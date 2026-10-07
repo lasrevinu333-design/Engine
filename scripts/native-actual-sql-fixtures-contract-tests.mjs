@@ -139,9 +139,9 @@ try {
     jarEnvironment:Object.fromEntries(NATIVE_WIRE_JARS.map(x=>[x.name,'/private/resolver/verified-jars/'+x.file])),
     env:Object.fromEntries([...ACTUAL_SQL_FIXTURE_JOBS.map(x=>[x.env,'/contamination']),['NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256','old'],['NATIVE_PROVIDER_EVENT_DECISION_INPUT','old'],['NATIVE_PROVIDER_EVENT_DECISION_INPUT_SHA256','old']])};
   const plans=nativeWireCommands(commandOptions);
-  check('real finite command plan prepares Query then executes private218 then consumes',()=>{
+  check('real finite command plan prepares Query then executes exact integrated227 then consumes',()=>{
     assert.deepEqual(plans.prepare.args,['mobile/scripts/custodial-provider-storage-tests.mjs','--prepare-event-decision-fixture','/private/query']);
-    assert.deepEqual(plans.sql.args,['scripts/native-provider-event-decisions-database-tests.mjs','--execute','/private/engine']);
+    assert.deepEqual(plans.sql.args,['scripts/native-provider-event-decisions-database-tests.mjs','--execute-integrated','/private/engine']);
     assert.equal(plans.sql.cwd,'/private/backend');assert.equal(plans.sql.env.NATIVE_PROVIDER_EVENT_DECISION_INPUT,'/private/query/native-provider-event-decision-prepared.json');
     assert.equal(plans.sql.env.NATIVE_SQL_FIXTURE_OUTPUT_DIR,'/private/engine');
     assert.deepEqual(plans.consume.args,['mobile/scripts/custodial-provider-storage-tests.mjs']);

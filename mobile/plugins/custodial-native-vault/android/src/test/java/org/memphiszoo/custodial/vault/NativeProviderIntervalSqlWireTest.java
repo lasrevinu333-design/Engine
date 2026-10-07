@@ -45,7 +45,7 @@ public final class NativeProviderIntervalSqlWireTest {
             if(fault.equals("nonce"))nonce=i.getString("secondNonce");
             if(fault.equals("missing"))response.remove("clock");
             if(fault.equals("extra"))response.getJSONObject("clock").put("qualified",true);
-            if(fault.equals("frozen"))response.getJSONObject("clock").put("server_now","2026-10-02T14:59:59.999999Z");
+            if(fault.equals("frozen"))response.getJSONObject("clock").put("server_now",NativeProviderTime.canonical(NativeProviderClockExchange.micros(response.getJSONObject("data").get("server_now"))-1L));
             if(fault.equals("point"))response.getJSONObject("clock").put("authenticated_at",response.getJSONObject("clock").get("server_now"));
             NativeProviderClockExchange x=exchange(request,response,nonce,100,112);
             if(fault.equals("body"))x=new NativeProviderClockExchange(x.response,x.requestId,x.path,"f".repeat(64),x.before,x.after);
@@ -57,7 +57,7 @@ public final class NativeProviderIntervalSqlWireTest {
         NativeProviderInventory.Request request=request(f,"input");
         NativeProviderInventory.CheckedExchange checked=NativeProviderInventory.validateExchange(request,
             exchange(request,response,response.getJSONObject("clock").getString("native_request_id"),100,112));
-        assertEquals("2026-10-02T15:00:04.123456Z",NativeProviderTime.canonical(checked.clock.serverMicros));
+        assertEquals(NativeProviderClockExchange.micros(f.getJSONObject("interval").getJSONObject("first").getJSONObject("data").get("server_now"))+4_000_000L,checked.clock.serverMicros);
         assertEquals(f.getJSONObject("interval").getJSONObject("first").getJSONObject("data").get("server_now"),checked.page.data().get("server_now"));
     }
 }

@@ -152,7 +152,7 @@ export function nativeWireCommands({resolver,preparation,engine,backend,jarEnvir
   for(const name of ['NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256','NATIVE_PROVIDER_EVENT_DECISION_INPUT','NATIVE_PROVIDER_EVENT_DECISION_INPUT_SHA256'])delete cleanEnv[name];
   return {
     prepare:{program:process.execPath,args:['mobile/scripts/custodial-provider-storage-tests.mjs','--prepare-event-decision-fixture',preparation],env:{...cleanEnv,...jarEnvironment}},
-    sql:{program:process.execPath,args:[wireJob.script,'--execute',engine],cwd:backend,env:{...cleanEnv,NATIVE_SQL_FIXTURE_OUTPUT_DIR:engine,[wireJob.env]:join(engine,wireJob.file),NATIVE_PROVIDER_EVENT_DECISION_INPUT:join(preparation,'native-provider-event-decision-prepared.json')}},
+    sql:{program:process.execPath,args:[wireJob.script,'--execute-integrated',engine],cwd:backend,env:{...cleanEnv,NATIVE_SQL_FIXTURE_OUTPUT_DIR:engine,[wireJob.env]:join(engine,wireJob.file),NATIVE_PROVIDER_EVENT_DECISION_INPUT:join(preparation,'native-provider-event-decision-prepared.json')}},
     consume:{program:process.execPath,args:['mobile/scripts/custodial-provider-storage-tests.mjs'],env:{...cleanEnv,...jarEnvironment,[wireJob.env]:join(engine,wireJob.file)}},
   };
 }
@@ -161,7 +161,7 @@ function resolveNativeWireJars(directory,env) {
   const resolver=join(directory,'native-wire-resolver');mkdirSync(resolver,{mode:0o700});
   mkdirSync(join(resolver,'gradle/wrapper'),{recursive:true});
   const cliPackage=cliRequire.resolve('@capacitor/cli/package.json');
-  assert.equal(JSON.parse(readFileSync(cliPackage)).version,'8.4.2');
+  assert.equal(JSON.parse(readFileSync(cliPackage)).version,'8.4.3');
   const archive=resolve(cliPackage,'../assets/android-template.tar.gz');
   const jar=command('tar',['-xOf',archive,'gradle/wrapper/gradle-wrapper.jar'],{encoding:null,maxBuffer:1048576});
   validateGradleWrapperJar(jar);
@@ -266,7 +266,11 @@ export function verifyFixtureBundle({ directory, backend, expectedCommit, expect
     if (manifestSha) assert.equal(current, manifestSha, 'all fixtures must replay identical complete migrations');
     manifestSha = current;
     const files = readdirSync(join(backend, 'supabase/migrations')).filter(file => file.endsWith('.sql')).sort();
-    assert.deepEqual(p.migration_manifest.map(item => item.file), files, 'fixture must cover all current migrations');
+    const declared=JSON.parse(readFileSync(join(backend,'supabase/canonical/migration-replay-order.json'),'utf8'));
+    const ordered=declared.phases.flatMap(phase=>phase.files.map(row=>row.name));
+    assert.deepEqual([...new Set(ordered)].sort(),files,'every exact source member, no omitted or invented migrations');
+    assert.equal(ordered.length,files.length,'no duplicate source members');
+    assert.deepEqual(p.migration_manifest.map(item => item.file), ordered, 'fixture must execute the byte-bound source phases, not date-sort previously installed work');
     for (const item of p.migration_manifest) assert.equal(item.sha256, sha(readFileSync(join(backend, 'supabase/migrations', item.file))));
     receipts.push({ env: job.env, file: job.file, sha256: sha(bytes), source_script_sha256: p.source_script.sha256, owning_migration_sha256: own.sha256 });
   }

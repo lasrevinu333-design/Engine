@@ -54,6 +54,15 @@ const repo = resolve(root, '../../../../..');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 // BEGIN exact event-decision migration authority (pure; no JAR/process access).
 function assertProviderDecisionSqlManifest(rows, profile = 'CURRENT_219') {
+  if(profile==='INTEGRATED_227'){
+    assert.ok(Array.isArray(rows));assert.equal(rows.length,227,'exact integrated source required');
+    for(const row of rows){assert.deepEqual(Object.keys(row).sort(),['file','sha256']);assert.match(row.file,/^\d{14}_[a-zA-Z0-9_]+\.sql$/);assert.match(row.sha256,/^[0-9a-f]{64}$/);}
+    assert.equal(new Set(rows.map(r=>r.file)).size,227);
+    assert.equal(sha(JSON.stringify(rows)),'df6373a06e51e1477e0304dc0460be2e600d6240a5107719cc536b0c0cf21a34','complete phase-ordered integrated source bytes');
+    assert.deepEqual(rows[222],{file:'20261004000000_native_provider_event_decision_lookup.sql',sha256:'ab4e6eb848bd214f8616fb52f094829786df9a9a81d2eb8d00d247b1f28e52fd'});
+    return {profile,migration_count:227,manifest_sha256:sha(JSON.stringify(rows))};
+  }
+
   assert.ok(profile === 'CURRENT_219' || profile === 'HISTORICAL_218', 'explicit supported manifest profile required');
   assert.ok(Array.isArray(rows));
   for (const row of rows) {
@@ -102,9 +111,9 @@ if (prepareDecision || decisionFixture) {
     assert.equal(sha(JSON.stringify(value.native_input,null,2)+'\n'),value.native_input_sha256,'included native preparation bytes retain original serialization identity');
     const proof = value.sql_fixture_provenance; assert.equal(proof.schema, 'custodial.native-actual-sql-fixture-provenance.v1');
     assert.equal(proof.synthetic, true); assert.equal(proof.production, false); assert.equal(proof.automatic_grants_absent_before_and_after_each, true);
-    assertProviderDecisionSqlManifest(proof.migration_manifest, 'CURRENT_219');
+    assertProviderDecisionSqlManifest(proof.migration_manifest, value.migration_profile || 'CURRENT_219');
     assert.equal(proof.migration_manifest_sha256, sha(JSON.stringify(proof.migration_manifest)+'\n'));
-    assert.deepEqual(proof.owning_migration, proof.migration_manifest.at(-1));
+    assert.deepEqual(proof.owning_migration, proof.migration_manifest.find(row=>row.file==='20261004000000_native_provider_event_decision_lookup.sql'));
     assert.equal(proof.owning_migration.file, '20261004000000_native_provider_event_decision_lookup.sql');
     for (const id of [proof.backend_commit, proof.backend_tree]) assert.match(id, /^[0-9a-f]{40}$/);
     tests.push(wireClass);
