@@ -178,7 +178,6 @@ const nativeBuildNumber = (() => {
 const rootPackage = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
 const custodialCompatibilityFiles = new Set([
   'Background1_optimized.webp',
-  'Event_Icon_Pink_ui.webp',
   'Event_Icon_ui.webp',
   'Header_ui.webp',
   'Zoo_Logo_ui.webp',
