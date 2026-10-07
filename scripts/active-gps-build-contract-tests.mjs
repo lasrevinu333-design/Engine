@@ -26,7 +26,7 @@ for(const page of pages){
   const html=read(page);
   assert.ok(html.includes('memphis-custodial-bridge.js'),`${page} lacks shared Custodial bridge`);
   assert.ok(html.includes('memphis-scan-sync.js'),`${page} lacks durable sync worker`);
-  assert.equal((html.match(/<script[^>]+src=["'][^"']*memphis-scan-sync\.js["']/g)||[]).length,1,`${page} must have exactly one sync worker`);
+  assert.equal((html.match(/<script[^>]+src=["'][^"']*memphis-scan-sync\.js(?:[?#][^"']*)?["']/g)||[]).length,1,`${page} must have exactly one sync worker`);
 }
 const scan=readFileSync(resolve(root,'index.html'),'utf8');
 assert.match(scan,/activeGpsLifecycle===true/);
