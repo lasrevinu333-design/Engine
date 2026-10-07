@@ -44,11 +44,10 @@
   }
 
   function timestampMs(value, fallback = Date.now()) {
-    if (value == null || value === '') return fallback;
-    const numeric = Number(value);
-    if (Number.isFinite(numeric)) return numeric;
-    const parsed = Date.parse(String(value));
-    return Number.isFinite(parsed) ? parsed : fallback;
+    if(value==null||value==='')return fallback;
+    if(!['number','string'].includes(typeof value)||(typeof value==='string'&&!value.trim()))return fallback;
+    const numeric=Number(value),parsed=Number.isFinite(numeric)?numeric:Date.parse(value);
+    return Number.isFinite(parsed)&&Number.isFinite(new Date(parsed).getTime())?parsed:fallback;
   }
 
   function evaluate(position = {}, geofence = {}, previousPosition = null) {

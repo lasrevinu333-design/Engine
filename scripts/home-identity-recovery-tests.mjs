@@ -1,0 +1,16 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import{attendanceFacts,homeIdentity,homeBinding}from'../mobile/src/custodial/home-facts.js';
+import{createHomeFacts}from'../mobile/src/custodial/home-facts-runtime.js';
+const NOW=Date.parse('2026-10-06T15:00:00Z'),STAMP=new Date(NOW).toISOString(),E='11000000-0000-4000-8000-000000000001',C='12000000-0000-4000-8000-000000000001';
+const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:E,employee_name:'Synthetic Employee',credential_id:C,assignment_epoch:1};
+const id={deviceId:'KIOSK_08',employeeId:E,employeeName:'Synthetic Employee',credentialId:C,assignmentEpoch:1};
+const day={service_date:'2026-10-06',device_id:'KIOSK_08',employee_id:E,employee_name:'Synthetic Employee',projection_status:'current',shift:{active:true,start:'07:00',end:'16:00'}};
+test('same employee and credential reassigned later have distinct cache identity',()=>{const a=homeIdentity(profile,'KIOSK_08'),b=homeIdentity({...profile,assignment_epoch:2},'KIOSK_08');assert.notEqual(homeBinding(a),homeBinding(b));});
+for(const key of ['employee_id','credential_id','assignment_epoch'])test('incomplete authenticated profile cannot own Home cache: '+key,()=>{assert.equal(homeIdentity({...profile,[key]:null},'KIOSK_08'),null)});
+test('yesterday count is not presented as today guest attendance',()=>{const r=attendanceFacts({attendance:500,source_timestamp:'2026-10-05T15:00:00Z'},NOW);assert.equal(r.value,'Unavailable')});
+test('contradictory source date cannot be refreshed by a newer timestamp',()=>{assert.equal(attendanceFacts({attendance:500,service_date:'2026-10-05',source_timestamp:STAMP},NOW).value,'Unavailable')});
+test('future or missing source time cannot certify guest count',()=>{for(const source_timestamp of [null,'bad','2026-10-07T15:00:00Z'])assert.equal(attendanceFacts({attendance:100,source_timestamp},NOW).value,'Unavailable')});
+test('valid zero from today is retained',()=>assert.equal(attendanceFacts({attendance:0,source_timestamp:STAMP},NOW).value,'0'));
+function fixture(){const cache=new Map(),rendered=[];let current=id,deny=false;const app=createHomeFacts({identity:()=>current,storage:{getItem:k=>cache.get(k)||null,setItem:(k,v)=>cache.set(k,v)},mutate:async fn=>fn(),now:()=>NOW,request:async kind=>{if(deny&&kind==='schedule')throw Object.assign(Error('denied'),{status:403});return kind==='schedule'?day:kind==='attendance'?{attendance:20,source_timestamp:STAMP}:{}},render:v=>rendered.push(v)});return{app,cache,rendered,deny:()=>{deny=true},loseIdentity:()=>{current=null}};}
+test('authorization denial withdraws Home shift instead of calling it offline',async()=>{const f=fixture();try{await f.app.refresh();assert.match(f.rendered.at(-1).schedule.shift,/7:00/);f.deny();await f.app.refresh({force:true});assert.equal(f.rendered.at(-1).schedule.shift,'Schedule unavailable');}finally{f.app.dispose()}});
+test('losing current identity withdraws displayed Home facts without erasing cache',async()=>{const f=fixture();try{await f.app.refresh();const saved=JSON.stringify([...f.cache]);f.loseIdentity();f.app.redraw();assert.equal(f.rendered.at(-1).schedule.shift,'Schedule unavailable');assert.equal(f.rendered.at(-1).attendance.value,'Unavailable');assert.equal(JSON.stringify([...f.cache]),saved);}finally{f.app.dispose()}});

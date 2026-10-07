@@ -8,7 +8,7 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
   const els={day:byId('home-service-date'),shift:byId('home-shift'),lunch:byId('home-lunch'),schedule:byId('home-schedule-freshness'),
     guests:byId('home-guest-count'),attendance:byId('home-attendance-freshness'),hours:byId('home-weather-hours'),weather:byId('home-weather-freshness')};
   let facts=null,binding='',timer=null;
-  const identity=()=>homeIdentity(getProfile(),getDeviceId());
+  const identity=()=>{const status=security.getStatus?.();return status?.ready===true&&status.available===true&&!status.quarantined?homeIdentity(getProfile(),getDeviceId()):null;};
   function draw(value){
     if(!isVisible()||!Object.values(els).every(Boolean))return;
     els.day.textContent=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'long',month:'short',day:'numeric'}).format(new Date(`${value.date}T18:00:00Z`));
@@ -33,7 +33,7 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
   }
   function update(force=false){
     if(!isVisible())return;
-    const id=identity();if(!id||!Object.values(els).every(Boolean))return;
+    const id=identity();if(!id){stop();clearFacts();return;}if(!Object.values(els).every(Boolean))return;
     const next=homeBinding(id);
     if(!facts||binding!==next){
       facts?.dispose();binding=next;
@@ -43,6 +43,8 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     if(!timer)timer=setInterval(()=>{if(!document.hidden&&isVisible()){facts?.redraw();update();}},60000);
   }
   function stop(){facts?.dispose();facts=null;binding='';clearInterval(timer);timer=null;}
+  function clearFacts(){for(const el of Object.values(els))if(el)el.textContent='';if(els.shift)els.shift.textContent='Schedule unavailable';if(els.lunch)els.lunch.textContent='Lunch unavailable';if(els.guests)els.guests.textContent='Unavailable';}
+  window.addEventListener('memphis:custodial-security-state',()=>{if(!identity()){stop();clearFacts();}else update(true);});
   window.addEventListener('pagehide',stop);
   window.addEventListener('pageshow',()=>update());
   window.addEventListener('online',()=>update(true));

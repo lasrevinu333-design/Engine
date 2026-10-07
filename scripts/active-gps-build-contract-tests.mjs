@@ -21,7 +21,7 @@ for(const token of [
   'gps_unavailable',
 ]) assert.ok(bridge.includes(token),`compiled bridge missing active GPS contract: ${token}`);
 
-const pages=['index.html','employee-schedule.html','messages.html','employee-events.html','employee-feedback.html'];
+const pages=['index.html','employee-schedule.html','messages.html','events.html','employee-feedback.html'];
 for(const page of pages){
   const html=read(page);
   assert.ok(html.includes('memphis-custodial-bridge.js'),`${page} lacks shared Custodial bridge`);

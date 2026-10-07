@@ -24,10 +24,10 @@ test('weather uses real units/times, names stale source, and only the coming hou
  assert.equal(D.weather(weather,noon+3600000).stale,true);assert.match(D.weather(weather,noon+3600000).hour,/unavailable/);
  assert.equal(D.weather({...weather,current_units:{temperature_2m:'°C'}},noon).value,'Unavailable');
 });
-test('scan ticket removal follows replacement summary; origins remain separate',()=>{
+test('custodial ticket removal follows replacement summary without claiming unverified scan provenance',()=>{
  const summary={open_tickets:[{ticket_id:'12',location_name:'Fixture restroom',maintenance_issue:'Fixture leak'}]};
  const mail={state:'current',rows:[{ticket_id:'12',custodial:true,active:true,status:'Open',title:'Fixture gate'}]};
- const both=D.tickets(summary,mail);assert.deepEqual(both.cards.map(x=>x.source),['Scan session','Spiceworks']);
+ const both=D.tickets(summary,mail);assert.deepEqual(both.cards.map(x=>x.source),['Custodial ticket','Spiceworks']);
  assert.equal(D.tickets({open_tickets:[]},mail).cards.length,1);assert.equal(D.tickets({open_tickets:[]},{state:'unavailable'}).cards.length,0);
  assert.equal(D.tickets(null,{state:'current',rows:[{...mail.rows[0],status:'Closed'}]}).cards.length,0);
  assert.match(D.tickets(summary,null).note,/unavailable/);

@@ -5,6 +5,8 @@ export function createHomeFacts({identity,storage,mutate,request,render,now=()=>
   let binding='',records={},flight=null,disposed=false;
   const requests=new Set();
   const key=id=>`mz_custodial_home_cache:${id}:facts`;
+  function withdraw(){if(disposed)return;render({date:zooServiceDate(now()),schedule:scheduleFacts(null,null,null,now()),attendance:attendanceFacts(null,now()),weather:weatherFacts(null,null,now())});}
+  function invalidate(){for(const c of requests)c.abort();requests.clear();records={};binding='';}
   function draw(id) {
     if(disposed||homeBinding(identity())!==homeBinding(id))return;
     const data=kind=>records[kind]?.data && (records[kind].failed||records[kind].fromCache) ? {...records[kind].data,stale:true} : records[kind]?.data;
@@ -34,7 +36,7 @@ export function createHomeFacts({identity,storage,mutate,request,render,now=()=>
   }
   async function refresh({force=false}={}) {
     if(disposed)return;
-    const id=identity();if(!id)return;
+    const id=identity();if(!id){invalidate();withdraw();return;}
     load(id);draw(id);
     if(flight)return flight;
     const captured=homeBinding(id);
@@ -52,11 +54,15 @@ export function createHomeFacts({identity,storage,mutate,request,render,now=()=>
         if(!data||disposed||homeBinding(identity())!==captured)return;
         records[kind]={data,received_at:new Date(now()).toISOString()};
         draw(id);await persist(id);
-      }catch{if(!disposed&&homeBinding(identity())===captured){if(records[kind])records[kind].failed=true;draw(id);}}
+      }catch(error){if(!disposed&&homeBinding(identity())===captured){
+        if(kind==='schedule'&&[401,403].includes(error?.status??error?.statusCode))delete records.schedule;
+        else if(records[kind])records[kind].failed=true;
+        draw(id);
+      }}
       finally{clearTimeout(timeout);requests.delete(controller);}
     })).finally(()=>{flight=null;});
     return flight;
   }
   function dispose(){disposed=true;for(const controller of requests)controller.abort();requests.clear();}
-  return {refresh,dispose,redraw:()=>{const id=identity();if(id){load(id);draw(id);}}};
+  return {refresh,dispose,redraw:()=>{const id=identity();if(id){load(id);draw(id);}else{invalidate();withdraw();}}};
 }

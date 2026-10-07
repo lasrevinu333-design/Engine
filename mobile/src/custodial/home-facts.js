@@ -46,7 +46,12 @@ export function attendanceFacts(data,now=Date.now()) {
   const count=numeric(data?.attendance);
   if(count===null||!Number.isSafeInteger(count)||count<0||data?.available===false)
     return {value:'Unavailable',stale:true,detail:'Guest count has not been verified.'};
-  const fresh=sourceLabel(data.source_timestamp??data.fetched_at??data.updated_at,now,60*minute,data.stale===true);
+  const sourceTime=data.source_timestamp??data.fetched_at??data.updated_at,observed=stamp(sourceTime);
+  const declaredDate=data.service_date??data.date;
+  if(!Number.isFinite(observed)||observed>now+minute||zooServiceDate(observed)!==zooServiceDate(now)
+    ||(declaredDate!=null&&declaredDate!==zooServiceDate(now)))
+    return {value:'Unavailable',stale:true,detail:'Today’s guest count has not been verified.'};
+  const fresh=sourceLabel(sourceTime,now,60*minute,data.stale===true);
   return {value:count.toLocaleString('en-US'),...fresh,detail:fresh.label};
 }
 export function weatherFacts(data,receivedAt,now=Date.now()) {
@@ -72,10 +77,11 @@ export function homeIdentity(profile,deviceId) {
   if(!/^KIOSK_(0[2-9]|10)$/.test(id)||profile?.authenticated!==true
     ||String(profile.canonical_device_id||profile.device_id||'').toUpperCase()!==id)return null;
   const employeeName=String(profile.employee_name||profile.employee?.display_name||'').trim();
-  if(!employeeName)return null;
-  return {deviceId:id,employeeId:String(profile.employee_id||profile.employee?.id||''),employeeName,
-    credentialId:String(profile.credential_id||'')};
+  const employeeId=String(profile.employee_id||profile.employee?.id||''),credentialId=String(profile.credential_id||'');
+  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if(!employeeName||!uuid.test(employeeId)||!uuid.test(credentialId)||!Number.isSafeInteger(profile.assignment_epoch)||profile.assignment_epoch<1)return null;
+  return {deviceId:id,employeeId:employeeId.toLowerCase(),employeeName,credentialId:credentialId.toLowerCase(),assignmentEpoch:profile.assignment_epoch};
 }
 export function homeBinding(identity) {
-  return identity?JSON.stringify([identity.deviceId,identity.employeeId,identity.employeeName,identity.credentialId]):'';
+  return identity?JSON.stringify([identity.deviceId,identity.employeeId,identity.employeeName,identity.credentialId,identity.assignmentEpoch??null]):'';
 }

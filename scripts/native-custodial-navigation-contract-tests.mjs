@@ -102,7 +102,7 @@ browserEmployeeRuntime.localStorage.setItem('mz_phone_scan_resume:KIOSK_08', '{b
 assert.equal(browserEmployee.resolveOpenScanSession('KIOSK_08').state, 'corrupted',
   'a malformed active-work index must fail closed');
 
-for (const page of ['employee-schedule.html', 'events.html', 'system-feedback.html']) {
+for (const page of ['employee-schedule.html', 'system-feedback.html']) {
   const html = readFileSync(new URL(`../${page}`, import.meta.url), 'utf8');
   assert.match(html, /data-mz-back/, `${page} must delegate Back to the canonical shared route`);
   assert.match(html, /memphis-ui\.js/, `${page} must load the canonical shared route runtime`);
@@ -114,3 +114,11 @@ console.log(JSON.stringify({
   native_employee_target: nativeTarget.toString(),
   manager_target: browserManager.canonicalBackTarget().toString(),
 }));
+
+// The one shared Events view has its own role-sensitive Back: native Home or
+// manager Map, not the retired separate page's generic Hub route.
+const eventsSource=readFileSync(new URL('../events-view.js',import.meta.url),'utf8'),ctx={module:{exports:{}},URL};vm.runInNewContext(eventsSource,ctx);
+const eventHtml=readFileSync(new URL('../events.html',import.meta.url),'utf8');assert.match(eventHtml,/id="events-back"/);assert.match(eventHtml,/events-view\.js/);
+const nativeEnv={location:{href:'https://localhost/events.html?device=KIOSK_04&return=https://evil.invalid'},MemphisMobileBuildIdentity:{edition:'custodial'}};
+assert.equal(ctx.module.exports.returnTarget(nativeEnv,{kind:'employee',device:'KIOSK_08'}),'https://localhost/index.html');
+assert.equal(new URL(ctx.module.exports.returnTarget({location:{href:'https://example.invalid/events.html'}},{kind:'manager',device:'verified-browser'})).pathname,'/operations-dashboard.html');

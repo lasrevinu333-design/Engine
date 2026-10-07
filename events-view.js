@@ -29,6 +29,7 @@ function principal(w,now=Date.now(),allowExpired=false){
 }
 function returnTarget(w,p){
  const employee=p?.kind==='employee'||isNative(w),u=new URL(employee?'./index.html':'./operations-dashboard.html',w.location.href);
+ if(isNative(w)){u.search='';u.hash='';return u.toString();}
  u.searchParams.set('hub',employee?'employee':'manager');if(p?.device)u.searchParams.set('device',p.device);
  return u.toString();
 }

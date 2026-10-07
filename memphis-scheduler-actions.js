@@ -7,6 +7,37 @@ const same=(a,b)=>!!a&&!!b&&a.managerId===b.managerId&&a.credentialId===b.creden
 function permissions(auth){const s=auth?.readSession?.(),p=s?.permissions,current=principal(auth),valid=!!current&&p?.schema==='custodial.manager-permissions.v1'&&p.read===true;const owner=valid&&p.owner===true&&s.read_only===false;return{read:valid,owner,absences:valid&&(owner||p.manage_absences===true),coverall:valid&&(owner||p.manage_coverall===true),routes:valid&&(owner||p.regenerate_routes===true),closeScanTickets:valid&&(owner||p.close_scan_tickets===true)};}
 function receiptProjection(value){return value?.data?.current_projection||value?.data?.projection||null;}
 function accepted(value,record){const p=receiptProjection(value);return Number.isSafeInteger(value?.revision)&&value.revision>=record.body.expected_revision&&UUID.test(p?.projection_id||'')&&(!record.body.publication_id||p.publication_id===record.body.publication_id)&&(!p.week_start||p.week_start===record.body.week_start);}
+function activeExceptions(snapshot,date){
+ const rows=Array.isArray(snapshot?.exceptions)?snapshot.exceptions:[];
+ const reversed=new Set(rows.filter(r=>r.type==='reverse').map(r=>r.reversesExceptionId||r.reverses_exception_id||r.payload?.reversesExceptionId).filter(Boolean));
+ return rows.filter(r=>r.serviceDate===date&&r.type!=='reverse'&&!reversed.has(r.id));
+}
+function rosterAt(snapshot,date){
+ const day=new Date(`${date}T12:00:00Z`).getUTCDay(),availability=Array.isArray(snapshot?.availability)?snapshot.availability:[];
+ return (Array.isArray(snapshot?.roster)?snapshot.roster:[]).map(slot=>{
+  const week=Array.isArray(slot.week_staffing)?slot.week_staffing:[],dated=week.find(r=>r.service_date===date);
+  const current=(slot.incumbencies||[]).find(r=>r.effective_start<=date&&(!r.effective_end||date<r.effective_end));
+  const baseline=availability.find(r=>r.slot_id===slot.slot_id&&(r.service_date?r.service_date===date:Number(r.day_of_week)===day));
+  // An explicit null in a dated record is a vacancy, never permission to
+  // resurrect the employee who occupied the position in a prior baseline.
+  const person=dated&&Object.hasOwn(dated,'person_id')?dated:current||{};
+  return {...slot,...dated,person_id:person.person_id||null,person_name:person.person_name||null,
+   week_person_names:[...new Set(week.map(r=>r.person_name).filter(Boolean))].join(' / '),
+   availability_state:dated?.availability_state??baseline?.availability_state??null,
+   device_ids:Array.isArray(dated?.device_ids)?dated.device_ids:[]};
+ });
+}
+function staffingAt(snapshot,date){
+ const roster=rosterAt(snapshot,date),events=activeExceptions(snapshot,date);
+ const ids=types=>new Set(events.filter(r=>types.includes(r.type)).map(r=>r.payload?.slotId||r.payload?.availability?.slotId).filter(Boolean));
+ const absent=ids(['daily_absence','pto']),partial=ids(['partial_absence']),capacity=ids(['cover_all']);
+ const staff=roster.filter(r=>!r.contractor_capacity),present=staff.filter(r=>r.person_id&&r.availability_state!=='vacant_unfilled'&&r.availability_state!=='departed_named_absent');
+ const people=rows=>new Set(rows.map(r=>r.person_id)).size;
+ return {roster,working:people(present.filter(r=>r.availability_state==='working'&&!absent.has(r.slot_id))),
+  absent:people(present.filter(r=>absent.has(r.slot_id))),partial:people(present.filter(r=>partial.has(r.slot_id)&&!absent.has(r.slot_id))),
+  vacant:staff.filter(r=>!r.person_id||['vacant_unfilled','departed_named_absent'].includes(r.availability_state)).length,
+  contractors:roster.filter(r=>r.contractor_capacity&&capacity.has(r.slot_id)).length};
+}
 function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{}}={}){
  const owner=principal(auth);if(!owner||typeof api!=='function')throw Error('A current manager session is required.');const base=new URL(baseUrl).origin;
  const key='mz_scheduler_dated_operation_v1:'+encodeURIComponent(base)+':'+owner.managerId;let sending=false;
@@ -40,7 +71,7 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{}}={}){
    if(!paths.has(path)||!p.routes||!p.absences||!Number.isSafeInteger(body?.expected_revision)||body.expected_revision<0||typeof body.idempotency_key!=='string'||!body.idempotency_key)throw Error('This scheduler change is not authorized or complete.');
    const r={schema:'custodial.scheduler-pending.v1',base,managerId:owner.managerId,path,body:copy(body),encoded:JSON.stringify(body),state:'PENDING',receipt:null,error:null};save(r);return send(r);
   },
-  async retry(){const r=read();if(!r)throw Error('No saved scheduler request.');if(r.state==='ACCEPTED')return r.receipt;return send({...r,state:'PENDING',error:null});},
+  async retry(){const r=read();if(!r)throw Error('No saved scheduler request.');if(r.state==='ACCEPTED')return r.receipt;if(r.state==='REJECTED')throw Error('The request was rejected. Refresh current state and dismiss it before making a corrected change.');return send({...r,state:'PENDING',error:null});},
   acknowledge(snapshot){const r=read();if(!r||r.state!=='ACCEPTED')return false;const p=receiptProjection(r.receipt);
    if(snapshot?.week_start!==r.body.week_start||snapshot.projection_status!=='current'||!Number.isSafeInteger(snapshot.authority_revision)||snapshot.authority_revision<r.receipt.revision
     ||!UUID.test(snapshot.latest_projection?.projection_id||''))return false;
@@ -51,5 +82,5 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{}}={}){
   samePrincipal:()=>same(owner,principal(auth)),principal:copy(owner),
  });
 }
-const api=Object.freeze({create,permissions,principal,same,accepted,receiptProjection});root.MemphisSchedulerActions=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+const api=Object.freeze({create,permissions,principal,same,accepted,receiptProjection,rosterAt,staffingAt,activeExceptions});root.MemphisSchedulerActions=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
