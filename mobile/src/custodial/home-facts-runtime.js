@@ -55,7 +55,7 @@ export function createHomeFacts({identity,storage,mutate,request,render,now=()=>
         records[kind]={data,received_at:new Date(now()).toISOString()};
         draw(id);await persist(id);
       }catch(error){if(!disposed&&homeBinding(identity())===captured){
-        if(kind==='schedule'&&[401,403].includes(error?.status??error?.statusCode))delete records.schedule;
+        if(kind==='schedule'&&[401,403].includes(error?.status??error?.statusCode)){records.schedule={data:null,accessDenied:true,received_at:new Date(now()).toISOString()};await persist(id);}
         else if(records[kind])records[kind].failed=true;
         draw(id);
       }}
