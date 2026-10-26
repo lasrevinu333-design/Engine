@@ -25,12 +25,83 @@ public final class NativeProviderPayloadTest {
     static Map<String, String> signed(Map<String, String> data) throws Exception {
         data.put("content_sha256", NativeProviderPrincipal.hash(NativeProviderPayload.canonical(data, true))); return data;
     }
+    // Synthetic finite validity only; no production Event/Message horizon or
+    // hardware qualification is selected by these parser fixtures.
+    static Map<String, String> requiredKind(boolean event) throws Exception {
+        Map<String, String> data = lunch(fixture().prepared);
+        for (String key : new String[]{"event", "loan_id", "scheduled_time", "scheduled_at", "coverer_slot_id", "projection_id", "document_identity"}) data.remove(key);
+        String source = "88000000-0000-4000-8000-000000000001", target = "88000000-0000-4000-8000-000000000002";
+        data.put("schema", event ? NativeProviderPayload.EVENT_SCHEMA : NativeProviderPayload.MESSAGE_SCHEMA);
+        data.put("kind", event ? "employee_event" : "employee_message"); data.put("notification_type", event ? "event" : "message");
+        data.put("channel_id", event ? "employee-events" : "employee-messages"); data.put("source_revision", "d".repeat(64));
+        if (event) {
+            data.put("event_id", source); data.put("instance_id", target); data.put("event_revision", "7"); data.put("notification_kind", "shift_plus_15");
+            data.put("recipient_device_uuid", "88000000-0000-4000-8000-000000000003");
+            data.put("notification_key", "event:" + source + ":7:" + data.get("service_date") + ":" + data.get("receipt_employee_id")
+                + ":" + data.get("recipient_device_uuid") + ":" + data.get("receipt_assignment_epoch") + ":shift_plus_15");
+            data.put("route", "events.html?hub=employee&event_id=" + source);
+        } else {
+            data.put("message_id", source); data.put("thread_id", target); data.put("recipient_user_id", "88000000-0000-4000-8000-000000000003");
+            data.put("notification_key", "message:" + source); data.put("route", "messages.html?hub=employee&thread_id=" + target);
+        }
+        return signed(data);
+    }
+    @Test public void requiredKindsHaveClosedImmutableConditionalFcmAndInventoryParity() throws Exception {
+        for (boolean event : new boolean[]{false, true}) {
+            Map<String, String> data = requiredKind(event); NativeProviderPayload payload = accept(data);
+            assertEquals(event ? 26 : 24, payload.data().size());
+            assertEquals(payload.data(), NativeProviderPayload.fromInventory(payload.json()).data());
+            assertTrue(NativeProviderPayload.protectedTraffic(data));
+            String original = payload.get("body"); data.put("body", "caller mutation"); assertEquals(original, payload.get("body"));
+            try { payload.data().put("body", "mutation"); fail(); } catch (UnsupportedOperationException expected) { }
+            assertNull(NativeProviderTime.Profiles.NONE.select(new NativeProviderTime.Platform("36", "synthetic", "synthetic")));
+        }
+    }
+    @Test public void requiredKindsRejectMissingExtraCrossKindAndMalformedFields() throws Exception {
+        for (boolean event : new boolean[]{false, true}) {
+            Map<String, String> original = requiredKind(event);
+            for (String field : original.keySet()) {
+                Map<String, String> changed = new TreeMap<>(original); changed.remove(field);
+                ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(field.equals("content_sha256") ? changed : signed(changed)));
+            }
+            for (String[] change : new String[][]{{"unexpected", "field"}, {"schema", NativeProviderPayload.SCHEMA},
+                {"kind", event ? "employee_message" : "employee_event"}, {"source_revision", "not-a-digest"}, {"notification_type", "location_status"},
+                {"channel_id", "employee-lunch-coverage"}, {"route", "https://elsewhere.invalid/"}, {"receipt_assignment_epoch", "01"},
+                {"valid_until", RESERVATION}, {"reservation_at", "2026-02-31T17:00:00.000000Z"}}) {
+                Map<String, String> changed = new TreeMap<>(original); changed.put(change[0], change[1]);
+                ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(signed(changed)));
+            }
+            Map<String, String> changed = new TreeMap<>(original); changed.put("body", "changed without original digest");
+            ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(changed));
+        }
+    }
+    @Test public void requiredKindsBindOriginalSourceRecipientRouteAndDoNotAdoptLegacy() throws Exception {
+        Map<String, String> event = requiredKind(true), message = requiredKind(false);
+        for (String field : new String[]{"event_id", "recipient_device_uuid", "receipt_employee_id", "event_revision", "receipt_assignment_epoch", "service_date", "notification_kind"}) {
+            Map<String, String> changed = new TreeMap<>(event); changed.put(field, field.contains("id") ? "99000000-0000-4000-8000-000000000001" : "8");
+            ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(signed(changed)));
+        }
+        for (String field : new String[]{"message_id", "thread_id", "recipient_user_id"}) {
+            Map<String, String> changed = new TreeMap<>(message); changed.put(field, field.equals("recipient_user_id") ? "invalid" : "99000000-0000-4000-8000-000000000001");
+            ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(signed(changed)));
+        }
+        for (String kind : new String[]{"employee_event", "employee_message"}) {
+            Map<String, String> legacy = new TreeMap<>(); legacy.put("kind", kind); legacy.put("notification_key", "original-legacy-key");
+            assertTrue(NativeProviderPayload.protectedTraffic(legacy));
+            ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(legacy));
+        }
+    }
     static NativeProviderPayload accept(Map<String, ?> data) throws VaultFailure { return NativeProviderPayload.fromFcm(PROJECT, PROJECT, false, data); }
     static NativeProviderRegistrationReceiptTest.Fixture fixture() throws Exception { return new NativeProviderRegistrationReceiptTest.Fixture(false); }
     static Map<String, String> location(boolean overdue, boolean exhibit) throws Exception {
         Map<String, String> data = lunch(fixture().prepared);
         for (String field : new String[]{"event", "loan_id", "scheduled_time", "scheduled_at", "coverer_slot_id", "projection_id", "document_identity"}) data.remove(field);
         data.put("kind", "employee_location_status"); data.put("notification_type", "location_status"); data.put("reminder_contract", "verified-visit-reminders.v2");
+        data.put("schema", NativeProviderPayload.LOCATION_SCHEMA);
+        for (String field : new String[]{"projection_id", "publication_id", "version_id", "occurrence_id", "authority_source_id"})
+            data.put(field, "66000000-0000-4000-8000-000000000001");
+        data.put("authority_source", "static_weekly_projection"); data.put("authority_source_digest", "d".repeat(64));
+        data.put("coverage_end_at", "2026-09-24T21:00:00.000000Z"); data.put("operational_end_at", "2026-09-25T09:00:00.000000Z");
         data.put("cleaned_at", "2026-09-24T13:00:00.123456Z"); data.put("cycle_base_at", data.get("cleaned_at")); data.put("cycle_base_evidence", "completed_cleaning");
         data.put("due_soon_at", exhibit ? "2026-09-24T16:15:00.123456Z" : "2026-09-24T14:15:00.123456Z");
         data.put("overdue_at", exhibit ? "2026-09-24T16:30:00.123456Z" : "2026-09-24T14:30:00.123456Z");
@@ -40,7 +111,8 @@ public final class NativeProviderPayloadTest {
         data.put("location_id", "55000000-0000-4000-8000-000000000001"); data.put("location_code", "TETM"); data.put("location_name", "Teton restroom");
         data.put("group_code", "TETON"); data.put("group_name", "Teton"); data.put("channel_id", overdue ? "employee-overdue" : "employee-due-soon");
         data.put("route", "employee-schedule.html?hub=employee&highlight=TETM");
-        data.put("notification_key", "location-visit:2026-09-24:" + data.get("location_id") + ":" + data.get("status_code") + ":20260924130000123456:" + (overdue ? "1" : "0"));
+        data.put("notification_key", "location-visit:2026-09-24:" + data.get("location_id") + ":" + data.get("status_code") + ":20260924130000123456:" + (overdue ? "1" : "0")
+            + ":projection:" + data.get("projection_id"));
         return signed(data);
     }
     @Test public void exactFcmAndAuthenticatedInventoryAreIdenticalButDoNotCreateAuthority() throws Exception {
@@ -87,7 +159,9 @@ public final class NativeProviderPayloadTest {
         assertTrue(NativeProviderPayload.protectedTraffic(Map.of("kind", "employee_location_status", "test_delivery", true)));
         assertTrue(NativeProviderPayload.protectedTraffic(Map.of("schema", NativeProviderPayload.SCHEMA, "kind", "foreign")));
         assertTrue(NativeProviderPayload.protectedTraffic(Map.of("schema", "custodial.native-provider-payload.v2")));
-        assertFalse(NativeProviderPayload.protectedTraffic(Map.of("kind", "employee_message")));
+        assertTrue(NativeProviderPayload.protectedTraffic(Map.of("kind", "employee_message")));
+        assertTrue(NativeProviderPayload.protectedTraffic(Map.of("kind", "employee_event")));
+        assertFalse(NativeProviderPayload.protectedTraffic(Map.of("kind", "unrelated_legacy")));
     }
     @Test public void aliasesArbitraryRoutesChannelMismatchAndInvalidFractionalTimesFailEvenIfRehashed() throws Exception {
         Map<String, String> source = lunch(fixture().prepared);
@@ -118,6 +192,23 @@ public final class NativeProviderPayloadTest {
         checked.put("cycle_base_evidence", "verified_check_checkout"); accept(signed(checked));
         checked.put("cleaned_at", checked.get("cycle_base_at")); ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(signed(checked)));
         checked.put("cleaned_at", ""); ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(signed(checked)));
+    }
+    @Test public void exactLocationProjectionAndAuthoritySchemaRejectsCrossProjectionAndLegacyPackets() throws Exception {
+        Map<String, String> source = location(true, false);
+        for (String field : new String[]{"projection_id", "publication_id", "version_id", "occurrence_id", "authority_source_id", "authority_source_digest", "authority_source", "coverage_end_at", "operational_end_at"}) {
+            Map<String, String> changed = new TreeMap<>(source); changed.remove(field);
+            ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(signed(changed)));
+        }
+        for (String[] change : new String[][]{{"projection_id", "99000000-0000-4000-8000-000000000001"},
+            {"schema", NativeProviderPayload.SCHEMA}, {"authority_source", "legacy"},
+            {"coverage_end_at", source.get("reservation_at")}, {"operational_end_at", source.get("reservation_at")},
+            {"publication_id", "malformed"}, {"authority_source_digest", "x".repeat(64)}}) {
+            Map<String, String> changed = new TreeMap<>(source); changed.put(change[0], change[1]);
+            ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(signed(changed)));
+        }
+        Map<String, String> changed = new TreeMap<>(source); changed.put("projection_alias", source.get("projection_id"));
+        ProviderRecordStoreTest.failure("custodial_provider_payload_invalid", () -> accept(signed(changed)));
+        assertTrue(NativeProviderPayload.protectedTraffic(Map.of("schema", NativeProviderPayload.LOCATION_SCHEMA, "kind", "foreign")));
     }
     @Test public void lunchStartExpiresAtLoanEndAndEndNoticeHasNoInventedResponseDeadline() throws Exception {
         Map<String, String> data = lunch(fixture().prepared);

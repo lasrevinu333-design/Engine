@@ -1,4 +1,5 @@
 import { protectedPrincipal } from './protected-principal.js';
+import { CUSTODIAL_PROTECTED_STORAGE_PREFIXES } from './storage-firewall.js';
 import {
   CUSTODIAL_CREDENTIAL_KEY,
   CUSTODIAL_DEVICE_KEYS,
@@ -39,8 +40,22 @@ const SCAN_CONTRACT_CACHE_PREFIX = 'mz_scan_contract_cache:';
 const CUSTODIAL_HOME_CACHE_PREFIX = 'mz_custodial_home_cache:';
 const EMPLOYEE_SCHEDULE_SNAPSHOT_PREFIX = 'mz_employee_schedule_snapshot:';
 const EMPLOYEE_EVENTS_SNAPSHOT_PREFIX = 'mz_employee_events_snapshot:';
+// Preserve the existing explicit cache-only removal policy. Every OTHER
+// firewall-owned work prefix must participate in pending-work inspection,
+// including unreadable historical rows and future unclassified work kinds.
+// This consumes only the already selected app Storage; no wider collection,
+// store deletion, semantic acceptance or native key/export authority.
+const NON_PENDING_PROTECTED_CACHE_PREFIXES = Object.freeze([
+  SCAN_AUTHORITY_SNAPSHOT_PREFIX,
+  SCAN_CONTRACT_CACHE_PREFIX,
+  CUSTODIAL_HOME_CACHE_PREFIX,
+  EMPLOYEE_SCHEDULE_SNAPSHOT_PREFIX,
+  EMPLOYEE_EVENTS_SNAPSHOT_PREFIX,
+]);
 const SCAN_QUEUE_DATABASE = 'mz_scan_queue';
 const SCAN_QUEUE_STORE = 'actions';
+const SCAN_DRAFT_DATABASE = 'mz_scan_completion_drafts';
+const SCAN_DRAFT_STORE = 'drafts';
 const INSTALLATION_SCHEMA_VERSION = 1;
 const RECOVERY_SCHEMA_VERSION = 1;
 const ENROLLMENT_OPERATION_SCHEMA_VERSION = 1;
@@ -311,7 +326,7 @@ function hasName(names, wanted) {
   return Array.from(names).includes(wanted);
 }
 
-async function inspectIndexedDbQueue(indexedDb) {
+async function inspectIndexedDbQueue(indexedDb, databaseName = SCAN_QUEUE_DATABASE, storeName = SCAN_QUEUE_STORE) {
   if (!indexedDb || typeof indexedDb.open !== 'function') {
     return { available: false, databaseExists: false, records: [] };
   }
@@ -319,7 +334,7 @@ async function inspectIndexedDbQueue(indexedDb) {
   if (typeof indexedDb.databases === 'function') {
     try {
       const databases = await indexedDb.databases();
-      if (Array.isArray(databases) && !databases.some((item) => item?.name === SCAN_QUEUE_DATABASE)) {
+      if (Array.isArray(databases) && !databases.some((item) => item?.name === databaseName)) {
         return { available: true, databaseExists: false, records: [] };
       }
     } catch {
@@ -343,11 +358,11 @@ async function inspectIndexedDbQueue(indexedDb) {
       if (settled) return;
       settled = true;
       try { database?.close?.(); } catch {}
-      reject(new CustodialStateInspectionError('scan queue inspection', error));
+      reject(new CustodialStateInspectionError(`${databaseName}/${storeName} inspection`, error));
     };
 
     let request;
-    try { request = indexedDb.open(SCAN_QUEUE_DATABASE); }
+    try { request = indexedDb.open(databaseName); }
     catch (error) { fail(error); return; }
 
     request.onblocked = () => fail(new Error('Scan queue inspection is blocked by another app view'));
@@ -362,23 +377,31 @@ async function inspectIndexedDbQueue(indexedDb) {
     };
     request.onsuccess = () => {
       database = request.result;
+      if (settled) { try { database?.close?.(); } catch {} return; }
       if (createdByProbe) {
         finish({ available: true, databaseExists: false, records: [] });
         return;
       }
-      if (!hasName(database?.objectStoreNames, SCAN_QUEUE_STORE)) {
-        finish({ available: true, databaseExists: true, records: [] });
+      if (!hasName(database?.objectStoreNames, storeName)) {
+        // An existing but unrecognized protected database is UNKNOWN, not an
+        // empty queue. Refuse before any enrollment/removal credential handoff.
+        fail(new Error(databaseName === SCAN_DRAFT_DATABASE
+          ? 'Existing completion draft database has no expected draft store'
+          : 'Existing scan queue database has no expected action store'));
         return;
       }
 
       let transaction;
       let rows = [];
       try {
-        transaction = database.transaction(SCAN_QUEUE_STORE, 'readonly');
-        const store = transaction.objectStore(SCAN_QUEUE_STORE);
+        transaction = database.transaction(storeName, 'readonly');
+        const store = transaction.objectStore(storeName);
         if (typeof store.getAll === 'function') {
           const all = store.getAll();
-          all.onsuccess = () => { rows = Array.isArray(all.result) ? all.result : []; };
+          all.onsuccess = () => {
+            if (!Array.isArray(all.result)) { fail(new Error('Protected records were not readable')); return; }
+            rows = all.result;
+          };
           all.onerror = () => fail(all.error || new Error('Scan queue records could not be read'));
         } else {
           const cursor = store.openCursor();
@@ -409,6 +432,8 @@ async function inspectIndexedDbQueue(indexedDb) {
  *   indexedDb?: IDBFactory,
  *   now?: () => Date|string|number,
  *   verifyManagerCode?: (request: object) => Promise<boolean|object>|boolean|object,
+ *   protectedWorkAdmission?: (operation: () => unknown) => Promise<unknown>,
+ *   protectedWorkCheckpoint?: () => void,
  * }} [options]
  */
 export function createCustodialCredentialStore({
@@ -418,12 +443,20 @@ export function createCustodialCredentialStore({
   indexedDb = globalThis.indexedDB,
   now = () => new Date(),
   verifyManagerCode: defaultManagerVerifier = null,
+  protectedWorkAdmission = null,
+  protectedWorkCheckpoint = null,
 } = {}) {
   if (!secureStorage || typeof secureStorage.get !== 'function' || typeof secureStorage.set !== 'function' || typeof secureStorage.remove !== 'function') {
     throw new TypeError('A SecureStorage-compatible implementation is required');
   }
   if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function' || typeof storage.removeItem !== 'function' || typeof storage.key !== 'function') {
     throw new TypeError('A Storage-compatible implementation is required');
+  }
+  if (protectedWorkAdmission !== null && typeof protectedWorkAdmission !== 'function') {
+    throw new TypeError('A protected-work admission function is required');
+  }
+  if (protectedWorkAdmission !== null && typeof protectedWorkCheckpoint !== 'function') {
+    throw new TypeError('The private protected-work checkpoint is required with admission');
   }
 
   const listeners = new Set();
@@ -498,12 +531,20 @@ export function createCustodialCredentialStore({
   }
 
   function localSet(key, value, operation = 'local state write') {
-    try { storage.setItem(key, String(value)); }
+    try {
+      if(protectedWorkCheckpoint)protectedWorkCheckpoint();
+      storage.setItem(key, String(value));
+      if(protectedWorkCheckpoint)protectedWorkCheckpoint();
+    }
     catch (error) { throw new CustodialStateInspectionError(operation, error); }
   }
 
   function localRemove(key, operation = 'local state removal') {
-    try { storage.removeItem(key); }
+    try {
+      if(protectedWorkCheckpoint)protectedWorkCheckpoint();
+      storage.removeItem(key);
+      if(protectedWorkCheckpoint)protectedWorkCheckpoint();
+    }
     catch (error) { throw new CustodialStateInspectionError(operation, error); }
   }
 
@@ -521,6 +562,10 @@ export function createCustodialCredentialStore({
   }
 
   function purgeLegacyPlaintextCredential() {
+    // Mounted callers must await the same FIFO/browser owner as bootstrap.
+    // A preserved original cannot disappear through a bound raw adapter merely
+    // because this compatibility method historically swallowed write errors.
+    if(protectedWorkAdmission)return exclusive(()=>localRemove(CUSTODIAL_CREDENTIAL_KEY,'owned plaintext credential purge'));
     try { storage.removeItem(CUSTODIAL_CREDENTIAL_KEY); } catch {}
   }
 
@@ -612,7 +657,12 @@ export function createCustodialCredentialStore({
   }
 
   function exclusive(operation) {
-    const result = operationTail.then(operation, operation);
+    // Initialization can purge/reconstruct compatibility state too. Admit the
+    // ENTIRE queued operation before its first awaited inspection, not just a
+    // later runWhenReady callback. Capture waits for this same shared owner;
+    // every raw compatibility mutation also checks the hold before/after I/O.
+    const admitted=()=>protectedWorkAdmission?protectedWorkAdmission(operation):operation();
+    const result = operationTail.then(admitted, admitted);
     operationTail = result.then(() => undefined, () => undefined);
     return result;
   }
@@ -695,14 +745,53 @@ export function createCustodialCredentialStore({
 
   function runWhenReady(operation, options = {}) {
     if (typeof operation !== 'function') throw new TypeError('A protected-work mutation function is required');
+    // Capture caller bounds before any FIFO/initialization/shared-lock await.
+    // The private runtime admission does not admit credential transitions.
+    const { requireEnrollment = false, expectedGeneration = null,
+      allowPendingEnrollmentConfirmation = false, expectedEnrollmentOperationId = null } = options;
+    const originalOptions = Object.freeze({ requireEnrollment,
+      expectedGeneration: expectedGeneration == null ? null : Number(expectedGeneration),
+      allowPendingEnrollmentConfirmation, expectedEnrollmentOperationId: normalized(expectedEnrollmentOperationId) });
     return exclusive(async () => {
       await initializeIfNeeded();
-      const snapshot = stableStatusOrThrow(options);
-      return operation(Object.freeze({
+      const snapshot = stableStatusOrThrow(originalOptions);
+      const currentOptions = Object.freeze({ ...originalOptions, expectedGeneration: snapshot.generation });
+      const originalBinding = { credential: activeCredential, deviceId: activeDeviceId,
+        installationSeal: activeInstallationSeal, principal: activePrincipal };
+      let operationOwned = false;
+      const assertCurrent = () => {
+        if (!operationOwned) throw new CustodialSecurityTransitionError(status, 'custodial_protected_operation_closed');
+        const current = stableStatusOrThrow(currentOptions);
+        if (current.deviceId !== snapshot.deviceId || current.state !== snapshot.state
+          || activeCredential !== originalBinding.credential || activeDeviceId !== originalBinding.deviceId
+          || activeInstallationSeal !== originalBinding.installationSeal || activePrincipal !== originalBinding.principal) {
+          throw new CustodialSecurityTransitionError(status, 'custodial_security_generation_changed');
+        }
+        protectedWorkCheckpoint();
+      };
+      const context = {
         deviceId: snapshot.deviceId,
         generation: snapshot.generation,
         state: snapshot.state,
-      }));
+      };
+      if (protectedWorkAdmission) Object.defineProperty(context, 'assertCurrent', {
+        value: assertCurrent, enumerable: false, configurable: false, writable: false,
+      });
+      Object.freeze(context);
+      const admitted = async () => {
+        // A queued cross-document owner may change the compatibility binding.
+        // Recheck without re-entering this document's already-owned FIFO.
+        operationOwned = true;
+        try {
+          if (protectedWorkAdmission) assertCurrent(); else stableStatusOrThrow(currentOptions);
+          const result = await operation(context);
+          if (protectedWorkAdmission) assertCurrent(); else stableStatusOrThrow(currentOptions);
+          return result;
+        } finally { operationOwned = false; }
+      };
+      // Await all callback work inside both owners. A rejection is not rollback
+      // or native freeze/acceptance; original saved work remains preserved.
+      return admitted();
     });
   }
 
@@ -775,12 +864,56 @@ export function createCustodialCredentialStore({
     }
   }
 
-  async function inspectPreservedState() {
+  // Discovery ONLY for the closed application Event original. Its SQL device
+  // UUID is a retained reference, not a phone identity. This never authenticates
+  // an actor, adopts a row, settles a receipt or authorizes a mutation/removal.
+  function eventOpenOriginalPhoneIdentity(key, encoded, row) {
+    const prefix='mz_native_notification_outbox:event-open.v1:';
+    const closed=(value,names)=>value&&typeof value==='object'&&!Array.isArray(value)
+      &&Object.keys(value).sort().join('|')===[...names].sort().join('|');
+    const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value);
+    const positive=value=>Number.isSafeInteger(value)&&value>0;
+    if(typeof encoded!=='string'||encoded.length>8192
+      ||!closed(row,['schema_version','id','action','phase','binding','source','principal_sha256','body'])
+      ||row.schema_version!=='custodial.employee-event-open-outbox.v1'||row.action!=='opened'
+      ||!['PREPARED','DISPATCH_UNKNOWN'].includes(row.phase)
+      ||!closed(row.binding,['instance_id','notification_key','event_id','notification_kind','credential_id','employee_id','device_id','device_identifier','assignment_epoch'])
+      ||!closed(row.source,['event_revision','scheduled_for'])||!closed(row.body,['notification_key']))return null;
+    const b=row.binding,t=row.source.scheduled_for;
+    if(!['instance_id','event_id','credential_id','employee_id','device_id'].every(name=>uuid(b[name]))
+      ||!['three_days_before','two_days_before','shift_plus_15'].includes(b.notification_kind)
+      ||typeof b.device_identifier!=='string'||!/^KIOSK_(?:0[2-9]|10)$/.test(b.device_identifier)||!positive(b.assignment_epoch)
+      ||typeof b.notification_key!=='string'||b.notification_key!==b.notification_key.trim()||!b.notification_key
+      ||/[\u0000-\u001f\u007f]/.test(b.notification_key)||new TextEncoder().encode(b.notification_key).length>240
+      ||!positive(row.source.event_revision)||row.source.event_revision>2147483647
+      ||typeof row.principal_sha256!=='string'||! /^[a-f0-9]{64}$/.test(row.principal_sha256)
+      ||row.body.notification_key!==b.notification_key
+      ||row.id!==`employee-event-open:${b.instance_id}:${b.credential_id}:${b.assignment_epoch}:opened`
+      ||key!==prefix+row.id||JSON.stringify(row)!==encoded)return null;
+    if(typeof t!=='string'||!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/.test(t))return null;
+    const year=Number(t.slice(0,4)),month=Number(t.slice(5,7)),day=Number(t.slice(8,10));
+    const leap=year%4===0&&(year%100!==0||year%400===0),days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+    if(!(year>0&&month>=1&&month<=12&&day>=1&&day<=days[month-1]&&Number(t.slice(11,13))<24
+      &&Number(t.slice(14,16))<60&&Number(t.slice(17,19))<60&&Number.isFinite(Date.parse(t))))return null;
+    return b.device_identifier;
+  }
+
+  async function inspectPreservedState({ forRemoval = false, forEnrollment = false } = {}) {
     if (typeof secureStorage.reconcileLocalState === 'function') {
       try { await secureStorage.reconcileLocalState(); }
       catch (error) { throw new CustodialStateInspectionError('native transition reconciliation', error); }
     }
     const keys = localKeys();
+    const enrollmentChanges = forEnrollment ? enrollmentLocalChanges() : null;
+    const removalCacheKeys = forRemoval
+      ? keys.filter(key => NON_PENDING_PROTECTED_CACHE_PREFIXES.some(prefix => key.startsWith(prefix)))
+      : null;
+    const removalChanges = forRemoval ? removalLocalChanges([
+      ...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY,
+      CUSTODIAL_RESTORE_QUARANTINE_KEY, CUSTODIAL_RECOVERY_RECORD_KEY,
+      CUSTODIAL_ENROLLMENT_OPERATION_KEY, CUSTODIAL_REMOVAL_OPERATION_KEY,
+      CUSTODIAL_REMOVAL_COMPLETION_KEY, CUSTODIAL_CREDENTIAL_KEY, ...removalCacheKeys,
+    ], keys) : null;
     const identityMap = new Map();
     const originalDeviceKeys = {};
     const counts = {
@@ -820,10 +953,31 @@ export function createCustodialCredentialStore({
         if (parsed) collectObjectIdentities(parsed, `localStorage:${key}`, identityMap);
         continue;
       }
-      if (!kind) continue;
-      counts[kind] += 1;
+      if (!kind) {
+        const protectedWork = CUSTODIAL_PROTECTED_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix));
+        const explicitCache = NON_PENDING_PROTECTED_CACHE_PREFIXES.some((prefix) => key.startsWith(prefix));
+        if (!protectedWork || explicitCache) continue;
+        kind = 'additional_protected_work';
+      }
+      // Do not change the zero-additional-work historical count shape. When
+      // present, unknown protected work is positive, never guessed empty.
+      counts[kind] = (counts[kind] || 0) + 1;
       const value = localGet(key);
       const parsed = jsonObject(value);
+      if(key.startsWith('mz_native_notification_outbox:event-open.v1:')){
+        // Generic historical localGet normalizes strings. This closed codec
+        // must inspect the ORIGINAL encoding without trimming or rewriting it.
+        const exactEncoded=localRawGet(key,'event original state inspection');
+        const source=`localStorage:${key}`,phone=eventOpenOriginalPhoneIdentity(key,exactEncoded,parsed);
+        if(phone)addIdentityCandidate(identityMap,phone,`${source}.binding.device_identifier`);
+        else{
+          // Unknown/malformed/foreign shapes retain generic discovery AND
+          // explicit unowned evidence; no partial schema can hide another ID.
+          if(parsed)collectObjectIdentities(parsed,source,identityMap);
+          addIdentityCandidate(identityMap,UNOWNED_PRESERVED_WORK_IDENTITY,`${source}:invalid_event_open_original`);
+        }
+        continue; // Original bytes/count already retained; no write or adoption.
+      }
       if (parsed) {
         const source = `localStorage:${key}`;
         if (kind === 'chatscope_delete_outbox' || kind === 'chatscope_read_outbox') {
@@ -831,7 +985,14 @@ export function createCustodialCredentialStore({
         } else {
           collectObjectIdentities(parsed, source, identityMap);
         }
-      } else if (kind === 'chatscope_delete_outbox' || kind === 'chatscope_read_outbox') {
+        if (kind === 'additional_protected_work') {
+          const discovered = new Map();
+          collectObjectIdentities(parsed, source, discovered);
+          // Discovery is not identity admission. Known nested original device
+          // fields remain diagnostic candidates; missing identity stays unowned.
+          if (!discovered.size) addIdentityCandidate(identityMap, UNOWNED_PRESERVED_WORK_IDENTITY, `localStorage:${key}:unclassified_original_identity`);
+        }
+      } else if (kind === 'chatscope_delete_outbox' || kind === 'chatscope_read_outbox' || kind === 'additional_protected_work') {
         addIdentityCandidate(identityMap, UNOWNED_PRESERVED_WORK_IDENTITY, `localStorage:${key}:invalid_queue_row`);
       }
     }
@@ -842,6 +1003,20 @@ export function createCustodialCredentialStore({
       const id = normalized(String(record?.id ?? '')) || String(index);
       collectObjectIdentities(record, `indexedDB:${SCAN_QUEUE_DATABASE}/${SCAN_QUEUE_STORE}:${id}`, identityMap);
     });
+    // Durable completion answers deliberately outlive their weaker localStorage
+    // copy. They must participate in preservation/removal checks independently;
+    // an empty main queue is not evidence of absent saved answers.
+    const durableDrafts = await inspectIndexedDbQueue(indexedDb, SCAN_DRAFT_DATABASE, SCAN_DRAFT_STORE);
+    counts.scan_completion_drafts += durableDrafts.records.length;
+    durableDrafts.records.forEach((record, index) => {
+      const id = normalized(String(record?.session_uuid ?? '')) || String(index);
+      collectObjectIdentities(record, `indexedDB:${SCAN_DRAFT_DATABASE}/${SCAN_DRAFT_STORE}:${id}`, identityMap);
+      if (!record || typeof record !== 'object' || Array.isArray(record)
+        || !Array.from(IDENTITY_FIELDS).some(field => normalized(record[field]))) {
+        addIdentityCandidate(identityMap, UNOWNED_PRESERVED_WORK_IDENTITY,
+          `indexedDB:${SCAN_DRAFT_DATABASE}/${SCAN_DRAFT_STORE}:${id}:missing_device_identity`);
+      }
+    });
     counts.total_pending = counts.sessions
       + counts.messenger_outbox
       + counts.chatscope_outbox
@@ -851,7 +1026,8 @@ export function createCustodialCredentialStore({
       + counts.scan_completion_drafts
       + counts.work_position_evidence
       + counts.scan_resume_records
-      + counts.scan_queue;
+      + counts.scan_queue
+      + (counts.additional_protected_work || 0);
 
     const originalIdentities = Array.from(identityMap.values())
       .map((item) => ({
@@ -871,9 +1047,13 @@ export function createCustodialCredentialStore({
     const removalOperationRaw = localGet(CUSTODIAL_REMOVAL_OPERATION_KEY);
 
     return {
+      ...(forRemoval ? { removalChanges, removalCacheKeys } : {}),
+      ...(forEnrollment ? { enrollmentChanges } : {}),
       counts,
       scanQueueAvailable: queue.available,
       scanQueueDatabaseExists: queue.databaseExists,
+      scanDraftsAvailable: durableDrafts.available,
+      scanDraftDatabaseExists: durableDrafts.databaseExists,
       originalDeviceKeys,
       originalIdentities,
       canonicalIdentities: [...new Set(canonicalIdentities)].sort(),
@@ -971,7 +1151,7 @@ export function createCustodialCredentialStore({
     throw new CustodialCredentialQuarantineError(active.reason, summary);
   }
 
-  function activateQuarantine(reason, inspection, details = {}) {
+  function activateQuarantine(reason, inspection, details = {}, write = localSet) {
     let recovery = inspection.recovery?.status === 'pending_manager_recovery'
       ? inspection.recovery
       : newRecovery(reason, inspection, details);
@@ -979,9 +1159,9 @@ export function createCustodialCredentialStore({
       recovery = newRecovery(reason, inspection, details);
     }
     const active = activeRecordFromRecovery(recovery);
-    localSet(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(recovery), 'recovery record write');
+    write(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(recovery), 'recovery record write');
     try {
-      localSet(CUSTODIAL_RESTORE_QUARANTINE_KEY, JSON.stringify(active), 'active quarantine write');
+      write(CUSTODIAL_RESTORE_QUARANTINE_KEY, JSON.stringify(active), 'active quarantine write');
     } catch (error) {
       latestRecovery = recovery;
       activeQuarantine = active;
@@ -1043,8 +1223,8 @@ export function createCustodialCredentialStore({
     const failures = [];
     for (const [key, entry] of Object.entries(snapshot)) {
       try {
-        if (entry.present) storage.setItem(key, entry.value);
-        else storage.removeItem(key);
+        if (entry.present) localSet(key, entry.value, 'local rollback');
+        else localRemove(key, 'local rollback');
       } catch (error) {
         failures.push(error);
       }
@@ -1052,17 +1232,159 @@ export function createCustodialCredentialStore({
     return failures;
   }
 
-  async function restoreProtectedSnapshot(snapshot) {
-    const failures = [];
-    for (const key of [CUSTODIAL_INSTALLATION_RECORD_KEY, CUSTODIAL_CREDENTIAL_KEY, CUSTODIAL_INSTALLATION_SEAL_KEY]) {
+  // Used only by removal; enrollment has its own scoped byte witness below.
+  // No local byte witness grants native authority.
+  function removalLocalChanges(keys, originalLocalKeys) {
+    const mismatch = () => new CustodialStateInspectionError('removal original local state',
+      new Error('Original removal rows changed'));
+    const read = key => {
       try {
-        if (snapshot[key]) await secureStorage.set(key, snapshot[key]);
-        else await secureStorage.remove(key);
-      } catch (error) {
-        failures.push(error);
-      }
-    }
-    return failures;
+        const raw = storage.getItem(key);
+        if (raw === null || typeof raw === 'string') return raw;
+        throw mismatch();
+      } catch (error) { throw new CustodialStateInspectionError('removal original local state', error); }
+    };
+    const expected = new Map(keys.map(key => [key, read(key)]));
+    const cacheKey = key => NON_PENDING_PROTECTED_CACHE_PREFIXES.some(prefix => key.startsWith(prefix));
+    const workKey = key => !cacheKey(key)
+      && CUSTODIAL_PROTECTED_STORAGE_PREFIXES.some(prefix => key.startsWith(prefix));
+    const expectedCacheKeys = new Set(keys.filter(cacheKey));
+    const originalWorkKeys = new Set(originalLocalKeys.filter(workKey));
+    const assertPrefixMembership = () => {
+      // Membership comes from the original local inspection, never from a late
+      // reread of zero counts. Work cannot become cache or a cleanup target.
+      const currentKeys = localKeys();
+      const cache = new Set(currentKeys.filter(cacheKey));
+      const work = new Set(currentKeys.filter(workKey));
+      if (cache.size !== expectedCacheKeys.size
+        || [...cache].some(key => !expectedCacheKeys.has(key))
+        || work.size !== originalWorkKeys.size
+        || [...work].some(key => !originalWorkKeys.has(key))) throw mismatch();
+    };
+    const observeOwnCacheEffect = (key, value) => {
+      if (!cacheKey(key)) return;
+      if (value === null) expectedCacheKeys.delete(key);
+      else expectedCacheKeys.add(key);
+    };
+    let cleanupOriginals = null;
+    const cleanupWrites = new Set();
+    const assertCurrent = () => {
+      for (const [key, raw] of expected) if (read(key) !== raw) throw mismatch();
+      assertPrefixMembership();
+    };
+    const effect = (key, value, operation) => {
+      assertCurrent();
+      if (!expected.has(key)) throw mismatch();
+      let failure = null;
+      try { value === null ? localRemove(key, operation) : localSet(key, value, operation); }
+      catch (error) { failure = error; }
+      // A setter may commit and then throw. Track only its exact observable
+      // target; unknown/foreign bytes are never assumed to be our write.
+      if (read(key) === value) {
+        expected.set(key, value);
+        observeOwnCacheEffect(key, value);
+        if (cleanupOriginals) cleanupWrites.add(key);
+      } else if (!failure) failure = mismatch();
+      if (failure) throw failure;
+      assertCurrent();
+    };
+    return {
+      assertCurrent,
+      set: (key, value, operation) => effect(key, String(value), operation),
+      remove: (key, operation) => effect(key, null, operation),
+      beginCleanup() { assertCurrent(); cleanupOriginals = new Map(expected); cleanupWrites.clear(); },
+      rollback() {
+        const failures = [];
+        let changed = false;
+        for (const key of [...cleanupWrites].reverse()) {
+          // Preserve the existing plaintext purge policy; never recreate it.
+          if (key === CUSTODIAL_CREDENTIAL_KEY) continue;
+          try {
+            if (read(key) !== expected.get(key)) { changed = true; continue; }
+            const original = cleanupOriginals.get(key);
+            let failure = null;
+            try { original === null ? localRemove(key, 'removal rollback') : localSet(key, original, 'removal rollback'); }
+            catch (error) { failure = error; }
+            if (read(key) === original) {
+              expected.set(key, original);
+              observeOwnCacheEffect(key, original);
+            }
+            else if (!failure) failure = mismatch();
+            if (failure) failures.push(failure);
+          } catch (error) { failures.push(error); changed = true; }
+        }
+        for (const [key, raw] of expected) {
+          try { if (read(key) !== raw) changed = true; }
+          catch (error) { failures.push(error); changed = true; }
+        }
+        try { assertPrefixMembership(); }
+        catch (error) { failures.push(error); changed = true; }
+        return { failures, changed };
+      },
+    };
+  }
+
+  // Enrollment's local compatibility writes are reversible only while their
+  // exact originals/own targets remain observable. Native binding is separate,
+  // forward-only authority; this witness neither cancels nor recreates it.
+  function enrollmentLocalChanges() {
+    const keys = [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY,
+      CUSTODIAL_RESTORE_QUARANTINE_KEY, CUSTODIAL_RECOVERY_RECORD_KEY,
+      CUSTODIAL_ENROLLMENT_OPERATION_KEY, CUSTODIAL_CREDENTIAL_KEY];
+    const mismatch = () => new CustodialStateInspectionError('enrollment original local state',
+      new Error('Original enrollment rows changed'));
+    const read = key => {
+      try {
+        const raw = storage.getItem(key);
+        if (raw === null || typeof raw === 'string') return raw;
+        throw mismatch();
+      } catch (error) { throw new CustodialStateInspectionError('enrollment original local state', error); }
+    };
+    const original = new Map(keys.map(key => [key, read(key)]));
+    const expected = new Map(original);
+    const writes = new Set();
+    const assertCurrent = () => {
+      for (const [key, raw] of expected) if (read(key) !== raw) throw mismatch();
+    };
+    const effect = (key, value, operation) => {
+      assertCurrent();
+      if (!expected.has(key)) throw mismatch();
+      let failure = null;
+      try { value === null ? localRemove(key, operation) : localSet(key, value, operation); }
+      catch (error) { failure = error; }
+      if (read(key) === value) { expected.set(key, value); writes.add(key); }
+      else if (!failure) failure = mismatch();
+      if (failure) throw failure;
+      assertCurrent();
+    };
+    return {
+      assertCurrent,
+      set: (key, value, operation) => effect(key, String(value), operation),
+      remove: (key, operation) => effect(key, null, operation),
+      rollback() {
+        const failures = [];
+        let changed = false;
+        for (const key of [...writes].reverse()) {
+          // The compatibility plaintext purge is never reversed.
+          if (key === CUSTODIAL_CREDENTIAL_KEY) continue;
+          try {
+            if (read(key) !== expected.get(key)) { changed = true; continue; }
+            const value = original.get(key);
+            let failure = null;
+            try { value === null ? localRemove(key, 'enrollment rollback') : localSet(key, value, 'enrollment rollback'); }
+            catch (error) { failure = error; }
+            if (read(key) === value) expected.set(key, value);
+            else if (!failure) failure = mismatch();
+            if (failure) failures.push(failure);
+          } catch (error) { changed = true; failures.push(error); }
+        }
+        for (const [key, raw] of expected) {
+          try { if (read(key) !== raw) changed = true; }
+          catch (error) { changed = true; failures.push(error); }
+        }
+        return { failures, changed };
+      },
+    };
   }
 
   async function commitEnrollment({
@@ -1075,14 +1397,16 @@ export function createCustodialCredentialStore({
     resolvedRecovery = null,
     enrollmentOperation = null,
   }) {
-    const localKeysToRestore = [
-      ...CUSTODIAL_DEVICE_KEYS,
-      CUSTODIAL_INSTALLATION_MARKER_KEY,
-      CUSTODIAL_RESTORE_QUARANTINE_KEY,
-      ...(resolvedRecovery ? [CUSTODIAL_RECOVERY_RECORD_KEY] : []),
-      ...(enrollmentOperation ? [CUSTODIAL_ENROLLMENT_OPERATION_KEY] : []),
-    ];
-    const localBefore = localSnapshot(localKeysToRestore);
+    const changes = inspection.enrollmentChanges || enrollmentLocalChanges();
+    let ownedProtectedRecord = null;
+    let originalProtectedRecord = null;
+    const readInstallationBytes = async operation => {
+      try {
+        const value = await secureStorage.get(CUSTODIAL_INSTALLATION_RECORD_KEY);
+        if (value === null || typeof value === 'string') return value;
+        throw new TypeError('Protected installation bytes are unavailable');
+      } catch (error) { throw new CustodialSecureStorageError(operation, error); }
+    };
     let record = {
       schema_version: INSTALLATION_SCHEMA_VERSION,
       credential,
@@ -1094,11 +1418,21 @@ export function createCustodialCredentialStore({
     };
 
     try {
-      await protectedSet(CUSTODIAL_INSTALLATION_RECORD_KEY, JSON.stringify(record), 'installation record write');
-      const authoritative = installationRecord(await protectedGet(
-        CUSTODIAL_INSTALLATION_RECORD_KEY,
-        'authoritative installation record read',
-      ));
+      changes.assertCurrent();
+      const encoded = JSON.stringify(record);
+      if (secureStorage.nativeVault !== true) {
+        originalProtectedRecord = await readInstallationBytes('enrollment original installation read');
+        changes.assertCurrent();
+        if ((originalProtectedRecord === null ? '' : originalProtectedRecord) !== protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY]
+          || (originalProtectedRecord !== null && !installationRecord(originalProtectedRecord))) {
+          throw new CustodialStateInspectionError('enrollment original installation changed', null);
+        }
+      }
+      await protectedSet(CUSTODIAL_INSTALLATION_RECORD_KEY, encoded, 'installation record write');
+      changes.assertCurrent();
+      const authoritativeRaw = await readInstallationBytes('authoritative installation record read');
+      changes.assertCurrent();
+      const authoritative = installationRecord(authoritativeRaw);
       if (
         !authoritative
         || authoritative.credential !== credential
@@ -1108,27 +1442,44 @@ export function createCustodialCredentialStore({
       ) {
         throw new CustodialStateInspectionError('authoritative installation binding', null);
       }
+      if (secureStorage.nativeVault !== true && authoritativeRaw === encoded) ownedProtectedRecord = encoded;
       record = authoritative;
-      for (const key of CUSTODIAL_DEVICE_KEYS) localSet(key, deviceId, 'device identity binding');
-      localSet(CUSTODIAL_INSTALLATION_MARKER_KEY, record.installation_seal, 'installation marker write');
+      for (const key of CUSTODIAL_DEVICE_KEYS) changes.set(key, deviceId, 'device identity binding');
+      changes.set(CUSTODIAL_INSTALLATION_MARKER_KEY, record.installation_seal, 'installation marker write');
       if (resolvedRecovery) {
-        localSet(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(resolvedRecovery), 'recovery resolution write');
+        changes.set(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(resolvedRecovery), 'recovery resolution write');
       }
       if (enrollmentOperation) {
-        localSet(CUSTODIAL_ENROLLMENT_OPERATION_KEY, JSON.stringify(enrollmentOperation), 'enrollment operation checkpoint');
+        changes.set(CUSTODIAL_ENROLLMENT_OPERATION_KEY, JSON.stringify(enrollmentOperation), 'enrollment operation checkpoint');
       }
-      localRemove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'active quarantine resolution');
-      localRemove(CUSTODIAL_CREDENTIAL_KEY, 'plaintext credential purge');
+      changes.remove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'active quarantine resolution');
+      changes.remove(CUSTODIAL_CREDENTIAL_KEY, 'plaintext credential purge');
       await protectedRemove(CUSTODIAL_CREDENTIAL_KEY, 'legacy credential cleanup');
+      changes.assertCurrent();
       await protectedRemove(CUSTODIAL_INSTALLATION_SEAL_KEY, 'legacy installation binding cleanup');
+      changes.assertCurrent();
     } catch (error) {
-      const localFailures = restoreLocalSnapshot(localBefore);
-      const protectedFailures = await restoreProtectedSnapshot(protectedBefore);
-      if (localFailures.length || protectedFailures.length) {
+      const protectedFailures = [];
+      // Never replay native binding or restore purged legacy credentials. For
+      // non-native stores, only an exactly read-back own installation write is
+      // reversible; uncertain/foreign values remain untouched.
+      if (ownedProtectedRecord !== null) {
+        try {
+          const current = await readInstallationBytes('enrollment rollback record read');
+          changes.assertCurrent();
+          if (current !== ownedProtectedRecord) throw new CustodialStateInspectionError('enrollment rollback record changed', null);
+          if (originalProtectedRecord !== null) {
+            await protectedSet(CUSTODIAL_INSTALLATION_RECORD_KEY, originalProtectedRecord, 'enrollment rollback record');
+          } else await protectedRemove(CUSTODIAL_INSTALLATION_RECORD_KEY, 'enrollment rollback record');
+          changes.assertCurrent();
+        } catch (failure) { protectedFailures.push(failure); }
+      }
+      const rollback = changes.rollback();
+      if (!rollback.changed && (rollback.failures.length || protectedFailures.length)) {
         activateQuarantine('enrollment_commit_rollback_failed', inspection, {
-          local_rollback_failures: localFailures.length,
+          local_rollback_failures: rollback.failures.length,
           protected_rollback_failures: protectedFailures.length,
-        });
+        }, changes.set);
       }
       if (error instanceof CustodialSecureStorageError || error instanceof CustodialStateInspectionError) throw error;
       throw new CustodialStateInspectionError('enrollment commit', error);
@@ -1405,7 +1756,9 @@ export function createCustodialCredentialStore({
       }
       let inspection = null;
       try {
-        inspection = await inspectPreservedState();
+        inspection = await inspectPreservedState({ forEnrollment: true });
+        const changes = inspection.enrollmentChanges;
+        changes.assertCurrent();
         activeQuarantine = inspection.quarantine;
         latestRecovery = inspection.recovery;
         if (
@@ -1428,15 +1781,30 @@ export function createCustodialCredentialStore({
         }
 
         const protectedBefore = await protectedSnapshot();
+        changes.assertCurrent();
         const record = protectedEnrollmentOrQuarantine(protectedBefore, inspection);
         if (!record) return { reconciled: false, reason: 'protected_enrollment_missing' };
+        // This existing record, not a verifier's scalar response, owns the
+        // resolution. Raw source bytes must still name the same private bind.
+        const requireOriginalRecord = async () => {
+          let raw;
+          try { raw = await secureStorage.get(CUSTODIAL_INSTALLATION_RECORD_KEY); }
+          catch (error) { throw new CustodialSecureStorageError('server revalidation original binding read', error); }
+          changes.assertCurrent();
+          if (typeof raw !== 'string' || raw !== protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY]) {
+            throw new CustodialStateInspectionError('server revalidation original binding changed', null);
+          }
+        };
+        await requireOriginalRecord();
 
         let proof;
         try {
           proof = await verifyCredential({ deviceId: record.device_id });
         } catch {
+          changes.assertCurrent();
           return { reconciled: false, reason: 'server_revalidation_unavailable' };
         }
+        changes.assertCurrent();
         const proofDeviceId = canonicalDeviceId(proof?.deviceId);
         const proofCredentialId = normalized(proof?.credentialId);
         if (
@@ -1444,6 +1812,7 @@ export function createCustodialCredentialStore({
           || proofDeviceId !== record.device_id
           || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(proofCredentialId)
         ) return { reconciled: false, reason: 'server_revalidation_refused' };
+        await requireOriginalRecord();
 
         const resolved = {
           ...latestRecovery,
@@ -1464,19 +1833,16 @@ export function createCustodialCredentialStore({
             preserved_work_retained: true,
           },
         };
-        const localBefore = localSnapshot([
-          CUSTODIAL_RECOVERY_RECORD_KEY,
-          CUSTODIAL_RESTORE_QUARANTINE_KEY,
-        ]);
         try {
-          localSet(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(resolved), 'server revalidation recovery resolution');
-          localRemove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'server revalidation quarantine resolution');
+          changes.set(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(resolved), 'server revalidation recovery resolution');
+          changes.remove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'server revalidation quarantine resolution');
+          changes.assertCurrent();
         } catch (error) {
-          const rollbackFailures = restoreLocalSnapshot(localBefore);
-          if (rollbackFailures.length) {
-            activateQuarantine('server_revalidation_resolution_rollback_failed', inspection, {
-              local_rollback_failures: rollbackFailures.length,
-            });
+          const rollback = changes.rollback();
+          if (rollback.changed || rollback.failures.length) {
+            // Retain ambiguous/foreign rows; generating replacement recovery
+            // metadata here would conceal the original resolution failure.
+            throw new CustodialStateInspectionError('server revalidation original rollback', error);
           }
           throw error;
         }
@@ -1686,7 +2052,8 @@ export function createCustodialCredentialStore({
 
       let inspection;
       try {
-        inspection = await inspectPreservedState();
+        inspection = await inspectPreservedState({ forEnrollment: true });
+        inspection.enrollmentChanges.assertCurrent();
         const operation = inspection.enrollmentOperation;
         if (!operation || operation.operation_id !== operationId) {
           throw new CustodialEnrollmentOperationError('unknown_enrollment_operation');
@@ -1694,6 +2061,7 @@ export function createCustodialCredentialStore({
         if (operation.device_id !== selected) throw new CustodialEnrollmentOperationError('enrollment_operation_identity_mismatch');
 
         const existingProtected = await protectedSnapshot();
+        inspection.enrollmentChanges.assertCurrent();
         const existingRecord = installationRecord(existingProtected[CUSTODIAL_INSTALLATION_RECORD_KEY]);
         if (operation.status === 'local_committed_pending_server_confirmation') {
           if (
@@ -1868,7 +2236,8 @@ export function createCustodialCredentialStore({
       if (!selected) throw new CustodialRecoveryError('invalid_selected_identity');
       if (!managerCode || typeof verifier !== 'function') throw new CustodialRecoveryError('manager_verification_required');
 
-      const inspection = await inspectPreservedState();
+      const inspection = await inspectPreservedState({ forEnrollment: true });
+      inspection.enrollmentChanges.assertCurrent();
       const recovery = proveRecoveryIdentity(inspection, selected);
 
       let authorization;
@@ -1927,7 +2296,7 @@ export function createCustodialCredentialStore({
     });
   }
 
-  async function removeInternal({ beforeRemove = null } = {}) {
+  async function removeInternal({ beforeRemove = null } = {}, originalRequest) {
     let inspection = null;
     let finalPatch = null;
     const statusBeforeRemoval = getStatus();
@@ -1937,12 +2306,22 @@ export function createCustodialCredentialStore({
         ready: false,
         reason: status.quarantined ? status.reason : 'custodial_enrollment_removal_in_progress',
       }, { force: true });
-      inspection = await inspectPreservedState();
+      inspection = await inspectPreservedState({ forRemoval: true });
+      const changes = inspection.removalChanges;
+      changes.assertCurrent();
       if (inspection.counts.total_pending > 0) {
         throw new CustodialPendingWorkError(inspection.counts);
       }
+      if (!inspection.scanQueueAvailable || !inspection.scanDraftsAvailable) {
+        throw new CustodialStateInspectionError('enrollment removal protected databases',
+          new Error('Unavailable IndexedDB is not proof of no protected work'));
+      }
+      const offlineCacheKeys = inspection.removalCacheKeys;
+      const quarantineRemoval = (reason, details = {}) => activateQuarantine(reason, inspection, details, changes.set);
       const protectedBefore = await protectedSnapshot();
+      changes.assertCurrent();
       const protectedRecord = installationRecord(protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY]);
+      originalRequest.assertProtectedRecord(protectedRecord);
       pendingEnrollmentOperation = inspection.enrollmentOperation;
       if (pendingEnrollmentOperation) {
         throw new CustodialEnrollmentOperationError('enrollment_confirmation_required_before_removal');
@@ -1951,17 +2330,17 @@ export function createCustodialCredentialStore({
       let removal = inspection.removalOperation;
       if (protectedRecord) {
         if (inspection.marker !== protectedRecord.installation_seal) {
-          activateQuarantine('installation_binding_mismatch', inspection);
+          quarantineRemoval('installation_binding_mismatch');
         }
         if (!CUSTODIAL_DEVICE_KEYS.every((key) => normalized(inspection.originalDeviceKeys[key]) === protectedRecord.device_id)) {
-          activateQuarantine('device_identity_binding_incomplete', inspection, { protected_device_id: protectedRecord.device_id });
+          quarantineRemoval('device_identity_binding_incomplete', { protected_device_id: protectedRecord.device_id });
         }
         if (
           inspection.invalidIdentities.length
           || inspection.canonicalIdentities.length !== 1
           || inspection.canonicalIdentities[0] !== protectedRecord.device_id
         ) {
-          activateQuarantine('preserved_identity_mismatch', inspection, { protected_device_id: protectedRecord.device_id });
+          quarantineRemoval('preserved_identity_mismatch', { protected_device_id: protectedRecord.device_id });
         }
         if (typeof beforeRemove !== 'function') {
           throw new TypeError('Remote push unregistration and credential logout are required before local enrollment removal');
@@ -1975,10 +2354,10 @@ export function createCustodialCredentialStore({
             created_at: isoTimestamp(now),
             updated_at: isoTimestamp(now),
           };
-          localSet(CUSTODIAL_REMOVAL_OPERATION_KEY, JSON.stringify(removal), 'removal workflow journal creation');
+          changes.set(CUSTODIAL_REMOVAL_OPERATION_KEY, JSON.stringify(removal), 'removal workflow journal creation');
         }
         if (removal.device_id !== protectedRecord.device_id) {
-          activateQuarantine('removal_operation_identity_mismatch', inspection);
+          quarantineRemoval('removal_operation_identity_mismatch');
         }
         pendingRemovalOperation = removal;
         publish({
@@ -2004,7 +2383,7 @@ export function createCustodialCredentialStore({
           }
           if (nextIndex <= currentIndex) return cloneJson(removal);
           removal = { ...removal, phase: nextPhase, updated_at: isoTimestamp(now) };
-          localSet(CUSTODIAL_REMOVAL_OPERATION_KEY, JSON.stringify(removal), 'removal workflow checkpoint');
+          changes.set(CUSTODIAL_REMOVAL_OPERATION_KEY, JSON.stringify(removal), 'removal workflow checkpoint');
           pendingRemovalOperation = removal;
           publish({ removalOperation: cloneJson(removal) }, { force: true });
           return cloneJson(removal);
@@ -2014,7 +2393,7 @@ export function createCustodialCredentialStore({
         // handoff so a cross-realm mutation during those awaits cannot race the
         // remote unregistration/logout request.
         if (!localInstallationBindingMatches(protectedRecord.device_id, protectedRecord.installation_seal)) {
-          activateQuarantine('installation_binding_changed_during_removal', inspection, {
+          quarantineRemoval('installation_binding_changed_during_removal', {
             protected_device_id: protectedRecord.device_id,
           });
         }
@@ -2025,6 +2404,7 @@ export function createCustodialCredentialStore({
           phase: removal.phase,
           checkpoint,
         }));
+        changes.assertCurrent();
         if (removal.phase !== 'server_logged_out') {
           throw new CustodialEnrollmentRemovalPendingError(removal);
         }
@@ -2056,34 +2436,20 @@ export function createCustodialCredentialStore({
             },
           }
         : inspection.recovery;
-      const offlineCacheKeys = localKeys().filter((key) => (
-        key.startsWith(SCAN_AUTHORITY_SNAPSHOT_PREFIX)
-        || key.startsWith(SCAN_CONTRACT_CACHE_PREFIX)
-        || key.startsWith(CUSTODIAL_HOME_CACHE_PREFIX)
-        || key.startsWith(EMPLOYEE_SCHEDULE_SNAPSHOT_PREFIX)
-        || key.startsWith(EMPLOYEE_EVENTS_SNAPSHOT_PREFIX)
-      ));
-      const localBefore = localSnapshot([
-        ...CUSTODIAL_DEVICE_KEYS,
-        CUSTODIAL_INSTALLATION_MARKER_KEY,
-        CUSTODIAL_RESTORE_QUARANTINE_KEY,
-        CUSTODIAL_REMOVAL_OPERATION_KEY,
-        CUSTODIAL_REMOVAL_COMPLETION_KEY,
-        ...offlineCacheKeys,
-        ...(pendingRecovery ? [CUSTODIAL_RECOVERY_RECORD_KEY] : []),
-      ]);
+      changes.beginCleanup();
       try {
-        for (const key of CUSTODIAL_DEVICE_KEYS) localRemove(key, 'device identity removal');
-        localRemove(CUSTODIAL_INSTALLATION_MARKER_KEY, 'installation marker removal');
+        for (const key of CUSTODIAL_DEVICE_KEYS) changes.remove(key, 'device identity removal');
+        changes.remove(CUSTODIAL_INSTALLATION_MARKER_KEY, 'installation marker removal');
         if (pendingRecovery) {
-          localSet(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(removalRecovery), 'recovery removal resolution');
+          changes.set(CUSTODIAL_RECOVERY_RECORD_KEY, JSON.stringify(removalRecovery), 'recovery removal resolution');
         }
-        localRemove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'active quarantine removal');
-        localRemove(CUSTODIAL_CREDENTIAL_KEY, 'plaintext credential purge');
-        for (const key of offlineCacheKeys) localRemove(key, 'offline authority cache removal');
+        changes.remove(CUSTODIAL_RESTORE_QUARANTINE_KEY, 'active quarantine removal');
+        changes.remove(CUSTODIAL_CREDENTIAL_KEY, 'plaintext credential purge');
+        for (const key of offlineCacheKeys) changes.remove(key, 'offline authority cache removal');
         if (removal) {
           await finalizeProtectedRemoval(removal.operation_id, removal.device_id);
-          localSet(CUSTODIAL_REMOVAL_COMPLETION_KEY, JSON.stringify({
+          changes.assertCurrent();
+          changes.set(CUSTODIAL_REMOVAL_COMPLETION_KEY, JSON.stringify({
             schema_version: REMOVAL_OPERATION_SCHEMA_VERSION,
             operation_id: removal.operation_id,
             device_id: removal.device_id,
@@ -2091,12 +2457,12 @@ export function createCustodialCredentialStore({
             completed_at: isoTimestamp(now),
           }), 'removal completion acknowledgement');
         }
-        localRemove(CUSTODIAL_REMOVAL_OPERATION_KEY, 'removal workflow completion');
+        changes.remove(CUSTODIAL_REMOVAL_OPERATION_KEY, 'removal workflow completion');
       } catch (error) {
-        const localFailures = restoreLocalSnapshot(localBefore);
-        if (localFailures.length) {
-          activateQuarantine('enrollment_removal_rollback_failed', inspection, {
-            local_rollback_failures: localFailures.length,
+        const rollback = changes.rollback();
+        if (rollback.failures.length && !rollback.changed) {
+          quarantineRemoval('enrollment_removal_rollback_failed', {
+            local_rollback_failures: rollback.failures.length,
             protected_rollback_failures: 0,
           });
         }
@@ -2166,7 +2532,53 @@ export function createCustodialCredentialStore({
   }
 
   function removeEnrollment(options = {}) {
-    return exclusive(() => removeInternal(options));
+    // Pin this already-initialized caller BEFORE either FIFO or shared-owner
+    // wait. A later read must not turn an old removal into the successor's
+    // removal. Private RAM/compatibility witnesses grant no native authority.
+    let originalRequest;
+    try {
+      if (status.initialized !== true) throw new CustodialSecurityTransitionError(status);
+      const original = { generation: status.generation, credential: activeCredential,
+        deviceId: activeDeviceId, installationSeal: activeInstallationSeal, principal: activePrincipal };
+      const keys = [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY,
+        CUSTODIAL_ENROLLMENT_OPERATION_KEY, CUSTODIAL_REMOVAL_OPERATION_KEY];
+      const read = key => {
+        const raw = storage.getItem(key);
+        if (raw !== null && typeof raw !== 'string') throw new TypeError('Original removal binding is unavailable');
+        return raw;
+      };
+      const rawBefore = keys.map(key => [key, read(key)]);
+      const changed = () => new CustodialSecurityTransitionError(status, 'custodial_security_generation_changed');
+      originalRequest = {
+        assertAdmitted() {
+          if (status.generation !== original.generation || activeCredential !== original.credential
+            || activeDeviceId !== original.deviceId || activeInstallationSeal !== original.installationSeal
+            || activePrincipal !== original.principal
+            || rawBefore.some(([key, raw]) => read(key) !== raw)) throw changed();
+        },
+        assertProtectedRecord(record) {
+          const principal = protectedPrincipal(record?.principal);
+          if (Boolean(record) !== Boolean(original.credential)
+            || (record && (record.credential !== original.credential || record.device_id !== original.deviceId
+              || record.installation_seal !== original.installationSeal
+              || (record.principal != null && !principal)
+              || JSON.stringify(principal) !== JSON.stringify(original.principal)))) throw changed();
+        },
+      };
+    } catch (error) { return Promise.reject(error); }
+    const originalOptions = { beforeRemove: options.beforeRemove };
+    return exclusive(() => {
+      // Ordinary participating writers enter FIFO -> shared browser admission.
+      // Keep that same order for removal, and retain its existing private
+      // admission through both DB inspections and the native handoff. Do not
+      // re-enter runWhenReady/FIFO from this already-owned callback. This is
+      // cooperative writer exclusion only, never all-realm/native authority.
+      const operation = () => {
+        originalRequest.assertAdmitted();
+        return removeInternal(originalOptions, originalRequest);
+      };
+      return operation();
+    });
   }
 
   // Removal keeps its historical name for the current native callers. Both names

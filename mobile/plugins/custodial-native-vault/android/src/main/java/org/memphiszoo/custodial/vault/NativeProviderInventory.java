@@ -69,6 +69,29 @@ final class NativeProviderInventory {
         } catch (VaultFailure error) { throw error; }
         catch (Exception error) { throw new VaultFailure("custodial_provider_inventory_invalid", error); }
     }
+    static final class CheckedExchange {
+        final Page page; final NativeProviderClockExchange.Unqualified clock;
+        CheckedExchange(Page page,NativeProviderClockExchange.Unqualified clock){this.page=page;this.clock=clock;}
+    }
+    static CheckedExchange validateExchange(Request request,NativeProviderClockExchange exchange) throws VaultFailure {
+        byte[] bytes=null;
+        try {
+            if(request==null||exchange==null||!"/employee-notifications-api/native-provider/inventory".equals(exchange.path))throw invalid();
+            bytes=request.body();StringBuilder digest=new StringBuilder();
+            for(byte b:java.security.MessageDigest.getInstance("SHA-256").digest(bytes))digest.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
+            if(!digest.toString().equals(exchange.bodySha256))throw invalid();
+            JSONObject envelope=ProviderWireJson.object(exchange.response.body,262144);exact(envelope,"ok","data","clock");
+            NativeProviderClockExchange.Unqualified clock=exchange.validateClock(envelope.getJSONObject("clock"));
+            Page page=validateResponse(request,new AuthorizedResponse(exchange.response.status,exchange.response.headers,
+                new JSONObject().put("ok",envelope.get("ok")).put("data",envelope.get("data")).toString().getBytes(StandardCharsets.UTF_8)));
+            // Frozen pagination time is not a fresh clock sample.
+            if(NativeProviderClockExchange.micros(page.data().get("server_now"))>clock.serverMicros)throw invalid();
+            return new CheckedExchange(page,clock);
+        } catch(VaultFailure error){throw error;}
+        catch(Exception error){throw new VaultFailure("custodial_provider_inventory_invalid",error);}
+        finally {if(bytes!=null)Arrays.fill(bytes,(byte)0);}
+    }
+    /** Pure page admission seam, cannot create a provider clock. Runtime uses validateExchange. */
     static Page validateResponse(Request request, AuthorizedResponse response) throws VaultFailure {
         try {
             if (request == null || response == null || response.status < 200 || response.status >= 300) throw invalid();

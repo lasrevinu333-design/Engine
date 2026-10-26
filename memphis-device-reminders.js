@@ -1,5 +1,7 @@
 (() => {
   'use strict';
+  // Denial-only duplicate startup marker; this never supplies an owner.
+  if (Object.getOwnPropertyDescriptor(globalThis,'custodialNativeNormalApplicationOwner')) return;
 
   const CONFIG = {
     API_BASE: 'https://memphis-zoo-mcp.onrender.com/messaging-api',
@@ -24,8 +26,12 @@
     currentUserId: '',
     currentDisplayName: '',
     currentRole: '',
+    identityPrincipal: null,
     poller: null,
+    pollSequence: 0,
+    authorityGeneration: 0,
     activeAlert: null,
+    activeAudioAlert: null,
     audioCtx: null,
     audioEl: null,
     activeOscillators: [],
@@ -46,17 +52,30 @@
     return raw;
   }
 
-  function persistDeviceId(value) {
+  async function persistDeviceId(value) {
     const normalized = normalizeDeviceId(value);
     if (window.MemphisCustodialSecurity?.native === true) {
       const status = window.MemphisCustodialSecurity.getStatus?.();
       return status?.ready === true && normalizeDeviceId(status.deviceId) === normalized ? normalized : '';
     }
-    if (normalized) localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, normalized);
-    return normalized;
+    const authority = captureReminderWriterAuthority(normalized);
+    if (!authority) return '';
+    let original;
+    try { original = localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY); } catch { return ''; }
+    if (original && normalizeDeviceId(original) !== normalized) return '';
+    const saved = await mutateReminderStorage(authority, context => {
+      assertReminderWriter(context, authority);
+      if (localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) !== original) return false;
+      assertReminderWriter(context, authority);
+      if (original !== normalized) localStorage.setItem(CONFIG.DEVICE_STORAGE_KEY, normalized);
+      assertReminderWriter(context, authority);
+      return localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) === normalized;
+    });
+    return saved === true ? normalized : '';
   }
 
-  function resolveDeviceId() {
+  async function resolveDeviceId() {
+    try {
     if (window.MemphisCustodialSecurity?.native === true) {
       const status = window.MemphisCustodialSecurity.getStatus?.();
       return status?.ready === true && status?.available === true ? normalizeDeviceId(status.deviceId) : '';
@@ -65,7 +84,8 @@
     if (shared?.deviceId) return persistDeviceId(shared.deviceId);
     const stored = normalizeDeviceId(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || '');
     if (!stored || /^visitor-|^device-/i.test(stored)) return '';
-    return persistDeviceId(stored);
+    return await persistDeviceId(stored);
+    } catch { return ''; } // Uninspectable identity never starts a recipient poll.
   }
 
   function isEmployeeNotificationContext() {
@@ -146,32 +166,102 @@
     return !normalized || localStorage.getItem(`${CONFIG.SEEN_PREFIX}${normalized}`) === '1';
   }
 
-  function markSeenId(id) {
-    const normalized = alertId(id);
-    if (normalized) {
-      localStorage.setItem(`${CONFIG.SEEN_PREFIX}${normalized}`, '1');
-      localStorage.setItem(`${CONFIG.SEEN_PREFIX}${normalized}:ts`, String(Date.now()));
-      cleanupStaleSeenKeys();
-    }
+  // Legacy suppression pairs contain no recipient/principal. They are not
+  // disposable caches or accepted-scan evidence. Never migrate/relabel them.
+  // Only exact pairs this document wrote under current authority may be pruned.
+  const ownedSeenPairs = new Map();
+
+  function captureReminderWriterAuthority(deviceId = state.deviceId, requireRecipient = false) {
+    const security = window.MemphisCustodialSecurity;
+    try {
+      const status = security?.getStatus?.();
+      const principal = window.MemphisMobile?.principalIdentity?.();
+      if (typeof security?.mutateProtectedWork !== 'function' || status?.ready !== true
+        || status?.available !== true || status?.quarantined === true
+        || !Number.isSafeInteger(status.generation) || !deviceId
+        || normalizeDeviceId(status.deviceId) !== deviceId || typeof principal !== 'string' || !principal
+        || requireRecipient && (!state.currentUserId || state.identityPrincipal !== principal)) return null;
+      const generation = status.generation, authorityGeneration = state.authorityGeneration,
+        userId = state.currentUserId, originalDevice = state.deviceId;
+      const current = () => {
+        const live = security.getStatus?.();
+        const livePrincipal = window.MemphisMobile?.principalIdentity?.();
+        return window.MemphisCustodialSecurity === security && live?.ready === true && live?.available === true
+          && live?.quarantined !== true && live.generation === generation
+          && normalizeDeviceId(live.deviceId) === deviceId && state.deviceId === originalDevice
+          && state.authorityGeneration === authorityGeneration
+          && livePrincipal === principal
+          && (!requireRecipient || state.currentUserId === userId && state.identityPrincipal === principal);
+      };
+      return current() ? Object.freeze({security, deviceId, generation, principal, userId, current}) : null;
+    } catch { return null; }
   }
 
-  function cleanupStaleSeenKeys() {
+  function assertReminderWriter(context, authority) {
+    if (typeof context?.assertCurrent !== 'function') throw new Error('Owned reminder writer checkpoint unavailable.');
+    context.assertCurrent();
+    if (context.deviceId !== authority.deviceId || context.generation !== authority.generation || !authority.current())
+      throw new Error('Original reminder recipient changed.');
+    context.assertCurrent();
+  }
+
+  async function mutateReminderStorage(authority, operation) {
     try {
-      const keys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(CONFIG.SEEN_PREFIX) && !key.endsWith(':ts')) {
-          keys.push({ key, ts: Number(localStorage.getItem(key + ':ts') || 0) });
-        }
-      }
-      if (keys.length <= 200) return;
-      keys.sort((a, b) => a.ts - b.ts);
-      const toRemove = keys.length - 200;
-      for (let i = 0; i < toRemove; i++) {
-        localStorage.removeItem(keys[i].key);
-        localStorage.removeItem(keys[i].key + ':ts');
-      }
-    } catch (_e) {}
+      if (!authority?.current()) return false;
+      const saved = await authority.security.mutateProtectedWork(context => {
+        assertReminderWriter(context, authority);
+        return operation(context);
+      }, {requireEnrollment: true, expectedGeneration: authority.generation});
+      return authority.current() && saved === true;
+    } catch { return false; } // Unknown/denied storage is pending, never acceptance.
+  }
+
+  function markSeenId(id, context, authority) {
+    const normalized = alertId(id);
+    if (!normalized) return false;
+    assertReminderWriter(context, authority);
+    const key = CONFIG.SEEN_PREFIX + normalized, stampKey = key + ':ts',
+      prior = localStorage.getItem(key), priorStamp = localStorage.getItem(stampKey);
+    if (prior !== null || priorStamp !== null) {
+      // Preserve ambiguous/foreign originals; even a known pair is not ours.
+      return prior === '1' && /^\d{1,16}$/.test(priorStamp || '')
+        && Number.isSafeInteger(Number(priorStamp)) && Number(priorStamp) > 0;
+    }
+    const stamp = String(Date.now());
+    assertReminderWriter(context, authority);
+    localStorage.setItem(stampKey, stamp);
+    assertReminderWriter(context, authority);
+    if (localStorage.getItem(stampKey) !== stamp) return false;
+    // Flag is last. Failed timestamp persistence must not suppress a notice.
+    assertReminderWriter(context, authority);
+    localStorage.setItem(key, '1');
+    assertReminderWriter(context, authority);
+    if (localStorage.getItem(key) !== '1' || localStorage.getItem(stampKey) !== stamp) return false;
+    ownedSeenPairs.set(key, {stamp, principal: authority.principal, userId: authority.userId,
+      deviceId: authority.deviceId, generation: authority.generation});
+    return true;
+  }
+
+  function cleanupStaleSeenKeys(context, authority) {
+    if (!context || !authority) return false; // No unowned inventory deletion.
+    assertReminderWriter(context, authority);
+    const keys = [...ownedSeenPairs].filter(([, pair]) => pair.principal === authority.principal
+      && pair.userId === authority.userId && pair.deviceId === authority.deviceId && pair.generation === authority.generation);
+    keys.sort((a, b) => Number(a[1].stamp) - Number(b[1].stamp));
+    for (const [key, pair] of keys.slice(0, Math.max(0, keys.length - 200))) {
+      assertReminderWriter(context, authority);
+      if (localStorage.getItem(key) !== '1' || localStorage.getItem(key + ':ts') !== pair.stamp) continue;
+      assertReminderWriter(context, authority);
+      localStorage.removeItem(key);
+      assertReminderWriter(context, authority);
+      if (localStorage.getItem(key) !== null) return false;
+      assertReminderWriter(context, authority);
+      localStorage.removeItem(key + ':ts');
+      assertReminderWriter(context, authority);
+      if (localStorage.getItem(key + ':ts') !== null) return false;
+      ownedSeenPairs.delete(key);
+    }
+    return true;
   }
 
   function buildMessagesUrl(row) {
@@ -219,15 +309,28 @@
     document.head.appendChild(style);
   }
 
+  // Only a fetch rejection before a response is ordinary transport pending.
+  // HTTP denial, malformed JSON/data and local storage/authority exceptions
+  // remain visible. Quiet pending never means an accepted receipt or empty set.
+  const pendingTransportFailures = new WeakSet();
+  async function reminderFetch(url, options) {
+    try { return await fetch(url, options); }
+    catch (error) {
+      if (error && typeof error === 'object' && ['TypeError', 'AbortError', 'TimeoutError'].includes(error.name))
+        pendingTransportFailures.add(error);
+      throw error;
+    }
+  }
+
   async function fetchJson(path) {
-    const response = await fetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store', headers: { 'X-Device-Id': state.deviceId } });
+    const response = await reminderFetch(`${CONFIG.API_BASE}${path}`, { cache: 'no-store', headers: { 'X-Device-Id': state.deviceId } });
     const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    if (response.ok !== true || !payload || payload.ok !== true) throw new Error(payload?.error || `HTTP ${response.status}`);
     return payload.data;
   }
 
   async function postJson(path, body) {
-    const response = await fetch(`${CONFIG.API_BASE}${path}`, {
+    const response = await reminderFetch(`${CONFIG.API_BASE}${path}`, {
       method: 'POST',
       cache: 'no-store',
       keepalive: true,
@@ -235,11 +338,12 @@
       body: JSON.stringify(body || {})
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload || !payload.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    if (response.ok !== true || !payload || payload.ok !== true) throw new Error(payload?.error || `HTTP ${response.status}`);
     return payload.data;
   }
 
   async function acknowledgeAlert(alert, action) {
+    if(!alertCurrent(alert))return false;
     if(typeof alert?.boundReceiptAction === 'function')return alert.boundReceiptAction(action);
     if (!alert?.notificationKey) return true;
     if (!state.deviceId) return false;
@@ -254,38 +358,84 @@
       });
       return true;
     } catch (error) {
-      console.warn('Notification acknowledgement failed', error);
+      if (!pendingTransportFailures.has(error)) console.warn('Notification acknowledgement failed', error);
       return false;
     }
   }
 
-  function markAlertSeenIfAcknowledged(alert, acknowledged) {
+  async function markAlertSeenIfAcknowledged(alert, acknowledged, authority) {
     if (!alert?.id || (alert.notificationKey && acknowledged !== true)) return false;
-    markSeenId(alert.id);
-    (Array.isArray(alert.linkedIds) ? alert.linkedIds : []).forEach(markSeenId);
-    return true;
+    // Native owning receipt already controls repeat/retirement; the legacy
+    // local seen flag must never stand in for that receipt or accepted START.
+    if (alert.boundReceiptAction) return acknowledged === true && alertCurrent(alert);
+    const originalId = alert.id, originalLinked = [...(Array.isArray(alert.linkedIds) ? alert.linkedIds : [])];
+    const ids = [...new Set([originalId, ...originalLinked])];
+    return mutateReminderStorage(authority, context => {
+      if (!alertCurrent(alert)) return false;
+      const linked = Array.isArray(alert.linkedIds) ? alert.linkedIds : [];
+      if (alert.id !== originalId || linked.length !== originalLinked.length
+        || linked.some((id, index) => id !== originalLinked[index])) return false;
+      for (const id of ids) if (!markSeenId(id, context, authority)) return false;
+      return cleanupStaleSeenKeys(context, authority);
+    });
   }
 
-  async function resolveIdentity() {
-    if (!state.deviceId) return null;
-    const data = await fetchJson(`/me/by-device?device_id=${encodeURIComponent(state.deviceId)}`);
-    state.currentUserId = safeText(data?.msg_user_id);
-    state.currentDisplayName = safeText(data?.display_name);
-    state.currentRole = safeText(data?.role).toLowerCase();
-    return data || null;
+  function clearIdentity() {
+    state.currentUserId = '';
+    state.currentDisplayName = '';
+    state.currentRole = '';
+    state.identityPrincipal = null;
+  }
+
+  function captureIdentityAuthority() {
+    const sequence=state.pollSequence,generation=state.authorityGeneration,deviceId=state.deviceId;
+    let principal;
+    try { principal=window.MemphisMobile?.principalIdentity?.(); } catch { return null; }
+    const current=()=>{
+      if(sequence!==state.pollSequence||generation!==state.authorityGeneration||deviceId!==state.deviceId)return false;
+      let live;try{live=window.MemphisMobile?.principalIdentity?.();}catch{return false;}
+      // A protected read can synchronously dispatch a security transition.
+      return live===principal&&sequence===state.pollSequence&&generation===state.authorityGeneration&&deviceId===state.deviceId;
+    };
+    return current()?{principal,deviceId,current}:null;
+  }
+
+  async function resolveIdentity(deviceId) {
+    if (!deviceId) return null;
+    // Fetch into a local value only. The originating authority must still own
+    // the result before any shared identity field is committed.
+    const data = await fetchJson(`/me/by-device?device_id=${encodeURIComponent(deviceId)}`);
+    if (!data || typeof data !== 'object' || Array.isArray(data)
+      || typeof data.display_name !== 'string' || !data.display_name.trim()
+      || data.msg_user_id != null && typeof data.msg_user_id !== 'string'
+      || data.role != null && typeof data.role !== 'string') throw new Error('Reminder identity response malformed.');
+    return data;
+  }
+
+  function commitIdentity(data, token) {
+    const currentUserId=safeText(data?.msg_user_id),currentDisplayName=safeText(data?.display_name),
+      currentRole=safeText(data?.role).toLowerCase();
+    if(!token?.current())return false;
+    Object.assign(state,{currentUserId,currentDisplayName,currentRole,identityPrincipal:token.principal});
+    return true;
   }
 
   async function fetchLocationStatusReminders() {
     if (!state.deviceId) return [];
     const data = await fetchJson(`/device-location-status-reminders?device_id=${encodeURIComponent(state.deviceId)}&limit=5`);
-    return Array.isArray(data) ? data : [];
+    if (!Array.isArray(data) || data.some(row => !row || typeof row !== 'object' || Array.isArray(row)
+      || !['due_soon', 'overdue'].includes(row.status_code))) throw new Error('Location reminder response malformed.');
+    return data;
   }
 
   async function fetchThreads() {
+    if(window.MemphisMobile?.releaseCapabilities?.messenger===false)return [];
     if (!state.currentUserId) return [];
     const qs = `?user_id=${encodeURIComponent(state.currentUserId)}${state.deviceId ? `&device_id=${encodeURIComponent(state.deviceId)}` : ''}`;
     const data = await fetchJson(`/threads${qs}`);
-    return Array.isArray(data) ? data : [];
+    if (!Array.isArray(data) || data.some(row => !row || typeof row !== 'object' || Array.isArray(row)))
+      throw new Error('Reminder thread response malformed.');
+    return data;
   }
 
   function setReminderPresentationActive(active) {
@@ -319,6 +469,8 @@
   }
 
   function locationStatusAlert(row) {
+    const scope=window.MemphisMobile?.principalIdentity?.();
+    const boundRow=JSON.parse(JSON.stringify(row||{}));
     const statusCode = safeText(row?.status_code).toLowerCase();
     const locationCode = safeText(row?.location_code || row?.location_id);
     const locationName = safeText(row?.location_name || row?.group_name, 'Assigned location');
@@ -338,6 +490,8 @@
       id: notificationKey,
       notificationKey,
       notificationType: 'location_status',
+      currentAuthority:window.MemphisCustodialSecurity?.native===true||window.MemphisMobileBuildIdentity?.edition==='custodial'
+        ?()=>window.MemphisMobile?.isScheduleReminderCurrent?.(boundRow,scope)===true:null,
       linkedIds: [],
       kicker,
       title,
@@ -347,7 +501,7 @@
       openUrl: buildScheduleUrl(row),
       speakerName,
       speechText: isOverdue
-        ? `${lead}${locationName} needs attention now.`
+        ? `${lead}${locationName} is overdue and needs attention now.`
         : `${lead}${locationName} is due soon. Please check it soon.`
     };
   }
@@ -407,33 +561,73 @@
     };
   }
 
-  function fullySpeak(text) {
-    const normalized = safeText(text);
-    if (!normalized) return false;
-    try {
-      if (window.fully?.textToSpeech) {
-        window.fully.textToSpeech(normalized);
-        return true;
-      }
-    } catch (_err) {}
-    return false;
-  }
-
   function fullyKioskNudge(alert) {
+    if(alert.boundReceiptAction?.providerMirror===true){providerKioskNudge(alert);return;}
     const rawText = safeText(alert?.speechText, 'New Memphis notification.');
     const text = normalizePersonalizedSpeechText(rawText, alert?.speakerName || state.currentDisplayName);
-    try { if (window.fully?.turnScreenOn) window.fully.turnScreenOn(); } catch (_err) {}
-    try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}
+    // Notification audio never changes display sleep or launches a surface.
+    // The existing pending card remains for the owner's later manual wake.
     try { if (window.fully?.vibrate) window.fully.vibrate(650); } catch (_err) {}
     try { navigator.vibrate?.([350, 150, 350]); } catch (_err) {}
-    const sequence = startAlertAudioSequence(text).catch((error) => {
+    state.activeAudioAlert = alert;
+    const sequence = (async()=>{
+      if (alert.boundReceiptAction?.beginAudio && !await alert.boundReceiptAction.beginAudio()) return false;
+      if (!alertCurrent(alert)) return false;
+      const completed=await startAlertAudioSequence(text);
+      await alert.boundReceiptAction?.finishAudio?.(completed===true);
+      return completed;
+    })().catch((error) => {
       console.warn('Memphis alert audio sequence failed', error);
     });
     state.activeSequencePromise = sequence;
     sequence.finally(() => {
-      if (state.activeSequencePromise === sequence) state.activeSequencePromise = null;
+      if (state.activeSequencePromise === sequence) {
+        state.activeSequencePromise = null;
+        if (state.activeAudioAlert === alert) state.activeAudioAlert = null;
+        if (state.activeAlert !== alert) clearLunchCutoff(alert);
+      }
       if (!state.activeAlert) window.setTimeout(() => poll().catch(() => {}), 250);
     });
+  }
+
+  // Native mirrors use this SAME renderer/sequence state. Nothing audible or
+  // tactile precedes the original native durable audio claim/readback.
+  function providerKioskNudge(alert){
+    if(alert.boundReceiptAction.playAudio!==true)return;
+    state.activeAudioAlert=alert;
+    const sequence=(async()=>{
+      if(!await alert.boundReceiptAction.beginAudio()||!alertCurrent(alert))return false;
+      // Exact native audio admission is not permission to wake the display.
+      // Keep its current sleep state; manual wake must not replay this episode.
+      try{window.fully?.vibrate?.(650);}catch{}
+      try{navigator.vibrate?.([350,150,350]);}catch{}
+      const text=normalizePersonalizedSpeechText(safeText(alert.speechText),alert.speakerName||state.currentDisplayName);
+      const completed=await startAlertAudioSequence(text);
+      await alert.boundReceiptAction.finishAudio(completed===true);return completed;
+    })().catch(()=>false);
+    state.activeSequencePromise=sequence;
+    sequence.finally(()=>{
+      if(state.activeSequencePromise===sequence){state.activeSequencePromise=null;if(state.activeAudioAlert===alert)state.activeAudioAlert=null;}
+      window.MemphisMobile?.retryProviderMirror?.();
+    });
+  }
+  async function stopProviderAudioAndReadback(expected){
+    const active=state.activeAudioAlert||state.activeAlert;
+    // Never cancel an unrelated legacy/help/debug producer to acquire the lane.
+    if(active&&active.boundReceiptAction?.providerMirror!==true)return false;
+    if(expected&&active&&active.boundReceiptAction!==expected)return false;
+    if(state.activeOscillators.length)return false; // Legacy WebAudio/debug has no provider capability.
+    if(active){
+      if(!expected&&state.activeAlert===active)closeActiveAlert({stopSpeech:true,nextPresentation:false});
+      else stopAlertAudio();
+    }
+    await Promise.resolve();
+    const speech=window.speechSynthesis;
+    // cancel/void Fully calls are not silence receipts. Observe this WebView
+    // engine and owned HTML audio; unknown properties keep the barrier closed.
+    return Boolean(speech&&speech.speaking===false&&speech.pending===false
+      &&(!state.audioEl||state.audioEl.paused===true)&&!state.sequenceTone&&!state.browserSpeech
+      &&state.activeOscillators.length===0&&state.ringTimeouts.length===0&&!state.activeSequencePromise&&!state.activeSpeechPromise);
   }
 
   function clearPendingRingtoneRepeats() {
@@ -449,6 +643,7 @@
   function stopActiveSpeech() {
     try { window.fully?.stopTextToSpeech?.(); } catch (_err) {}
     try { window.speechSynthesis?.cancel?.(); } catch (_err) {}
+    state.browserSpeech?.finish(false);
   }
 
   function stopActiveRingtone() {
@@ -465,13 +660,7 @@
       try { osc.stop?.(); } catch (_err) {}
       try { osc.disconnect?.(); } catch (_err) {}
     }
-  }
-
-  function estimateSpeechDurationMs(text) {
-    const normalized = safeText(text);
-    if (!normalized) return 0;
-    const words = normalized.split(/\s+/).filter(Boolean).length;
-    return Math.max(5000, Math.min(45000, 3000 + words * 700));
+    state.sequenceTone?.finish(false);
   }
 
   function queueAlertStep(callback, delayMs) {
@@ -505,14 +694,16 @@
         const finish = (value) => {
           if (settled) return;
           settled = true;
+          if(state.browserSpeech?.utterance===utterance)state.browserSpeech=null;
           resolve(value);
         };
+        state.browserSpeech={utterance,finish};
         utterance.onend = () => finish(true);
         utterance.onerror = () => finish(false);
         window.speechSynthesis.cancel?.();
         window.speechSynthesis.speak(utterance);
-        window.setTimeout(() => finish(true), estimateSpeechDurationMs(normalized) + 8000);
       } catch (_err) {
+        state.browserSpeech=null;
         resolve(false);
       }
     });
@@ -521,12 +712,10 @@
   async function speakOnce(text) {
     const normalized = safeText(text);
     if (!normalized) return false;
-    if (fullySpeak(normalized)) {
-      // Fully Kiosk does not expose a reliable completion callback. Wait a generous
-      // amount before allowing another sound, but never force-stop the speech.
-      await new Promise((resolve) => window.setTimeout(resolve, estimateSpeechDurationMs(normalized)));
-      return true;
-    }
+    // Fully textToSpeech is a void call; broadcast ttsTextQueued/Done IDs are
+    // not an issuing-call token. Do not infer this utterance completed from
+    // another producer or a timer. Fully still owns kiosk/volume policy; an
+    // unavailable exact WebView utterance callback leaves audio incomplete.
     return speakViaBrowser(normalized);
   }
 
@@ -655,6 +844,7 @@
   }
 
   function primeAudioOutput() {
+    if(state.activeSequencePromise||state.sequenceTone)return;
     const hostedUrl = buildHostedRingtoneUrl();
     try {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -797,15 +987,41 @@
     state.alertSequenceToken = token;
     for (let cycle = 0; cycle < 2; cycle += 1) {
       if (state.alertSequenceToken !== token) return;
-      playOneRingtone();
-      if (!await waitForAlertStep(CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS)) return;
+      if (!await playSequenceTone()) return false;
+      if (!await waitForAlertStep(CONFIG.ALERT_POST_RINGTONE_DELAY_MS)) return false;
       if (state.alertSequenceToken !== token) return;
       stopActiveRingtone();
-      state.activeSpeechPromise = speakOnce(normalized);
-      await state.activeSpeechPromise;
-      state.activeSpeechPromise = null;
+      const speech = speakOnce(normalized);
+      state.activeSpeechPromise = speech;
+      const spoken=await speech;
+      if (state.activeSpeechPromise === speech) state.activeSpeechPromise = null;
+      if(spoken!==true)return false;
+      if (state.alertSequenceToken !== token) return;
       if (cycle === 0 && !await waitForAlertStep(CONFIG.VOICE_REPEAT_GAP_MS)) return;
     }
+    return true;
+  }
+
+  function playSequenceTone() {
+    // HTML ended/error observes this exact waveform's playback. The old debug
+    // fallback's timer/void Fully call cannot establish tone completion.
+    return new Promise(resolve=>{
+      let audio;
+      try { audio=new Audio(ensureRingtoneDataUrl()); } catch { resolve(false);return; }
+      const pending={finish:value=>{
+        if(state.sequenceTone!==pending)return;
+        state.sequenceTone=null;
+        audio.onended=null;audio.onerror=null;
+        resolve(value);
+      }};
+      state.sequenceTone=pending;state.audioEl=audio;audio.volume=1;
+      audio.onended=()=>pending.finish(true);
+      audio.onerror=()=>pending.finish(false);
+      try {
+        const started=audio.play();
+        if(started?.catch)started.catch(()=>pending.finish(false));
+      } catch { pending.finish(false); }
+    });
   }
 
   async function waitForActiveAlertSpeech() {
@@ -814,40 +1030,99 @@
       await new Promise((resolve) => window.setTimeout(resolve, CONFIG.ALERT_OPEN_GRACE_MS));
       return;
     }
-    await Promise.race([
-      Promise.resolve(active).catch(() => null),
-      new Promise((resolve) => window.setTimeout(resolve, 60000)),
-    ]);
+    await Promise.resolve(active).catch(() => null);
     await new Promise((resolve) => window.setTimeout(resolve, CONFIG.ALERT_POST_SPEECH_DELAY_MS));
   }
 
+  function stopAlertAudio(alert) {
+    if (alert && state.activeAudioAlert !== alert) return;
+    if(state.activeAlert!==state.activeAudioAlert)clearLunchCutoff(state.activeAudioAlert);
+    state.alertSequenceToken += 1;
+    clearPendingRingtoneRepeats();
+    stopActiveRingtone();
+    stopActiveSpeech();
+    state.activeSpeechPromise = null;
+    state.activeSequencePromise = null;
+    state.activeAudioAlert = null;
+  }
+
   function closeActiveAlert(options = {}) {
+    const closed=state.activeAlert;
     state.activeAlert?.boundReceiptAction?.retire?.();
     const releasePresentation = state.activeAlert?.releasePresentation;
     const stopSpeech = options.stopSpeech !== false;
     if (stopSpeech) {
-      state.alertSequenceToken += 1;
-      clearPendingRingtoneRepeats();
-      stopActiveRingtone();
-      stopActiveSpeech();
-      state.activeSpeechPromise = null;
-      state.activeSequencePromise = null;
+      stopAlertAudio();
     }
     // Visual Dismiss leaves both required audio cycles intact.
     document.querySelector('.mz-reminder-backdrop')?.remove();
     setReminderPresentationActive(false);
     state.activeAlert = null;
+    if(state.activeAudioAlert!==closed)clearLunchCutoff(closed);
     sessionStorage.removeItem(CONFIG.ALERT_LOCK_KEY);
     releasePresentation?.();
+    if(options.nextPresentation!==false)void window.MemphisMobile?.retryNotificationPresentation?.();
   }
 
+  function alertCurrent(alert){
+    if(alert?.boundReceiptAction&&!alert.boundReceiptAction.isCurrent())return false;
+    return typeof alert?.currentAuthority!=='function'||alert.currentAuthority()===true;
+  }
+  function hasLunchCutoff(alert){return alert?.notificationType==='lunch_coverage'
+    &&alert.boundReceiptAction?.providerMirror!==true&&typeof alert.originalLunchCutoff==='string';}
+  function clearLunchCutoff(alert){
+    const timer=alert?.lunchCutoffTimer;if(timer==null)return;alert.lunchCutoffTimer=null;
+    try{window.clearTimeout(timer);}catch{}
+  }
+  function armLunchCutoff(alert){
+    clearLunchCutoff(alert);
+    if(!hasLunchCutoff(alert)||state.detached||state.activeAlert!==alert&&state.activeAudioAlert!==alert)return;
+    // Original UTC cutoff is a wake hint only, never replacement currentness
+    // or native clock/claim proof. Round up, not down, at submillisecond bounds.
+    const m=/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(?:Z|\+00:00)$/.exec(alert.originalLunchCutoff);
+    if(!m)return;const fraction=(m[2]||'').padEnd(6,'0'),text=m[1]+'.'+fraction.slice(0,3)+'Z';
+    const millis=Date.parse(text),now=Date.now();
+    if(!Number.isFinite(millis)||!Number.isFinite(now)||new Date(millis).toISOString()!==text)return;
+    const deadline=millis+(fraction.slice(3)==='000'?0:1);if(deadline<=now){recheckLunchCutoff(alert,false);return;}
+    const timer=window.setTimeout(()=>{
+      if(alert.lunchCutoffTimer!==timer)return;alert.lunchCutoffTimer=null;recheckLunchCutoff(alert);
+    },Math.min(2147483647,deadline-now));
+    alert.lunchCutoffTimer=timer;
+    if(state.detached||state.activeAlert!==alert&&state.activeAudioAlert!==alert)clearLunchCutoff(alert);
+  }
+  function recheckLunchCutoff(alert,rearm=true){
+    if(!hasLunchCutoff(alert)||state.detached||state.activeAlert!==alert&&state.activeAudioAlert!==alert)return;
+    let current=false;try{current=alertCurrent(alert);}catch{}
+    if(state.detached||state.activeAlert!==alert&&state.activeAudioAlert!==alert){clearLunchCutoff(alert);return;}
+    if(current){if(rearm)armLunchCutoff(alert);return;}
+    if(state.activeAlert===alert)closeActiveAlert({stopSpeech:state.activeAudioAlert===alert});
+    if(state.activeAudioAlert===alert)stopAlertAudio(alert);
+    clearLunchCutoff(alert);
+  }
+  function recheckOwnedLunchCutoffs(){
+    const visual=state.activeAlert,audio=state.activeAudioAlert;
+    recheckLunchCutoff(visual);if(audio!==visual)recheckLunchCutoff(audio);
+  }
+  function reconcileScheduleAuthority(invalidatePolls=true){
+    if(invalidatePolls)state.authorityGeneration++;
+    const visual=state.activeAlert,audio=state.activeAudioAlert;
+    if(visual&&!alertCurrent(visual))closeActiveAlert({stopSpeech:true});
+    if(audio&&!alertCurrent(audio))stopAlertAudio(audio);
+    armLunchCutoff(state.activeAlert);if(state.activeAudioAlert!==state.activeAlert)armLunchCutoff(state.activeAudioAlert);
+    return (!state.activeAlert||alertCurrent(state.activeAlert))&&(!state.activeAudioAlert||alertCurrent(state.activeAudioAlert));
+  }
   function showAlert(alert, owned = false) {
+    if(state.detached||document.hidden===true)return false;
     if (!owned && window.MemphisMobile?.nativeNotifications === true) return false;
+    if (!alertCurrent(alert)) return false;
     if (!alert?.id || state.activeAlert || state.activeSequencePromise || state.activeSpeechPromise || document.querySelector('.mz-reminder-backdrop') || (!alert.boundReceiptAction && hasSeenId(alert.id))) return false;
     if (!owned && window.MemphisMobile?.presentBrowserNotification) {
       return window.MemphisMobile.presentBrowserNotification(alert.notificationKey || alert.id,
         releasePresentation => showAlert({...alert,releasePresentation},true));
     }
+    const writerAuthority = captureReminderWriterAuthority(state.deviceId, true);
+    if (!alert.boundReceiptAction && !writerAuthority) return false;
+    const writerAlertId = alert.id, writerLinkedIds = JSON.stringify(alert.linkedIds || []);
     let alreadyPresented = false;
     try { alreadyPresented = sessionStorage.getItem(CONFIG.ALERT_LOCK_KEY) === alert.id; } catch {}
     state.activeAlert = alert;
@@ -878,68 +1153,203 @@
     backdrop.querySelector('.mz-reminder-open').textContent = safeText(alert.openLabel, 'Open');
     backdrop.querySelector('.mz-reminder-dismiss').textContent = safeText(alert.dismissLabel, 'Dismiss');
 
+    let providerOpening=false,providerDismissing=false,providerAcknowledging=false,providerAcknowledge=null;
+    function recipientCurrent() {
+      try { return alertCurrent(alert) && (alert.boundReceiptAction || writerAuthority?.current() === true
+        && alert.id === writerAlertId && JSON.stringify(alert.linkedIds || []) === writerLinkedIds); }
+      catch { return false; }
+    }
+    function pendingSeenWrite() {
+      if (!recipientCurrent()) { closeActiveAlert({stopSpeech:true}); return; }
+      backdrop.querySelector('.mz-reminder-body').textContent =
+        'Local notification action unconfirmed — reminder remains pending. ' + safeText(alert.body);
+    }
+    function refreshProviderView(){
+      if(alert.boundReceiptAction?.providerMirror!==true||state.activeAlert!==alert)return;
+      const observed=alert.boundReceiptAction.presentationState();
+      const prefix=observed.freshness==='CURRENT'?'':observed.freshness==='HISTORICAL_EXPIRED'
+        ?'Expired notice — current responsibility is not confirmed. '
+        :'Notice freshness unavailable — current responsibility is not confirmed. ';
+      // Relabel this existing visual only. Immutable speech text, audio episode,
+      // displayed receipt and original notification identity are untouched.
+      backdrop.querySelector('.mz-reminder-body').textContent=prefix+safeText(alert.body,'You have a new Memphis notification.');
+      backdrop.setAttribute('data-native-freshness',observed.freshness);
+      const busy=providerOpening||providerDismissing||providerAcknowledging;
+      backdrop.querySelector('.mz-reminder-open').disabled=busy||!(observed.freshness==='CURRENT'||observed.navigation_pending);
+      backdrop.querySelector('.mz-reminder-dismiss').disabled=busy;
+      if(providerAcknowledge)providerAcknowledge.disabled=busy||observed.freshness!=='CURRENT';
+    }
+
     backdrop.querySelector('.mz-reminder-open').addEventListener('click', async () => {
       if(state.activeAlert!==alert)return;
+      if(!recipientCurrent()){closeActiveAlert({stopSpeech:true});return;}
       const openButton = backdrop.querySelector('.mz-reminder-open');
       const dismissButton = backdrop.querySelector('.mz-reminder-dismiss');
       if(openButton?.disabled)return;
+      providerOpening=true;
       if (openButton) { openButton.disabled = true; openButton.textContent = 'Opening after reminder…'; }
       if (dismissButton) dismissButton.disabled = true;
       let acknowledged;
       try{acknowledged=await acknowledgeAlert(alert, 'opened');}
       catch{
         if(state.activeAlert!==alert)return;
-        if(alert.boundReceiptAction&&!alert.boundReceiptAction.isCurrent())closeActiveAlert({stopSpeech:true});
-        else { if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false; }
+        if(!recipientCurrent())closeActiveAlert({stopSpeech:true});
+        else { providerOpening=false;if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false;refreshProviderView(); }
         return;
       }
       if(state.activeAlert!==alert)return;
-      if(alert.boundReceiptAction&&(acknowledged!==true||!alert.boundReceiptAction.isCurrent())){
-        if(state.activeAlert===alert&&!alert.boundReceiptAction.isCurrent())closeActiveAlert({stopSpeech:true});
-        else { if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false; }
+      if(!recipientCurrent()||alert.boundReceiptAction&&acknowledged!==true){
+        if(state.activeAlert===alert&&!recipientCurrent())closeActiveAlert({stopSpeech:true});
+        else { providerOpening=false;if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false;refreshProviderView(); }
         return;
       }
-      markAlertSeenIfAcknowledged(alert, acknowledged);
+      const seen = await markAlertSeenIfAcknowledged(alert, acknowledged, writerAuthority);
+      if (state.activeAlert !== alert) return;
+      if (!seen) {
+        providerOpening=false;
+        if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');}
+        if(dismissButton)dismissButton.disabled=false;
+        refreshProviderView();
+        pendingSeenWrite();
+        return;
+      }
       const destination = alert.openUrl || buildMessagesUrl();
       await waitForActiveAlertSpeech();
       if(state.activeAlert!==alert)return;
-      if(alert.boundReceiptAction&&!alert.boundReceiptAction.isCurrent()){
+      if(alert.boundReceiptAction?.providerMirror===true&&await alert.boundReceiptAction.recheck()!==true){
+        if(state.activeAlert===alert)closeActiveAlert({stopSpeech:true});return;
+      }
+      if(state.activeAlert!==alert)return;
+      if(!recipientCurrent()){
         if(state.activeAlert===alert)closeActiveAlert({stopSpeech:true});
         return;
       }
-      closeActiveAlert({ stopSpeech: false });
+      closeActiveAlert({ stopSpeech: false, nextPresentation:false });
       window.location.href = destination;
     });
     backdrop.querySelector('.mz-reminder-dismiss').addEventListener('click', async () => {
       if(state.activeAlert!==alert)return;
-      const acknowledged = await acknowledgeAlert(alert, 'dismissed');
+      if(!recipientCurrent()){closeActiveAlert({stopSpeech:true});return;}
+      const openButton=backdrop.querySelector('.mz-reminder-open');
+      const dismissButton=backdrop.querySelector('.mz-reminder-dismiss');
+      if(dismissButton?.disabled)return;
+      providerDismissing=true;
+      if(openButton)openButton.disabled=true;
+      if(dismissButton)dismissButton.disabled=true;
+      let acknowledged;
+      try { acknowledged=await acknowledgeAlert(alert, 'dismissed'); } catch { acknowledged=false; }
       if(state.activeAlert!==alert)return;
-      markAlertSeenIfAcknowledged(alert, acknowledged);
+      if(!recipientCurrent()){closeActiveAlert({stopSpeech:true});return;}
+      if(alert.boundReceiptAction&&acknowledged!==true){
+        providerDismissing=false;
+        if(openButton)openButton.disabled=false;
+        if(dismissButton)dismissButton.disabled=false;
+        refreshProviderView();
+        return;
+      }
+      const seen = await markAlertSeenIfAcknowledged(alert, acknowledged, writerAuthority);
+      if (state.activeAlert !== alert) return;
+      if (!seen) {
+        providerDismissing=false;
+        if(openButton)openButton.disabled=false;
+        if(dismissButton)dismissButton.disabled=false;
+        refreshProviderView();
+        pendingSeenWrite();
+        return;
+      }
       // Dismiss the card immediately, but let the current spoken sentence finish.
       closeActiveAlert({ stopSpeech: false });
     });
 
     document.body.appendChild(backdrop);
+    alert.boundReceiptAction?.onRetire?.((options) => {
+      const stopAudio=alert.boundReceiptAction?.providerMirror!==true||options?.stopAudio!==false;
+      if (state.activeAlert === alert) closeActiveAlert({stopSpeech:stopAudio});
+      if(stopAudio)stopAlertAudio(alert); // Dismiss may have hidden this card while audio continued.
+      // Never remove a successor or report a still-visible old card retired.
+      return state.activeAlert !== alert && (!stopAudio||state.activeAudioAlert !== alert)
+        && document.querySelector('.mz-reminder-backdrop') !== backdrop;
+    });
+    if(alert.boundReceiptAction?.providerMirror===true){
+      alert.boundReceiptAction.onOpen(()=>backdrop.querySelector('.mz-reminder-open')?.click());
+      const acknowledge=document.createElement('button');acknowledge.type='button';acknowledge.className='mz-reminder-btn mz-reminder-acknowledge';acknowledge.textContent='Acknowledge';
+      providerAcknowledge=acknowledge;
+      acknowledge.addEventListener('click',async()=>{
+        if(acknowledge.disabled||state.activeAlert!==alert||!alertCurrent(alert))return;providerAcknowledging=true;acknowledge.disabled=true;
+        let saved=false;try{saved=await alert.boundReceiptAction('acknowledged');}catch{}
+        if(state.activeAlert!==alert)return;
+        if(saved===true)closeActiveAlert({stopSpeech:true});else{providerAcknowledging=false;acknowledge.disabled=false;refreshProviderView();}
+      });
+      backdrop.querySelector('.mz-reminder-actions').appendChild(acknowledge);
+      alert.boundReceiptAction.onState(refreshProviderView);
+    }
     if(!alert.boundReceiptAction)acknowledgeAlert(alert, 'displayed');
-    if (!alreadyPresented) fullyKioskNudge(alert);
+    if (!alreadyPresented||alert.boundReceiptAction?.providerMirror===true) fullyKioskNudge(alert);
+    armLunchCutoff(alert);
     return true;
   }
 
   function showAcceptedNotification(event, boundReceiptAction) {
     const notification=event?.notification||{},data=notification.data||{};
-    if(!['employee_lunch_coverage','employee_location_status'].includes(data.kind)||!data.notification_key)return false;
+    if(!data.notification_key)return false;
+    const requiredKind=data.kind==='employee_event'?'event':data.kind==='employee_message'?'message':null;
+    if(requiredKind){
+      // Only the native-owned claim path can supply these protocols. Legacy
+      // unbound FCM/poll notices do not become admitted through a UI flag.
+      const sourceId=data[requiredKind==='event'?'event_id':'thread_id'];
+      const route=requiredKind==='event'?`events.html?hub=employee&event_id=${sourceId}`:`messages.html?hub=employee&thread_id=${sourceId}`;
+      if(typeof boundReceiptAction!=='function'||boundReceiptAction.providerMirror!==true
+        ||data.schema!==`custodial.native-${requiredKind}-payload.v1`||data.notification_type!==requiredKind
+        ||typeof sourceId!=='string'||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(sourceId)||data.route!==route)return false;
+      const body=safeText(notification.body);
+      if(!body)return false;
+      return showAlert({id:data.notification_key,notificationKey:data.notification_key,notificationType:requiredKind,boundReceiptAction,
+        kicker:requiredKind==='event'?'Event reminder':'Message',title:safeText(notification.title,'Memphis Zoo'),body,
+        openLabel:requiredKind==='event'?'Open event':'Open message',dismissLabel:'Dismiss',openUrl:new URL(route,window.location.href).toString(),
+        speakerName:state.currentDisplayName,speechText:body},true);
+    }
+    if(data.kind==='employee_schedule_ownership'){
+      if(typeof boundReceiptAction!=='function'||boundReceiptAction.providerMirror!==true
+        ||data.schema!=='custodial.native-schedule-payload.v1'||data.notification_type!=='schedule_ownership'
+        ||data.channel_id!=='employee-schedule-ownership'||data.route!=='employee-schedule.html?hub=employee')return false;
+      const body=safeText(notification.body);if(!body)return false;
+      return showAlert({id:data.notification_key,notificationKey:data.notification_key,title:safeText(notification.title,'Memphis Zoo'),body,
+        notificationType:'schedule_ownership',boundReceiptAction,kicker:'Assignment update',
+        openLabel:'Open schedule',dismissLabel:'Dismiss',openUrl:new URL(data.route,window.location.href).toString(),
+        speakerName:state.currentDisplayName,speechText:body},true);
+    }
+    if(!['employee_lunch_coverage','employee_location_status'].includes(data.kind))return false;
     const lunch=data.kind==='employee_lunch_coverage';
     const body=safeText(notification.body,'Please check your schedule.');
+    const scope=window.MemphisMobile?.principalIdentity?.(),original=JSON.parse(JSON.stringify(data));
+    if(lunch&&boundReceiptAction?.providerMirror!==true){
+      const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
+      freeze(original);
+    }
+    // Native mirror leases carry their own freshness contract. An accepted
+    // START adds only a confirmed old-cycle retirement; missing/offline
+    // observations do not relabel or withdraw a native-owned notice.
+    // Ordinary JS presentation uses the exact original accepted payload/scope.
+    // This is not a substitute for a native mirror's claim/clock authority.
+    const currentAuthority=lunch?(boundReceiptAction?.providerMirror===true?null:()=>{
+      try{return window.MemphisMobile?.isLunchNotificationCurrent?.(original,scope)===true;}
+      catch{return false;}
+    }):()=>{
+      try{return window.MemphisMobile?.isLocationReminderRetired?.(original,scope)!==true;}
+      catch{return true;}
+    };
     return showAlert({id:data.notification_key,notificationKey:data.notification_key,
-      notificationType:lunch?'lunch_coverage':'location_status',boundReceiptAction,
+      notificationType:lunch?'lunch_coverage':'location_status',boundReceiptAction,currentAuthority,
+      originalLunchCutoff:lunch&&boundReceiptAction?.providerMirror!==true?original.valid_until:undefined,
       kicker:lunch?'Lunch coverage':'Schedule reminder',title:safeText(notification.title,'Memphis Zoo'),body,
-      openLabel:'Open schedule',dismissLabel:'Dismiss',openUrl:buildScheduleUrl(data),
+      openLabel:'Open schedule',dismissLabel:'Dismiss',openUrl:boundReceiptAction?.providerMirror===true?new URL(data.route,window.location.href).toString():buildScheduleUrl(data),
       speakerName:state.currentDisplayName,speechText:body},true);
   }
 
   function pickNextAlert({ locationStatuses = [], threads = [] }) {
     const unseenLocationStatus = locationStatuses
       .map(locationStatusAlert)
+      .filter(alertCurrent)
       .find((alert) => !hasSeenId(alert.id));
     if (unseenLocationStatus) return unseenLocationStatus;
 
@@ -953,32 +1363,51 @@
   }
 
   function currentAlertIds({ locationStatuses = [], threads = [] }) {
-    const ids = locationStatuses.map(locationStatusAlert).map((alert) => alert.id);
+    const ids = locationStatuses.map(locationStatusAlert).filter(alertCurrent).map((alert) => alert.id);
     for (const row of threads) {
       if (Number(row?.unread_count || 0) <= 0 || !safeText(row?.last_message_id)) continue;
       if (safeText(row?.last_sender_name).toLowerCase() === state.currentDisplayName.toLowerCase()) continue;
-      ids.push(threadAlert(row).id);
+      const alert=threadAlert(row);if(alertCurrent(alert))ids.push(alert.id);
     }
     return new Set(ids.filter(Boolean));
   }
 
   async function poll() {
-    const principal = window.MemphisMobile?.principalIdentity?.();
+    if(state.detached)return;
+    const sequence=++state.pollSequence;
+    let principal;try{principal=window.MemphisMobile?.principalIdentity?.();}catch{return;}
     await window.MemphisMobile?.retryNotificationPresentation?.();
+    try{if(sequence!==state.pollSequence||principal!==window.MemphisMobile?.principalIdentity?.())return;}catch{return;}
+    // Startup presentation reconciliation can legitimately advance generation.
+    // Bind identity transport only AFTER that work settles for this same poll.
+    const token=captureIdentityAuthority();
+    if(!token||sequence!==state.pollSequence||principal!==token.principal)return;
+    const {current}=token;
+    reconcileScheduleAuthority(false);
     if (window.MemphisMobile?.nativeNotifications === true) return;
     try {
-      if (!state.currentUserId) await resolveIdentity().catch(() => null);
+      if(state.identityPrincipal!==token.principal)clearIdentity();
+      if (!state.currentUserId) {
+        const identity=await resolveIdentity(token.deviceId);
+        if(!commitIdentity(identity,token))return;
+      }
+      if(!current())return;
       const [locationStatuses, threads] = await Promise.all([fetchLocationStatusReminders(), fetchThreads()]);
-      if(principal !== window.MemphisMobile?.principalIdentity?.())return;
+      if(!current())return;
       if (window.MemphisMobile?.nativeNotifications === true) return;
+      // Recheck after transport: main's authenticated accepted-session read
+      // owns the observation, including native mode. Due/overdue candidate
+      // rows and their absence cannot be promoted into accepted START proof.
+      reconcileScheduleAuthority(false);
       const available = currentAlertIds({ locationStatuses, threads });
+      if(!current())return;
       if (state.activeAlert && !state.activeAlert.boundReceiptAction && !String(state.activeAlert.id || '').startsWith('debug:') && !available.has(state.activeAlert.id)) {
         closeActiveAlert({ stopSpeech: true });
       }
       const next = pickNextAlert({ locationStatuses, threads });
-      if (next) showAlert(next);
+      if (next&&current()) showAlert(next);
     } catch (error) {
-      console.warn('Memphis device reminder poll failed', error);
+      if (!pendingTransportFailures.has(error)) console.warn('Memphis device reminder poll failed', error);
     }
   }
 
@@ -989,8 +1418,9 @@
     const repeatCount = Math.max(1, Number(url.searchParams.get('repeatCount')) || CONFIG.RINGTONE_REPEAT_COUNT);
     if (testReminder === '1' || testReminder === 'true' || testReminder === 'yes') {
       window.setTimeout(async () => {
-        await resolveIdentity().catch(() => null);
-        showAlert(debugReminderAlert());
+        const token=captureIdentityAuthority();if(!token)return;
+        const identity=await resolveIdentity(token.deviceId).catch(() => null);
+        if(commitIdentity(identity,token)&&token.current())showAlert(debugReminderAlert());
       }, 900);
     }
     if (testRing === '1' || testRing === 'true' || testRing === 'yes') {
@@ -1000,9 +1430,9 @@
     }
   }
 
-  function init() {
+  async function init() {
     if (!isEmployeeNotificationContext()) return;
-    state.deviceId = resolveDeviceId();
+    state.deviceId = await resolveDeviceId();
     if (!state.deviceId) return;
     ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
       window.addEventListener(eventName, primeAudioOutput, { once: true, passive: true });
@@ -1010,19 +1440,29 @@
     primeAudioOutput();
     window.MemphisDeviceReminders = {
       poll,
+      reconcileScheduleAuthority,
       resolveDeviceId: () => state.deviceId,
       debugPlayRingtone: (repeatCount) => playRingtone({ repeatCount }),
       debugShowSampleAlert: () => showAlert(debugReminderAlert())
     };
     window.MemphisMobile?.registerNotificationFallback?.(showAcceptedNotification);
+    window.MemphisMobile?.registerProviderMirrorRenderer?.(Object.freeze({show:showAcceptedNotification,stopAndReadback:stopProviderAudioAndReadback}));
     window.addEventListener('memphis:custodial-security-state',()=>{
-      const bound=state.activeAlert?.boundReceiptAction;
-      if(bound&&!bound.isCurrent())closeActiveAlert({stopSpeech:true});
+      clearIdentity();
+      reconcileScheduleAuthority();
     });
+    window.addEventListener('pagehide',()=>{
+      state.detached=true;
+      const alert=state.activeAlert||state.activeAudioAlert;
+      if(state.activeAlert)closeActiveAlert({stopSpeech:true,nextPresentation:false});
+      else stopAlertAudio();
+      alert?.boundReceiptAction?.detach?.();
+    });
+    window.addEventListener('pageshow',()=>{state.detached=false;recheckOwnedLunchCutoffs();void poll();});
     runDebugTriggers();
     setTimeout(poll, CONFIG.STARTUP_DELAY_MS);
     state.poller = setInterval(poll, CONFIG.POLL_MS);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) {recheckOwnedLunchCutoffs();poll();} });
     window.addEventListener('memphis:native-notification-received', () => { poll(); });
     window.addEventListener('memphis:notification-mode-changed', () => {
       // Capability is not proof that this card was scheduled elsewhere. The

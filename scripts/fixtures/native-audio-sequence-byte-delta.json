@@ -1,0 +1,773 @@
+{
+  "schema": "custodial.native-audio-sequence-exact-delta.v1",
+  "base_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+  "files": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderClaims.java",
+      "name": "NativeProviderClaims.java",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "3950971915b7294d64a0a649c0b82555ff89a1815f3045cc7de1dcc553286e71",
+      "current_sha256": "d0c3d7fafa8047bdf335d278782faa8031e7c648f7b299a096d66c133b2f7ea4",
+      "hunks": [
+        {
+          "old_start": 33,
+          "old_count": 1,
+          "new_start": 33,
+          "new_count": 1,
+          "before": [
+            "        private Claim(NativeProviderJournal.Presentation presentation, NativeProviderJournal.Observation observation) throws Exception {"
+          ],
+          "after": [
+            "        private Claim(NativeProviderJournal.Presentation presentation, NativeProviderJournal.Observation observation, boolean offerAudio) throws Exception {"
+          ]
+        },
+        {
+          "old_start": 36,
+          "old_count": 1,
+          "new_start": 36,
+          "new_count": 1,
+          "before": [
+            "            audioOffered = !historical && \"PENDING\".equals(record.getString(\"audio_state\"));"
+          ],
+          "after": [
+            "            audioOffered = offerAudio && !historical && \"PENDING\".equals(record.getString(\"audio_state\"));"
+          ]
+        },
+        {
+          "old_start": 43,
+          "old_count": 0,
+          "new_start": 44,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    private final boolean offerAudio;"
+          ]
+        },
+        {
+          "old_start": 46,
+          "old_count": 1,
+          "new_start": 47,
+          "new_count": 2,
+          "before": [
+            "    NativeProviderClaims(NativeProviderJournal journal) { this.journal = journal; }"
+          ],
+          "after": [
+            "    NativeProviderClaims(NativeProviderJournal journal) { this(journal,true); }",
+            "    NativeProviderClaims(NativeProviderJournal journal,boolean offerAudio) { this.journal = journal;this.offerAudio=offerAudio; }"
+          ]
+        },
+        {
+          "old_start": 87,
+          "old_count": 1,
+          "new_start": 89,
+          "new_count": 1,
+          "before": [
+            "                Claim claim = new Claim(presentation, observation); claims.put(claim.id, claim); return claim;"
+          ],
+          "after": [
+            "                Claim claim = new Claim(presentation, observation,offerAudio); claims.put(claim.id, claim); return claim;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "name": "NativeProviderRuntimeOwner.java",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "be74c0df2b46fe1fe48b77f11dbe7bbc34802d3bde0e7b9cb96efa6f44d0b0d9",
+      "current_sha256": "92ea9ae088ad337f5b46f43d8466ccfcaec6c41a73586b6fe748fbd4a7c67a75",
+      "hunks": [
+        {
+          "old_start": 16,
+          "old_count": 0,
+          "new_start": 17,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "        final NativeProviderAudioSequence.Surface audioSurface;",
+            "        final NativeProviderAudioSequence.Scheduler audioScheduler;"
+          ]
+        },
+        {
+          "old_start": 18,
+          "old_count": 0,
+          "new_start": 21,
+          "new_count": 5,
+          "before": [],
+          "after": [
+            "            this(profiles,platform,readings,app,http,jobs,tokens,null,null);",
+            "        }",
+            "        Delivery(NativeProviderTime.Profiles profiles,NativeProviderTime.Platform platform,NativeProviderClockExchange.Readings readings,",
+            "            NativeProviderRegistrationCoordinator.AppIdentity app,NativeProviderHttp http,NativeProviderJobSchedule.SystemJobs jobs,Tokens tokens,",
+            "            NativeProviderAudioSequence.Surface audioSurface,NativeProviderAudioSequence.Scheduler audioScheduler) {"
+          ]
+        },
+        {
+          "old_start": 21,
+          "old_count": 0,
+          "new_start": 29,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "            if((audioSurface==null)!=(audioScheduler==null))throw new IllegalArgumentException(\"provider_audio_pair_required\");",
+            "            this.audioSurface=audioSurface;this.audioScheduler=audioScheduler;"
+          ]
+        },
+        {
+          "old_start": 34,
+          "old_count": 0,
+          "new_start": 44,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    private final NativeProviderAudioSequence audio;"
+          ]
+        },
+        {
+          "old_start": 50,
+          "old_count": 1,
+          "new_start": 60,
+          "new_count": 2,
+          "before": [
+            "        claims = new NativeProviderClaims(journal); display = new NativeProviderDisplayDriver(journal, surface);"
+          ],
+          "after": [
+            "        audio=delivery==null||delivery.audioSurface==null?null:new NativeProviderAudioSequence(engine,coordinator,delivery.audioSurface,delivery.audioScheduler);",
+            "        claims = new NativeProviderClaims(journal,audio==null); display = new NativeProviderDisplayDriver(journal, surface);"
+          ]
+        },
+        {
+          "old_start": 58,
+          "old_count": 1,
+          "new_start": 69,
+          "new_count": 1,
+          "before": [
+            "        try{synchronized (engine) { synchronized (coordinator) { reconcileLocked(); } }}finally{publishMirrorHint();}"
+          ],
+          "after": [
+            "        try{synchronized (engine) { synchronized (coordinator) { reconcileLocked();if(audio!=null)audio.reconcile(); } }}finally{publishMirrorHint();}"
+          ]
+        },
+        {
+          "old_start": 73,
+          "old_count": 1,
+          "new_start": 84,
+          "new_count": 2,
+          "before": [
+            "            return journal.pendingOsCancellations().isEmpty();"
+          ],
+          "after": [
+            "            if(audio!=null)audio.reconcile();",
+            "            return journal.pendingOsCancellations().isEmpty()&&(audio==null||!audio.busy());"
+          ]
+        },
+        {
+          "old_start": 162,
+          "old_count": 1,
+          "new_start": 174,
+          "new_count": 1,
+          "before": [
+            "            if(work.networkPending()||!work.quarantined.isEmpty())return NativeProviderJobLifecycle.Result.RETRY;"
+          ],
+          "after": [
+            "            if(work.networkPending()||!work.quarantined.isEmpty()||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;"
+          ]
+        },
+        {
+          "old_start": 245,
+          "old_count": 0,
+          "new_start": 258,
+          "new_count": 8,
+          "before": [],
+          "after": [
+            "                if(audio!=null){audio.reconcile();if(!audio.busy())for(String id:journal.admittedRecordIds(current.principal)){",
+            "                    invocation.attempt.check();NativeProviderJournal.Presentation presentation=journal.presentation(current.principal,id);",
+            "                    try{org.json.JSONObject row=presentation.record();",
+            "                        if(!\"PENDING\".equals(row.getString(\"audio_state\"))||row.getBoolean(\"card_dismissed\")||!row.isNull(\"acknowledged_event_id\")",
+            "                            ||!NativeProviderTime.live(clock.observe().bounds,presentation.payload.reservedAt,presentation.payload.validUntil))continue;",
+            "                    }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure(\"custodial_provider_audio_invalid\",invalid);}",
+            "                    if(audio.start(presentation.payload.get(\"body\"),audioOwner(presentation)))break;",
+            "                }}"
+          ]
+        },
+        {
+          "old_start": 252,
+          "old_count": 1,
+          "new_start": 272,
+          "new_count": 1,
+          "before": [
+            "                return remaining.networkPending()||quarantineWaiting||!journal.pendingOsCancellations().isEmpty()"
+          ],
+          "after": [
+            "                return remaining.networkPending()||quarantineWaiting||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())"
+          ]
+        },
+        {
+          "old_start": 269,
+          "old_count": 0,
+          "new_start": 290,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            if(audio!=null)audio.reconcile();"
+          ]
+        },
+        {
+          "old_start": 300,
+          "old_count": 0,
+          "new_start": 322,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            if(audio!=null)audio.reconcile();"
+          ]
+        },
+        {
+          "old_start": 307,
+          "old_count": 0,
+          "new_start": 330,
+          "new_count": 15,
+          "before": [],
+          "after": [
+            "    private NativeProviderAudioSequence.Owner audioOwner(NativeProviderJournal.Presentation presentation){",
+            "        return new NativeProviderAudioSequence.Owner(){",
+            "            private NativeProviderAuthority.Current exact()throws VaultFailure{",
+            "                NativeProviderAuthority.Current current=currentLocked();journal.requirePresentationCurrent(current.principal,presentation);",
+            "                try{if(!journal.presentation(current.principal,presentation.payload.recordId).record().isNull(\"acknowledged_event_id\"))",
+            "                    throw new VaultFailure(\"custodial_provider_audio_acknowledged\");}",
+            "                catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure(\"custodial_provider_audio_invalid\",invalid);}",
+            "                return current;",
+            "            }",
+            "            public void current()throws VaultFailure{exact();}",
+            "            public boolean begin()throws VaultFailure{return journal.tryStartAudio(exact().principal,presentation,clock.observe());}",
+            "            public void completed()throws VaultFailure{journal.applyPresentationAction(exact().principal,presentation,\"audio_completed\",clock.observe());publishMirrorHint();}",
+            "            public void stopped(){/* Exact quiet releases lane; persisted IN_PROGRESS remains uncertain. */publishMirrorHint();}",
+            "        };",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java",
+      "name": "CustodialNativeRuntime.java",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "8d9e8b657a3375ff30d0c414b04e6ae17896bbc0bebfe54339c13d714cb88fd1",
+      "current_sha256": "c72301d887374150b14afafc810d4b779a22280ca3843b0dc537352f3f12b139",
+      "hunks": [
+        {
+          "old_start": 74,
+          "old_count": 0,
+          "new_start": 75,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            boolean nativeAudio=false;"
+          ]
+        },
+        {
+          "old_start": 76,
+          "old_count": 0,
+          "new_start": 78,
+          "new_count": 6,
+          "before": [],
+          "after": [
+            "                NativeProviderAudioPolicy audioPolicy=null;",
+            "                if(admitted){NativeProviderAppIdentity app=AndroidProviderAppIdentity.read(application);",
+            "                    audioPolicy=NativeProviderAudioAdmission.compiled(app,NativeProviderReleaseAdmission.compiled(AndroidProviderPlatform.read(),app));",
+            "                    if(audioPolicy==null)throw new VaultFailure(\"custodial_provider_audio_policy_unqualified\");}",
+            "                AndroidProviderAudioSurface audio=audioPolicy==null?null:new AndroidProviderAudioSurface(application,audioPolicy);",
+            "                nativeAudio=audio!=null;"
+          ]
+        },
+        {
+          "old_start": 78,
+          "old_count": 1,
+          "new_start": 85,
+          "new_count": 1,
+          "before": [
+            "                    () -> AndroidProviderAppIdentity.read(application), new NativeProviderHttp(readings), new AndroidProviderJobs(application), AndroidProviderTokenSource::refresh);"
+          ],
+          "after": [
+            "                    () -> AndroidProviderAppIdentity.read(application), new NativeProviderHttp(readings), new AndroidProviderJobs(application), AndroidProviderTokenSource::refresh,audio,audio);"
+          ]
+        },
+        {
+          "old_start": 85,
+          "old_count": 1,
+          "new_start": 92,
+          "new_count": 1,
+          "before": [
+            "                providerCoordinator, new AndroidProviderNotifications(application), delivery);"
+          ],
+          "after": [
+            "                providerCoordinator, new AndroidProviderNotifications(application,nativeAudio), delivery);"
+          ]
+        },
+        {
+          "old_start": 149,
+          "old_count": 1,
+          "new_start": 156,
+          "new_count": 3,
+          "before": [
+            "            return NativeProviderReleaseAdmission.compiled(AndroidProviderPlatform.read(), AndroidProviderAppIdentity.read(context));"
+          ],
+          "after": [
+            "            NativeProviderAppIdentity app=AndroidProviderAppIdentity.read(context);",
+            "            NativeProviderReleaseAdmission.Selected clock=NativeProviderReleaseAdmission.compiled(AndroidProviderPlatform.read(),app);",
+            "            return NativeProviderAudioAdmission.compiled(app,clock)==null?null:clock;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReleaseAdmission.java",
+      "name": "NativeProviderReleaseAdmission.java",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "75a93193c9499385028b315d018a75eb771a15ad531963d83e4d389fc9921cf7",
+      "current_sha256": "886a8138d4d4fbdb3cb07893a571a9575c31a3ed3bcb3afc4294e319ba082fa7",
+      "hunks": [
+        {
+          "old_start": 41,
+          "old_count": 0,
+          "new_start": 42,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        boolean matchesAudioEvidence(String clockFingerprint,String backend,String composition){",
+            "            try{return release.profile.fingerprint().equals(clockFingerprint)&&release.backendProtocolEvidenceSha256.equals(backend)",
+            "                &&release.compositionEvidenceSha256.equals(composition);}catch(VaultFailure invalid){return false;}",
+            "        }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/AndroidProviderNotifications.java",
+      "name": "AndroidProviderNotifications.java",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "8e5fe08eb67f6bf8899f9312376f20adc52b510275eea240f79b234c2f99550c",
+      "current_sha256": "a006e691d75dedf159f91c3ba44ab02cda5df2abe0bfc3cc6ca7eda437a5fc3a",
+      "hunks": [
+        {
+          "old_start": 22,
+          "old_count": 0,
+          "new_start": 23,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    private final boolean nativeAudio;"
+          ]
+        },
+        {
+          "old_start": 23,
+          "old_count": 0,
+          "new_start": 25,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        this(context,false);",
+            "    }",
+            "    AndroidProviderNotifications(Context context,boolean nativeAudio) {",
+            "        this.nativeAudio=nativeAudio;"
+          ]
+        },
+        {
+          "old_start": 25,
+          "old_count": 0,
+          "new_start": 31,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "    private String channel(NativeProviderPayload payload) {",
+            "        return payload.get(\"channel_id\")+(nativeAudio?\".native-audio.v1\":\"\");",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 28,
+          "old_count": 2,
+          "new_start": 36,
+          "new_count": 2,
+          "before": [
+            "        String channel = payload.get(\"channel_id\");",
+            "        String title = NativeProviderNotificationPolicy.channelTitle(channel);"
+          ],
+          "after": [
+            "        String channel = channel(payload);",
+            "        String title = NativeProviderNotificationPolicy.channelTitle(payload.get(\"channel_id\"));"
+          ]
+        },
+        {
+          "old_start": 34,
+          "old_count": 1,
+          "new_start": 42,
+          "new_count": 5,
+          "before": [
+            "                manager.createNotificationChannel(new NotificationChannel(channel, title, NotificationManager.IMPORTANCE_HIGH));"
+          ],
+          "after": [
+            "                NotificationChannel fresh=new NotificationChannel(channel, title, NotificationManager.IMPORTANCE_HIGH);",
+            "                // Separate exact native-audio channels; never reset/delete the",
+            "                // legacy/user channels or let OS audio bypass the private lane.",
+            "                if(nativeAudio){fresh.setSound(null,null);fresh.enableVibration(false);}",
+            "                manager.createNotificationChannel(fresh);"
+          ]
+        },
+        {
+          "old_start": 37,
+          "old_count": 0,
+          "new_start": 50,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            if(nativeAudio&&(actual.getSound()!=null||actual.shouldVibrate()))return false;"
+          ]
+        },
+        {
+          "old_start": 55,
+          "old_count": 1,
+          "new_start": 68,
+          "new_count": 1,
+          "before": [
+            "                || (Build.VERSION.SDK_INT >= 26 && !intent.presentation.payload.get(\"channel_id\").equals(notification.getChannelId())))"
+          ],
+          "after": [
+            "                || (Build.VERSION.SDK_INT >= 26 && !channel(intent.presentation.payload).equals(notification.getChannelId())))"
+          ]
+        },
+        {
+          "old_start": 70,
+          "old_count": 1,
+          "new_start": 83,
+          "new_count": 1,
+          "before": [
+            "        Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(application, intent.presentation.payload.get(\"channel_id\")) : new Notification.Builder(application);"
+          ],
+          "after": [
+            "        Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(application, channel(intent.presentation.payload)) : new Notification.Builder(application);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml",
+      "name": "AndroidManifest.xml",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "5714fc43190e46dfe043749b8a5b9bf2903bed60cd2bc86ef2077875248c854a",
+      "current_sha256": "da680d0375c0936d64c9e1cf529881b5fe65dd96fabfab2a4698bd4c0bbe16fe",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 0,
+          "new_start": 2,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "    <!-- Normal app declarations only; exact build verifier admits no broader",
+            "         type/exported owner. Runtime still requires qualified release inputs. -->",
+            "    <uses-permission android:name=\"android.permission.FOREGROUND_SERVICE\" />",
+            "    <uses-permission android:name=\"android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK\" />"
+          ]
+        },
+        {
+          "old_start": 2,
+          "old_count": 0,
+          "new_start": 7,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        <service",
+            "            android:name=\"org.memphiszoo.custodial.vault.CustodialProviderAudioService\"",
+            "            android:exported=\"false\"",
+            "            android:foregroundServiceType=\"mediaPlayback\" />"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/scripts/custodial-android-manifest-security.mjs",
+      "name": "custodial-android-manifest-security.mjs",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "bac7c22725c2172bcf7c2eb5f38468eba9397f95397a8ed79f4e88c8b6ee4d5d",
+      "current_sha256": "3e83cac71395c723ecdc9301e72505ea94788731d721d7f4b13405156467fa43",
+      "hunks": [
+        {
+          "old_start": 14,
+          "old_count": 1,
+          "new_start": 14,
+          "new_count": 1,
+          "before": [
+            "export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.8.0';"
+          ],
+          "after": [
+            "export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.9.0';"
+          ]
+        },
+        {
+          "old_start": 22,
+          "old_count": 0,
+          "new_start": 23,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "  'android.permission.FOREGROUND_SERVICE',",
+            "  'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',"
+          ]
+        },
+        {
+          "old_start": 44,
+          "old_count": 0,
+          "new_start": 47,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`,"
+          ]
+        },
+        {
+          "old_start": 294,
+          "old_count": 0,
+          "new_start": 298,
+          "new_count": 5,
+          "before": [],
+          "after": [
+            "    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`]: policyNode('service', {",
+            "      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`,",
+            "      'android:exported': 'false',",
+            "      'android:foregroundServiceType': '0x00000002',",
+            "    }),"
+          ]
+        },
+        {
+          "old_start": 713,
+          "old_count": 1,
+          "new_start": 721,
+          "new_count": 1,
+          "before": [
+            "    policy: providerRelease === null ? 'exact-custodial-android-manifest-v9' : 'exact-custodial-android-manifest-v10-qualified-provider',"
+          ],
+          "after": [
+            "    policy: providerRelease === null ? 'exact-custodial-android-manifest-v11-private-audio' : 'exact-custodial-android-manifest-v12-qualified-provider-private-audio',"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+      "name": "custodial-android-release-acceptance.schema.json",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "44fe431c3ed16fd5d5a31d613e85f4cda498b8915266e4e7f529e223fbe87933",
+      "current_sha256": "09868fbf07fc37b7c8cf09e8402470f7f396e2f3b2c298f79a405cc67c96560d",
+      "hunks": [
+        {
+          "old_start": 271,
+          "old_count": 2,
+          "new_start": 271,
+          "new_count": 2,
+          "before": [
+            "        \"verifier_version\": { \"const\": \"1.8.0\" },",
+            "        \"policy\": { \"const\": \"exact-custodial-android-manifest-v10-qualified-provider\" },"
+          ],
+          "after": [
+            "        \"verifier_version\": { \"const\": \"1.9.0\" },",
+            "        \"policy\": { \"const\": \"exact-custodial-android-manifest-v12-qualified-provider-private-audio\" },"
+          ]
+        },
+        {
+          "old_start": 275,
+          "old_count": 2,
+          "new_start": 275,
+          "new_count": 2,
+          "before": [
+            "          \"minItems\": 10,",
+            "          \"maxItems\": 10,"
+          ],
+          "after": [
+            "          \"minItems\": 12,",
+            "          \"maxItems\": 12,"
+          ]
+        },
+        {
+          "old_start": 281,
+          "old_count": 0,
+          "new_start": 282,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "            { \"const\": \"android.permission.FOREGROUND_SERVICE\" },",
+            "            { \"const\": \"android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK\" },"
+          ]
+        },
+        {
+          "old_start": 320,
+          "old_count": 2,
+          "new_start": 322,
+          "new_count": 2,
+          "before": [
+            "              \"minItems\": 5,",
+            "              \"maxItems\": 5,"
+          ],
+          "after": [
+            "              \"minItems\": 6,",
+            "              \"maxItems\": 6,"
+          ]
+        },
+        {
+          "old_start": 326,
+          "old_count": 0,
+          "new_start": 329,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "                { \"const\": \"org.memphiszoo.custodial.vault.CustodialProviderAudioService\" },"
+          ]
+        },
+        {
+          "old_start": 649,
+          "old_count": 1,
+          "new_start": 652,
+          "new_count": 1,
+          "before": [
+            "        \"android_manifest_security_verifier_version\": { \"const\": \"1.8.0\" },"
+          ],
+          "after": [
+            "        \"android_manifest_security_verifier_version\": { \"const\": \"1.9.0\" },"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/scripts/custodial-provider-storage-tests.mjs",
+      "name": "custodial-provider-storage-tests.mjs",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "bcc9d9681039f7471766eb44dba777f1e91fc35fa8e96d69d0364b4fb53e8665",
+      "current_sha256": "c5f9470d15c4e01cfef55a4dc356271d0b37f0086fe9c8dfafcad2a20d17ed87",
+      "hunks": [
+        {
+          "old_start": 43,
+          "old_count": 0,
+          "new_start": 44,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "tests.push('NativeProviderAudioSequenceTest');",
+            "tests.push('NativeProviderAudioRuntimeTest');"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderCompositionTest.java",
+      "name": "NativeProviderCompositionTest.java",
+      "prior_commit": "2840d236d0cb3a650b394fdf7ecb0a84cf05a283",
+      "prior_sha256": "0479a83424b45b20cc8cd786fa874fe597431697fd3359ccfff48341e973dbf6",
+      "current_sha256": "6c17784f5af40c637129bfe0fbba01de6aa4ef19630482eb2f8eca3224f443f7",
+      "hunks": [
+        {
+          "old_start": 96,
+          "old_count": 0,
+          "new_start": 97,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "        NativeProviderAudioSequence.Surface audioSurface;",
+            "        NativeProviderAudioSequence.Scheduler audioScheduler;"
+          ]
+        },
+        {
+          "old_start": 145,
+          "old_count": 1,
+          "new_start": 147,
+          "new_count": 1,
+          "before": [
+            "                }));"
+          ],
+          "after": [
+            "                },audioSurface,audioScheduler));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "name": "native-notification-arrival-boundary-tests.mjs",
+      "prior_commit": "793aa7e831b0acb477c076edb6a5c649f8873b32",
+      "prior_sha256": "fa3efe4598cc4327d0ae82110f9cacadb311b9880d96da342f58e5c14047a90c",
+      "current_sha256": "20cb1d753f65768955884b4b6ecfe9a1ee01dae5a824dc287924abd551f00933",
+      "hunks": [
+        {
+          "old_start": 39,
+          "old_count": 1,
+          "new_start": 39,
+          "new_count": 1,
+          "before": [
+            "  const cards=[],session=new Map(),noop=()=>{};"
+          ],
+          "after": [
+            "  const cards=[],session=new Map(),noop=()=>{},wakeCalls=[];"
+          ]
+        },
+        {
+          "old_start": 74,
+          "old_count": 2,
+          "new_start": 74,
+          "new_count": 5,
+          "before": [
+            "  if(fullySpeech)context.window.fully={bind:(kind,code)=>fullyBindings.set(kind,code),",
+            "    textToSpeech:text=>fullyTexts.push(text),stopTextToSpeech:()=>{audioStops++;}};"
+          ],
+          "after": [
+            "  // Observe only this synthetic renderer's exact wake calls. No real Fully or",
+            "  // device is used; these methods do not grant audio or presentation authority.",
+            "  context.window.fully={turnScreenOn:()=>wakeCalls.push('turnScreenOn'),bringToForeground:()=>wakeCalls.push('bringToForeground'),vibrate:noop};",
+            "  if(fullySpeech)Object.assign(context.window.fully,{bind:(kind,code)=>fullyBindings.set(kind,code),",
+            "    textToSpeech:text=>fullyTexts.push(text),stopTextToSpeech:()=>{audioStops++;}});"
+          ]
+        },
+        {
+          "old_start": 78,
+          "old_count": 1,
+          "new_start": 81,
+          "new_count": 1,
+          "before": [
+            "  return {poll:()=>context.window.MemphisDeviceReminders.poll(),cards,httpActions,tones,utterances,fullyTexts,fullyBindings,"
+          ],
+          "after": [
+            "  return {poll:()=>context.window.MemphisDeviceReminders.poll(),cards,httpActions,tones,utterances,fullyTexts,fullyBindings,wakeCalls,"
+          ]
+        }
+      ]
+    }
+  ],
+  "additions": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderAudioSequence.java",
+      "sha256": "98b0712c21d0be2a8f4a3017da2f720363e648da84315aa200205eac2ae24489"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderAudioPolicy.java",
+      "sha256": "53dc90d0426ce84f8cc5471aa99fa31c06c51db1b2d3a5fe84a35d1cc7f9c6d8"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderAudioAdmission.java",
+      "sha256": "c7cc31cfbe367879c4de6c5ce3c6a912a943baa6516b2975e52dd09bfce0fbe1"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/AndroidProviderAudioSurface.java",
+      "sha256": "b1f68c7d29000ca15ed9abd1ff5abe4e49ef57a7812d63f08d9d5123c7bf9a8f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialProviderAudioService.java",
+      "sha256": "ade66171601405392ed40c4e33b288eb5bb7cedea3903c47b7f1e5ce640f037a"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderAudioSequenceTest.java",
+      "sha256": "5d9da241ea18911cfb57ae028108dbf9d735bb217649d388fead1fa06ff0b131"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderAudioRuntimeTest.java",
+      "sha256": "ed90c2d59d8181171a07c224a3445b31e8ad534467c4554f2f29dadf6bb78921"
+    }
+  ]
+}

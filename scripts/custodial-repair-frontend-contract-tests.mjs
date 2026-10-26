@@ -31,7 +31,19 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
-assert.equal(manifest.schema_fingerprint, '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb');
+// The same exact isolated252 Source capture governs this declared Source
+// contract and runtime-manifest-contract-tests. It is not a current291/live,
+// production, independent review, release or frontend-pair admission receipt.
+const declaredSchemaCaptureBytes = fs.readFileSync(path.resolve(root, 'scripts/fixtures/current-schema-capture-binding.json'));
+assert.equal(createHash('sha256').update(declaredSchemaCaptureBytes).digest('hex'), 'ff671755afde209c927a85f5a0c5b9c3a7f17675cee12d6dc9ff55976559a656');
+const declaredSchemaCapture = JSON.parse(declaredSchemaCaptureBytes);
+assert.equal(declaredSchemaCapture.schema, 'custodial.isolated-normal-canonical-source-binding.v1');
+assert.equal(declaredSchemaCapture.source_commit, '9a0da26eb3e0d0052227da15224cbc78ee8705c0');
+assert.equal(declaredSchemaCapture.migration_count, 252);
+for (const field of ['production', 'independent_review', 'release_admission', 'frontend_pair_admission']) {
+  assert.equal(declaredSchemaCapture[field], false);
+}
+assert.equal(manifest.schema_fingerprint, declaredSchemaCapture.schema_fingerprint);
 assert.equal(manifest.api_contract_versions.scan, 'scan.v4.snapshot-bound-authority');
 assert.equal(manifest.api_contract_versions.messaging, 'messaging.v5');
 assert.deepEqual(manifest.queue_compatibility_versions.messaging, ['local-storage-outbox-v1']);
@@ -74,12 +86,23 @@ assert.match(sharedSync, /tool_get_device_rollback_readiness/);
 assert.match(sharedSync, /native_occurrence_count/);
 assert.match(sharedSync, /return withQueueLock\(async \(lockContext\) => \{/);
 assert.match(sharedSync, /return withQueueLock\(\(\) => enqueueUnlocked\(action\)\)/);
-assert.match(sharedSync, /current\?\.owner === state\.workerId && current\?\.token === token/);
+// Current shared owner uses the real exclusive Web Lock. The retired TTL
+// fallback must not write/delete original lease bytes before a later refusal.
+const queueLockStart = sharedSync.indexOf('  async function withQueueLock(');
+const queueLockEnd = sharedSync.indexOf('\n  async function enqueue(', queueLockStart);
+assert.ok(queueLockStart >= 0 && queueLockEnd > queueLockStart);
+const queueLockSource = sharedSync.slice(queueLockStart, queueLockEnd);
+assert.match(queueLockSource, /typeof navigator\.locks\?\.request === 'function'/);
+assert.match(queueLockSource, /const options = \{ mode: 'exclusive' \}/);
+assert.match(queueLockSource, /if \(ifAvailable\) options\.ifAvailable = true/);
+assert.match(queueLockSource, /return navigator\.locks\.request\(CONFIG\.WEB_LOCK_NAME, options, \(lock\) => lock \? operation\(\{ recoverClaimsImmediately: true \}\) : false\)/);
+assert.match(queueLockSource, /throw Object\.assign\(queueSecurityUnavailable\(\), \{ reason: 'browser_shared_lock_unavailable' \}\)/);
+assert.doesNotMatch(queueLockSource, /\b(?:localStorage|sessionStorage)\s*\.|\b(?:setItem|removeItem|setTimeout|setInterval)\s*\(/);
 assert.match(sharedSync, /Number\(item\.lease_until \|\| 0\) > now\(\)/);
 assert.match(sharedSync, /recoverOrphanedClaims\(lockContext\.recoverClaimsImmediately === true\)/);
 assert.match(sharedSync, /ADMISSION_MAX_BATCHES/);
-assert.match(sharedSync, /remaining\.some\(\(item\) => actionCanRun\(item, currentTime\)\)\) scheduleSync\(50\)/,
-  'A bounded background batch must immediately continue while eligible work remains');
+assert.match(sharedSync, /if \(nextClaimableAction\(remaining, currentTime\)\) scheduleSync\(50\)/,
+  'A bounded background batch must continue only when the ordered claim selector finds eligible work');
 assert.match(sharedSync, /result\.started_at\) !== safeText\(item\?\.payload\?\.p_client_started_at\)/);
 assert.match(sharedSync, /started_at: safeText\(payload\.p_client_started_at\)/);
 assert.match(scan, /async function admitNewScanWork\(/);

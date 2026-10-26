@@ -11,6 +11,56 @@ import static org.junit.Assert.*;
 /** Registration-only journal proof using the EXISTING actual V1/V2 native journal fixtures.
  * No authenticated registration result, Firebase, Android process, OS or backend proof. */
 public final class NativeProviderJournalTest {
+    @Test public void retainedCancellationRejectsUnconfirmedCandidateAcrossAdapters()throws Exception{
+        for(String failure:new String[]{"false-before","false-memory","throw"}){
+            NativeProviderRuntimeOwnerTest.FencedCancellationFixture f=new NativeProviderRuntimeOwnerTest.FencedCancellationFixture(false);
+            if("false-before".equals(failure))f.preferences.fail=true;
+            if("false-memory".equals(failure))f.preferences.persistThenFail=true;
+            if("throw".equals(failure))f.preferences.beforeCommit=()->{throw new IllegalStateException("synthetic commit unknown");};
+            NativeProviderJournal.Presentation original=f.journal.presentation(f.original.principal,f.original.f.payload.recordId);
+            ProviderRecordStoreTest.failure("custodial_provider_commit_failed_preserved",()->f.journal.requestOsCancellation(f.original.principal,original));
+            String after=f.providerHash();f.hold();
+            ProviderRecordStoreTest.failure("custodial_provider_retained_commit_unconfirmed",()->f.journal.retainedPendingOsCancellations());
+            ProviderRecordStoreTest.failure("custodial_provider_retained_commit_unconfirmed",()->f.newJournal().retainedPendingOsCancellations());
+            ProviderRecordStoreTest.failure("custodial_provider_retained_commit_unconfirmed",()->f.owner.reconcileLocalEffects());
+            assertEquals(after,f.providerHash());assertEquals(1,f.preferences.commits);assertEquals(0,f.surface.cancellations);
+        }
+    }
+    @Test public void retainedCancellationBatchRejectsWrongOwnerAndWholeCiphertextAba()throws Exception{
+        NativeProviderRuntimeOwnerTest.FencedCancellationFixture f=new NativeProviderRuntimeOwnerTest.FencedCancellationFixture(true);
+        NativeProviderJournal.RetainedCancellationBatch batch=f.journal.retainedPendingOsCancellations();assertEquals(1,batch.size());
+        ProviderRecordStoreTest.failure("custodial_provider_operation_stale",()->f.newJournal().requireRetainedCancellationCurrent(batch,0));
+        ProviderRecordStoreTest.failure("custodial_provider_operation_stale",()->f.journal.requireRetainedCancellationCurrent(batch,1));
+        Map<String,Object> original=new HashMap<>(f.preferences.disk);
+        NativeProviderDisplayDriver driver=new NativeProviderDisplayDriver(f.journal,f.surface);assertEquals(1,driver.cancelPending(32));
+        ProviderRecordStoreTest.failure("custodial_provider_retained_source_changed",()->f.journal.requireRetainedCancellationCurrent(batch,0));
+        // Exact ciphertext ABA in the fixture does not renew this old snapshot;
+        // the actual owner's attempted-write epoch remains changed.
+        f.preferences.disk=new HashMap<>(original);
+        ProviderRecordStoreTest.failure("custodial_provider_retained_source_changed",()->f.journal.requireRetainedCancellationCurrent(batch,0));
+    }
+    @Test public void retainedCancellationRejectsMalformedOriginalBeforeAnyTag()throws Exception{
+        for(String defect:new String[]{"extra","tag","record","content","principal","sequence","state"}){
+            NativeProviderRuntimeOwnerTest.FencedCancellationFixture f=new NativeProviderRuntimeOwnerTest.FencedCancellationFixture(true);
+            ProviderRecordStore store=new AndroidProviderStore(f.preferences.object(),f.gate,
+                AndroidProviderAdapterTest.crypto(f.preferences,f.keys)).records();
+            ProviderRecordStore.Snapshot snapshot=store.load();ProviderRecordStore.Key key=ProviderRecordStore.key(ProviderEnvelopeCrypto.Domain.INBOX,f.original.f.payload.recordId);
+            char[] original=snapshot.read(key);JSONObject record;
+            try{record=new JSONObject(new String(original));}finally{Arrays.fill(original,'\0');}
+            if("extra".equals(defect))record.put("future_unknown",true);
+            if("tag".equals(defect))record.put("os_tag","mz-provider:foreign");
+            if("record".equals(defect))record.put("record_id","f".repeat(64));
+            if("content".equals(defect))record.put("content_sha256","f".repeat(64));
+            if("principal".equals(defect))record.getJSONObject("principal").put("assignment_epoch",999);
+            if("sequence".equals(defect))record.put("cancel_sequence",0);
+            if("state".equals(defect))record.put("state","UNKNOWN");
+            char[] malformed=record.toString().toCharArray();
+            try{store.commit(snapshot.revision,Collections.singletonMap(key,malformed),Collections.emptySet());}finally{Arrays.fill(malformed,'\0');}
+            f.hold();String before=f.providerHash();
+            try{f.owner.reconcileLocalEffects();fail("malformed original must refuse before OS");}catch(VaultFailure expected){assertTrue(expected.code.startsWith("custodial_provider_"));}
+            assertEquals(before,f.providerHash());assertEquals(0,f.surface.cancellations);assertEquals(1,f.preferences.commits);
+        }
+    }
     static NativeProviderAppIdentity app() throws Exception { return NativeProviderAppIdentityTest.identity(53); }
     static NativeProviderPrincipal v1() throws Exception {
         NativePrincipalJournalTest fixture = new NativePrincipalJournalTest(); NativePrincipalJournalTest.Memory memory = new NativePrincipalJournalTest.Memory();

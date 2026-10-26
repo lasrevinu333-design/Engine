@@ -1,5 +1,6 @@
 import { createCustodialCredentialStore } from './credential-store.js';
 import { principalIdentity } from './protected-principal.js';
+import { createProtectedBrowserAdmission, readDocumentProtectedBrowserWriterAdmission } from './protected-browser-admission.js';
 import {
   createRawStorageAdapter,
   installCustodialStorageFirewall,
@@ -30,61 +31,102 @@ function materialSecurityState(status) {
  *   storage?: Storage,
  *   cryptoApi?: Crypto,
  *   indexedDb?: IDBFactory,
+ *   locks?: LockManager,
  * }} options
  */
 function createCustodialSecurityRuntime({
   secureStorage,
   storage = globalThis.localStorage,
+  sessionStorage = globalThis.sessionStorage,
   cryptoApi = globalThis.crypto,
   indexedDb = globalThis.indexedDB,
+  locks = globalThis.navigator?.locks,
 } = {}) {
   const rawStorage = createRawStorageAdapter(storage);
+  // Preserve the actual secondary area's identity. Missing declaration stays
+  // unknown; an aliased area must remain aliased so the collector refuses it.
+  const rawSessionStorage = sessionStorage === undefined ? undefined
+    : sessionStorage === storage ? rawStorage : createRawStorageAdapter(sessionStorage);
+  // Private cooperative browser writer admission only. Never publish the
+  // preservation owner or derive native/enrollment/removal authority from it.
+  const browserAdmission = readDocumentProtectedBrowserWriterAdmission()
+    ?? createProtectedBrowserAdmission({ storage: rawStorage, sessionStorage: rawSessionStorage, indexedDb, locks, cryptoApi });
   const store = createCustodialCredentialStore({
     secureStorage,
     storage: rawStorage,
     cryptoApi,
     indexedDb,
+    protectedWorkAdmission: operation => browserAdmission.mutate(operation),
+    protectedWorkCheckpoint: () => browserAdmission.requireAdmission(),
   });
-  installCustodialStorageFirewall({ storage, getSecurityStatus: store.getStatus });
+  installCustodialStorageFirewall({ storage, getSecurityStatus: store.getStatus,
+    requireProtectedWorkMutation: () => browserAdmission.requireMutation() });
 
+  // Current readiness DATA must not outlive this SAME private browser owner.
+  // Refusal only: this cannot authenticate a principal or admit a mutation,
+  // and never changes the underlying credential record/status or selects a
+  // fallback owner. Preserve existing nonoperational/quarantine diagnostics.
+  const getStatus = () => {
+    const snapshot = store.getStatus();
+    try { browserAdmission.requireAdmission(); }
+    catch (error) {
+      if (snapshot.quarantined === true || snapshot.initialized !== true
+        || (snapshot.ready !== true && snapshot.available !== true)) {
+        return { ...snapshot, ready: false, available: false };
+      }
+      const pending = error?.code === 'custodial_browser_preservation_pending'
+        || error?.code === 'browser_hold_missing_after_observation';
+      return { ...snapshot, state: 'unavailable', ready: false, available: false,
+        reason: pending ? 'custodial_browser_preservation_pending' : 'custodial_browser_admission_unavailable' };
+    }
+    return snapshot;
+  };
+  const ensureSecurityState = () => store.ensureSecurityState().then(status => {
+    browserAdmission.requireAdmission();return status;
+  });
+  const waitForStableState = options => store.waitForStableState(options).then(status => {
+    browserAdmission.requireAdmission();return status;
+  });
   const listeners = new Set();
   let lastMaterialState = '';
-  const publish = (status) => {
-    const materialState = materialSecurityState(status);
+  const publish = () => {
+    const materialState = materialSecurityState(getStatus());
     if (!materialState || materialState === lastMaterialState) return;
     lastMaterialState = materialState;
-    const snapshot = store.getStatus();
     for (const listener of listeners) {
-      try { listener(snapshot); } catch {}
+      try { listener(getStatus()); } catch {}
     }
     try {
-      globalThis.dispatchEvent?.(new CustomEvent('memphis:custodial-security-state', { detail: snapshot }));
+      globalThis.dispatchEvent?.(new CustomEvent('memphis:custodial-security-state', { detail: getStatus() }));
     } catch {}
   };
   store.subscribe(publish);
 
   const initialCheck = Promise.resolve()
     .then(() => store.ensureSecurityState())
-    .catch(() => store.getStatus());
+    .then(() => getStatus())
+    .catch(() => getStatus());
   const publicSecurity = Object.freeze({
     native: true,
-    ready: initialCheck,
-    ensureSecurityState: store.ensureSecurityState,
-    getStatus: store.getStatus,
+    // A later readiness read must not reuse an earlier fulfilled ready
+    // snapshot after a hold. Previously returned DATA is not a live lease.
+    get ready() { return initialCheck.then(() => getStatus()); },
+    ensureSecurityState,
+    getStatus,
     getPendingEnrollmentOperation: store.getPendingEnrollmentOperation,
-    waitForStableState: store.waitForStableState,
+    waitForStableState,
     mutateProtectedWork: store.runWhenReady,
     subscribe(listener) {
       if (typeof listener !== 'function') throw new TypeError('A security-state listener function is required');
       listeners.add(listener);
-      try { listener(store.getStatus()); } catch {}
+      try { listener(getStatus()); } catch {}
       return () => listeners.delete(listener);
     },
   });
   const shellSecurity = Object.freeze({
-    ensureSecurityState: store.ensureSecurityState,
-    getStatus: store.getStatus,
-    waitForStableState: store.waitForStableState,
+    ensureSecurityState,
+    getStatus,
+    waitForStableState,
   });
   const bridge = Object.freeze({ credentialStore: store, security: publicSecurity });
   return Object.freeze({ bridge, publicSecurity, shellSecurity });

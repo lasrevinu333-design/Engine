@@ -101,6 +101,7 @@ export function createImmutableFileSnapshot(
   const temporaryRoot = realpathSync(tmpdir());
   const directory = mkdtempSync(join(temporaryRoot, prefix));
   chmodSync(directory, 0o700);
+  const directoryOwner = identity(lstatSync(directory, { bigint: true }));
   const destination = join(directory, safeName);
   let sourceDescriptor = null;
   let destinationDescriptor = null;
@@ -173,7 +174,26 @@ export function createImmutableFileSnapshot(
   } catch (error) {
     if (sourceDescriptor !== null) closeSync(sourceDescriptor);
     if (destinationDescriptor !== null) closeSync(destinationDescriptor);
-    rmSync(directory, { recursive: true, force: true });
+    let currentDirectory;
+    try {
+      currentDirectory = lstatSync(directory, { bigint: true });
+    } catch (cleanupError) {
+      if (cleanupError.code !== 'ENOENT') throw cleanupError;
+      throw error; // Already absent: preserve the original copy failure.
+    }
+    // Creation may change directory timestamps/size. Custody must still name
+    // the same owned directory, never a replacement at its former pathname.
+    if (
+      !currentDirectory.isDirectory()
+      || currentDirectory.dev !== directoryOwner.dev
+      || currentDirectory.ino !== directoryOwner.ino
+      || currentDirectory.uid !== directoryOwner.uid
+      || currentDirectory.gid !== directoryOwner.gid
+      || (currentDirectory.mode & 0o777n) !== 0o700n
+    ) {
+      throw new Error('Refusing to clean up a replaced immutable snapshot directory', { cause: error });
+    }
+    rmSync(directory, { recursive: true, force: false });
     throw error;
   }
 }

@@ -34,7 +34,14 @@ final class EncryptedSecret {
     final String iv;
 
     EncryptedSecret(String ciphertext, String iv) throws VaultFailure {
-        this.ciphertext = VaultValidation.bounded(ciphertext, 8, 16_384, "custodial_native_vault_corrupt");
+        this(ciphertext,iv,16_384);
+    }
+    // Lexical bounded record-class adapter only; the enrollment/vault default
+    // stays 16 KiB. This does not change AAD, key custody or acceptance authority.
+    EncryptedSecret(String ciphertext,String iv,int maximumCiphertextCharacters)throws VaultFailure {
+        if(maximumCiphertextCharacters<16_384||maximumCiphertextCharacters>128*1024*1024)
+            throw new VaultFailure("custodial_native_vault_corrupt");
+        this.ciphertext = VaultValidation.bounded(ciphertext, 8, maximumCiphertextCharacters, "custodial_native_vault_corrupt");
         this.iv = VaultValidation.bounded(iv, 8, 1024, "custodial_native_vault_corrupt");
     }
 

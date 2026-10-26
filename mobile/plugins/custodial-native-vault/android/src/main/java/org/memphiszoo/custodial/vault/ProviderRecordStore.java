@@ -23,6 +23,9 @@ final class ProviderRecordStore {
 
     interface Backend {
         Map<String, ?> readAll() throws Exception;
+        /** Fixed backing identity, not an authority/caller-selected pointer.
+         * Android adapters of the same private namespace share this identity. */
+        default Object retainedSourceIdentity() { return this; }
         /** ONE atomic commit, removing only previous provider-owned keys. */
         boolean replace(Map<String, String> next) throws Exception;
     }
@@ -51,6 +54,10 @@ final class ProviderRecordStore {
         final long revision;
         private final Map<Key, String> encrypted;
         private final Crypto crypto;
+        private ProviderRecordStore retainedOwner;
+        private Object retainedSource;
+        private Map<String,String> retainedRaw;
+        private long retainedEpoch;
         private Snapshot(long revision, Map<Key, String> encrypted, Crypto crypto) {
             this.revision = revision;
             this.encrypted = Collections.unmodifiableMap(new TreeMap<>(encrypted));
@@ -67,6 +74,9 @@ final class ProviderRecordStore {
     private final Backend backend;
     private final Crypto crypto;
     private final Object lock;
+    private static final Object RETAINED_STATE_LOCK = new Object();
+    private static final Map<Object,Long> RETAINED_EPOCHS = new java.util.IdentityHashMap<>();
+    private static final Set<Object> RETAINED_UNCERTAIN = Collections.newSetFromMap(new java.util.IdentityHashMap<>());
     ProviderRecordStore(Backend backend, Crypto crypto, Object lock) {
         if (backend == null || crypto == null || lock == null) throw new IllegalArgumentException("provider_store_dependencies_required");
         this.backend = backend; this.crypto = crypto; this.lock = lock;
@@ -76,6 +86,90 @@ final class ProviderRecordStore {
         synchronized (lock) {
             crypto.initialize(); // Missing key with ANY retained preferences must fail closed.
             return decode(readRaw());
+        }
+    }
+
+    /** Existing encrypted namespace ONLY. Unlike ordinary initial load, this
+     * observer never calls initialize and therefore cannot create a key. Empty,
+     * missing-key or unreadable storage is absence of a witness, not admission. */
+    Snapshot loadRetained() throws VaultFailure {
+        synchronized (lock) {
+            Map<String, String> raw = readRaw();
+            if (raw.isEmpty()) throw new VaultFailure("custodial_provider_retained_namespace_missing");
+            return decode(raw); // Every read requires the already-existing key.
+        }
+    }
+
+    /** Read-only witness for exact retained intent consumption, never ordinary
+     * key initialization, a repair write or inventory/finalization authority.
+     * Reject a valid-looking memory-only failed commit across store adapters. */
+    Snapshot loadDurableRetained() throws VaultFailure {
+        synchronized(lock) {
+            Object source=sourceIdentity();long epoch=requireConfirmedSource(source);
+            Map<String,String> raw=readRaw();
+            if(raw.isEmpty())throw new VaultFailure("custodial_provider_retained_namespace_missing");
+            Snapshot result=decode(raw);
+            if(epoch!=requireConfirmedSource(source)||!raw.equals(readRaw()))throw retainedChanged();
+            result.retainedOwner=this;result.retainedSource=source;
+            result.retainedRaw=Collections.unmodifiableMap(new TreeMap<>(raw));result.retainedEpoch=epoch;
+            return result;
+        }
+    }
+
+    void requireDurableRetainedCurrent(Snapshot original) throws VaultFailure {
+        synchronized(lock) {
+            Object source=sourceIdentity();
+            if(original==null||original.retainedOwner!=this||original.retainedSource!=source
+                ||original.retainedRaw==null||original.retainedEpoch!=requireConfirmedSource(source)
+                ||!original.retainedRaw.equals(readRaw()))throw retainedChanged();
+        }
+    }
+    /** Callback-free native commit/UNKNOWN fence for a real retained read.
+     * Source identity is captured by the original durable observation, never
+     * supplied by an ordinary caller. Other store adapters share this epoch. */
+    static final class RetainedNativeRead {
+        private final Object source;private final long epoch;
+        private RetainedNativeRead(Object source,long epoch){this.source=source;this.epoch=epoch;}
+        void requireCurrent()throws VaultFailure {if(epoch!=requireConfirmedSource(source))throw retainedChanged();}
+    }
+    RetainedNativeRead captureRetainedNativeRead(Snapshot original)throws VaultFailure {
+        synchronized(lock){requireDurableRetainedCurrent(original);
+            return new RetainedNativeRead(original.retainedSource,original.retainedEpoch);}
+    }
+    private Object sourceIdentity() throws VaultFailure {
+        Object source=backend.retainedSourceIdentity();
+        if(source==null)throw retainedChanged();return source;
+    }
+    private static long requireConfirmedSource(Object source)throws VaultFailure {
+        synchronized(RETAINED_STATE_LOCK){
+            if(RETAINED_UNCERTAIN.contains(source))throw new VaultFailure("custodial_provider_retained_commit_unconfirmed");
+            return RETAINED_EPOCHS.getOrDefault(source,0L);
+        }
+    }
+    private static void markRetainedAttempt(Object source)throws VaultFailure {
+        synchronized(RETAINED_STATE_LOCK){
+            RETAINED_UNCERTAIN.add(source);
+            long old=RETAINED_EPOCHS.getOrDefault(source,0L);
+            if(old==Long.MAX_VALUE)throw retainedChanged();
+            RETAINED_EPOCHS.put(source,old+1);
+        }
+    }
+    private static void confirmRetainedAttempt(Object source){
+        synchronized(RETAINED_STATE_LOCK){RETAINED_UNCERTAIN.remove(source);}
+    }
+    private static VaultFailure retainedChanged(){return new VaultFailure("custodial_provider_retained_source_changed");}
+
+    /** Exact private all-row snapshot, using existing provider key/AAD ONLY.
+     * No initialize/repair/commit or token/credential export is performed. */
+    Snapshot loadRetainedCaptured(Map<String,?> expected) throws VaultFailure {
+        synchronized(lock) {
+            Map<String,String> before=readRaw();
+            if(expected==null||before.isEmpty()||!before.equals(expected))
+                throw new VaultFailure("custodial_provider_census_source_changed");
+            Snapshot value=decode(before);
+            if(!before.equals(readRaw())||!before.equals(expected))
+                throw new VaultFailure("custodial_provider_census_source_changed");
+            return value;
         }
     }
 
@@ -107,6 +201,10 @@ final class ProviderRecordStore {
             try { raw.put(INDEX, wire(crypto.encrypt(ProviderEnvelopeCrypto.Domain.METADATA, INDEX, index))); }
             finally { Arrays.fill(index, '\0'); }
             enforceBytes(raw);
+            Object retainedSource=sourceIdentity();
+            // Mark BEFORE the external write. false/throw/readback/decode failure
+            // never makes a newly visible in-memory cancellation pointer usable.
+            markRetainedAttempt(retainedSource);
             try {
                 if (!backend.replace(Collections.unmodifiableMap(raw))) throw new VaultFailure("custodial_provider_commit_failed_preserved");
             } catch (VaultFailure error) { throw error; }
@@ -115,6 +213,7 @@ final class ProviderRecordStore {
             if (!raw.equals(readback)) throw new VaultFailure("custodial_provider_readback_failed_preserved");
             Snapshot accepted = decode(readback); // Authenticate index AND every record before caller effects.
             if (accepted.revision != expectedRevision + 1) throw new VaultFailure("custodial_provider_readback_failed_preserved");
+            confirmRetainedAttempt(retainedSource);
             return accepted;
         }
     }
@@ -213,9 +312,22 @@ final class ProviderRecordStore {
         return new String(out);
     }
     private static byte[] unhex(String value) throws VaultFailure {
-        if ((value.length() & 1) != 0 || !value.matches("[0-9a-f]+")) throw new VaultFailure("custodial_provider_envelope_invalid");
-        byte[] bytes = new byte[value.length() / 2];
-        for (int i = 0; i < bytes.length; i++) bytes[i] = (byte) ((Character.digit(value.charAt(i * 2), 16) << 4) | Character.digit(value.charAt(i * 2 + 1), 16));
-        return bytes;
+        int length = value.length();
+        if (length == 0 || (length & 1) != 0) throw new VaultFailure("custodial_provider_envelope_invalid");
+        byte[] bytes = new byte[length / 2];
+        boolean decoded = false;
+        try {
+            for (int i = 0; i < bytes.length; i++) {
+                char high = value.charAt(i * 2), low = value.charAt(i * 2 + 1);
+                int hi = high >= '0' && high <= '9' ? high - '0' : high >= 'a' && high <= 'f' ? high - 'a' + 10 : -1;
+                int lo = low >= '0' && low <= '9' ? low - '0' : low >= 'a' && low <= 'f' ? low - 'a' + 10 : -1;
+                if (hi < 0 || lo < 0) throw new VaultFailure("custodial_provider_envelope_invalid");
+                bytes[i] = (byte) ((hi << 4) | lo);
+            }
+            decoded = true;
+            return bytes;
+        } finally {
+            if (!decoded) Arrays.fill(bytes, (byte) 0);
+        }
     }
 }

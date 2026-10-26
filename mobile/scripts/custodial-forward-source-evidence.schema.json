@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "custodial.forward-source-evidence.v1",
+  "title": "Nonqualifying source and receipt byte observation",
+  "description": "Structural schema only. Byte observation does not qualify source, review authority, retained compatibility or artifact admission.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "purpose",
+    "declarations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "purpose": {
+      "const": "forward_source_evidence_observation"
+    },
+    "declarations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frontend",
+        "backend",
+        "retained_receipts"
+      ],
+      "properties": {
+        "frontend": {
+          "type": "object"
+        },
+        "backend": {
+          "type": "object"
+        },
+        "retained_receipts": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    }
+  }
+}

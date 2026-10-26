@@ -492,9 +492,9 @@
 
         <div class="heroControls">
           <div class="controlGrid">
-            <input id="actor-input" class="input" type="text" placeholder="Action as" />
-            <input id="location-search" class="input" type="text" placeholder="Search location" />
-            <select id="location-filter" class="select">
+            <input id="actor-input" class="input" type="text" placeholder="Action as" aria-label="Action as" />
+            <input id="location-search" class="input" type="text" placeholder="Search location" aria-label="Search location" />
+            <select id="location-filter" class="select" aria-label="Location filter">
               <option value="all">All locations</option>
               <option value="attention">Needs attention</option>
               <option value="not_cleaned">Not cleaned</option>
@@ -636,7 +636,7 @@
       <h3 id="modal-title" class="modalTitle">Action</h3>
       <div id="modal-sub" class="modalSub">Review the details below.</div>
       <div id="modal-ticket-id" class="helpText inlineCode"></div>
-      <textarea id="modal-textarea" class="textarea" placeholder="Enter notes or reason"></textarea>
+      <textarea id="modal-textarea" class="textarea" placeholder="Enter notes or reason" aria-label="Enter notes or reason"></textarea>
       <div class="modalActions">
         <button id="modal-cancel-btn" class="button dark" type="button">Cancel</button>
         <button id="modal-confirm-btn" class="button warning" type="button">Confirm</button>

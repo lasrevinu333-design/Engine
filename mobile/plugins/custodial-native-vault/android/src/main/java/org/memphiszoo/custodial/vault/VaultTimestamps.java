@@ -32,6 +32,32 @@ final class VaultTimestamps {
         }
     }
 
+    static int compareInstants(String first, String second, String failureCode) throws VaultFailure {
+        Parsed a = parse(first, failureCode), b = parse(second, failureCode);
+        int seconds = Long.compare(a.epochSecond, b.epochSecond);
+        return seconds != 0 ? seconds : Integer.compare(a.nanoOfSecond, b.nanoOfSecond);
+    }
+
+    static int compareEpochMillisToInstant(long epochMillis, String instant, String failureCode) throws VaultFailure {
+        Parsed right = parse(instant, failureCode);
+        long seconds = Math.floorDiv(epochMillis, 1000L);
+        int nanos = (int) Math.floorMod(epochMillis, 1000L) * 1_000_000;
+        int secondOrder = Long.compare(seconds, right.epochSecond);
+        return secondOrder != 0 ? secondOrder : Integer.compare(nanos, right.nanoOfSecond);
+    }
+
+    static boolean exceedsDuration(String start, String end, long maximumMillis, String failureCode) throws VaultFailure {
+        if (maximumMillis < 0) throw new VaultFailure(failureCode);
+        Parsed a = parse(start, failureCode), b = parse(end, failureCode);
+        long seconds = b.epochSecond - a.epochSecond;
+        int nanos = b.nanoOfSecond - a.nanoOfSecond;
+        if (nanos < 0) { seconds -= 1; nanos += 1_000_000_000; }
+        if (seconds < 0) return false;
+        long maximumSeconds = maximumMillis / 1000L;
+        int maximumNanos = (int) (maximumMillis % 1000L) * 1_000_000;
+        return seconds > maximumSeconds || (seconds == maximumSeconds && nanos > maximumNanos);
+    }
+
     static String fromEpochMillis(long epochMillis) throws VaultFailure {
         long seconds = Math.floorDiv(epochMillis, 1000L);
         int millis = (int) Math.floorMod(epochMillis, 1000L);

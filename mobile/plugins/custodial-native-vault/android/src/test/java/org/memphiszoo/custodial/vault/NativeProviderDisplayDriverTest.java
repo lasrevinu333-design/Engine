@@ -7,6 +7,36 @@ import static org.junit.Assert.*;
 
 /** Actual effect driver plus encrypted journal; synthetic NotificationManager observation only. */
 public final class NativeProviderDisplayDriverTest {
+    @Test public void retainedCancellationRechecksSourceAroundExactOsEffects()throws Exception{
+        for(String edge:new String[]{"cancel","readback"}){
+            NativeProviderRuntimeOwnerTest.FencedCancellationFixture f=new NativeProviderRuntimeOwnerTest.FencedCancellationFixture(true);
+            f.hold();MapCopy before=new MapCopy(f.preferences.disk);int[] cancels={0},reads={0};
+            NativeProviderDisplayDriver.Surface changed=new NativeProviderDisplayDriver.Surface(){
+                public boolean enabled(NativeProviderPayload p){throw new AssertionError("no delivery permission");}
+                public NativeProviderDisplayDriver.Active active(NativeProviderJournal.OsDisplayIntent i){throw new AssertionError("no display lookup");}
+                public void show(NativeProviderJournal.OsDisplayIntent i){throw new AssertionError("no new display");}
+                public void cancel(String tag){assertEquals(f.tag(),tag);cancels[0]++;if("cancel".equals(edge))f.preferences.disk.put("index","changed");}
+                public boolean absent(String tag){assertEquals(f.tag(),tag);reads[0]++;if("readback".equals(edge))f.preferences.disk.put("index","changed");return true;}
+            };
+            NativeProviderDisplayDriver driver=new NativeProviderDisplayDriver(f.journal,changed);
+            ProviderRecordStoreTest.failure("custodial_provider_retained_source_changed",()->driver.cancelRetainedPending(32));
+            assertEquals(1,cancels[0]);assertEquals("cancel".equals(edge)?0:1,reads[0]);assertEquals(0,f.preferences.commits);
+            f.preferences.disk=before.values;assertEquals(1,f.journal.retainedPendingOsCancellations().size());
+        }
+    }
+    private static final class MapCopy {
+        final java.util.Map<String,Object> values;
+        MapCopy(java.util.Map<String,Object> source){values=new java.util.HashMap<>(source);}
+    }
+    @Test public void retainedCancellationBoundsOnlyExistingIntentsAndKeepsThemPending()throws Exception{
+        NativeProviderRuntimeOwnerTest.FencedCancellationFixture f=new NativeProviderRuntimeOwnerTest.FencedCancellationFixture(true);f.hold();
+        NativeProviderDisplayDriver driver=new NativeProviderDisplayDriver(f.journal,f.surface);String before=f.providerHash();
+        ProviderRecordStoreTest.failure("custodial_provider_cancel_limit_invalid",()->driver.cancelRetainedPending(33));
+        ProviderRecordStoreTest.failure("custodial_provider_cancel_limit_invalid",()->driver.cancelRetainedPending(0));
+        assertEquals(0,f.surface.cancellations);assertEquals(1,driver.cancelRetainedPending(1));
+        assertEquals(java.util.List.of(f.tag()),f.surface.tags);assertEquals(before,f.providerHash());assertEquals(0,f.preferences.commits);
+        assertEquals(1,f.journal.retainedPendingOsCancellations().size());
+    }
     interface Hook { void run() throws Exception; }
     static final class Surface implements NativeProviderDisplayDriver.Surface {
         boolean enabled = true, visibleAfterShow = true, cancelWorks = true;

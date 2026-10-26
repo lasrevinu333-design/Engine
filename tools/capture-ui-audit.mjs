@@ -20,7 +20,6 @@ const pages = [
   ['device-security', 'device-security.html'],
   ['employee-hub', 'employee-hub.html?device=KIOSK_02&lock=0'],
   ['employee-schedule', 'employee-schedule.html?device=KIOSK_02&hub=employee'],
-  ['events-admin', 'events-admin.html'],
   ['events', 'events.html?hub=manager'],
   ['gemini-admin', 'gemini-admin.html'],
   ['guest-issues', 'guest-issues.html'],

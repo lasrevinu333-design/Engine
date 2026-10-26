@@ -15,6 +15,9 @@ final class RemovalCoordinator {
     RemovalView remove(String operationId, String deviceId) throws VaultFailure {
         String operation = VaultValidation.operationId(operationId);
         String device = VaultValidation.deviceId(deviceId);
+        // Native presence is not inventory/current-transaction/manager proof.
+        // Do not prompt or invoke getState's legacy recovery before admission.
+        engine.requireOriginalRemovalAdmission();
         Map<String, Object> state = engine.getState();
         boolean durableIntent = Boolean.TRUE.equals(state.get("removal_pending"));
         if (durableIntent) {

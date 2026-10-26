@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
   copyFileSync,
@@ -30,14 +31,35 @@ import {
 } from './refresh-frontend-release-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CANONICAL_SCHEMA_FINGERPRINT = '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb';
-const PREVIOUS_SCHEMA_FINGERPRINT = '750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822';
+// Exact isolated TEST catalog binding. This grants no production or release admission.
+const schemaCaptureBytes=readFileSync(resolve(root,'scripts/fixtures/current-schema-capture-binding.json'));
+assert.equal(createHash('sha256').update(schemaCaptureBytes).digest('hex'),'0092dcd68b2e5bba9f2a09093a07d7a0710ead8caadd82b777332687dbda8205');
+const schemaCapture=JSON.parse(schemaCaptureBytes);
+assert.equal(schemaCapture.schema,'custodial.isolated-test-canonical-source-binding.v1');
+assert.equal(schemaCapture.scope,'SAME_EXCLUSIVE_POST293_DATA_TEST_ONLY');
+for(const flag of ['production','production_observation','production_applicability','independent_review','release_admission','frontend_pair_admission'])assert.equal(schemaCapture[flag],false);
+assert.equal(schemaCapture.read_only_same_snapshot,true);
+assert.equal(schemaCapture.ledger293_observed_by_this_reader,null);
+assert.equal(schemaCapture.raw_rowstream.sha256,'937d920067b4c93ba2d702de21c02ba3c8504793c1c73d2c67d0166ed3abd595');
+assert.equal(schemaCapture.normalized.sha256,'0684ddbdf2dbc6b850dc2463425fc4cf20764c3970d45bb74d08c8ba438e7560');
+assert.equal(schemaCapture.catalog_module.sha256,'2d9a6c581d434630257fdb9c915bf196380af96d15af7185fb3f6d19a6cfafad');
+assert.equal(schemaCapture.reader_adapter.sha256,'f3ccba542492ba1d35cfb580172ed23375e0e908e2d0b28ed595913ddfd4394b');
+assert.equal(schemaCapture.catalog_sql.sha256,'939c887aa1cf727d6be654e08b187e4fefb40661baa38ee7670bb82d957570f1');
+assert.equal(schemaCapture.catalog_summary.sha256,'f632981d6342fb1d5afeb4011b4f038479f0549404e63fef7d320cdbaabeb46d');
+assert.equal(schemaCapture.Root_closed_actual_catalog.sha256,'16e16773b00f410d95be1c17afdf418972228b6e9f352fb698c1176534cacb7f');
+assert.equal(schemaCapture.schema_fingerprint,'b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548');
+assert.equal(schemaCapture.source_query_sections,26);
+assert.equal(schemaCapture.counts.tables,274);
+assert.equal(schemaCapture.counts.functions,963);
+const CANONICAL_SCHEMA_FINGERPRINT = schemaCapture.schema_fingerprint;
+const PREVIOUS_SCHEMA_FINGERPRINT = 'b496c72630100da8173006aa34886c7868b3ead5bea43e056135df64cf53b4ce';
 const ACTIVE_SCHEMA_TRANSITION = {
-  transition_id: 'custodial-verified-visits-20260922',
-  from_fingerprint: PREVIOUS_SCHEMA_FINGERPRINT,
-  to_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
-  expires_at: '2026-10-02T23:59:59Z',
+  "transition_id": "custodial-post293-test-20261025",
+  "from_fingerprint": "b496c72630100da8173006aa34886c7868b3ead5bea43e056135df64cf53b4ce",
+  "to_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
+  "expires_at": "2026-11-01T15:12:05Z"
 };
+assert.deepEqual(schemaCapture.schema_transition,ACTIVE_SCHEMA_TRANSITION);
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 
 function createFrontendGitFixture({
@@ -80,12 +102,12 @@ const scanWorkerSource = readFileSync(resolve(root, 'memphis-scan-sync.js'), 'ut
 assert.equal(
   frontendManifest.schema_fingerprint,
   CANONICAL_SCHEMA_FINGERPRINT,
-  'the frontend release must declare the live backend schema fingerprint',
+  'the candidate frontend release must declare the exact source-captured backend schema fingerprint',
 );
 assert.equal(
   frontendDeploymentManifest.schema_fingerprint,
   CANONICAL_SCHEMA_FINGERPRINT,
-  'the deployment manifest must declare the live backend schema fingerprint',
+  'the candidate deployment manifest must declare the exact source-captured backend schema fingerprint',
 );
 assert.deepEqual(frontendManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
   'the release manifest must declare the exact active backend transition');

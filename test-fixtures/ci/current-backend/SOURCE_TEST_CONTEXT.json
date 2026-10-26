@@ -1,0 +1,541 @@
+{
+  "schema": "custodial.frozen-backend-source-test-context.v1",
+  "roles": {
+    "selected_source_test_code_and_TEST_metadata": {
+      "selected1060_frame_sha256": "e4b2e1c6f921d48421f29e32977eca017db4fc72bccf2cdddb6499a3d8020245",
+      "actual_final_generated_artifact": null,
+      "applicability": "Exact selected scheduler Source02 runtime/controller/helpers plus genuine TEST metadata; prebind frontendSHA remainsNULL. No actual whole1061 generated artifact exists."
+    },
+    "historical_generated_artifact_snapshot_only": {
+      "path": "test-fixtures/ci/current-backend/release/integrated-backend-authority-evidence.json",
+      "sha256": "8b78b6612ce459016e10e5122c6cd32a0844c08af466867b6c792ecb640c0e18",
+      "bytes": 240570,
+      "actual_prior_commit": "ebcd2e65ec3f189619dcc7be27fb8c833bc8e386",
+      "applicability": "Existing snapshot proof only. Its expected_tree_inventory and518 frontend declaration are not current scheduler/TEST metadata/final release authority. No artifact fields rewritten."
+    }
+  },
+  "bodies": [
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-component-weight-authority-v1.json",
+      "sha256": "7e843c3eb6df72f1f5d7bf10702c25d7f155c952e693202ba66495b2bbd2c794",
+      "bytes": 10505,
+      "git_blob_sha1": "3545d2fe8406dc06b21f58d10c3454747568bbae",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "config/custodial-component-weight-authority-v1.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-full-nine-family-owners-20260926.json",
+      "sha256": "f2dbf647910b140ee13af91fd949f5b5127da733b6234b1d572ee4b3ac1cd4e9",
+      "bytes": 11710,
+      "git_blob_sha1": "da3bd49e0b3ec721aa5a87771d4c2ed10c697fac",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "config/custodial-full-nine-family-owners-20260926.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-owner-workdays.json",
+      "sha256": "34455f7594dbe36a985ad8ae0f4fdd3c12ea44b0bc0d76ec893a4be28d48bb02",
+      "bytes": 612,
+      "git_blob_sha1": "087e6769f8efca83e172bde52f7416143afb4084",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "config/custodial-owner-workdays.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-recurring-schedule-20260924.json",
+      "sha256": "38704b761ff474ac6448610ba09fe7b840999352ab78e8ec15c21610dc31461a",
+      "bytes": 12364,
+      "git_blob_sha1": "973952b2e8350ded47e430bf7abf88436acfeab8",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "config/custodial-recurring-schedule-20260924.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-six-person-static-20260926.json",
+      "sha256": "8b8e9d9aa4c775d08feb4daa2057d484b5f6fd8805ede9a5148bafe1619b5c96",
+      "bytes": 18117,
+      "git_blob_sha1": "00a615075fdf2f645076f5c9181bf13efffa7c6c",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "config/custodial-six-person-static-20260926.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-six-person-static-20261005.json",
+      "sha256": "40da4e1d4cce52b2361b5403b7e5e4477ca00def0fd3649a1d76dacb48422f30",
+      "bytes": 23221,
+      "git_blob_sha1": "070977a7b47c4afbac05e65af922e81cd886fbcc",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "config/custodial-six-person-static-20261005.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/package-lock.json",
+      "sha256": "ad1352fdd9867022c6404a2bf1ae3ebc516fd74ff5e52c7f4bdd4a417bf0d139",
+      "bytes": 83047,
+      "git_blob_sha1": "f8cf990ee4b4d879cb1df201824f544ee1cb4c3e",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "package-lock.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/package.json",
+      "sha256": "ccbab61c3c4ff9170b5bc3cb7e9a1348160f662e7bca7280ddce1168097f233a",
+      "bytes": 21103,
+      "git_blob_sha1": "04dce09a94a0abb085ccb1c9914a2d9a5e9559b1",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "package.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/release/frontend-release-manifest.json",
+      "sha256": "8042c42c6c3e8bf4efca5f3a6509b4313e289ccd1922e246b55e2c35b4e8956d",
+      "bytes": 1714,
+      "git_blob_sha1": "344c91361beaaa1d3bea5001df0b82d004faa508",
+      "role": "SELECTED_TEST_METADATA_PREBIND",
+      "original_logical_path": "release/frontend-release-manifest.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/release/integrated-backend-authority-evidence.json",
+      "sha256": "8b78b6612ce459016e10e5122c6cd32a0844c08af466867b6c792ecb640c0e18",
+      "bytes": 240570,
+      "git_blob_sha1": "1d54d4cd84517d72ebdf84c0f1668efac2a78c3e",
+      "role": "HISTORICAL_1043_GENERATED_ARTIFACT_SNAPSHOT_NOT_CURRENT1061_NOT_FINAL_PAIR",
+      "original_logical_path": "release/integrated-backend-authority-evidence.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/release/schema-alignment-input.json",
+      "sha256": "ac9f0ea4466b6715eaba7c5adeec41518a5c20b3d88819a9c9f4885d80bea689",
+      "bytes": 1537,
+      "git_blob_sha1": "2d0c8cb4390d6264ba2363a9a5a4ea5348ff30c0",
+      "role": "SELECTED_TEST_METADATA_PREBIND",
+      "original_logical_path": "release/schema-alignment-input.json"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/scripts/verified-visit-completion-integration-tests.mjs",
+      "sha256": "8dfd6a918920a6500088a92f9bcc595001096deca0725ea68647c50af8b079a3",
+      "bytes": 37173,
+      "git_blob_sha1": "23e1a696e9898d8e8862e682ba5952af8264c337",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "scripts/verified-visit-completion-integration-tests.mjs"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/app-version.js",
+      "sha256": "e7cb06d61a7e07c50d072d3cd7011dd357f7a65060c861a1a25bc0cdb1a6b970",
+      "bytes": 285,
+      "git_blob_sha1": "448e6dc79edfda5b4e51d8ac77eda3945f06a544",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/app-version.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/auth/map-manager-identity.js",
+      "sha256": "fff733fce8e6c5e06e6a2fded0b00b86c9d4716718d86a628533a3314cc4f0ec",
+      "bytes": 4181,
+      "git_blob_sha1": "c367ca3d8626cb383aee7f2ff4b8f6c11671e229",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/auth/map-manager-identity.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/auth/shared-access-auth.js",
+      "sha256": "bd51c68e017627852b261de83d9c1c6667a1b99367a7e93f6f88d13e613fc672",
+      "bytes": 122223,
+      "git_blob_sha1": "765c74eee6869bcdb53e2d9fbb39d93dbe8531e2",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/auth/shared-access-auth.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/completion-selection-read-boundary.js",
+      "sha256": "80ab309ec90ef0751b519f044538a75bb3da9cb617db7cdc9c649293702ff62c",
+      "bytes": 1770,
+      "git_blob_sha1": "ee6c0ea687a531826c6fa38ec74d75cedaeebbc1",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/completion-selection-read-boundary.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/coverall-advisory-order.js",
+      "sha256": "2044caadd2b998b712330e43fe1468340a12e19f875d40407ffcd240c659241f",
+      "bytes": 3321,
+      "git_blob_sha1": "382b4fade833168fa8cc7a2618be07d3de9cff15",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/coverall-advisory-order.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/events-api.js",
+      "sha256": "08d7c52236ac0c444642b9de0a589321762cab0df354f53b9460c7210f251c3e",
+      "bytes": 44466,
+      "git_blob_sha1": "ad2c278d74514800a6c2e7ed364ac5b9e01d9f85",
+      "role": "VM_TEXT_ONLY_SERVICE_SOURCE_NOT_IMPORTED",
+      "original_logical_path": "src/events-api.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/index.js",
+      "sha256": "e45ea758b0c40f6491fc8042d142ccc0cd98531e41d85d3a87f530c577bc2468",
+      "bytes": 162333,
+      "git_blob_sha1": "85baae0d368d5c7a5e9237ffcf8fce0fb2b7f76f",
+      "role": "VM_TEXT_ONLY_SERVICE_SOURCE_NOT_IMPORTED",
+      "original_logical_path": "src/index.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/release-contract.js",
+      "sha256": "82bbfd995e5e488d7a0d33fa8f438c1f8ad6ba7b6397eee55544d51c957fd001",
+      "bytes": 6234,
+      "git_blob_sha1": "aa078f48cfc54098e062a9f6cbb07e49405eb528",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/release-contract.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/release-manifest.js",
+      "sha256": "5dc230875764dd0f1654d89fdcba4b8674d7a29ee8e9152765531e6de455e510",
+      "bytes": 6653,
+      "git_blob_sha1": "7978ce065ac1bcd1c55ad49e455c40fb677d1384",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/release-manifest.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/restore-mutation-gate.js",
+      "sha256": "0d19264405e08b25588a07a83221e42712d7b6a9fc8b98a1096a039237de4304",
+      "bytes": 14693,
+      "git_blob_sha1": "bb82edc54e8f5f872857f4f81f94414afe43b778",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/restore-mutation-gate.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/schedule-component-weight-authority.js",
+      "sha256": "23a30cbd627909ddd4d9bccea6f24efb43d3ef78fc83ed06f61e4251c36e30ed",
+      "bytes": 9715,
+      "git_blob_sha1": "99cf8af9c6ff80f092839b27fccf91c99bde56f2",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/schedule-component-weight-authority.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-approved-initial-request.js",
+      "sha256": "739831e22ea0cafd7ebaaed0a1a0d1cb4adf83a1357ede9bf6c4b16e2c8ce726",
+      "bytes": 2247,
+      "git_blob_sha1": "e5913a867ad2d5a8b27ee0d3fdc865c7d52f989e",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-approved-initial-request.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-control-plane-runtime.js",
+      "sha256": "5bb0c2407a70fa7c37eab62fb355ecbabbfd9828b22e80561f55f6cd656c4e71",
+      "bytes": 28840,
+      "git_blob_sha1": "661296d6681ff00155b4fee854f60c3d0f664173",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-control-plane-runtime.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-control-plane.js",
+      "sha256": "7d1865425c93be7ab524eef94c93dcb3d65a0bb58e926586019bb170e672f823",
+      "bytes": 110515,
+      "git_blob_sha1": "b1bd797124a92f75416be64737ee284e7eba6399",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-control-plane.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-coverall-print.js",
+      "sha256": "2b664634fe9a334c785815d7544c900ac74e4adef4d2df955bdecd3c5bd9d98b",
+      "bytes": 20527,
+      "git_blob_sha1": "db2c1cd1d0b1653e853e51fc15d2fa201c137c48",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-coverall-print.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-lunch-authority-adapter.js",
+      "sha256": "b8d7461215bf0444ed4d462cb9989d6dec9d795ec156f7f31c3d73601c001999",
+      "bytes": 7539,
+      "git_blob_sha1": "75c9692055479b63caee3656f728cc259fb7fd13",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-lunch-authority-adapter.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-lunch-coverage.js",
+      "sha256": "9072d2fbeeaebc7b64c794a8a941a9554760c9869698a13610db9bab7d456fcb",
+      "bytes": 1863,
+      "git_blob_sha1": "68a1105780c8094e36286f723e886cfc45511628",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-lunch-coverage.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-lunch-derivation.js",
+      "sha256": "42eb82ce146867bc69215430644b841ab7aeab39baf95b8c9cda101ea41b4324",
+      "bytes": 14380,
+      "git_blob_sha1": "cf6d9c60ad2dd37aa86632d5b60448f1f2fb9f2d",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-lunch-derivation.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-lunch-publication.js",
+      "sha256": "f9538bc5df3ed1546b412a0a4371a659c9d358a2fba58bafd9d38fed6a0e608c",
+      "bytes": 2486,
+      "git_blob_sha1": "9673da7d8a88280427e36b4527176747709914b8",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-lunch-publication.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-manager-operation.js",
+      "sha256": "ae546852ebde937d1b75f2cb6db35cdfcdc8aea3bc44e5da400076e995e8a32f",
+      "bytes": 2382,
+      "git_blob_sha1": "6bd08ba7b5658c762bf9fa88fad56736e95145e5",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-manager-operation.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-morning-planning-authority.js",
+      "sha256": "c9d5f27fb779a6ae3e03ba5d2221ac85b2cde64a86b06c7d69cae3e8f755f717",
+      "bytes": 15155,
+      "git_blob_sha1": "5c6e57a8b9a92c57fddd09dd117db2811a13bcae",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-morning-planning-authority.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-opening-coverage-report.js",
+      "sha256": "ddd755b8851ef45cf7d1d7ddb5b27ce53aa454e93ab51e46457c09f9bfb61bc0",
+      "bytes": 15272,
+      "git_blob_sha1": "e74893b5c2b15a389465a0fdba4c412ddd8cbcd9",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-opening-coverage-report.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-owner-eligibility.js",
+      "sha256": "402b6333f68994b9a5889b1098449f39b26a28c4de6b7b085240dfab51d48720",
+      "bytes": 5023,
+      "git_blob_sha1": "97d31a0a265aeeee2b79892230189e7733fb10d3",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-owner-eligibility.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-owner-workdays.js",
+      "sha256": "6c6cbd2a837955927c41777ed884f0b9f4e73be515ec0aeea2275b344daa5946",
+      "bytes": 4306,
+      "git_blob_sha1": "04f7a1b0d0c7e904f587d68e4e7ce76bf940df56",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-owner-workdays.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-dependency-result.js",
+      "sha256": "f12d93675f045acbfcfdf84511398ecee83798ea726e999cf7b1e55c58b82419",
+      "bytes": 2116,
+      "git_blob_sha1": "3493158059a296803857c39b059a2922577ef149",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-recurring-dependency-result.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-morning-solver.js",
+      "sha256": "1fd0fdbeb825fce89dcbf0aaa050a3981bdb527f171ffa247ba4d20a98c65510",
+      "bytes": 31746,
+      "git_blob_sha1": "0fb6c2102b0f5a05a497f2c6e9f1cd4399347048",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-recurring-morning-solver.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-phase-authority.js",
+      "sha256": "3ba4bccdf09d1e2c2775df7c9e96ae6c8c85bbdab75c57aeeb746910e7d84ec8",
+      "bytes": 58048,
+      "git_blob_sha1": "3f67f49f0e7419267ddabc1d56c559afa6ca5c05",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-recurring-phase-authority.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-preview.js",
+      "sha256": "c1e90303d5a8b38bb74730b11533262d21b5387c797b90a9d3da9600b66e909f",
+      "bytes": 10745,
+      "git_blob_sha1": "7524c919bb5525d8f412b0f2ca2ea5ccd047e798",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-recurring-preview.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-repair-basis.js",
+      "sha256": "b809ba7935f457a820cae1cb5dcf0db73d52a31b3429e2b18ba839e10a970aed",
+      "bytes": 4524,
+      "git_blob_sha1": "b7f4b48ee57eb7d78d5a448b0c20f6dbb5fb4cc2",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-recurring-repair-basis.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-staffing-adaptation.js",
+      "sha256": "977104f45b0eaee1b904371998f61734d79308895a78581238706856c9477894",
+      "bytes": 190983,
+      "git_blob_sha1": "357854df6831c9a857cdfbe71c662d4cb76e07a8",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-recurring-staffing-adaptation.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-week-commitment.js",
+      "sha256": "d5c4315bd446352517f064a7d2b365aad2ed7c96c7fdaf84baf8dd7aa0ec657b",
+      "bytes": 39035,
+      "git_blob_sha1": "36e3308cf0a293acef6f927ec316f6de667488c3",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-recurring-week-commitment.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler-runtime.js",
+      "sha256": "a8bbfd711630cacbbefeac57221acac78cf98694e9dfabbaeece59fa30e777ff",
+      "bytes": 32123,
+      "git_blob_sha1": "9d6b4470425e1fd1ae7c8a695e9af1a7b81d5e17",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-compiler-runtime.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler-worker.js",
+      "sha256": "1462d1fa17d79be9cdbb42d997745f13eb8857ce326ced6cd438e4d408d47606",
+      "bytes": 23843,
+      "git_blob_sha1": "7dbee6e448eea7f85e0d1cb48af715dbdc84f5d4",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-compiler-worker.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler.js",
+      "sha256": "593893e4daac566fa665bb987af17ce803414c92ebd59abf6e8a24aed2361f1a",
+      "bytes": 35699,
+      "git_blob_sha1": "e68dbd13a4d12b9610ce581dcffb855dfb57f2d7",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-compiler.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-database-adapter.js",
+      "sha256": "4b69e88ccc6686fd11f4989c81d0e99e5ee202fcba56f67be9dd20a22e7246b9",
+      "bytes": 35180,
+      "git_blob_sha1": "67e911518e8837009c0807e584f65243169b3121",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-database-adapter.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-model.js",
+      "sha256": "23fd769ded7a126c6dc61c0421a7a2bb96e0073cbae048440910de192d16738e",
+      "bytes": 35558,
+      "git_blob_sha1": "8f7dddc33bbe823c5857f8d281fc064e1c0aa852",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-model.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-program.js",
+      "sha256": "1a5ef78107964d823f1a1eaf617b9d5e439339122730ac4691bd671199a4da52",
+      "bytes": 126444,
+      "git_blob_sha1": "9a01e22af2ca9c511a1b97733a3132fa4cf45059",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-program.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-runtime-policy.js",
+      "sha256": "1bf452fd4a26cb3eac891aade69b41ec60394f871beb4ee929870bcf23c415c5",
+      "bytes": 389,
+      "git_blob_sha1": "e6ec132dff02b84f2b8939e49eedd7e86856a686",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-runtime-policy.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-solver-worker.js",
+      "sha256": "dca0b0d627ec41e173e23f440dbd58423d3acb063135e7de63edebe6d503f044",
+      "bytes": 21996,
+      "git_blob_sha1": "76d2720ca98105e85fb7bfdb853eaa5861bb9b36",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-solver-worker.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-solver.js",
+      "sha256": "b4142894fdf9b730160455a81d0c22ca342d732c182b239f5884dca1f903add0",
+      "bytes": 19374,
+      "git_blob_sha1": "a22fa83b758bffd387ea36d04de3ab7d5a716a57",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-solver.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-verifier.js",
+      "sha256": "1700488fafa6e7683aed9ba11e1d6b0eb9800ed4a19d2713410a987417bfcabf",
+      "bytes": 80133,
+      "git_blob_sha1": "ef0563d4d5f9be2b78e9346b2047c13790bb250a",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-schedule-verifier.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-shift-end-coverage.js",
+      "sha256": "b3ba0ad5cccfd0c0d6a7440ac7da80beed8a167a6f398763657bceadccfd017f",
+      "bytes": 12020,
+      "git_blob_sha1": "46bc39e33b3b38ae013dd818d7f0aba120066a0c",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-shift-end-coverage.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-shift-end-derivation.js",
+      "sha256": "582dd466c11527710375c1ea1296ee38b948fc4c24045e6c2422113ebe35e5c8",
+      "bytes": 54627,
+      "git_blob_sha1": "b556e4f98046615063a09bc2fec87f026f3677c7",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-shift-end-derivation.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-staffing-candidates.js",
+      "sha256": "8515380725b73d6fe0fa8ce372e688944125b0f11324e1e3dbed473ddf3603f0",
+      "bytes": 4229,
+      "git_blob_sha1": "80d13db4c9041076fffa23dbdd366217c1800b0d",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-staffing-candidates.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-staffing-command.js",
+      "sha256": "ff04ba2ece26db2b1e8282d139b02059f7b201750a9cf76220d69b754d4a1e49",
+      "bytes": 4076,
+      "git_blob_sha1": "d9521f04fd3be8ccb54c6201b01fcb324caec737",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-staffing-command.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-staffing-preparation.js",
+      "sha256": "98700ec72482221b90d902395ac9a0b42a184f79e6f9ebea4c2c3c84c18a3314",
+      "bytes": 4527,
+      "git_blob_sha1": "0e7f1841ca68b20e31bef1e2693a68fd4572f4c6",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-staffing-preparation.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-staffing-preview.js",
+      "sha256": "42f71c0990a65c5a8553131ca6eece422c25f7e6fb111c29ef92c4a949fa3c00",
+      "bytes": 20562,
+      "git_blob_sha1": "8f3b161f9a7f2b526842c686736a9c7f70ebb6e1",
+      "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
+      "original_logical_path": "src/static-weekly-staffing-preview.js"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/supabase/canonical/schema-fingerprint.txt",
+      "sha256": "df80418f04f887c33650b5fe5a62041d2fe048ae97b38c226e9f65be28b09c91",
+      "bytes": 65,
+      "git_blob_sha1": "b1c6375ca02ca47a7ed9ca2e89671d9f1dc2c027",
+      "role": "SELECTED_TEST_METADATA_PREBIND",
+      "original_logical_path": "supabase/canonical/schema-fingerprint.txt"
+    }
+  ],
+  "exact_top_level_scheduler_read_census": [
+    "src/static-weekly-approved-initial-request.js",
+    "src/static-weekly-control-plane-runtime.js",
+    "src/static-weekly-control-plane.js",
+    "src/static-weekly-coverall-print.js",
+    "src/static-weekly-lunch-authority-adapter.js",
+    "src/static-weekly-lunch-coverage.js",
+    "src/static-weekly-lunch-derivation.js",
+    "src/static-weekly-lunch-publication.js",
+    "src/static-weekly-manager-operation.js",
+    "src/static-weekly-morning-planning-authority.js",
+    "src/static-weekly-opening-coverage-report.js",
+    "src/static-weekly-owner-eligibility.js",
+    "src/static-weekly-owner-workdays.js",
+    "src/static-weekly-recurring-dependency-result.js",
+    "src/static-weekly-recurring-morning-solver.js",
+    "src/static-weekly-recurring-phase-authority.js",
+    "src/static-weekly-recurring-preview.js",
+    "src/static-weekly-recurring-repair-basis.js",
+    "src/static-weekly-recurring-staffing-adaptation.js",
+    "src/static-weekly-recurring-week-commitment.js",
+    "src/static-weekly-schedule-compiler-runtime.js",
+    "src/static-weekly-schedule-compiler-worker.js",
+    "src/static-weekly-schedule-compiler.js",
+    "src/static-weekly-schedule-database-adapter.js",
+    "src/static-weekly-schedule-model.js",
+    "src/static-weekly-schedule-program.js",
+    "src/static-weekly-schedule-runtime-policy.js",
+    "src/static-weekly-schedule-solver-worker.js",
+    "src/static-weekly-schedule-solver.js",
+    "src/static-weekly-schedule-verifier.js",
+    "src/static-weekly-shift-end-coverage.js",
+    "src/static-weekly-shift-end-derivation.js",
+    "src/static-weekly-staffing-candidates.js",
+    "src/static-weekly-staffing-command.js",
+    "src/static-weekly-staffing-preparation.js",
+    "src/static-weekly-staffing-preview.js"
+  ],
+  "full_current1061_release_claim": false,
+  "final_pair": "Final BE evidence stays external toFE until genuine final FE commit and maintained regeneration. Final backend exact-pair guards literal.",
+  "artifact_fields_rewritten": false,
+  "execution": false
+}

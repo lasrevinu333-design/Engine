@@ -192,23 +192,23 @@ public final class NativeProviderInventoryTest {
         NativeProviderInventory.Request otherObject = f.prepare(); NativeProviderInventory.Page original = page(next, data(next, q, false, q));
         ProviderRecordStoreTest.failure(INVALID, () -> f.journal().consumeInventory(f.principal, otherObject, original, observed()));
     }
-    static OfflineAuthorityTime unknownClock() {
-        OfflineAuthorityTime.OfflineAuthorityTimeStore storage = (OfflineAuthorityTime.OfflineAuthorityTimeStore) java.lang.reflect.Proxy.newProxyInstance(
-            OfflineAuthorityTime.class.getClassLoader(), new Class<?>[]{OfflineAuthorityTime.OfflineAuthorityTimeStore.class}, (proxy, method, args) -> {
-                if (method.getName().equals("loadAnchor") || method.getName().equals("loadRollbackFence")) return null;
-                throw new AssertionError("Unexpected cleaning store access: " + method.getName());
-            });
-        return new OfflineAuthorityTime(storage, new OfflineAuthorityTime.MonotonicClock() {
-            public long now() { return 101; } public int bootCount() { return 7; }
-        });
+    static NativeProviderClockOwner unknownClock(NativeProviderHttpTest.Fixture f,NativeProviderJournal journal) throws Exception {
+        return new NativeProviderClockOwner(f.engine,f.provider.storage.lock,journal,f.principalJournal,f.legacyJournal,
+            NativeProviderTime.Profiles.NONE,NativeProviderTimeTest.platform(),NativeProviderHttpTest.readings());
+    }
+    static byte[] clockBody(JSONObject data) throws Exception {
+        return new JSONObject().put("ok",true).put("data",data).put("clock",new JSONObject()
+            .put("native_request_id",NativeProviderHttpTest.RID).put("server_now",NativeProviderIngressTest.NOW)
+            .put("valid_until","2026-09-24T17:15:00.123457Z")).toString().getBytes(StandardCharsets.UTF_8);
     }
     @Test public void actualEngineTypedInventorySignsExactOriginalBodyAndQuarantinesUnknownClock() throws Exception {
         for (boolean legacy : new boolean[]{false, true}) {
             NativeProviderHttpTest.Fixture f = new NativeProviderHttpTest.Fixture(legacy); f.send(false, f.http());
             NativeProviderInventory.Request request = f.provider.journal().prepareInventory(f.principal); NativeProviderPayload p = payload(f.prepared, 1);
-            byte[] body = response(data(request, p, false, p)).body;
-            NativeProviderHttp http = new NativeProviderHttp(url -> { f.connection = new NativeProviderHttpTest.Connection(url, body); return f.connection; }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID);
-            assertEquals(1, f.engine.recoverNativeProviderInventory(request, f.principalJournal, f.legacyJournal, f.provider.journal(), http, new NativeProviderHttp.Attempt(), unknownClock()));
+            byte[] body = clockBody(data(request, p, false, p));
+            NativeProviderHttp http = new NativeProviderHttp(url -> { f.connection = new NativeProviderHttpTest.Connection(url, body); return f.connection; }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID, NativeProviderHttpTest.readings());
+            NativeProviderJournal journal=f.provider.journal();
+            assertEquals(1, f.engine.recoverNativeProviderInventory(request, f.principalJournal, f.legacyJournal, journal, http, new NativeProviderHttp.Attempt(), unknownClock(f,journal)));
             NativeProviderHttpTest.Connection c = f.connection;
             assertEquals("/employee-notifications-api/native-provider/inventory", c.getURL().getPath()); assertArrayEquals(request.body(), c.sent.toByteArray());
             JSONObject wire = ProviderWireJson.object(c.sent.toByteArray(), 65536); assertEquals(32, wire.getInt("limit")); assertFalse(wire.has("token")); assertFalse(wire.has("principal"));
@@ -232,8 +232,9 @@ public final class NativeProviderInventoryTest {
                     else if (fault.equals("unavailable")) { f.provider.journal().observeUnavailable(); f.provider.journal().observeActivePrincipal(f.principal); }
                     else f.provider.journal().observeRemoved();
                 }; return f.connection;
-            }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID);
-            try { f.engine.recoverNativeProviderInventory(request, f.principalJournal, f.legacyJournal, f.provider.journal(), http, attempt, unknownClock()); fail(fault); }
+            }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID, NativeProviderHttpTest.readings());
+            NativeProviderJournal journal=f.provider.journal();
+            try { f.engine.recoverNativeProviderInventory(request, f.principalJournal, f.legacyJournal, journal, http, attempt, unknownClock(f,journal)); fail(fault); }
             catch (VaultFailure expected) { assertTrue(expected.code.startsWith("custodial_provider_")); }
             assertTrue(f.provider.read(ProviderEnvelopeCrypto.Domain.METADATA, request.recoveryId).getJSONObject("scan").isNull("cursor"));
             assertEquals(0, f.provider.storage.store().load().keys().stream().filter(k -> k.domain == ProviderEnvelopeCrypto.Domain.INBOX || k.domain == ProviderEnvelopeCrypto.Domain.QUARANTINE).count());

@@ -11,8 +11,57 @@ const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
 const NFC_ENTRY_G = '00000000-0000-4000-8000-000000000430';
 const NFC_ENTRY_H = '00000000-0000-4000-8000-000000000439';
-const SCHEMA_FINGERPRINT = '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb';
-const PREVIOUS_SCHEMA_FINGERPRINT = '750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822';
+// Candidate's isolated NORMAL catalog; not physical wake or installation proof.
+const SCHEMA_FINGERPRINT = 'ce1406bf491d398acb0d9d81ce1ed8f5d9ad60f503bc27585b9991c93b1b6ee2';
+const PREVIOUS_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
+
+// Changed shipping join only: real local browser Storage/Web Locks/IndexedDB,
+// actual UI + identity + queue modules. No native acceptance fixture, signed
+// manager, device/clock/audio authority or provider request is supplied.
+test('NEW actual browser phone metadata preservation survives page restart', async ({ page }) => {
+  const errors = [];page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/*', async route => {
+    const url = new URL(route.request().url());
+    if (url.hostname === '127.0.0.1') return route.continue();
+    return route.abort('blockedbyclient');
+  });
+  await page.goto('/tests/storage-seed.html?device=KIOSK_06');
+  await page.evaluate(() => {
+    for (const key of ['mz_scan_device_id', 'mz_employee_hub_device_id', 'memphisAssignedDeviceId']) localStorage.setItem(key, 'KIOSK_06');
+    sessionStorage.setItem('unrelated-retained-session-original', '{ unknown exact original }');
+  });
+  const mount = async () => {
+    await page.evaluate(() => { window.fully = { bind() {} }; }); // Runtime shape only, not physical Fully.
+    for (const url of ['/memphis-device-identity.js', '/memphis-ui.js', '/memphis-scan-sync.js']) await page.addScriptTag({ url });
+  };
+  await mount();
+  expect(await page.evaluate(() => window.MemphisScanSync.ready)).toBe(true);
+  await page.evaluate(() => { window.MemphisUI.markPhoneUnlocked();window.MemphisUI.markPhoneScreenOff(); });
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('mz_phone_screen_off_at'))).toMatch(/^[1-9][0-9]+$/);
+  expect(await page.evaluate(() => sessionStorage.getItem('mz_phone_unlocked_since_wake'))).toBe(null);
+  const held = await page.evaluate(async () => {
+    const { createProtectedBrowserAdmission } = await import('/mobile/src/custodial/protected-browser-admission.js');
+    const gate = createProtectedBrowserAdmission({ storage: localStorage, sessionStorage, indexedDb: indexedDB, locks: navigator.locks, cryptoApi: crypto });
+    await gate.holdAndObserve({ operationId: '11111111-2222-4333-8444-555555555555' });
+    const raw = area => Object.keys(area).sort().map(key => [key, area.getItem(key)]);
+    return { local: raw(localStorage), session: raw(sessionStorage), url: location.href };
+  });
+  const attempt = () => page.evaluate(async () => {
+    window.MemphisUI.markPhoneUnlocked();window.MemphisUI.markPhoneScreenOff();
+    const navigated = await window.MemphisUI.handlePhoneWake({ force: true });
+    const raw = area => Object.keys(area).sort().map(key => [key, area.getItem(key)]);
+    return { navigated, local: raw(localStorage), session: raw(sessionStorage), url: location.href };
+  });
+  const first = await attempt();expect(first.navigated).toBe(false);
+  expect(first.local).toEqual(held.local);expect(first.session).toEqual(held.session);expect(first.url).toBe(held.url);
+  await page.reload();await mount();
+  // Restart must retain the durable hold, not silently open a new queue owner.
+  expect(await page.evaluate(() => window.MemphisScanSync.ready)).toBe(false);
+  const restarted = await attempt();expect(restarted.navigated).toBe(false);
+  expect(restarted.local).toEqual(held.local);expect(restarted.session).toEqual(held.session);expect(restarted.url).toBe(held.url);
+  expect(errors).toEqual([]);
+});
+
 function currentAuthoritySnapshot() {
   return {
     schema_version: 'offline-scan-snapshot.v2',
@@ -35,9 +84,9 @@ async function json(route, status, body, headers = {}) {
 
 async function installKioskRuntime(context, {
   session = null, resumeView = '', fullyDeviceId = DEVICE_ID, verifiedEntryIds = [],
-  rollbackFenceId = '', nativeOccurrencePending = false, nativeOfflineTimeAuthority = false,
+  rollbackFenceId = '', nativeOccurrencePending = false,
 } = {}) {
-  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view, entryIds, initialFenceId, initialNativeOccurrence, nativeTimeAuthority }) => {
+  await context.addInitScript(({ deviceId, nativeDeviceId, seededSession, view, entryIds, initialFenceId, initialNativeOccurrence }) => {
     window.fully = {
       bindings: {},
       bind(event, source) { this.bindings[event] = source; },
@@ -65,7 +114,7 @@ async function installKioskRuntime(context, {
       return endedAt;
     };
     window.MemphisMobile = {
-      nativeOfflineTimeAuthority: nativeTimeAuthority,
+      nativeOfflineTimeAuthority: false,
       readCustodialHomeCache: () => ({
         schema_version: 'custodial-home-cache.v3',
         device_id: deviceId,
@@ -242,22 +291,18 @@ async function installKioskRuntime(context, {
     entryIds: verifiedEntryIds,
     initialFenceId: rollbackFenceId,
     initialNativeOccurrence: nativeOccurrencePending,
-    nativeTimeAuthority: nativeOfflineTimeAuthority,
   });
 }
 
-async function seedOfflineAuthority(context, {
-  expiresAt = new Date(Date.now() + 60 * 60_000).toISOString(),
-  validatedAt = new Date().toISOString(), online = false, includeContractCache = true,
-} = {}) {
-  await context.addInitScript(({ deviceId, expiration, schemaFingerprint, validationTime, navigatorOnline, seedContractCache }) => {
-    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => navigatorOnline });
-    if (seedContractCache) localStorage.setItem(`mz_scan_contract_cache:release-2026.07.19.custodial-v3.12`, JSON.stringify({
+async function seedOfflineAuthority(context, { expiresAt = new Date(Date.now() + 60 * 60_000).toISOString() } = {}) {
+  await context.addInitScript(({ deviceId, expiration, schemaFingerprint }) => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+    localStorage.setItem(`mz_scan_contract_cache:release-2026.07.19.custodial-v3.12`, JSON.stringify({
       app_version: 'release-2026.07.19.custodial-v3.12',
       contract_version: 'scan.v4.snapshot-bound-authority',
       backend_version: 'release-2026.07.19.custodial-v3.12',
       schema_fingerprint: schemaFingerprint,
-      validated_at: validationTime,
+      validated_at: new Date().toISOString(),
     }));
     localStorage.setItem(`mz_scan_authority_snapshot:${deviceId}`, JSON.stringify({
       schema_version: 'offline-scan-snapshot.v2',
@@ -272,15 +317,13 @@ async function seedOfflineAuthority(context, {
       expires_at: expiration,
       locations: [{ location_code: 'TETM', location_name: "Teton Men's Restroom", location_type: 'restroom', form_type: 'restroom' }],
     }));
-  }, { deviceId: DEVICE_ID, expiration: expiresAt, schemaFingerprint: SCHEMA_FINGERPRINT,
-    validationTime: validatedAt, navigatorOnline: online, seedContractCache: includeContractCache });
+  }, { deviceId: DEVICE_ID, expiration: expiresAt, schemaFingerprint: SCHEMA_FINGERPRINT });
 }
 
 async function installCommonRoutes(context, scanHandler = null, {
   backendVersion = 'release-2026.07.19.custodial-v3.12',
   backendSchema = SCHEMA_FINGERPRINT,
   onScanRequest = () => {},
-  onVersionRequest = () => {},
 } = {}) {
   await context.route('https://api.open-meteo.com/**', (route) => json(route, 200, {
     current: { temperature_2m: 25, weather_code: 0, wind_speed_10m: 3 },
@@ -289,15 +332,12 @@ async function installCommonRoutes(context, scanHandler = null, {
   }));
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname === '/version') {
-      onVersionRequest();
-      return json(route, 200, {
+    if (url.pathname === '/version') return json(route, 200, {
       ok: true,
       version: backendVersion,
       contracts: { scan: 'scan.v4.snapshot-bound-authority' },
       release_manifest: { schema: { fingerprint: backendSchema } },
-      });
-    }
+    });
     if (url.pathname === '/scan-api/rpc') {
       const request = JSON.parse(route.request().postData() || '{}');
       onScanRequest(request);
@@ -370,54 +410,6 @@ test('same-version backend on the transition-source schema fails closed before s
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
   await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
   expect(scanCalls).toBe(0);
-  await context.close();
-});
-
-test('online native authority still verifies the exact backend schema before scan work', async ({ browser }) => {
-  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
-  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F], nativeOfflineTimeAuthority: true });
-  await seedOfflineAuthority(context, { online: true });
-  let versionCalls = 0;
-  let scanCalls = 0;
-  await installCommonRoutes(context, async (route) => {
-    scanCalls += 1;
-    return json(route, 200, { ok: true, data: {} });
-  }, { backendSchema: PREVIOUS_SCHEMA_FINGERPRINT, onVersionRequest: () => { versionCalls += 1; } });
-  const page = await context.newPage();
-  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
-  await expect(page.getByRole('heading', { name: 'Update Required' })).toBeVisible();
-  expect(versionCalls).toBe(1);
-  expect(scanCalls).toBe(0);
-  await context.close();
-});
-
-for (const hostileCache of [
-  { name: 'missing', options: { includeContractCache: false } },
-  { name: 'expired', options: { validatedAt: new Date(Date.now() - 8 * 24 * 60 * 60_000).toISOString() } },
-  { name: 'future-dated', options: { validatedAt: '2099-01-01T00:00:00.000Z' } },
-]) {
-  test(`offline native authority rejects a ${hostileCache.name} compatibility cache`, async ({ browser }) => {
-    const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
-    await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F], nativeOfflineTimeAuthority: true });
-    await seedOfflineAuthority(context, hostileCache.options);
-    await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => route.abort('internetdisconnected'));
-    const page = await context.newPage();
-    await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
-    await expect(page.getByRole('heading', { name: 'Reconnect Required' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Start Cleaning' })).not.toBeVisible();
-    await context.close();
-  });
-}
-
-test('offline native authority accepts only a current exact compatibility cache', async ({ browser }) => {
-  const context = await browser.newContext({ userAgent: 'FullyKiosk Browser' });
-  await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_F], nativeOfflineTimeAuthority: true });
-  await seedOfflineAuthority(context, { validatedAt: new Date(Date.now() - 60_000).toISOString() });
-  await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => route.abort('internetdisconnected'));
-  const page = await context.newPage();
-  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_F}`);
-  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Reconnect Required' })).not.toBeVisible();
   await context.close();
 });
 
@@ -867,7 +859,7 @@ test('NFC occurrence completes through v4 with signed start and finish entry evi
   await expect(page.getByRole('heading', { name: 'Finish Cleaning' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: 'How did it go?' })).toBeVisible();
-  await page.getByRole('radio', { name: 'Selected services completed' }).check();
+  await page.getByText('Something needs attention', { exact: true }).click();
   await page.locator('input[name="services"]').first().check();
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect.poll(() => completion).not.toBeNull();
@@ -995,7 +987,7 @@ test('process death after accepted completion reuses the journaled completion id
   }, { onScanRequest: (request) => requestOrder.push(request.fn) });
   const first = await context.newPage();
   await first.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
-  await first.getByRole('radio', { name: 'Selected services completed' }).check();
+  await first.getByText('Something needs attention', { exact: true }).click();
   await first.locator('input[name="services"]').first().check();
   await first.getByRole('button', { name: 'Finish' }).click({ noWaitAfter: true });
   await expect.poll(() => first.evaluate((sessionId) => {

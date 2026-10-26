@@ -14,11 +14,35 @@ const server = createServer((request, response) => {
   }
   response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   response.end(`<!doctype html><script>
+    let protectedTail = Promise.resolve();
     window.MemphisCustodialSecurity = {
       native: true,
       getStatus: () => ({ ready: true, available: true, quarantined: false, deviceId: 'KIOSK_08' }),
       waitForStableState: async () => true,
-      mutateProtectedWork: async (operation) => operation({ deviceId: 'KIOSK_08', generation: 1, state: 'ready' }),
+      mutateProtectedWork: async (operation) => {
+        const previous = protectedTail;
+        let releaseAdmission;
+        protectedTail = new Promise((resolve) => { releaseAdmission = resolve; });
+        await previous;
+        window.__draftAdmissionActive = (window.__draftAdmissionActive || 0) + 1;
+        window.__draftAdmissionMax = Math.max(window.__draftAdmissionMax || 0, window.__draftAdmissionActive);
+        window.__draftAdmissionCount = (window.__draftAdmissionCount || 0) + 1;
+        window.__draftOwnerCheckCount = 0;
+        try {
+          return await operation({
+            deviceId: 'KIOSK_08', generation: 1, state: 'ready',
+            assertCurrent: () => {
+              window.__draftOwnerCheckCount += 1;
+              if (window.__draftOwnerCurrent === false || window.__draftOwnerCheckCount === window.__draftOwnerFailAt) {
+                throw Object.assign(new Error('owner changed'), { code: 'custodial_security_generation_changed' });
+              }
+            },
+          });
+        } finally {
+          window.__draftAdmissionActive -= 1;
+          releaseAdmission();
+        }
+      },
     };
     window.MemphisDeviceIdentity = { resolve: () => ({ deviceId: 'KIOSK_08' }) };
     window.fetch = async () => ({ ok: false, status: 503, json: async () => null, headers: new Headers() });
@@ -41,6 +65,72 @@ try {
     employee_id: '33333333-3333-4333-8333-333333333333',
     location_code: 'NOCX',
   };
+  if (process.argv.includes('--completion-draft-leaf-focus')) {
+    assert.equal(await page.evaluate((id) => window.MemphisScanSync.completionDraftExists(id), identity.session_uuid), false,
+      'readonly existence on a missing database must report absent');
+    assert.equal(await page.evaluate(async () => (await indexedDB.databases()).some((entry) => entry.name === 'mz_scan_completion_drafts')), false,
+      'readonly calls must not create the completion-draft database');
+    assert.equal(await page.evaluate((input) => window.MemphisScanSync.loadCompletionDraft(input), identity), null,
+      'readonly load on a missing database must report absent');
+    assert.equal(await page.evaluate(async () => (await indexedDB.databases()).some((entry) => entry.name === 'mz_scan_completion_drafts')), false,
+      'readonly load must leave the missing database absent');
+
+    await page.evaluate(() => { window.__draftOwnerFailAt = 4; });
+    const staleUpgradeOwner = await page.evaluate(async (input) => {
+      try { await window.MemphisScanSync.saveCompletionDraft({ ...input, draft: { work_result: 'details' } }); return null; }
+      catch (error) { return error?.code || ''; }
+    }, identity);
+    assert.equal(staleUpgradeOwner, 'custodial_security_generation_changed', 'a changed owner during database upgrade must refuse the write');
+    assert.equal(await page.evaluate(async () => (await indexedDB.databases()).some((entry) => entry.name === 'mz_scan_completion_drafts')), false,
+      'a refused upgrade must leave the database absent');
+    await page.evaluate(() => { window.__draftOwnerFailAt = null; });
+
+    await page.evaluate(() => { window.__draftOwnerCurrent = false; });
+    const forgedContext = await page.evaluate(async (input) => {
+      try {
+        await window.MemphisScanSync.loadCompletionDraft(input, { assertCurrent() {} });
+        return null;
+      } catch (error) { return error?.code || ''; }
+    }, identity);
+    assert.equal(forgedContext, 'custodial_security_generation_changed',
+      'an exported load call must ignore a caller-supplied fake owner and consult protected admission');
+    await page.evaluate(() => { window.__draftOwnerCurrent = true; });
+
+    const serialized = await page.evaluate(async (input) => {
+      const admissionsBefore = window.__draftAdmissionCount;
+      const save = window.MemphisScanSync.saveCompletionDraft({
+        ...input, draft: { work_result: 'details', issues: ['Sink'], note: 'Slow drain' },
+      });
+      const concurrentRead = window.MemphisScanSync.loadCompletionDraft(input);
+      const [saved, read] = await Promise.all([save, concurrentRead]);
+      return {
+        saved: saved.draft, read: read.draft,
+        additionalAdmissions: window.__draftAdmissionCount - admissionsBefore,
+        maxConcurrentAdmissions: window.__draftAdmissionMax,
+      };
+    }, identity);
+    const saved = { draft: serialized.saved };
+    assert.deepEqual(serialized.read, serialized.saved, 'a concurrent public read waits behind save and sees its completed draft');
+    assert.equal(serialized.additionalAdmissions, 2, 'save uses one admission and the concurrent public read gets its own queued admission');
+    assert.equal(serialized.maxConcurrentAdmissions, 1, 'the test fixture serializes protected-work admissions');
+    assert.deepEqual(saved.draft, { issues: ['Sink'], note: 'Slow drain', work_result: 'details' },
+      'the owned save/read path preserves the exact draft content');
+    assert.equal(await page.evaluate((id) => window.MemphisScanSync.completionDraftExists(id), identity.session_uuid), true);
+    await page.evaluate((id) => window.MemphisScanSync.deleteCompletionDraft(id), identity.session_uuid);
+    assert.equal(await page.evaluate((input) => window.MemphisScanSync.loadCompletionDraft(input), identity), null,
+      'the owned delete path removes only the selected completion draft');
+
+    await page.evaluate(() => { window.__draftOwnerCurrent = false; });
+    const staleOwner = await page.evaluate(async (input) => {
+      try { await window.MemphisScanSync.saveCompletionDraft({ ...input, draft: { work_result: 'details' } }); return null; }
+      catch (error) { return error?.code || ''; }
+    }, identity);
+    assert.equal(staleOwner, 'custodial_security_generation_changed', 'a changed protected owner must refuse the draft write');
+    await page.evaluate(() => { window.__draftOwnerCurrent = true; });
+    assert.equal(await page.evaluate((id) => window.MemphisScanSync.completionDraftExists(id), identity.session_uuid), false,
+      'a refused owner must cause no draft mutation');
+    console.log('CUSTODIAL_COMPLETION_DRAFT_LEAF_FOCUS_PASS');
+  } else {
   const saved = await page.evaluate((input) => window.MemphisScanSync.saveCompletionDraft({
     ...input,
     draft: { work_result: 'details', issues: ['Sink'], note: 'Slow drain' },
@@ -119,6 +209,7 @@ try {
   await page.evaluate((sessionUuid) => window.MemphisScanSync.deleteCompletionDraft(sessionUuid), identity.session_uuid);
   assert.equal(await page.evaluate((input) => window.MemphisScanSync.loadCompletionDraft(input), identity), null);
   console.log('CUSTODIAL_COMPLETION_DRAFT_RECOVERY_PASS');
+  }
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

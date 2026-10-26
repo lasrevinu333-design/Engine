@@ -25,6 +25,12 @@ import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import {
+  assertReviewedForwardBuild,
+  forwardBuildProvenance,
+  loadReviewedForwardBuild,
+  parseForwardBuildArguments,
+} from './configure-native-release.mjs';
+import {
   ANDROID_BACKUP_VERIFIER_VERSION,
   parseCompiledAndroidManifestMetadata,
   verifyAndroidApkBackupSecurity,
@@ -41,6 +47,7 @@ import {
   CUSTODIAL_NATIVE_VAULT_CLASS,
   CUSTODIAL_NATIVE_VAULT_PACKAGE,
   inspectCustodialCapacitorRuntime,
+  parseDeterministicJson,
 } from './custodial-capacitor-runtime-policy.mjs';
 import {
   assertImmutableFileSnapshot,
@@ -52,13 +59,24 @@ import {
   CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,
   CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS,
   inspectCustodialNativeVaultDexSemantics,
+  inspectCustodialNewProducerScopeDexSemantics,
 } from './verify-custodial-dex-semantics.mjs';
 import {
   CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
   verifyCustodialAndroidManifestSecurity,
 } from './custodial-android-manifest-security.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import {readReviewedProviderRelease,inspectCompiledProviderOwner} from './custodial-provider-release-policy.mjs';
+import {readCustodialBuildScope,isCleaningScope,assertCleaningScopeManifest,inspectCompiledCleaningScope,isCompiledCleaningScopeProof} from './custodial-new-producer-scope-policy.mjs';
+import {acquireCustodialCallbackReference} from './custodial-callback-reference-admission.mjs';
 import { assertCustodialRuntimeMatchesCleanSource } from './verify-custodial-runtime-source.mjs';
+import { inspectSourceRuntimeRecords } from '../../scripts/lib/runtime-sanitation-policy.mjs';
+import {
+  inspectCustodialPrebuildCustodyEvidence,
+  parsePrebuildCustodySourceArguments,
+  writeCustodialPrebuildCustodyEvidence,
+} from './custodial-prebuild-custody-consumer.mjs';
+import { observeForwardSourceEvidence } from './custodial-forward-source-evidence.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
@@ -69,6 +87,7 @@ const capacitorRuntimePolicyPath = fileURLToPath(new URL('./custodial-capacitor-
 const dexSemanticVerifierPath = fileURLToPath(new URL('./verify-custodial-dex-semantics.mjs', import.meta.url));
 const immutableSnapshotVerifierPath = fileURLToPath(new URL('./immutable-file-snapshot.mjs', import.meta.url));
 const runtimeSourceVerifierPath = fileURLToPath(new URL('./verify-custodial-runtime-source.mjs', import.meta.url));
+const runtimeSanitationPolicyPath = fileURLToPath(new URL('../../scripts/lib/runtime-sanitation-policy.mjs', import.meta.url));
 const androidManifestSecurityVerifierPath = fileURLToPath(new URL('./custodial-android-manifest-security.mjs', import.meta.url));
 const toolchainPolicyVerifierPath = fileURLToPath(new URL('./custodial-android-toolchain-policy.mjs', import.meta.url));
 const releasePolicyPath = fileURLToPath(new URL('../release-policies/custodial-android.json', import.meta.url));
@@ -83,9 +102,9 @@ export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = PINNED_CUSTODIAL_ANDROID_BU
 export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
 export const CUSTODIAL_FORWARD_RECOVERY_BRANCH =
-  'release/custodial-build29-recovery-v53-implementation-20260918';
+  'release/custodial-build29-recovery-v56-implementation-20260929';
 export const CUSTODIAL_FORWARD_RECOVERY_REF = `refs/heads/${CUSTODIAL_FORWARD_RECOVERY_BRANCH}`;
-export const CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE = 53;
+export const CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE = 56;
 export {
   CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
   CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
@@ -161,6 +180,15 @@ export function assertCustodialAcceptanceSchema(value) {
       .map((error) => `${error.instancePath || '/'} ${error.message || error.keyword}`)
       .join('; ');
     throw new Error(`Custodial acceptance does not satisfy its committed schema: ${failures}`);
+  }
+  if (value.forward_transition) {
+    const f = value.forward_transition;
+    if (!(f.candidate_version_code > f.installed_version_code && f.recovery_version_code > f.candidate_version_code)
+        || value.application.version_code !== f[`${f.role}_version_code`]
+        || value.build.number !== value.application.version_code || value.source.ref !== f.source_ref
+        || (f.role === 'candidate' && f.source_ref !== 'refs/heads/main')) {
+      throw new Error('Custodial forward acceptance does not bind the reviewed version order/role/source');
+    }
   }
   return true;
 }
@@ -383,15 +411,35 @@ function fileSha256(path) {
 
 function releaseAcceptanceSourceDigest() {
   const sources = [
+    ['configure-native-release.mjs', join(mobileRoot, 'scripts', 'configure-native-release.mjs')],
+    ['custodial-new-producer-scope-policy.mjs', join(mobileRoot,'scripts','custodial-new-producer-scope-policy.mjs')],
+    ['custodial-callback-dex-continuity.mjs', join(mobileRoot,'scripts','custodial-callback-dex-continuity.mjs')],
+    ['custodial-callback-reference-admission.mjs', join(mobileRoot,'scripts','custodial-callback-reference-admission.mjs')],
+    ['produce-custodial-callback-reference.mjs', join(mobileRoot,'scripts','produce-custodial-callback-reference.mjs')],
+    ['provision-custodial-forward-build-inputs.mjs', join(mobileRoot,'scripts','provision-custodial-forward-build-inputs.mjs')],
+    ['custodial-callback-reference.json', join(mobileRoot,'release-policies','custodial-callback-reference.json')],
+    ['custodial-callback-reference-source.json', join(mobileRoot,'release-policies','custodial-callback-reference-source.json')],
+    ['custodial-callback-reference-workflow.json', join(mobileRoot,'release-policies','custodial-callback-reference-workflow.json')],
+    ['codemagic.yaml', join(repositoryRoot,'codemagic.yaml')],
+    ['custodial-forward-transition-admission-adapter.mjs', join(mobileRoot, 'scripts', 'custodial-forward-transition-admission-adapter.mjs')],
     ['custodial-android-manifest-security.mjs', androidManifestSecurityVerifierPath],
     ['custodial-android-toolchain-policy.mjs', toolchainPolicyVerifierPath],
     ['custodial-capacitor-runtime-policy.mjs', capacitorRuntimePolicyPath],
     ['immutable-file-snapshot.mjs', immutableSnapshotVerifierPath],
+    ['runtime-sanitation-policy.mjs', runtimeSanitationPolicyPath],
     ['verify-android-apk-backup.mjs', backupVerifierPath],
     ['verify-custodial-android-release.mjs', scriptPath],
     ['verify-custodial-dex-semantics.mjs', dexSemanticVerifierPath],
     ['verify-custodial-runtime-source.mjs', runtimeSourceVerifierPath],
   ];
+  const boundaryBytes=readFileSync(join(mobileRoot,'release-policies','custodial-callback-reference-source.json'));
+  if(sha256(boundaryBytes)!=='55e49c6d0003592daf05e405b5eaf4ce4921207dfdabc30bb686f89cc71f514a')throw new Error('Frozen original callback Source authority differs');
+  const boundary=parseDeterministicJson(boundaryBytes,'Frozen original callback Source');
+  for(const record of boundary.source_files){
+    const path=join(mobileRoot,'callback-reference-source',record.family,record.name),bytes=readFileSync(path);
+    if(bytes.length!==record.bytes||sha256(bytes)!==record.sha256)throw new Error('Frozen original callback Source body differs');
+    sources.push(['callback-reference-source/'+record.family+'/'+record.name,path]);
+  }
   const canonical = sources.map(([name, path]) => {
     const bytes = readFileSync(path);
     return `${name}\0${bytes.length}\0${sha256(bytes)}`;
@@ -586,16 +634,18 @@ export function assertCustodialReleaseManifest({
   badgingDump,
   expectedBuildNumber,
   enforceStagedRecoveryCeiling = true,
+  forwardBuild = null,
 }) {
   if (typeof enforceStagedRecoveryCeiling !== 'boolean') {
     throw new Error('Custodial staged recovery ceiling enforcement must be explicitly boolean');
   }
   const buildNumber = positiveInteger(expectedBuildNumber, 'Expected Custodial build number');
+  if (forwardBuild) assertReviewedForwardBuild(forwardBuild, { buildNumber });
   if (buildNumber < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code) {
     throw new Error(`Custodial versionCode must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
   }
   if (
-    enforceStagedRecoveryCeiling
+    !forwardBuild && enforceStagedRecoveryCeiling
     && buildNumber > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery
   ) {
     throw new Error(`Custodial versionCode must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
@@ -612,7 +662,7 @@ export function assertCustodialReleaseManifest({
     throw new Error(`Compiled Custodial versionCode must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
   }
   if (
-    enforceStagedRecoveryCeiling
+    !forwardBuild && enforceStagedRecoveryCeiling
     && metadata.version_code > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery
   ) {
     throw new Error(`Compiled Custodial versionCode must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
@@ -721,11 +771,16 @@ export function assertEmbeddedRuntimeAssets({
     throw new Error(`APK public runtime graph differs from its manifest (missing: ${missing.join(', ') || 'none'}; unexpected: ${unexpected.join(', ') || 'none'})`);
   }
   if (typeof readEntry !== 'function') throw new Error('APK runtime verification requires an entry reader');
+  const sanitationRecords = [];
   for (const path of paths) {
-    const actual = sha256(readEntry(`assets/public/${path}`));
+    // Copy once before hashing: a later reader call cannot mutate the verified
+    // bytes. Sanitation must not re-read an asset after its hash was accepted.
+    const bytes = Buffer.from(readEntry(`assets/public/${path}`));
+    const actual = sha256(bytes);
     if (actual !== String(hashes[path]).toLowerCase()) {
       throw new Error(`APK runtime asset hash differs from its manifest: ${path}`);
     }
+    sanitationRecords.push({ path, bytes, scope: 'runtime-source' });
   }
   const generatedHashes = {};
   for (const path of generated) {
@@ -735,7 +790,15 @@ export function assertEmbeddedRuntimeAssets({
       throw new Error(`Custodial Capacitor placeholder must be exactly empty: ${entry}`);
     }
     generatedHashes[path] = sha256(bytes);
+    sanitationRecords.push({ path, bytes, scope: 'runtime-source' });
   }
+  sanitationRecords.push({ path: 'runtime-asset-manifest.json',
+    bytes: Buffer.from(readEntry('assets/public/runtime-asset-manifest.json')), scope: 'runtime-source' });
+  // The legacy category names the unchanged shipping-content rule set; these
+  // buffers are actual APK entries, not source-file or caller-selected inputs.
+  // Exact source/manifest/native/security checks and success shape stay intact.
+  const sanitationFindings = inspectSourceRuntimeRecords(sanitationRecords);
+  if (sanitationFindings.length) throw new Error(JSON.stringify(sanitationFindings));
   return {
     runtime_asset_count: paths.length,
     runtime_assets_verified: true,
@@ -931,6 +994,23 @@ export function dexClassDefinitionCounts(input, wantedDescriptors) {
   return counts;
 }
 
+export function assertQualifiedProviderClassClosure(dexEntries) {
+  const wanted = ['CustodialProviderMessagingService','CustodialNativeRuntime','NativeProviderFirebaseDispatch',
+    'NativeProviderReleaseAdmission','NativeProviderReviewedReleases','NativeProviderRuntimeOwner','NativeProviderPayload',
+    'NativeProviderAudioAdmission','NativeProviderReviewedAudioReleases','NativeProviderAudioPolicy']
+    .map(name => `Lorg/memphiszoo/custodial/vault/${name};`);
+  if (!Array.isArray(dexEntries) || !dexEntries.length) throw new Error('Qualified provider DEX closure is absent');
+  const names = new Set(); const totals = Object.fromEntries(wanted.map(name => [name,0]));
+  for (const entry of dexEntries) {
+    if (!/^classes(?:\d+)?\.dex$/.test(entry?.name || '') || names.has(entry.name)) throw new Error('Qualified provider DEX entry identity invalid');
+    names.add(entry.name);
+    const counts = dexClassDefinitionCounts(entry.bytes,wanted);
+    for (const name of wanted) totals[name] += counts[name];
+  }
+  if (Object.values(totals).some(count => count !== 1)) throw new Error('Qualified provider requires each actual class definition exactly once');
+  return totals;
+}
+
 export function assertEmbeddedCustodialProvenance({
   buildJson,
   runtimeAssetManifest,
@@ -1082,24 +1162,29 @@ export function createCustodialAndroidReleaseAcceptance({
   nativeSecurity,
   tools,
   verifier,
+  cleaningFirstScopeProof = null,
+  forwardBuild = null,
 }) {
   const commit = normalizedSourceCommit(sourceCommit);
   const tree = normalizedSourceCommit(sourceTree);
-  const ref = normalizeCustodialSourceRef(sourceRef);
+  const number = positiveInteger(buildNumber, 'Custodial build number');
+  const forwardDescriptor = forwardBuild ? assertReviewedForwardBuild(forwardBuild, {
+    buildNumber: number, sourceCommit: commit, sourceTree: tree, sourceRef,
+  }) : null;
+  const ref = forwardBuild ? sourceRef : normalizeCustodialSourceRef(sourceRef);
   const runId = normalizedBuildRun(buildRun);
   const workflow = String(buildWorkflow || '').trim();
   if (workflow !== CUSTODIAL_CODEMAGIC_WORKFLOW) {
     throw new Error(`Custodial release workflow must be ${CUSTODIAL_CODEMAGIC_WORKFLOW}`);
   }
-  const number = positiveInteger(buildNumber, 'Custodial build number');
   if (number < CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code) {
     throw new Error(`Custodial build number must be at least protected release floor ${CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code}`);
   }
-  const recoveryBuild = ref === CUSTODIAL_FORWARD_RECOVERY_REF;
+  const recoveryBuild = !forwardBuild && ref === CUSTODIAL_FORWARD_RECOVERY_REF;
   if (recoveryBuild && number !== CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE) {
     throw new Error(`Custodial Build 29 recovery source must emit versionCode ${CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE}`);
   }
-  if (!recoveryBuild && number > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery) {
+  if (!forwardBuild && !recoveryBuild && number > CUSTODIAL_ANDROID_RELEASE_POLICY.maximum_candidate_version_code_for_staged_recovery) {
     throw new Error(`Custodial build number must not outrun staged recovery ${CUSTODIAL_ANDROID_RELEASE_POLICY.rollback_recovery_version_code}`);
   }
   const timestamp = String(generatedAt || '').trim();
@@ -1278,8 +1363,18 @@ export function createCustodialAndroidReleaseAcceptance({
     if (name.endsWith('_sha256')) normalizedSha256(value, name);
     else if (!String(value || '').trim()) throw new Error(`${name} verifier provenance is missing`);
   }
+  if (forwardDescriptor) {
+    if (embeddedProvenance.custodial_native_vault_source_sha256 !== forwardDescriptor.native_sha256
+        || verifier.acceptance_schema_sha256 !== forwardDescriptor.schema_sha256
+        || (forwardDescriptor.artifact_sha256 !== null && artifact.apk_sha256 !== forwardDescriptor.artifact_sha256)
+        || (forwardDescriptor.runtime_sha256 !== null && embeddedProvenance.runtime_asset_manifest_sha256 !== forwardDescriptor.runtime_sha256)) {
+      throw new Error('Compiled artifact/native/schema/runtime evidence differs from the reviewed forward descriptor');
+    }
+  }
 
+  if(cleaningFirstScopeProof!==null&&!isCompiledCleaningScopeProof(cleaningFirstScopeProof))throw Error('Unbound compiled cleaning scope proof');
   const acceptance = {
+    ...(cleaningFirstScopeProof?{cleaning_first_scope:cleaningFirstScopeProof}:{}),
     schema_id: CUSTODIAL_ACCEPTANCE_SCHEMA_ID,
     schema_version: 6,
     accepted: true,
@@ -1302,6 +1397,7 @@ export function createCustodialAndroidReleaseAcceptance({
     native_security: nativeSecurity,
     tools,
     verifier,
+    ...(forwardBuild ? { forward_transition: forwardBuildProvenance(forwardBuild) } : {}),
   };
   assertCustodialAcceptanceSchema(acceptance);
   return acceptance;
@@ -1436,7 +1532,7 @@ function toolDescriptor(path, version) {
   return { path, version, sha256: fileSha256(path) };
 }
 
-function parseArguments(argumentsList) {
+export function parseCustodialArtifactArguments(argumentsList) {
   const allowed = new Set([
     '--apk',
     '--build-number',
@@ -1448,6 +1544,10 @@ function parseArguments(argumentsList) {
     '--runtime-directory',
     '--output',
   ]);
+  const required = [...allowed];
+  allowed.add('--callback-reference-build-id');
+  const forwardNames = ['--forward-source-input', '--forward-trusted-pins', '--forward-trusted-pins-sha256', '--forward-role'];
+  for (const name of forwardNames) allowed.add(name);
   const values = {};
   for (let index = 0; index < argumentsList.length; index += 2) {
     const name = argumentsList[index];
@@ -1458,14 +1558,112 @@ function parseArguments(argumentsList) {
     if (Object.hasOwn(values, name)) throw new Error(`Custodial release verifier argument repeats: ${name}`);
     values[name] = value;
   }
-  for (const name of allowed) {
+  for (const name of required) {
     if (!String(values[name] || '').trim()) throw new Error(`Custodial release verifier requires ${name}`);
   }
+  parseForwardBuildArguments(forwardNames.filter(name => Object.hasOwn(values, name)).flatMap(name => [name, values[name]]));
   return values;
 }
 
-function main() {
-  const args = parseArguments(process.argv.slice(2));
+function exactObjectKeys(value, keys, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object`);
+  const unknown = Object.keys(value).filter((key) => !keys.includes(key));
+  if (unknown.length) throw new Error(`${label} contains unsupported field ${unknown[0]}`);
+}
+
+export function parseNormalForwardSourceArguments(args) {
+  if (!Array.isArray(args) || args.length !== 4 || args[0] !== '--source-input' || args[2] !== '--trusted-pins') throw new Error('Usage: verify-custodial-android-release.mjs forward-source --source-input <absolute-json> --trusted-pins <absolute-json>');
+  for (const [index, path] of [[1, args[1]], [3, args[3]]]) if (!path || !path.startsWith('/') || resolve(path) !== path || !lstatSync(path).isFile() || lstatSync(path).isSymbolicLink() || realpathSync(path) !== path) throw new Error(`Forward verifier input ${index === 1 ? 'source' : 'trusted-pins'} must be a canonical regular file`);
+  if (args[1] === args[3]) throw new Error('Forward verifier source and trusted-pins files must be distinct');
+  return { sourceInputPath: args[1], trustedPinsPath: args[3] };
+}
+
+export async function runNormalForwardSourceAdmission(args) {
+  const paths = parseNormalForwardSourceArguments(args);
+  const sourceEnvelope = JSON.parse(readFileSync(paths.sourceInputPath, 'utf8'));
+  const trustedEnvelope = JSON.parse(readFileSync(paths.trustedPinsPath, 'utf8'));
+  exactObjectKeys(sourceEnvelope, ['schema_version', 'kind', 'source_only', 'activation', 'adapter_input'], 'Forward verifier source input');
+  exactObjectKeys(trustedEnvelope, ['schema_version', 'kind', 'external_trusted_pins'], 'Forward verifier trusted pins');
+  if (sourceEnvelope.schema_version !== 1 || sourceEnvelope.kind !== 'custodial.forward-source-admission-input.v1' || sourceEnvelope.source_only !== true || sourceEnvelope.activation !== false) throw new Error('Forward verifier source input must be inactive source-only metadata');
+  if (trustedEnvelope.schema_version !== 1 || trustedEnvelope.kind !== 'custodial.forward-source-trusted-pins.v1') throw new Error('Forward verifier trusted pins envelope is invalid');
+  const adapter = await import('./custodial-forward-transition-admission-adapter.mjs');
+  const result = adapter.inspectForwardTransitionSourceAdmission(sourceEnvelope.adapter_input, trustedEnvelope.external_trusted_pins);
+  console.log(JSON.stringify({ verifier: 'custodial-android-release-normal-source-only', source_only: true, activation: false, result }, null, 2));
+  if (!result.accepted) process.exitCode = 1;
+}
+
+export function parseForwardSourceEvidenceArguments(args) {
+  if (!Array.isArray(args) || args.length !== 4 || args[0] !== '--source-input' || args[2] !== '--review-context') throw new Error('Usage: verify-custodial-android-release.mjs forward-source-evidence --source-input <absolute-json> --review-context <absolute-json>');
+  for (const path of [args[1], args[3]]) if (!path || !path.startsWith('/') || resolve(path) !== path || !lstatSync(path).isFile() || lstatSync(path).isSymbolicLink() || realpathSync(path) !== path) throw new Error('Forward source evidence inputs must be canonical regular files');
+  if (args[1] === args[3]) throw new Error('Forward source evidence files must be distinct');
+  return { sourceInputPath: args[1], reviewContextPath: args[3] };
+}
+
+export function runNormalForwardSourceEvidence(args) {
+  const paths = parseForwardSourceEvidenceArguments(args);
+  const sourceEnvelope = JSON.parse(readFileSync(paths.sourceInputPath, 'utf8'));
+  const contextEnvelope = JSON.parse(readFileSync(paths.reviewContextPath, 'utf8'));
+  exactObjectKeys(sourceEnvelope, ['schema_version', 'kind', 'source_only', 'activation', 'observation_input'], 'Forward source evidence input');
+  exactObjectKeys(contextEnvelope, ['schema_version', 'kind', 'external_review_context'], 'Forward source evidence review context');
+  if (sourceEnvelope.schema_version !== 1 || sourceEnvelope.kind !== 'custodial.forward-source-evidence-input.v1' || sourceEnvelope.source_only !== true || sourceEnvelope.activation !== false) throw new Error('Forward source evidence must be inactive source-only input');
+  if (contextEnvelope.schema_version !== 1 || contextEnvelope.kind !== 'custodial.forward-source-evidence-context.v1') throw new Error('Forward source evidence context envelope is invalid');
+  const result = observeForwardSourceEvidence(sourceEnvelope.observation_input, contextEnvelope.external_review_context);
+  console.log(JSON.stringify({ verifier: 'custodial-android-release-normal-forward-source-evidence', source_only: true, activation: false, result }, null, 2));
+  // Success at BYTE observation is not a compatible release/source admission.
+  // This diagnostic deliberately cannot produce a source-ready exit code.
+  if (!result.source_ready) process.exitCode = 1;
+  return result;
+}
+
+async function main() {
+  if (process.argv[2] === 'forward-source-evidence') {
+    runNormalForwardSourceEvidence(process.argv.slice(3));
+    return;
+  }
+  if (process.argv[2] === 'forward-source') {
+    await runNormalForwardSourceAdmission(process.argv.slice(3));
+    return;
+  }
+  if (process.argv.slice(2).includes('--prebuild-custody-package')) {
+    const sourceArgs = parsePrebuildCustodySourceArguments(process.argv.slice(2));
+    if (process.version !== CUSTODIAL_NODE_VERSION) {
+      throw new Error(`Custodial source verifier requires Node ${CUSTODIAL_NODE_VERSION}`);
+    }
+    const git = pathExecutable('git');
+    if (!git) throw new Error('Unable to locate git for current Custodial source evidence');
+    const observedSource = () => {
+      const commit = normalizedSourceCommit(successfulOutput(git, ['-C', repositoryRoot, 'rev-parse', 'HEAD'], 'Custodial source commit inspection'));
+      const tree = normalizedSourceCommit(successfulOutput(git, ['-C', repositoryRoot, 'rev-parse', 'HEAD^{tree}'], 'Custodial source tree inspection'));
+      // Source preparation may bind an exact draft branch. Artifact mode
+      // still requires protected main/the exact recovery ref, unchanged.
+      const ref = successfulOutput(git, ['-C', repositoryRoot, 'symbolic-ref', 'HEAD'], 'Custodial source ref inspection');
+      if (!/^refs\/heads\/[A-Za-z0-9._/-]+$/.test(ref)) throw new Error('Custodial source evidence requires an exact named source branch');
+      if (successfulOutput(git, ['-C', repositoryRoot, 'status', '--porcelain=v1', '--untracked-files=all', '--', '.'], 'Custodial source status inspection').trim()) {
+        throw new Error('Custodial source evidence requires the exact clean source; dirty artifacts remain quarantined');
+      }
+      return Object.freeze({commit, tree, ref});
+    };
+    const expectedFrontendSource = observedSource();
+    const evidence = inspectCustodialPrebuildCustodyEvidence({
+      ...sourceArgs, expectedFrontendSource, normalVerifierSourceSha256: fileSha256(scriptPath),
+      expectedSignerPins: Object.freeze({package_name:CUSTODIAL_PACKAGE_NAME,
+        signer_certificate_sha256:CUSTODIAL_SIGNER_SHA256, signer_public_key_sha256:CUSTODIAL_SIGNER_PUBLIC_KEY_SHA256}),
+    });
+    if (JSON.stringify(observedSource()) !== JSON.stringify(expectedFrontendSource)) {
+      throw new Error('Custodial source changed during prebuild evidence inspection');
+    }
+    const receipt = writeCustodialPrebuildCustodyEvidence(sourceArgs.outputPath, evidence, repositoryRoot);
+    console.log(JSON.stringify({schema:evidence.schema, phase:evidence.phase, evidence:receipt,
+      summary:evidence.summary, artifact_admitted:false, installation_admitted:false, physical_verified:false}));
+    process.exitCode = evidence.summary.missingInputs.length ? 1 : 0;
+    return;
+  }
+  const args = parseCustodialArtifactArguments(process.argv.slice(2));
+  const forwardNames = ['--forward-source-input', '--forward-trusted-pins', '--forward-trusted-pins-sha256', '--forward-role'];
+  const forwardFlags = parseForwardBuildArguments(forwardNames.filter(name => Object.hasOwn(args, name)).flatMap(name => [name, args[name]]));
+  const buildNumber = positiveInteger(args['--build-number'], 'Custodial build number');
+  // Load reviewed bytes and exact clean source before APK/tool/output effects.
+  const forwardBuild = await loadReviewedForwardBuild(forwardFlags, { buildNumber });
   const sourceApk = resolve(args['--apk']);
   const runtimeDirectory = resolveCustodialRuntimeDirectory(args['--runtime-directory']);
   const outputPath = resolve(args['--output']);
@@ -1479,13 +1677,12 @@ function main() {
     throw new Error(`Custodial release verifier requires Node ${CUSTODIAL_NODE_VERSION}; received ${process.version}`);
   }
   const sourceCommit = normalizedSourceCommit(args['--source-commit']);
-  const sourceRef = normalizeCustodialSourceRef(args['--source-ref']);
+  const sourceRef = forwardBuild ? args['--source-ref'] : normalizeCustodialSourceRef(args['--source-ref']);
   const buildRun = normalizedBuildRun(args['--build-run']);
   const buildWorkflow = String(args['--build-workflow']).trim();
   if (buildWorkflow !== CUSTODIAL_CODEMAGIC_WORKFLOW) {
     throw new Error(`Custodial release workflow must be ${CUSTODIAL_CODEMAGIC_WORKFLOW}`);
   }
-  const buildNumber = positiveInteger(args['--build-number'], 'Custodial build number');
   const git = pathExecutable('git');
   if (!git) throw new Error('Unable to locate git for exact Custodial source attestation');
   const checkedOutCommit = normalizedSourceCommit(successfulOutput(
@@ -1505,11 +1702,24 @@ function main() {
   if (checkedOutCommit !== sourceCommit || String(sourceStatus.stdout || '').trim()) {
     throw new Error('Custodial release acceptance requires the exact clean source commit; dirty artifacts are quarantined');
   }
+  if (forwardBuild) assertReviewedForwardBuild(forwardBuild, { buildNumber, sourceCommit, sourceTree, sourceRef });
   const nativeVaultSourceSha256 = custodialNativeVaultSourceDigest(join(
     mobileRoot,
     'plugins',
     'custodial-native-vault',
   ));
+  // A cleaning release cannot mint original callback continuity from its own
+  // acceptance receipt. Acquire independently from the Source-fixed evidence
+  // workflow before creating the candidate snapshot; no injected fetch/receipt.
+  const selectedScope=readCustodialBuildScope(mobileRoot);
+  let callbackReferenceTicket=null;
+  if(isCleaningScope(selectedScope)){
+    if(!forwardBuild)throw new Error('Cleaning callback reference requires the actual reviewed forward Source');
+    if(!args['--callback-reference-build-id'])throw new Error('Cleaning release requires an independently Source-bound callback reference build');
+    callbackReferenceTicket=await acquireCustodialCallbackReference({buildId:args['--callback-reference-build-id'],token:process.env.CODEMAGIC_API_TOKEN,forwardBuild,profile:selectedScope.profile,policySha256:selectedScope.policy_sha256});
+    const afterReferenceStatus=command(git,['-C',repositoryRoot,'status','--porcelain=v1','--untracked-files=all','--','.']);
+    if(afterReferenceStatus.status!==0||String(afterReferenceStatus.stdout||'').trim()||normalizedSourceCommit(successfulOutput(git,['-C',repositoryRoot,'rev-parse','HEAD'],'Source after callback reference'))!==sourceCommit||normalizedSourceCommit(successfulOutput(git,['-C',repositoryRoot,'rev-parse','HEAD^{tree}'],'Source tree after callback reference'))!==sourceTree)throw new Error('Source changed during callback reference acquisition');
+  }else if(args['--callback-reference-build-id'])throw new Error('Callback reference argument is only supported for the explicit cleaning scope');
   const tools = resolveCustodialAndroidTools(args['--build-tools-directory']);
   const apkSnapshot = createImmutableFileSnapshot(sourceApk);
   try {
@@ -1526,6 +1736,8 @@ function main() {
       sourceRef,
       sourceTree,
       tools,
+      forwardBuild,
+      callbackReferenceTicket,
     });
   } finally {
     disposeImmutableFileSnapshot(apkSnapshot);
@@ -1545,6 +1757,8 @@ function verifyCustodialAndroidSnapshot({
   sourceRef,
   sourceTree,
   tools,
+  forwardBuild = null,
+  callbackReferenceTicket = null,
 }) {
   const apk = apkSnapshot.path;
   assertImmutableFileSnapshot(apkSnapshot);
@@ -1561,14 +1775,25 @@ function verifyCustodialAndroidSnapshot({
     manifestDump,
     badgingDump,
     expectedBuildNumber: buildNumber,
-    enforceStagedRecoveryCeiling: requiresCustodialStagedRecoveryCeiling(sourceRef),
+    enforceStagedRecoveryCeiling: forwardBuild ? true : requiresCustodialStagedRecoveryCeiling(sourceRef),
+    forwardBuild,
   });
+  const sourceScope=readCustodialBuildScope(mobileRoot);
+  const cleaningScope=isCleaningScope(sourceScope)?sourceScope:null;
+  let providerRelease=null;
+  if(cleaningScope)assertCleaningScopeManifest(manifestDump,cleaningScope);
+  else{
+    providerRelease = readReviewedProviderRelease(join(mobileRoot,'plugins','custodial-native-vault'), {
+      versionCode: application.version_code, versionName: application.version_name, required: true,
+    });
+    inspectCompiledProviderOwner(manifestDump,providerRelease);
+  }
   const { apk: _apk, aapt2: _aapt2, ...backup } = verifyAndroidApkBackupSecurity(apk, { aapt2Path: tools.aapt2 });
   const {
     apk: _manifestSecurityApk,
     aapt2: _manifestSecurityAapt2,
     ...androidManifestSecurity
-  } = verifyCustodialAndroidManifestSecurity(apk, { aapt2Path: tools.aapt2 });
+  } = verifyCustodialAndroidManifestSecurity(apk, { aapt2Path: tools.aapt2, providerRelease, cleaningScope });
 
   const signerResult = command(
     tools.apksigner,
@@ -1585,6 +1810,9 @@ function verifyCustodialAndroidSnapshot({
   const capacitorConfigBytes = readEntry('assets/capacitor.config.json');
   const dexNames = [...new Set(zipEntries.filter((entry) => /^classes(?:\d+)?\.dex$/.test(entry)))].sort();
   const dexEntries = dexNames.map((name) => ({ name, bytes: readEntry(name) }));
+  if(!cleaningScope)assertQualifiedProviderClassClosure(dexEntries);
+  // Every selected profile must match its three actual compiled scope classes.
+  inspectCustodialNewProducerScopeDexSemantics(dexEntries,{profile:sourceScope.profile,policySha256:sourceScope.policy_sha256});
   const dexSemantics = inspectCustodialNativeVaultDexSemantics(dexEntries, {
     oldSecureStorageDescriptor: `L${CUSTODIAL_OLD_SECURE_STORAGE_CLASS.replaceAll('.', '/')};`,
   });
@@ -1604,6 +1832,7 @@ function verifyCustodialAndroidSnapshot({
   }
   const nativeSecurity = { ...nativeBoundary, ...dexSemantics };
   const buildBytes = readEntry('assets/public/build.json');
+  const cleaningFirstScopeProof=cleaningScope?inspectCompiledCleaningScope({ticket:cleaningScope,manifestDump,buildJson:jsonObject(buildBytes,'Embedded build.json'),buildIdentity:parseEmbeddedBuildIdentity(readEntry('assets/public/memphis-build-identity.js')),readEntry,dexEntries,callbackReferenceTicket,candidateSourceCommit:sourceCommit,versionCode:buildNumber}):null;
   const runtimeManifestBytes = readEntry('assets/public/runtime-asset-manifest.json');
   const buildIdentityBytes = readEntry('assets/public/memphis-build-identity.js');
   const runtimeAssetManifest = jsonObject(runtimeManifestBytes, 'Embedded runtime-asset-manifest.json');
@@ -1692,6 +1921,8 @@ function verifyCustodialAndroidSnapshot({
     nativeSecurity,
     tools: toolProvenance,
     verifier,
+    cleaningFirstScopeProof,
+    forwardBuild,
   });
 
   mkdirSync(dirname(outputPath), { recursive: true });

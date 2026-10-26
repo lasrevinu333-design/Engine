@@ -1,4 +1,9 @@
 import assert from 'node:assert/strict';
+import {webcrypto} from 'node:crypto';
+import {createProtectedFeedbackIdentity} from '../src/custodial/protected-principal.js';
+import {createFeedbackOutbox} from '../src/custodial/feedback-outbox.js';
+import {createSyntheticScheduleLocks} from '../../scripts/synthetic-schedule-locks.mjs';
+import {createProtectedBrowserAdmission} from '../src/custodial/protected-browser-admission.js';
 import {
   CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,
   createNativeProtectedStorage,
@@ -10,6 +15,7 @@ import {
   CUSTODIAL_ENROLLMENT_OPERATION_KEY,
   CUSTODIAL_INSTALLATION_MARKER_KEY,
   CUSTODIAL_INSTALLATION_RECORD_KEY,
+  CUSTODIAL_INSTALLATION_SEAL_KEY,
   CUSTODIAL_RECOVERY_RECORD_KEY,
   CUSTODIAL_REMOVAL_COMPLETION_KEY,
   CUSTODIAL_REMOVAL_OPERATION_KEY,
@@ -20,6 +26,35 @@ const operationId = '12345678-1234-4123-8123-123456789abc';
 const recoveryId = 'recovery-proof-1234567890';
 const deviceId = 'KIOSK_09';
 const seal = 'native-installation-seal-1234567890';
+
+if(process.argv.includes('--feedback-original-fifo-only')){
+  const id=n=>`81000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+  const principal={schema_version:'custodial-protected-principal.v1',device_id:'KIOSK_08',employee_id:id(1),credential_id:id(2),
+    credential_operation_id:id(3),assignment_epoch:4,installation_seal:seal,enrolled_at:'2026-10-12T12:00:00Z'};
+  const local=storageFixture({...Object.fromEntries(CUSTODIAL_DEVICE_KEYS.map(k=>[k,principal.device_id])),[CUSTODIAL_INSTALLATION_MARKER_KEY]:seal});
+  const record=JSON.stringify({schema_version:1,credential:'synthetic-not-native-token',device_id:principal.device_id,
+    installation_seal:seal,enrolled_at:principal.enrolled_at,principal,migrated_from_credential_only_state:false});
+  const secure={async get(key){return key===CUSTODIAL_INSTALLATION_RECORD_KEY?record:null;},async set(){throw Error('Unexpected fixture protected write');},async remove(){throw Error('Unexpected fixture protected remove');}};
+  const db={databases:async()=>[],open(){throw Error('No fixture database should be created');}};
+  const gate=createProtectedBrowserAdmission({storage:local,indexedDb:db,locks:createSyntheticScheduleLocks(),cryptoApi:webcrypto});
+  const owner=createCustodialCredentialStore({storage:local,secureStorage:secure,indexedDb:db,cryptoApi:webcrypto,
+    protectedWorkAdmission:work=>gate.mutate(work),protectedWorkCheckpoint:()=>gate.requireAdmission()});
+  await owner.ensureSecurityState();assert.equal(owner.getStatus().ready,true);assert.deepEqual(owner.getStatus().principal,principal);
+  let ensureCalls=0,refreshCalls=0,requests=0;
+  const facade={getStatus:owner.getStatus,ensureSecurityState:async()=>{ensureCalls++;return owner.ensureSecurityState();}};
+  const identity=createProtectedFeedbackIdentity({ready:()=>Promise.resolve(),security:facade,currentDeviceId:()=>principal.device_id,
+    online:()=>true,refreshStatus:async()=>{refreshCalls++;throw Error('No identity refresh for existing principal');}});
+  const outbox=createFeedbackOutbox({storage:local,mutate:owner.runWhenReady,identity,online:()=>true,
+    request:async(_path,options)=>{requests++;assert.equal(options.expectedGeneration,owner.getStatus().generation);throw Error('Synthetic unknown transport; original must remain');}});
+  let timer;const bounded=work=>Promise.race([work,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Actual protected FIFO deadlock')),1500);})]).finally(()=>clearTimeout(timer));
+  const body={operation_id:id(4),message:'original source-only fixture feedback',category:'other',priority:'normal'};
+  await bounded(outbox.save(body));const pending=await bounded(outbox.readPending());assert.equal(pending.state,'pending');
+  assert.equal(pending.body.expected_employee_id,principal.employee_id);assert.equal(pending.body.expected_credential_id,principal.credential_id);
+  assert.equal(pending.body.expected_assignment_epoch,'4');assert.equal(ensureCalls,0);assert.equal(refreshCalls,0);
+  assert.deepEqual(await bounded(outbox.flush()),[]);assert.equal(requests,1);assert.equal((await bounded(outbox.readPending())).body.operation_id,body.operation_id);
+  console.log('NEW actual credential-store/browser FIFO -> protected identity -> Feedback save/pending/unknown transport join PASS; synthetic enrollment/store, no SQL/native/phone acceptance');
+  process.exit(0);
+}
 
 function storageFixture(initial = {}, failOnce = null) {
   const values = new Map(Object.entries(initial));
@@ -132,6 +167,1350 @@ function stateAdapter(storage, state) {
 
 const removalOperationId = 'abcdef12-3456-4789-8abc-def012345678';
 const enrollmentOperationId = 'fedcba98-7654-4321-8fed-cba987654321';
+
+if (process.argv.includes('--enrollment-original-rollback-only')) {
+  const flow = process.argv.includes('--recovery-original-only') ? 'recovery' : 'enrollment';
+  const initial = pendingRecoveryFixture({ flow });
+  if (flow === 'enrollment') {
+    delete initial[CUSTODIAL_RECOVERY_RECORD_KEY];
+    delete initial[CUSTODIAL_RESTORE_QUARANTINE_KEY];
+  }
+  const storage = storageFixture(initial);
+  let current = { ...pendingNativeState(flow), state: 'CREDENTIAL_STAGED' };
+  let enter, finish;
+  const entered = new Promise(resolve => { enter = resolve; });
+  const wait = new Promise(resolve => { finish = resolve; });
+  let completeCalls = 0;
+  const plugin = {
+    async getState() { return structuredClone(current); },
+    async completeLocalBinding(input) {
+      assert.equal(input.operation_id, operationId);
+      completeCalls++;
+      current = pendingNativeState(flow); // Source fixture models accepted native binding before lost reply.
+      enter();
+      await wait;
+      throw Error('Synthetic lost binding reply');
+    },
+  };
+  const owner = createCustodialCredentialStore({
+    storage, secureStorage: createNativeProtectedStorage(plugin, storage), cryptoApi: webcrypto,
+    indexedDb: { databases: async () => [], open() { throw Error('No fixture database creation'); } },
+    now: () => new Date('2026-08-01T01:07:00.000Z'),
+  });
+  const work = owner.commitEnrollmentOperation({ operationId, deviceId,
+    credential: CUSTODIAL_NATIVE_CREDENTIAL_HANDLE });
+  await entered;
+  const replacement = '{foreign original enrollment journal, retained exactly';
+  storage.setItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY, replacement);
+  finish();
+  await assert.rejects(work);
+  assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), replacement);
+  assert.equal(completeCalls, 1);
+  assert.equal(current.state, 'PENDING_SERVER_CONFIRMATION');
+  assert.equal(current.installation.enrollment_operation_id, operationId);
+  assert.equal(owner.getStatus().ready, false);
+  assert.equal(storage.value(CUSTODIAL_CREDENTIAL_KEY), undefined);
+  console.log(`NEW ${flow} actual caller preserves foreign original after lost native binding reply; synthetic source callback only`);
+  process.exit(0);
+}
+
+if (process.argv.includes('--enrollment-new-cases-only')) {
+  const keys = [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY,
+    CUSTODIAL_ENROLLMENT_OPERATION_KEY, CUSTODIAL_RECOVERY_RECORD_KEY,
+    CUSTODIAL_RESTORE_QUARANTINE_KEY, CUSTODIAL_CREDENTIAL_KEY];
+  const snapshot = storage => Object.fromEntries(keys.map(key => [key, storage.getItem(key)]));
+  const make = ({ flow = 'enrollment', failure = null, onComplete = null,
+    onRead = null, onRemove = null, onInspect = null } = {}) => {
+    const initial = pendingRecoveryFixture({ flow });
+    if (flow === 'enrollment') {
+      delete initial[CUSTODIAL_RECOVERY_RECORD_KEY];
+      delete initial[CUSTODIAL_RESTORE_QUARANTINE_KEY];
+    }
+    const storage = storageFixture(initial, failure);
+    let current = { ...pendingNativeState(flow), state: 'CREDENTIAL_STAGED' };
+    const evidence = { calls: 0, before: null };
+    const plugin = {
+      async getState() {
+        if (current.state === 'PENDING_SERVER_CONFIRMATION' && onRead) await onRead(storage);
+        return structuredClone(current);
+      },
+      async completeLocalBinding(input) {
+        assert.equal(input.operation_id, operationId);
+        evidence.calls++;
+        evidence.before = snapshot(storage);
+        current = pendingNativeState(flow);
+        if (onComplete) await onComplete(storage);
+        return structuredClone(current);
+      },
+    };
+    const native = createNativeProtectedStorage(plugin, storage);
+    const secure = { ...native, async remove(key) {
+      if (onRemove) await onRemove(storage, key);
+      return native.remove(key);
+    } };
+    const owner = createCustodialCredentialStore({ storage, secureStorage: secure, cryptoApi: webcrypto,
+      indexedDb: { databases: async () => { if (onInspect) await onInspect(storage); return []; },
+        open() { throw Error('No fixture database creation'); } },
+      now: () => new Date('2026-08-01T01:07:00.000Z') });
+    return { storage, owner, evidence, state: () => current,
+      commit: () => owner.commitEnrollmentOperation({ operationId, deviceId,
+        credential: CUSTODIAL_NATIVE_CREDENTIAL_HANDLE }) };
+  };
+  const cases = {
+    async normalEnrollmentAndRecovery() {
+      for (const flow of ['enrollment', 'recovery']) {
+        const x = make({ flow });
+        const result = await x.commit();
+        assert.equal(result.operationId, operationId);
+        assert.equal(x.evidence.calls, 1);
+        assert.equal(x.owner.getStatus().ready, true);
+        for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(x.storage.value(key), deviceId);
+        assert.equal(x.storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), seal);
+        const journal = JSON.parse(x.storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY));
+        assert.equal(journal.status, 'local_committed_pending_server_confirmation');
+        assert.equal(journal.operation_id, operationId);
+        assert.equal(journal.device_id, deviceId);
+        assert.equal(x.storage.value(CUSTODIAL_CREDENTIAL_KEY), undefined);
+        if (flow === 'recovery') {
+          assert.equal(JSON.parse(x.storage.value(CUSTODIAL_RECOVERY_RECORD_KEY)).status, 'resolved');
+          assert.equal(x.storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), undefined);
+        }
+      }
+    },
+    async partialOwnWrites() {
+      for (const [operation, key, occurrence] of [
+        ['set', CUSTODIAL_DEVICE_KEYS[1], 1],
+        ['set', CUSTODIAL_INSTALLATION_MARKER_KEY, 1],
+        ['set', CUSTODIAL_RECOVERY_RECORD_KEY, 1],
+        ['set', CUSTODIAL_ENROLLMENT_OPERATION_KEY, 2],
+        ['remove', CUSTODIAL_RESTORE_QUARANTINE_KEY, 1],
+      ]) for (const after of [false, true]) {
+        const x = make({ flow: 'recovery', failure: { operation, key, occurrence, after } });
+        await assert.rejects(x.commit());
+        assert.deepEqual(snapshot(x.storage), x.evidence.before);
+        assert.equal(x.state().state, 'PENDING_SERVER_CONFIRMATION');
+        assert.equal(x.evidence.calls, 1);
+        assert.equal(x.owner.getStatus().ready, false);
+      }
+    },
+    async authoritativeReadReplacement() {
+      const foreign = '{different original operation after protected read';
+      const x = make({ onRead: async storage => { storage.setItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY, foreign); } });
+      await assert.rejects(x.commit());
+      assert.equal(x.storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), foreign);
+      assert.equal(x.storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), undefined);
+      assert.equal(x.evidence.calls, 1);
+    },
+    async partialReentrantReplacement() {
+      const x = make({ flow: 'recovery' });
+      const set = x.storage.setItem;
+      const foreign = '{foreign pending recovery after own checkpoint';
+      x.storage.setItem = (key, value) => {
+        set(key, value);
+        if (key === CUSTODIAL_INSTALLATION_MARKER_KEY) set(CUSTODIAL_RECOVERY_RECORD_KEY, foreign);
+      };
+      await assert.rejects(x.commit());
+      assert.equal(x.storage.value(CUSTODIAL_RECOVERY_RECORD_KEY), foreign);
+      assert.equal(x.storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), x.evidence.before[CUSTODIAL_ENROLLMENT_OPERATION_KEY]);
+      assert.equal(x.storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), undefined);
+    },
+    async protectedCleanupReplacement() {
+      for (const target of [CUSTODIAL_CREDENTIAL_KEY, CUSTODIAL_INSTALLATION_SEAL_KEY]) {
+        const foreign = `{retained different original during ${target}`;
+        const x = make({ flow: 'recovery', onRemove: async (storage, key) => {
+          if (key === target) storage.setItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY, foreign);
+        } });
+        await assert.rejects(x.commit());
+        assert.equal(x.storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), foreign);
+        assert.equal(x.storage.value(CUSTODIAL_RECOVERY_RECORD_KEY), x.evidence.before[CUSTODIAL_RECOVERY_RECORD_KEY]);
+        assert.equal(x.storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), x.evidence.before[CUSTODIAL_RESTORE_QUARANTINE_KEY]);
+        assert.equal(x.state().state, 'PENDING_SERVER_CONFIRMATION');
+        assert.equal(x.evidence.calls, 1);
+        assert.equal(x.owner.getStatus().ready, false);
+      }
+    },
+    async inspectionReplacement() {
+      const foreign = '{foreign original during asynchronous source inspection';
+      let once = false;
+      const x = make({ onInspect: async storage => {
+        if (!once) { once = true; storage.setItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY, foreign); }
+      } });
+      await assert.rejects(x.commit());
+      assert.equal(x.storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), foreign);
+      assert.equal(x.evidence.calls, 0);
+    },
+    async noPlaintextResurrection() {
+      const x = make({ onRemove: async (_storage, key) => {
+        if (key === CUSTODIAL_CREDENTIAL_KEY) throw Error('Synthetic unknown protected cleanup');
+      } });
+      x.storage.setItem(CUSTODIAL_CREDENTIAL_KEY, 'synthetic legacy compatibility secret');
+      await assert.rejects(x.commit());
+      assert.equal(x.storage.value(CUSTODIAL_CREDENTIAL_KEY), undefined);
+      assert.equal(x.state().state, 'PENDING_SERVER_CONFIRMATION');
+      assert.equal(x.evidence.calls, 1);
+      assert.equal(x.owner.getStatus().ready, false);
+    },
+    async nonNativeExactAndForeignRollback() {
+      for (const foreign of [false, true]) {
+        const initial = pendingRecoveryFixture({ flow: 'enrollment' });
+        delete initial[CUSTODIAL_RECOVERY_RECORD_KEY];
+        delete initial[CUSTODIAL_RESTORE_QUARANTINE_KEY];
+        const storage = storageFixture(initial, { operation: 'set', key: CUSTODIAL_INSTALLATION_MARKER_KEY, after: true });
+        const protectedRows = new Map();
+        const replacement = '{retained different protected installation';
+        let getsAfterWrite = 0;
+        const secure = {
+          async get(key) {
+            if (key === CUSTODIAL_INSTALLATION_RECORD_KEY && protectedRows.has(key)) {
+              getsAfterWrite++;
+              if (foreign && getsAfterWrite === 2) protectedRows.set(key, replacement);
+            }
+            return protectedRows.get(key) ?? null;
+          },
+          async set(key, value) { protectedRows.set(key, value); },
+          async remove(key) { protectedRows.delete(key); },
+        };
+        const owner = createCustodialCredentialStore({ storage, secureStorage: secure, cryptoApi: webcrypto,
+          indexedDb: { databases: async () => [], open() { throw Error('No fixture database creation'); } } });
+        await assert.rejects(owner.commitEnrollmentOperation({ operationId, deviceId, credential: 'synthetic protected fixture credential' }));
+        assert.equal(protectedRows.get(CUSTODIAL_INSTALLATION_RECORD_KEY), foreign ? replacement : undefined);
+        assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), initial[CUSTODIAL_ENROLLMENT_OPERATION_KEY]);
+        for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), undefined);
+        assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), undefined);
+        assert.equal(storage.value(CUSTODIAL_CREDENTIAL_KEY), undefined);
+        assert.equal(owner.getStatus().ready, false);
+      }
+    },
+    async directRecoveryVerifierReplacement() {
+      const initial = pendingRecoveryFixture();
+      const storage = storageFixture(initial);
+      let protectedWrites = 0;
+      const secure = { async get() { return null; }, async set() { protectedWrites++; }, async remove() {} };
+      const owner = createCustodialCredentialStore({ storage, secureStorage: secure, cryptoApi: webcrypto,
+        indexedDb: { databases: async () => [], open() { throw Error('No fixture database creation'); } } });
+      const foreign = '{foreign recovery while original verifier awaited';
+      await assert.rejects(owner.recoverEnrollment({ deviceId, managerCode: 'synthetic fixture-only code',
+        credential: 'synthetic protected fixture credential', verifyManagerCode: async () => {
+          storage.setItem(CUSTODIAL_RECOVERY_RECORD_KEY, foreign);
+          return { authorized: true }; // Source callback fixture, not named-manager authentication.
+        } }));
+      assert.equal(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY), foreign);
+      assert.equal(storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), initial[CUSTODIAL_RESTORE_QUARANTINE_KEY]);
+      assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), initial[CUSTODIAL_ENROLLMENT_OPERATION_KEY]);
+      assert.equal(protectedWrites, 0);
+      assert.equal(owner.getStatus().ready, false);
+    },
+    async whitespaceProtectedReplacement() {
+      const initial = pendingRecoveryFixture({ flow: 'enrollment' });
+      delete initial[CUSTODIAL_RECOVERY_RECORD_KEY];
+      delete initial[CUSTODIAL_RESTORE_QUARANTINE_KEY];
+      const storage = storageFixture(initial, { operation: 'set', key: CUSTODIAL_INSTALLATION_MARKER_KEY });
+      let raw = null, originalWritten = null, readsAfterWrite = 0;
+      const secure = {
+        async get(key) {
+          if (key !== CUSTODIAL_INSTALLATION_RECORD_KEY) return null;
+          if (raw !== null && ++readsAfterWrite === 2) raw = ` ${raw} `;
+          return raw;
+        },
+        async set(key, value) { assert.equal(key, CUSTODIAL_INSTALLATION_RECORD_KEY); raw = value; originalWritten = value; },
+        async remove() { throw Error('Foreign protected original must not be removed'); },
+      };
+      const owner = createCustodialCredentialStore({ storage, secureStorage: secure, cryptoApi: webcrypto,
+        indexedDb: { databases: async () => [], open() { throw Error('No fixture database creation'); } } });
+      await assert.rejects(owner.commitEnrollmentOperation({ operationId, deviceId, credential: 'synthetic protected fixture credential' }));
+      assert.equal(raw, ` ${originalWritten} `);
+      assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), initial[CUSTODIAL_ENROLLMENT_OPERATION_KEY]);
+      assert.equal(owner.getStatus().ready, false);
+    },
+  };
+  const selected = process.argv.find(value => value.startsWith('--enrollment-new-case='))?.split('=')[1];
+  const entries = Object.entries(cases).filter(([name]) => !selected || selected === name);
+  assert.ok(entries.length, 'Unknown affected enrollment case');
+  for (const [name, work] of entries) { await work(); console.log(`NEW enrollment ${name} PASS (source/synthetic callbacks only)`); }
+  process.exit(0);
+}
+
+// Original server-revalidation failure/regression, separate from enrollment.
+if (process.argv.includes('--server-revalidation-original-counterexample-only')) {
+  const initial = pendingRecoveryFixture({ reason: 'server_credential_rejected' });
+  const recovery = JSON.parse(initial[CUSTODIAL_RECOVERY_RECORD_KEY]);
+  recovery.details = { requested_by: 'protected_enrollment_runtime' };
+  initial[CUSTODIAL_RECOVERY_RECORD_KEY] = JSON.stringify(recovery);
+  for (const key of CUSTODIAL_DEVICE_KEYS) initial[key] = deviceId;
+  initial[CUSTODIAL_INSTALLATION_MARKER_KEY] = seal;
+  const storage = storageFixture(initial);
+  const remove = storage.removeItem;
+  const foreign = '{foreign recovery before resolution rollback';
+  let changed = false;
+  storage.removeItem = key => {
+    if (key === CUSTODIAL_RESTORE_QUARANTINE_KEY && !changed) {
+      changed = true;
+      storage.setItem(CUSTODIAL_RECOVERY_RECORD_KEY, foreign);
+      throw Error('Synthetic resolution failure after foreign replacement');
+    }
+    return remove(key);
+  };
+  const record = JSON.stringify({ schema_version: 1, credential: 'synthetic protected fixture credential',
+    device_id: deviceId, installation_seal: seal, enrolled_at: '2026-08-01T01:00:00Z' });
+  const owner = createCustodialCredentialStore({ storage, cryptoApi: webcrypto,
+    secureStorage: { async get(key) { return key === CUSTODIAL_INSTALLATION_RECORD_KEY ? record : null; },
+      async set() { throw Error('Unexpected protected write'); }, async remove() { throw Error('Unexpected protected remove'); } },
+    indexedDb: { databases: async () => [], open() { throw Error('No fixture database creation'); } } });
+  await assert.rejects(owner.reconcileAuthenticatedServerQuarantine(async () => ({ authenticated: true,
+    deviceId, credentialId: '11000000-0000-4000-8000-000000000001' })));
+  assert.equal(changed, true, 'Actual resolution callback must be reached');
+  assert.equal(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY), foreign);
+  process.exit(0);
+}
+
+if (process.argv.includes('--revalidation-original-new-only')) {
+  const keys = [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY,
+    CUSTODIAL_RECOVERY_RECORD_KEY, CUSTODIAL_RESTORE_QUARANTINE_KEY,
+    CUSTODIAL_ENROLLMENT_OPERATION_KEY, CUSTODIAL_CREDENTIAL_KEY];
+  const snapshot = storage => Object.fromEntries(keys.map(key => [key, storage.getItem(key)]));
+  const make = ({ failures = null, onInspection = null, onProtectedRead = null } = {}) => {
+    const initial = pendingRecoveryFixture({ reason: 'server_credential_rejected' });
+    const recovery = JSON.parse(initial[CUSTODIAL_RECOVERY_RECORD_KEY]);
+    recovery.details = { requested_by: 'protected_enrollment_runtime' };
+    initial[CUSTODIAL_RECOVERY_RECORD_KEY] = JSON.stringify(recovery);
+    for (const key of CUSTODIAL_DEVICE_KEYS) initial[key] = deviceId;
+    initial[CUSTODIAL_INSTALLATION_MARKER_KEY] = seal;
+    const storage = storageFixture(initial, failures);
+    let protectedRaw = JSON.stringify({ schema_version: 1, credential: 'synthetic protected fixture credential',
+      device_id: deviceId, installation_seal: seal, enrolled_at: '2026-08-01T01:00:00Z' });
+    let installationReads = 0, writes = 0;
+    const secure = {
+      async get(key) {
+        if (key !== CUSTODIAL_INSTALLATION_RECORD_KEY) return null;
+        installationReads++;
+        if (onProtectedRead) await onProtectedRead({ installationReads, storage,
+          replace: raw => { protectedRaw = raw; }, original: protectedRaw });
+        return protectedRaw;
+      },
+      async set() { writes++; throw Error('Unexpected protected write'); },
+      async remove() { writes++; throw Error('Unexpected protected remove'); },
+    };
+    const owner = createCustodialCredentialStore({ storage, secureStorage: secure, cryptoApi: webcrypto,
+      indexedDb: { databases: async () => { if (onInspection) await onInspection(storage); return []; },
+        open() { throw Error('No fixture database creation'); } } });
+    const proof = { authenticated: true, deviceId, credentialId: '11000000-0000-4000-8000-000000000001' };
+    return { storage, initial, owner, proof, protectedWrites: () => writes,
+      reconcile: verifier => owner.reconcileAuthenticatedServerQuarantine(verifier || (async () => proof)) };
+  };
+  const cases = {
+    async normalResolution() {
+      const x = make();
+      const result = await x.reconcile();
+      assert.equal(result.reconciled, true);
+      const resolved = JSON.parse(x.storage.value(CUSTODIAL_RECOVERY_RECORD_KEY));
+      assert.equal(resolved.recovery_id, recoveryId);
+      assert.equal(resolved.status, 'resolved');
+      assert.equal(resolved.resolution.credential_id, x.proof.credentialId);
+      assert.equal(x.storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), undefined);
+      assert.equal(x.storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), x.initial[CUSTODIAL_ENROLLMENT_OPERATION_KEY]);
+      assert.equal(x.owner.getStatus().ready, true);
+      assert.equal(x.protectedWrites(), 0);
+    },
+    async rejectedAndCommittedThrowEffects() {
+      for (const [operation, key] of [['set', CUSTODIAL_RECOVERY_RECORD_KEY], ['remove', CUSTODIAL_RESTORE_QUARANTINE_KEY]]) {
+        for (const after of [false, true]) {
+          const x = make({ failures: { operation, key, after } });
+          const before = snapshot(x.storage);
+          await assert.rejects(x.reconcile());
+          assert.deepEqual(snapshot(x.storage), before);
+          assert.equal(x.owner.getStatus().ready, false);
+          assert.equal(x.owner.getStatus().principal, null);
+          assert.equal(x.protectedWrites(), 0);
+        }
+      }
+    },
+    async foreignRowsAtEffectTime() {
+      for (const effect of ['set', 'remove']) {
+        const x = make();
+        const ownSet = x.storage.setItem, ownRemove = x.storage.removeItem;
+        const foreign = '{foreign unresolved protected row, exact original retained';
+        const target = effect === 'set' ? CUSTODIAL_RESTORE_QUARANTINE_KEY : CUSTODIAL_RECOVERY_RECORD_KEY;
+        if (effect === 'set') x.storage.setItem = (key, value) => {
+          ownSet(key, value);
+          if (key === CUSTODIAL_RECOVERY_RECORD_KEY) ownSet(target, foreign);
+        };
+        else x.storage.removeItem = key => {
+          ownRemove(key);
+          if (key === CUSTODIAL_RESTORE_QUARANTINE_KEY) {
+            ownSet(target, foreign);
+            throw Error('Synthetic committed cleanup with foreign replacement');
+          }
+        };
+        await assert.rejects(x.reconcile());
+        assert.equal(x.storage.value(target), foreign);
+        assert.equal(x.owner.getStatus().ready, false);
+        assert.equal(x.owner.getStatus().principal, null);
+        assert.equal(x.protectedWrites(), 0);
+      }
+    },
+    async originalChangedWhileVerifierAwaited() {
+      for (const key of [CUSTODIAL_DEVICE_KEYS[0], CUSTODIAL_ENROLLMENT_OPERATION_KEY, CUSTODIAL_RECOVERY_RECORD_KEY]) {
+        const x = make();
+        const foreign = '{different original protected owner while verifier awaited';
+        await assert.rejects(x.reconcile(async () => {
+          await Promise.resolve();
+          x.storage.setItem(key, foreign);
+          return x.proof;
+        }));
+        assert.equal(x.storage.value(key), foreign);
+        assert.equal(x.storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), x.initial[CUSTODIAL_RESTORE_QUARANTINE_KEY]);
+        assert.equal(x.owner.getStatus().ready, false);
+      }
+    },
+    async protectedBindingChangedDuringVerification() {
+      for (const mutate of ['credential', 'device_id']) {
+        const x = make({ onProtectedRead: async ({ installationReads, replace, original }) => {
+          if (installationReads === 3) {
+            const changed = JSON.parse(original);
+            changed[mutate] = mutate === 'device_id' ? 'KIOSK_08' : 'different synthetic protected binding';
+            replace(JSON.stringify(changed));
+          }
+        } });
+        const before = snapshot(x.storage);
+        await assert.rejects(x.reconcile());
+        assert.deepEqual(snapshot(x.storage), before);
+        assert.equal(x.owner.getStatus().ready, false);
+        assert.equal(x.owner.getStatus().principal, null);
+        assert.equal(x.protectedWrites(), 0);
+      }
+    },
+    async refusedOrUnavailableVerification() {
+      for (const failure of ['refused', 'throws']) {
+        const x = make();
+        const before = snapshot(x.storage);
+        const beforeStatus = x.owner.getStatus();
+        const result = await x.reconcile(async () => {
+          if (failure === 'throws') throw Error('Synthetic unavailable verifier');
+          return { ...x.proof, authenticated: false };
+        });
+        assert.equal(result.reconciled, false);
+        assert.deepEqual(snapshot(x.storage), before);
+        assert.equal(x.owner.getStatus().ready, false);
+        assert.deepEqual(x.owner.getStatus(), beforeStatus);
+        assert.equal(x.protectedWrites(), 0);
+      }
+    },
+    async changedOwnerOnRejectedVerification() {
+      for (const failure of ['refused', 'throws']) {
+        const x = make();
+        const foreign = '{foreign quarantine during failed verifier';
+        await assert.rejects(x.reconcile(async () => {
+          x.storage.setItem(CUSTODIAL_RESTORE_QUARANTINE_KEY, foreign);
+          if (failure === 'throws') throw Error('Synthetic unavailable verifier');
+          return { ...x.proof, authenticated: false };
+        }));
+        assert.equal(x.storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), foreign);
+        assert.equal(x.storage.value(CUSTODIAL_RECOVERY_RECORD_KEY), x.initial[CUSTODIAL_RECOVERY_RECORD_KEY]);
+        assert.equal(x.owner.getStatus().ready, false);
+      }
+    },
+    async rollbackFailureDoesNotGenerateRecovery() {
+      const x = make({ failures: [
+        { operation: 'remove', key: CUSTODIAL_RESTORE_QUARANTINE_KEY },
+        { operation: 'set', key: CUSTODIAL_RECOVERY_RECORD_KEY, occurrence: 2, after: true },
+      ] });
+      const before = snapshot(x.storage);
+      await assert.rejects(x.reconcile());
+      assert.deepEqual(snapshot(x.storage), before);
+      assert.equal(x.owner.getStatus().ready, false);
+      assert.equal(x.owner.getStatus().principal, null);
+      assert.equal(x.protectedWrites(), 0);
+    },
+    async sourceInspectionReplacement() {
+      const foreign = '{foreign recovery during deferred source inspection';
+      let once = false;
+      const x = make({ onInspection: async storage => {
+        if (!once) { once = true; storage.setItem(CUSTODIAL_RECOVERY_RECORD_KEY, foreign); }
+      } });
+      let verifierCalls = 0;
+      await assert.rejects(x.reconcile(async () => { verifierCalls++; return x.proof; }));
+      assert.equal(verifierCalls, 0);
+      assert.equal(x.storage.value(CUSTODIAL_RECOVERY_RECORD_KEY), foreign);
+      assert.equal(x.owner.getStatus().ready, false);
+    },
+  };
+  const selected = process.argv.find(value => value.startsWith('--revalidation-original-new-case='))?.split('=')[1];
+  const entries = Object.entries(cases).filter(([name]) => !selected || name === selected);
+  assert.ok(entries.length, 'Unknown owning revalidation case');
+  for (const [name, work] of entries) { await work(); console.log(`NEW original revalidation ${name} PASS (source/synthetic callbacks only)`); }
+  process.exit(0);
+}
+
+if (process.argv.includes('--enrollment-original-initial-value-only')) {
+  const selected = process.argv.find(value => value.startsWith('--initial-value-case='))?.split('=')[1];
+  const validOriginal = JSON.stringify({ schema_version: 1, credential: 'synthetic prior protected credential',
+    device_id: deviceId, installation_seal: seal, enrolled_at: '2026-08-01T01:00:00Z' });
+  const cases = { empty: '', whitespace: ' ', blankLines: '\n\t', malformed: '{saved unsupported original',
+    absent: null, validRecovery: validOriginal };
+  const entries = Object.entries(cases).filter(([name]) => !selected || selected === name);
+  assert.ok(entries.length, 'Unknown owning original installation case');
+  for (const [name, original] of entries) {
+    const flow = name === 'validRecovery' ? 'recovery' : 'enrollment';
+    const initial = pendingRecoveryFixture({ flow });
+    if (flow === 'enrollment') {
+      delete initial[CUSTODIAL_RECOVERY_RECORD_KEY];
+      delete initial[CUSTODIAL_RESTORE_QUARANTINE_KEY];
+    }
+    const storage = storageFixture(initial);
+    let raw = original, writes = 0;
+    const secure = {
+      async get(key) { return key === CUSTODIAL_INSTALLATION_RECORD_KEY ? raw : null; },
+      async set(key, value) { assert.equal(key, CUSTODIAL_INSTALLATION_RECORD_KEY); writes++; raw = value; },
+      async remove(key) { assert.notEqual(key, CUSTODIAL_INSTALLATION_RECORD_KEY); },
+    };
+    const owner = createCustodialCredentialStore({ storage, secureStorage: secure, cryptoApi: webcrypto,
+      indexedDb: { databases: async () => [], open() { throw Error('No fixture database creation'); } } });
+    const work = owner.commitEnrollmentOperation({ operationId, deviceId, credential: 'synthetic new protected credential' });
+    if (name === 'absent' || name === 'validRecovery') {
+      assert.equal((await work).operationId, operationId);
+      assert.equal(writes, 1);
+      assert.equal(JSON.parse(raw).enrollment_operation_id, operationId);
+      assert.equal(owner.getStatus().ready, true);
+    } else {
+      await assert.rejects(work);
+      assert.equal(writes, 0);
+      assert.equal(raw, original);
+      assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), initial[CUSTODIAL_ENROLLMENT_OPERATION_KEY]);
+      assert.equal(owner.getStatus().ready, false);
+    }
+    console.log(`NEW original installation ${name} PASS (source/synthetic store only)`);
+  }
+  process.exit(0);
+}
+
+if (process.argv.includes('--queued-removal-original-new-only')) {
+  const { protectedBrowserIdbFixture } = await import('../../scripts/protected-browser-inventory-tests.mjs');
+  const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
+  const fixture = async ({ initialize = true } = {}) => {
+    const id = n => `79000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+    const principal = { schema_version: 'custodial-protected-principal.v1', device_id: deviceId,
+      employee_id: id(1), credential_id: id(2), credential_operation_id: id(3), assignment_epoch: 1,
+      installation_seal: seal, enrolled_at: '2026-08-01T02:00:00.000Z' };
+    const original = { schema_version: 1, credential: 'synthetic-original-removal-owner-only', device_id: deviceId,
+      installation_seal: seal, enrolled_at: principal.enrolled_at, enrollment_operation_id: id(3),
+      migrated_from_credential_only_state: false, principal };
+    let encoded = JSON.stringify(original), pausedRead = null, remoteCalls = 0, finalizerCalls = 0, holder = null;
+    const storage = storageFixture(Object.fromEntries([
+      ...CUSTODIAL_DEVICE_KEYS.map(key => [key, deviceId]), [CUSTODIAL_INSTALLATION_MARKER_KEY, seal],
+    ]));
+    const definitions = { mz_scan_queue: { stores: { actions: [] } }, mz_scan_completion_drafts: { stores: { drafts: [] } } };
+    const indexedDb = protectedBrowserIdbFixture(definitions), locks = createSyntheticScheduleLocks();
+    const attempted = [deferred(), deferred()];
+    const secureStorage = {
+      async get(key) {
+        if (key !== CUSTODIAL_INSTALLATION_RECORD_KEY) return null;
+        if (pausedRead) { const wait = pausedRead; pausedRead = null; wait.entered.resolve(); await wait.release.promise; }
+        return encoded;
+      },
+      async set() { throw Error('Unexpected fixture protected write'); },
+      async remove() { throw Error('Unexpected fixture protected removal'); },
+      async finalizeRemoval(operation, requestedDevice) {
+        assert.equal(holder, 0); finalizerCalls++;
+        assert.equal(operation, removalOperationId);
+        const current = JSON.parse(encoded);
+        assert.equal(requestedDevice, current.device_id);
+        const journal = JSON.parse(storage.getItem(CUSTODIAL_REMOVAL_OPERATION_KEY));
+        assert.equal(journal.operation_id, operation); assert.equal(journal.phase, 'server_logged_out');
+        for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.getItem(key), null);
+        encoded = null;
+      },
+    };
+    const gates = [0, 1].map(() => createProtectedBrowserAdmission({ storage, indexedDb, locks, cryptoApi: webcrypto }));
+    const owners = gates.map((gate, index) => createCustodialCredentialStore({ storage, indexedDb, secureStorage,
+      cryptoApi: { randomUUID: () => removalOperationId }, now: () => '2026-08-01T02:15:00.000Z',
+      protectedWorkAdmission: operation => {
+        attempted[index].resolve();
+        return gate.mutate(async () => {
+          assert.equal(holder, null); holder = index;
+          try { return await operation(); } finally { holder = null; }
+        });
+      }, protectedWorkCheckpoint: () => gate.requireAdmission(),
+    }));
+    if (initialize) { await owners[0].ensureSecurityState(); await owners[1].ensureSecurityState(); }
+    const replacement = change => {
+      // Synthetic persisted-owner change, not a native activation or permission.
+      const next = structuredClone(original); change(next); encoded = JSON.stringify(next);
+      for (const key of CUSTODIAL_DEVICE_KEYS) storage.setItem(key, next.device_id);
+      storage.setItem(CUSTODIAL_INSTALLATION_MARKER_KEY, next.installation_seal);
+      return next;
+    };
+    const remote = async args => {
+      assert.equal(holder, 0); remoteCalls++;
+      const current = JSON.parse(encoded);
+      assert.equal(args.credential, current.credential); assert.equal(args.deviceId, current.device_id);
+      assert.equal(args.operationId, removalOperationId); await args.checkpoint('server_logged_out');
+    };
+    const rawLocal = () => Object.fromEntries(Array.from({ length: storage.length }, (_, n) => {
+      const key = storage.key(n); return [key, storage.getItem(key)];
+    }));
+    return { owners, attempted, storage, indexedDb, locks, original, replacement, remote, rawLocal,
+      rawProtected: () => encoded, holder: () => holder, counts: () => ({ remoteCalls, finalizerCalls }),
+      pauseRead() { const wait = { entered: deferred(), release: deferred() }; pausedRead = wait; return wait; },
+    };
+  };
+  const behindSharedOwner = async (change, { unchanged = false } = {}) => {
+    const x = await fixture(), entered = deferred(), release = deferred();
+    const blocker = x.owners[1].runWhenReady(async context => {
+      entered.resolve(); await release.promise; context.assertCurrent();
+    }, { requireEnrollment: true }).then(() => ({}), error => ({ error }));
+    await entered.promise;
+    const request = x.owners[0].removeEnrollment({ beforeRemove: x.remote }).then(value => ({ value }), error => ({ error }));
+    await x.attempted[0].promise;
+    assert.equal(x.holder(), 1); assert.deepEqual(x.counts(), { remoteCalls: 0, finalizerCalls: 0 });
+    change(x);
+    const protectedBefore = x.rawProtected(), localBefore = x.rawLocal();
+    release.resolve(); await blocker;
+    const result = await request;
+    console.log(`NEW queued owner result: refused=${!!result.error} remote=${x.counts().remoteCalls} finalizer=${x.counts().finalizerCalls}`);
+    if (unchanged) {
+      assert.equal(result.value?.removed, true); assert.deepEqual(x.counts(), { remoteCalls: 1, finalizerCalls: 1 });
+      assert.equal(x.rawProtected(), null);
+      for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(x.storage.getItem(key), null);
+      assert.equal(JSON.parse(x.storage.getItem(CUSTODIAL_REMOVAL_COMPLETION_KEY)).operation_id, removalOperationId);
+    } else {
+      assert.equal(result.error?.code, 'custodial_security_generation_changed', 'An old queued request must not retarget the replacement');
+      assert.deepEqual(x.counts(), { remoteCalls: 0, finalizerCalls: 0 });
+      assert.equal(x.rawProtected(), protectedBefore); assert.deepEqual(x.rawLocal(), localBefore);
+    }
+    assert.equal(x.indexedDb.state.opens, x.indexedDb.state.closes);
+    assert.equal(x.holder(), null); await Promise.resolve(); assert.equal(x.locks.pending, 0);
+  };
+  const cases = {
+    async sharedOwnerReplacement() {
+      await behindSharedOwner(x => x.replacement(next => {
+        next.device_id = 'KIOSK_08'; next.credential = 'synthetic-successor-removal-owner-only';
+        next.installation_seal = 'successor-fixture-installation-seal-12345678';
+        next.principal = { ...next.principal, device_id: next.device_id, installation_seal: next.installation_seal,
+          employee_id: '79000000-0000-4000-8000-000000000009', credential_id: '79000000-0000-4000-8000-000000000010', assignment_epoch: 2 };
+      }));
+    },
+    async sharedCredentialOnlyReplacement() {
+      await behindSharedOwner(x => x.replacement(next => { next.credential = 'synthetic-successor-removal-owner-only'; }));
+    },
+    async sharedPrincipalOnlyReplacement() {
+      await behindSharedOwner(x => x.replacement(next => {
+        next.principal = { ...next.principal, credential_id: '79000000-0000-4000-8000-000000000010', assignment_epoch: 2 };
+      }));
+    },
+    async sharedUnknownPrincipalReplacement() {
+      await behindSharedOwner(x => x.replacement(next => { next.principal.extra_unknown = 'retained unsupported original'; }));
+    },
+    async unchangedSharedOwnerOwnPhases() { await behindSharedOwner(() => {}, { unchanged: true }); },
+    async fifoRefreshSuccessor() {
+      const x = await fixture(), wait = x.pauseRead();
+      const refresh = x.owners[0].ensureSecurityState();
+      await wait.entered.promise;
+      const removal = x.owners[0].removeEnrollment({ beforeRemove: x.remote }).then(value => ({ value }), error => ({ error }));
+      x.replacement(next => {
+        next.credential = 'synthetic-successor-removal-owner-only';
+        next.principal = { ...next.principal, credential_id: '79000000-0000-4000-8000-000000000010', assignment_epoch: 2 };
+      });
+      const original = x.rawProtected(), localBefore = x.rawLocal();
+      wait.release.resolve(); await refresh;
+      assert.equal((await removal).error?.code, 'custodial_security_generation_changed');
+      assert.deepEqual(x.counts(), { remoteCalls: 0, finalizerCalls: 0 });
+      assert.equal(x.rawProtected(), original); assert.deepEqual(x.rawLocal(), localBefore);
+      assert.equal(x.owners[0].getStatus().ready, true, 'Old request refusal does not rewrite the newly refreshed owner');
+      assert.equal(x.owners[0].getStatus().principal.assignment_epoch, 2);
+      await Promise.resolve(); assert.equal(x.locks.pending, 0);
+    },
+    async unchangedFifoOwner() {
+      const x = await fixture(), entered = deferred(), release = deferred();
+      const first = x.owners[0].runWhenReady(async context => {
+        entered.resolve(); await release.promise; context.assertCurrent();
+      }, { requireEnrollment: true });
+      await entered.promise;
+      const removal = x.owners[0].removeEnrollment({ beforeRemove: x.remote });
+      assert.deepEqual(x.counts(), { remoteCalls: 0, finalizerCalls: 0 });
+      release.resolve(); await first;
+      assert.equal((await removal).removed, true);
+      assert.deepEqual(x.counts(), { remoteCalls: 1, finalizerCalls: 1 });
+      assert.equal(x.rawProtected(), null); await Promise.resolve(); assert.equal(x.locks.pending, 0);
+    },
+    async uninitializedCallerIsUnknown() {
+      const x = await fixture({ initialize: false }), original = x.rawProtected(), localBefore = x.rawLocal();
+      await assert.rejects(x.owners[0].removeEnrollment({ beforeRemove: x.remote }), error => error.code === 'custodial_security_state_unchecked');
+      assert.deepEqual(x.counts(), { remoteCalls: 0, finalizerCalls: 0 });
+      assert.equal(x.indexedDb.state.opens, 0); assert.equal(x.rawProtected(), original); assert.deepEqual(x.rawLocal(), localBefore);
+      await Promise.resolve(); assert.equal(x.locks.pending, 0);
+    },
+    async originalPendingNativePhaseResume() {
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage, { finalizeFailure: 'before_write' });
+      const owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      await assert.rejects(owner.removeEnrollment({ beforeRemove: native.remoteComplete }), error => error.code === 'custodial_secure_storage_unavailable');
+      const pending = storage.getItem(CUSTODIAL_REMOVAL_OPERATION_KEY);
+      assert.equal(JSON.parse(pending).operation_id, removalOperationId);
+      assert.equal(JSON.parse(pending).phase, 'server_logged_out');
+      assert.equal(owner.getStatus().ready, false);
+      assert.equal((await owner.removeEnrollment({ beforeRemove: native.remoteComplete })).removed, true);
+      assert.equal(native.remoteCalls(), 1); assert.equal(native.finalizeAttempts(), 2);
+      assert.equal(JSON.parse(storage.getItem(CUSTODIAL_REMOVAL_COMPLETION_KEY)).operation_id, removalOperationId);
+    },
+  };
+  const selected = process.argv.find(value => value.startsWith('--queued-removal-original-case='))?.split('=')[1];
+  const entries = Object.entries(cases).filter(([name]) => !selected || name === selected);
+  assert.ok(entries.length, 'Unknown queued original removal case');
+  for (const [name, run] of entries) {
+    let timer;
+    try {
+      await Promise.race([run(), new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Queued original removal deadlock')), 2000); })]);
+      console.log(`NEW queued original removal ${name} PASS (source/synthetic owner/storage/locks only)`);
+    } finally { clearTimeout(timer); }
+  }
+  process.exit(0);
+}
+
+if (process.argv.includes('--participating-removal-new-only')) {
+  const { protectedBrowserIdbFixture } = await import('../../scripts/protected-browser-inventory-tests.mjs');
+  const { PROTECTED_BROWSER_HOLD_KEY } = await import('../src/custodial/protected-browser-admission.js');
+  const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
+  const fixture = async () => {
+    const definitions = { mz_scan_queue: { stores: { actions: [] } }, mz_scan_completion_drafts: { stores: { drafts: [] } } };
+    const options = {}, indexedDb = protectedBrowserIdbFixture(definitions, options);
+    const storage = storageFixture(nativeRemovalLocalFixture()), native = nativeRemovalHarness(storage);
+    const locks = createSyntheticScheduleLocks();
+    const gates = ['removal', 'writer'].map(() => createProtectedBrowserAdmission({ storage, indexedDb, locks, cryptoApi: webcrypto }));
+    const attempted = { removal: deferred(), writer: deferred() };
+    let holder = null, removalDecided = false, producerCalls = 0;
+    const admission = (name, gate) => operation => {
+      attempted[name].resolve();
+      return gate.mutate(async () => {
+        assert.equal(holder, null, 'Actual modeled shared lease excludes the other owner');
+        holder = name;
+        try { return await operation(); }
+        finally { if (name === 'removal') removalDecided = true; holder = null; }
+      });
+    };
+    const owners = gates.map((gate, index) => createCustodialCredentialStore({ storage, indexedDb,
+      secureStorage: createNativeProtectedStorage({ ...native.plugin, async finalizeRemoval(args) {
+        assert.equal(holder, 'removal', 'Finalizer callback runs inside removal shared lease');
+        const result = await native.plugin.finalizeRemoval(args);
+        assert.equal(holder, 'removal');
+        return result;
+      } }, storage),
+      protectedWorkAdmission: admission(index === 0 ? 'removal' : 'writer', gate),
+      protectedWorkCheckpoint: () => gate.requireAdmission(),
+      cryptoApi: { randomUUID: () => removalOperationId }, now: () => '2026-08-01T02:15:00.000Z' }));
+    await owners[0].ensureSecurityState(); await owners[1].ensureSecurityState();
+    const original = { id: 93, type: 'commit_workflow', operation_id: operationId, state: 'pending',
+      payload: { p_device_id: deviceId, p_client_completion_id: enrollmentOperationId } };
+    const produce = async context => {
+      assert.equal(holder, 'writer'); context.assertCurrent();
+      producerCalls++; definitions.mz_scan_queue.stores.actions.push({ key: 93, value: original });
+      context.assertCurrent();
+    };
+    const remote = async args => {
+      assert.equal(holder, 'removal', 'Remote callback runs inside removal shared lease');
+      await native.remoteComplete(args); assert.equal(holder, 'removal');
+    };
+    return { definitions, indexedDb, options, storage, native, locks, owners, gates, attempted, original, produce, remote,
+      holder: () => holder, decided: () => removalDecided, produced: () => producerCalls };
+  };
+  const cases = {
+    async removalFirstWriterWaitsThenRefuses() {
+      const x = await fixture(), inspecting = deferred(), resume = deferred();
+      const list = x.indexedDb.databases.bind(x.indexedDb);
+      let lists = 0;
+      x.indexedDb.databases = async () => {
+        const result = await list();
+        if (++lists === 2) { inspecting.resolve(); await resume.promise; }
+        return result;
+      };
+      const originalGeneration = x.owners[1].getGeneration();
+      const removal = x.owners[0].removeEnrollment({ beforeRemove: x.remote });
+      await inspecting.promise;
+      assert.equal(x.indexedDb.state.opens, x.indexedDb.state.closes, 'Existing queue snapshot already closed');
+      const writer = x.owners[1].runWhenReady(x.produce, { requireEnrollment: true, expectedGeneration: originalGeneration })
+        .then(value => ({ value }), error => ({ error }));
+      await x.attempted.writer.promise;
+      assert.equal(x.holder(), 'removal'); assert.equal(x.produced(), 0); assert.equal(x.decided(), false);
+      assert.deepEqual(x.definitions.mz_scan_queue.stores.actions, []);
+      resume.resolve();
+      assert.equal((await removal).removed, true);
+      const outcome = await writer;
+      assert.equal(outcome.error?.code, 'custodial_security_state_unavailable');
+      assert.equal(x.decided(), true); assert.equal(x.produced(), 0);
+      assert.deepEqual(x.definitions.mz_scan_queue.stores.actions, []);
+      assert.equal(x.native.remoteCalls(), 1); assert.equal(x.native.finalizeAttempts(), 1);
+      assert.equal(x.holder(), null); await Promise.resolve(); assert.equal(x.locks.pending, 0);
+    },
+    async writerFirstPendingWorkRefusesRemoval() {
+      const x = await fixture(), writerEntered = deferred(), release = deferred();
+      const producer = x.owners[1].runWhenReady(async context => {
+        writerEntered.resolve(); await release.promise; await x.produce(context);
+      }, { requireEnrollment: true, expectedGeneration: x.owners[1].getGeneration() });
+      await writerEntered.promise;
+      const opens = x.indexedDb.state.opens;
+      const removal = x.owners[0].removeEnrollment({ beforeRemove: x.remote }).then(value => ({ value }), error => ({ error }));
+      await x.attempted.removal.promise;
+      assert.equal(x.holder(), 'writer'); assert.equal(x.indexedDb.state.opens, opens);
+      release.resolve(); await producer;
+      const result = await removal;
+      assert.equal(result.error?.code, 'custodial_pending_work');
+      assert.equal(result.error.preservedCounts.scan_queue, 1);
+      assert.equal(x.produced(), 1); assert.deepEqual(x.definitions.mz_scan_queue.stores.actions, [{ key: 93, value: x.original }]);
+      assert.equal(x.native.remoteCalls(), 0); assert.equal(x.native.finalizeAttempts(), 0);
+      assert.equal(x.storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(x.holder(), null); await Promise.resolve(); assert.equal(x.locks.pending, 0);
+    },
+    async rejectedInspectionReleasesLease() {
+      const x = await fixture();
+      x.options.transactionAbort = true;
+      const removal = x.owners[0].removeEnrollment({ beforeRemove: x.remote }).then(value => ({ value }), error => ({ error }));
+      await x.attempted.removal.promise;
+      const producer = x.owners[1].runWhenReady(async context => {
+        assert.equal(x.decided(), true, 'Writer proceeds only after rejected removal terminal decision');
+        await x.produce(context);
+      }, { requireEnrollment: true, expectedGeneration: x.owners[1].getGeneration() });
+      const result = await removal; assert.equal(result.error?.code, 'custodial_security_state_unavailable');
+      await producer;
+      assert.equal(x.produced(), 1); assert.deepEqual(x.definitions.mz_scan_queue.stores.actions, [{ key: 93, value: x.original }]);
+      assert.equal(x.native.remoteCalls(), 0); assert.equal(x.native.finalizeAttempts(), 0);
+      assert.equal(x.indexedDb.state.opens, x.indexedDb.state.closes);
+      assert.equal(x.holder(), null); await Promise.resolve(); assert.equal(x.locks.pending, 0);
+    },
+    async closedAdmissionNoOperationsAndReleases() {
+      const x = await fixture(), raw = '{retained unknown preservation marker';
+      x.storage.setItem(PROTECTED_BROWSER_HOLD_KEY, raw);
+      const opens = x.indexedDb.state.opens;
+      await assert.rejects(x.owners[0].removeEnrollment({ beforeRemove: x.remote }),
+        error => error.code === 'custodial_browser_preservation_pending');
+      await assert.rejects(x.owners[1].runWhenReady(x.produce, { requireEnrollment: true }),
+        error => error.code === 'custodial_browser_preservation_pending');
+      assert.equal(x.indexedDb.state.opens, opens); assert.equal(x.produced(), 0);
+      assert.equal(x.native.remoteCalls(), 0); assert.equal(x.native.finalizeAttempts(), 0);
+      assert.equal(x.storage.value(PROTECTED_BROWSER_HOLD_KEY), raw);
+      assert.deepEqual(x.definitions.mz_scan_queue.stores.actions, []);
+      assert.equal(x.holder(), null); await Promise.resolve(); assert.equal(x.locks.pending, 0);
+    },
+  };
+  const selected = process.argv.find(value => value.startsWith('--participating-removal-case='))?.split('=')[1];
+  const entries = Object.entries(cases).filter(([name]) => !selected || name === selected);
+  assert.ok(entries.length, 'Unknown participating removal case');
+  for (const [name, run] of entries) {
+    let timer;
+    try {
+      await Promise.race([run(), new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Participating owner/FIFO deadlock')), 2000); })]);
+      console.log(`NEW participating removal ${name} PASS (actual modules/synthetic locks and IDB, not native/browser proof)`);
+    } finally { clearTimeout(timer); }
+  }
+  process.exit(0);
+}
+
+if (process.argv.includes('--removal-original-work-keyset-only')) {
+  const storage = storageFixture(nativeRemovalLocalFixture());
+  const native = nativeRemovalHarness(storage);
+  let enter, resume;
+  const inspecting = new Promise(resolve => { enter = resolve; });
+  const waiting = new Promise(resolve => { resume = resolve; });
+  let armed = false;
+  const owner = createCustodialCredentialStore({ storage,
+    secureStorage: createNativeProtectedStorage(native.plugin, storage),
+    indexedDb: { async databases() { if (armed) { enter(); await waiting; } return []; },
+      open() { throw Error('Absent original database must not open'); } },
+    cryptoApi: { randomUUID: () => removalOperationId }, now: () => '2026-08-01T02:15:00.000Z' });
+  await owner.ensureSecurityState();
+  armed = true;
+  const work = owner.removeEnrollment({ beforeRemove: native.remoteComplete });
+  await inspecting;
+  const key = 'session:new-original-pending-work';
+  const raw = JSON.stringify({ device_id: deviceId, status: 'open',
+    client_session_id: '11000000-0000-4000-8000-000000000009' });
+  storage.setItem(key, raw);
+  resume();
+  await assert.rejects(work.then(result => {
+    console.log(JSON.stringify({ unexpected_success: result.removed === true,
+      remote_calls: native.remoteCalls(), finalizer_calls: native.finalizeAttempts(),
+      original_work_retained: storage.value(key) === raw }));
+    return result;
+  }));
+  assert.equal(storage.value(key), raw);
+  assert.equal(native.remoteCalls(), 0);
+  assert.equal(native.finalizeAttempts(), 0);
+  assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+  assert.equal(owner.getStatus().ready, false);
+  console.log('NEW local pending work inserted during actual removal inspection retained/refused (synthetic callbacks only)');
+  process.exit(0);
+}
+
+if (process.argv.includes('--removal-work-keyset-new-only')) {
+  const cases = {
+    async knownAndUnknownWorkDuringProtectedRead() {
+      for (const key of ['mz_chatscope_read_outbox:new-original', 'mz_employee_feedback_retirement_backup:new-original',
+        'mz_chatscope_group_pending:new-original']) {
+        const storage = storageFixture(nativeRemovalLocalFixture());
+        const native = nativeRemovalHarness(storage);
+        let armed = false, reads = 0;
+        const raw = '{unknown pending original work, retained without interpretation';
+        const owner = nativeRemovalStore({ ...native.plugin, async getState() {
+          if (armed && ++reads === 2) storage.setItem(key, raw);
+          return native.plugin.getState();
+        } }, storage);
+        await owner.ensureSecurityState();
+        armed = true;
+        await assert.rejects(owner.removeEnrollment({ beforeRemove: native.remoteComplete }));
+        assert.equal(storage.value(key), raw);
+        assert.equal(native.remoteCalls(), 0);
+        assert.equal(native.finalizeAttempts(), 0);
+        assert.equal(owner.getStatus().ready, false);
+      }
+    },
+    async remoteAwaitNewWork() {
+      const key = 'mz_chatscope_outbox:late-original', raw = '{held original send, never adopt';
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      await assert.rejects(owner.removeEnrollment({ beforeRemove: async args => {
+        await native.remoteComplete(args);
+        storage.setItem(key, raw);
+      } }));
+      assert.equal(storage.value(key), raw);
+      assert.equal(native.remoteCalls(), 1);
+      assert.equal(native.finalizeAttempts(), 0);
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(owner.getStatus().ready, false);
+    },
+    async workAppearsDuringCleanupRollback() {
+      const key = 'mz_scan_completion_draft:new-original', raw = '{unknown pending answers, do not erase';
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      const remove = storage.removeItem;
+      storage.removeItem = item => {
+        remove(item);
+        if (item === CUSTODIAL_INSTALLATION_MARKER_KEY) storage.setItem(key, raw);
+      };
+      await assert.rejects(owner.removeEnrollment({ beforeRemove: native.remoteComplete }));
+      assert.equal(storage.value(key), raw);
+      assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), seal);
+      for (const item of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(item), deviceId);
+      assert.equal(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY), undefined);
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(native.finalizeAttempts(), 0);
+      assert.equal(owner.getStatus().ready, false);
+    },
+    async workAppearsDuringFinalizerAwait() {
+      const key = 'mz_native_notification_outbox:unknown-original', raw = '{unknown notification original, not accepted';
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage);
+      const owner = nativeRemovalStore({ ...native.plugin, async finalizeRemoval(args) {
+        const result = await native.plugin.finalizeRemoval(args);
+        storage.setItem(key, raw);
+        return result;
+      } }, storage);
+      await owner.ensureSecurityState();
+      await assert.rejects(owner.removeEnrollment({ beforeRemove: native.remoteComplete }));
+      assert.equal(storage.value(key), raw);
+      assert.equal(native.finalizeAttempts(), 1, 'JS refusal cannot undo an already completed native fixture effect');
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(owner.getStatus().ready, false);
+    },
+    async unchangedOriginalWorkStillBlocks() {
+      const key = 'session:existing-original', raw = JSON.stringify({ device_id: deviceId, status: 'open' });
+      const storage = storageFixture({ ...nativeRemovalLocalFixture(), [key]: raw });
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      await assert.rejects(owner.removeEnrollment({ beforeRemove: native.remoteComplete }),
+        error => error.code === 'custodial_pending_work');
+      assert.equal(storage.value(key), raw);
+      assert.equal(native.remoteCalls(), 0);
+      assert.equal(native.finalizeAttempts(), 0);
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+    },
+    async exactCacheOnlyCleanupStillAllowed() {
+      const cache = 'mz_employee_events_snapshot:original';
+      const storage = storageFixture({ ...nativeRemovalLocalFixture(), [cache]: 'original cache bytes' });
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      assert.equal((await owner.removeEnrollment({ beforeRemove: native.remoteComplete })).removed, true);
+      assert.equal(storage.value(cache), undefined);
+      assert.equal(native.finalizeAttempts(), 1);
+      assert.equal(JSON.parse(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY)).operation_id, removalOperationId);
+    },
+    async nearPrefixUnrelatedRowNotWork() {
+      const key = 'sessionPreference', raw = 'unrelated original preference';
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      const get = storage.getItem;
+      storage.getItem = item => { if (item === key) throw Error('Unrelated value must not be read'); return get(item); };
+      assert.equal((await owner.removeEnrollment({ beforeRemove: async args => {
+        storage.setItem(key, raw);
+        await native.remoteComplete(args);
+      } })).removed, true);
+      assert.equal(storage.value(key), raw);
+      assert.equal(native.finalizeAttempts(), 1);
+    },
+  };
+  const selected = process.argv.find(value => value.startsWith('--removal-work-keyset-case='))?.split('=')[1];
+  const entries = Object.entries(cases).filter(([name]) => !selected || name === selected);
+  assert.ok(entries.length, 'Unknown affected local work keyset case');
+  for (const [name, work] of entries) { await work(); console.log(`NEW local work membership ${name} PASS (source/synthetic callbacks only)`); }
+  process.exit(0);
+}
+
+if (process.argv.includes('--removal-original-keyset-only')) {
+  const storage = storageFixture(nativeRemovalLocalFixture());
+  const native = nativeRemovalHarness(storage);
+  let entered, resume;
+  const inspecting = new Promise(resolve => { entered = resolve; });
+  const waiting = new Promise(resolve => { resume = resolve; });
+  let armed = false;
+  const owner = createCustodialCredentialStore({ storage,
+    secureStorage: createNativeProtectedStorage(native.plugin, storage),
+    indexedDb: { async databases() { if (armed) { entered(); await waiting; } return []; },
+      open() { throw Error('Absent original database must not open'); } },
+    cryptoApi: { randomUUID: () => removalOperationId }, now: () => '2026-08-01T02:15:00.000Z' });
+  await owner.ensureSecurityState();
+  armed = true;
+  const work = owner.removeEnrollment({ beforeRemove: native.remoteComplete });
+  await inspecting;
+  const key = 'mz_employee_schedule_snapshot:new-original';
+  const raw = '{new unknown old-owner authority cache, retain exactly';
+  storage.setItem(key, raw);
+  resume();
+  await assert.rejects(work.then(result => {
+    console.log(JSON.stringify({ unexpected_success: result.removed === true,
+      remote_calls: native.remoteCalls(), finalizer_calls: native.finalizeAttempts(),
+      inserted_original_retained: storage.value(key) === raw }));
+    return result;
+  }));
+  assert.equal(storage.value(key), raw);
+  assert.equal(native.remoteCalls(), 0);
+  assert.equal(native.finalizeAttempts(), 0);
+  assert.equal(owner.getStatus().ready, false);
+  assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+  console.log('NEW removal keyset insertion during actual deferred inspection retained/refused (synthetic source callbacks only)');
+  process.exit(0);
+}
+
+if (process.argv.includes('--removal-original-keyset-new-only')) {
+  const prefixes = ['mz_scan_authority_snapshot:', 'mz_scan_contract_cache:', 'mz_custodial_home_cache:',
+    'mz_employee_schedule_snapshot:', 'mz_employee_events_snapshot:'];
+  const unknown = '{new ambiguous original cache, retained without adoption';
+  const cases = {
+    async eachOwnedPrefixDuringProtectedRead() {
+      for (const prefix of prefixes) {
+        const storage = storageFixture(nativeRemovalLocalFixture());
+        const native = nativeRemovalHarness(storage);
+        let armed = false, inserted = false;
+        const key = `${prefix}new-original`;
+        // Removal first reconciles state, then captures its fixed keys. Insert
+        // only on the following protectedSnapshot get, after that capture.
+        let removalReads = 0;
+        const actualGet = native.plugin.getState;
+        // This is a private source-fixture callback, not a replacement guard.
+        const readPlugin = { ...native.plugin, async getState() {
+          if (armed && ++removalReads === 2) { inserted = true; storage.setItem(key, unknown); }
+          return actualGet();
+        } };
+        const bound = nativeRemovalStore(readPlugin, storage);
+        await bound.ensureSecurityState();
+        armed = true;
+        await assert.rejects(bound.removeEnrollment({ beforeRemove: native.remoteComplete }));
+        assert.equal(inserted, true);
+        assert.equal(storage.value(key), unknown);
+        assert.equal(native.remoteCalls(), 0);
+        assert.equal(native.finalizeAttempts(), 0);
+        assert.equal(bound.getStatus().ready, false);
+      }
+    },
+    async remoteCallbackAddition() {
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      const key = `${prefixes[0]}remote-original`;
+      await assert.rejects(owner.removeEnrollment({ beforeRemove: async args => {
+        await native.remoteComplete(args);
+        storage.setItem(key, unknown);
+      } }));
+      assert.equal(storage.value(key), unknown);
+      assert.equal(native.remoteCalls(), 1);
+      assert.equal(native.finalizeAttempts(), 0);
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(owner.getStatus().ready, false);
+    },
+    async additionAtCleanupAndRollback() {
+      const oldKey = `${prefixes[1]}original`, newKey = `${prefixes[1]}inserted-original`;
+      const original = 'exact original cache bytes';
+      const storage = storageFixture({ ...nativeRemovalLocalFixture(), [oldKey]: original });
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      const remove = storage.removeItem;
+      storage.removeItem = key => {
+        remove(key);
+        if (key === oldKey) storage.setItem(newKey, unknown);
+      };
+      await assert.rejects(owner.removeEnrollment({ beforeRemove: native.remoteComplete }));
+      assert.equal(storage.value(newKey), unknown);
+      assert.equal(storage.value(oldKey), original, 'Own deleted original is restored, new row never removed');
+      for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), deviceId);
+      assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), seal);
+      assert.equal(native.finalizeAttempts(), 0);
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY), undefined, 'Membership uncertainty must not generate recovery metadata');
+      assert.equal(owner.getStatus().ready, false);
+    },
+    async legitimateCacheMembershipCleanup() {
+      const caches = Object.fromEntries(prefixes.map(prefix => [`${prefix}original`, 'original cache bytes']));
+      const storage = storageFixture({ ...nativeRemovalLocalFixture(), ...caches });
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      assert.equal((await owner.removeEnrollment({ beforeRemove: native.remoteComplete })).removed, true);
+      for (const key of Object.keys(caches)) assert.equal(storage.value(key), undefined);
+      assert.equal(native.finalizeAttempts(), 1);
+      assert.equal(JSON.parse(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY)).operation_id, removalOperationId);
+      assert.equal(owner.getStatus().ready, true);
+    },
+    async ownCacheCommittedThrowRollback() {
+      for (const after of [false, true]) {
+        const key = `${prefixes[2]}original`, raw = 'retained original cache';
+        const storage = storageFixture({ ...nativeRemovalLocalFixture(), [key]: raw },
+          { operation: 'remove', key, after });
+        const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+        await owner.ensureSecurityState();
+        await assert.rejects(owner.removeEnrollment({ beforeRemove: native.remoteComplete }));
+        assert.equal(storage.value(key), raw);
+        assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), seal);
+        assert.equal(native.finalizeAttempts(), 0);
+        assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+        assert.equal(owner.getStatus().ready, false);
+      }
+    },
+    async unrelatedRowIsNotInCacheFence() {
+      const key = 'ordinary_fixture_preference';
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage), owner = nativeRemovalStore(native.plugin, storage);
+      await owner.ensureSecurityState();
+      const get = storage.getItem;
+      storage.getItem = item => { if (item === key) throw Error('Unrelated row value must not be read'); return get(item); };
+      assert.equal((await owner.removeEnrollment({ beforeRemove: async args => {
+        storage.setItem(key, 'unrelated unchanged bytes');
+        await native.remoteComplete(args);
+      } })).removed, true);
+      assert.equal(storage.value(key), 'unrelated unchanged bytes');
+      assert.equal(native.finalizeAttempts(), 1);
+    },
+    async lateFinalizerAdditionRemainsUnconfirmed() {
+      const key = `${prefixes[4]}late-original`;
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage);
+      const owner = nativeRemovalStore({ ...native.plugin, async finalizeRemoval(args) {
+        const result = await native.plugin.finalizeRemoval(args);
+        storage.setItem(key, unknown);
+        return result;
+      } }, storage);
+      await owner.ensureSecurityState();
+      await assert.rejects(owner.removeEnrollment({ beforeRemove: native.remoteComplete }));
+      assert.equal(storage.value(key), unknown);
+      assert.equal(native.finalizeAttempts(), 1, 'Browser refusal does not undo synthetic native finalization');
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(owner.getStatus().ready, false);
+      for (const deviceKey of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(deviceKey), deviceId);
+    },
+  };
+  const selected = process.argv.find(value => value.startsWith('--removal-keyset-new-case='))?.split('=')[1];
+  const entries = Object.entries(cases).filter(([name]) => !selected || name === selected);
+  assert.ok(entries.length, 'Unknown affected removal keyset case');
+  for (const [name, work] of entries) { await work(); console.log(`NEW removal keyset ${name} PASS (source/synthetic callbacks only)`); }
+  process.exit(0);
+}
+
+if (process.argv.includes('--original-retirement-only')) {
+  const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
+  const original = JSON.stringify(JSON.parse(pendingRecoveryFixture({ flow: 'enrollment' })[CUSTODIAL_ENROLLMENT_OPERATION_KEY]));
+  const cancelled = { state: 'CANCELLED', enrollment_terminal: true,
+    cancelled_enrollment: { operation_id: operationId, device_id: deviceId, flow: 'enrollment', status: 'cancelled' } };
+  const terminal = JSON.stringify({ schema_version: 1, operation_id: removalOperationId,
+    device_id: deviceId, phase: 'server_logged_out', created_at: '2026-08-01T01:00:00Z' });
+  const cases = {
+    async stateReplacement() {
+      const storage = storageFixture({ [CUSTODIAL_ENROLLMENT_OPERATION_KEY]: original });
+      const wait = deferred();
+      const owner = createNativeProtectedStorage({ getState: () => wait.promise }, storage);
+      const work = owner.reconcileLocalState();
+      const replacement = original.replace('01:05:00', '01:06:00');
+      storage.setItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY, replacement);
+      wait.resolve(cancelled);
+      await assert.rejects(work);
+      assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), replacement);
+    },
+    async effectReplacement() {
+      const storage = storageFixture({ [CUSTODIAL_ENROLLMENT_OPERATION_KEY]: original });
+      const set = storage.setItem;
+      const replacement = original.replace(operationId, enrollmentOperationId);
+      storage.setItem = (key, value) => { set(key, value); if (key === CUSTODIAL_DEVICE_KEYS[0]) set(CUSTODIAL_ENROLLMENT_OPERATION_KEY, replacement); };
+      await assert.rejects(stateAdapter(storage, activeNativeState({ operation: operationId })).reconcileLocalState());
+      assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), replacement);
+    },
+    async corruptOriginals() {
+      for (const [key, state] of [
+        [CUSTODIAL_ENROLLMENT_OPERATION_KEY, cancelled],
+        [CUSTODIAL_ENROLLMENT_OPERATION_KEY, activeNativeState({ operation: operationId })],
+        [CUSTODIAL_REMOVAL_COMPLETION_KEY, { state: 'EMPTY' }],
+      ]) {
+        const raw = '{retained original, unsupported JSON';
+        const storage = storageFixture({ [key]: raw });
+        await assert.rejects(stateAdapter(storage, state).reconcileLocalState());
+        assert.equal(storage.value(key), raw);
+      }
+      for (const raw of ['', '[]', JSON.stringify({ ...JSON.parse(original), schema_version: 2 })]) {
+        const storage = storageFixture({ [CUSTODIAL_ENROLLMENT_OPERATION_KEY]: raw });
+        await assert.rejects(stateAdapter(storage, cancelled).reconcileLocalState());
+        assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), raw);
+      }
+    },
+    async finalizeStateReplacement() {
+      const storage = storageFixture({ [CUSTODIAL_REMOVAL_OPERATION_KEY]: terminal });
+      const native = nativeRemovalHarness(storage);
+      await native.remoteComplete({ operationId: removalOperationId, deviceId, checkpoint: async () => {} });
+      const before = await native.plugin.getState();
+      const wait = deferred(); let calls = 0;
+      const owner = createNativeProtectedStorage({ getState: () => wait.promise,
+        finalizeRemoval: async args => { calls++; return native.plugin.finalizeRemoval(args); } }, storage);
+      const work = owner.finalizeRemoval(removalOperationId, deviceId);
+      const replacement = terminal.replace(removalOperationId, enrollmentOperationId);
+      storage.setItem(CUSTODIAL_REMOVAL_OPERATION_KEY, replacement);
+      wait.resolve(before);
+      await assert.rejects(work);
+      assert.equal(calls, 0);
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), replacement);
+    },
+    async foreignRemovalJournal() {
+      const raw = original.replace(deviceId, 'KIOSK_08');
+      const storage = storageFixture({ [CUSTODIAL_ENROLLMENT_OPERATION_KEY]: raw });
+      const native = nativeRemovalHarness(storage);
+      await native.remoteComplete({ operationId: removalOperationId, deviceId, checkpoint: async () => {} });
+      await assert.rejects(createNativeProtectedStorage(native.plugin, storage).reconcileLocalState());
+      assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), raw);
+    },
+    async finalizeResponseReplacement() {
+      const storage = storageFixture({ [CUSTODIAL_REMOVAL_OPERATION_KEY]: terminal });
+      const native = nativeRemovalHarness(storage);
+      await native.remoteComplete({ operationId: removalOperationId, deviceId, checkpoint: async () => {} });
+      const waiting = deferred(), entered = deferred();
+      const owner = createNativeProtectedStorage({ getState: native.plugin.getState,
+        finalizeRemoval: async args => { const response = await native.plugin.finalizeRemoval(args); entered.resolve(); await waiting.promise; return response; } }, storage);
+      const work = owner.finalizeRemoval(removalOperationId, deviceId);
+      await entered.promise;
+      const replacement = terminal.replace('01:00:00', '01:00:01');
+      storage.setItem(CUSTODIAL_REMOVAL_OPERATION_KEY, replacement);
+      waiting.resolve();
+      await assert.rejects(work);
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), replacement);
+    },
+    async boundOriginalControls() {
+      const storage = storageFixture({ [CUSTODIAL_ENROLLMENT_OPERATION_KEY]: original, 'mz_scan_queue:original': 'retained original work' });
+      await stateAdapter(storage, cancelled).reconcileLocalState();
+      assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
+      assert.equal(storage.value('mz_scan_queue:original'), 'retained original work');
+      const removalStorage = storageFixture({ [CUSTODIAL_REMOVAL_OPERATION_KEY]: terminal });
+      const native = nativeRemovalHarness(removalStorage);
+      await native.remoteComplete({ operationId: removalOperationId, deviceId, checkpoint: async () => {} });
+      assert.equal(await createNativeProtectedStorage(native.plugin, removalStorage).finalizeRemoval(removalOperationId, deviceId), true);
+      assert.equal(removalStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), terminal);
+    },
+    async callerRollbackBoundary() {
+      if (process.argv.includes('--removal-inspection-change-only')) {
+        const key = 'mz_employee_schedule_snapshot:original';
+        const local = storageFixture({ ...nativeRemovalLocalFixture(), [key]: 'original cached bytes' });
+        const originalNative = nativeRemovalHarness(local), inspecting = deferred(), resume = deferred();
+        let armed = false;
+        const owner = createCustodialCredentialStore({ storage: local,
+          secureStorage: createNativeProtectedStorage(originalNative.plugin, local),
+          indexedDb: { async databases() { if (armed) { inspecting.resolve(); await resume.promise; } return []; }, open() { throw new Error('Absent original database must not open'); } },
+          cryptoApi: { randomUUID: () => removalOperationId }, now: () => '2026-08-01T02:15:00.000Z' });
+        await owner.ensureSecurityState(); armed = true;
+        const work = owner.removeEnrollment({ beforeRemove: originalNative.remoteComplete });
+        await inspecting.promise;
+        local.setItem(key, 'foreign replacement cached bytes'); resume.resolve();
+        await assert.rejects(work);
+        assert.equal(local.value(key), 'foreign replacement cached bytes');
+        assert.equal(originalNative.finalizeAttempts(), 0);
+        console.log('CALLER_ROLLBACK_NEW inspection await preserves changed original PASS');
+        return;
+      }
+      const storage = storageFixture(nativeRemovalLocalFixture());
+      const native = nativeRemovalHarness(storage), entered = deferred(), waiting = deferred();
+      const store = nativeRemovalStore({ getState: native.plugin.getState,
+        finalizeRemoval: async args => { const response = await native.plugin.finalizeRemoval(args); entered.resolve(); await waiting.promise; return response; } }, storage);
+      await store.ensureSecurityState();
+      const work = store.removeEnrollment({ beforeRemove: native.remoteComplete });
+      await Promise.race([entered.promise, work.then(() => { throw new Error('Missing original finalizer boundary'); })]);
+      const replacement = terminal.replace(removalOperationId, enrollmentOperationId);
+      storage.setItem(CUSTODIAL_REMOVAL_OPERATION_KEY, replacement);
+      waiting.resolve();
+      await assert.rejects(work);
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), replacement,
+        'The owning credential-store rollback must retain a changed original row');
+      assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(store.getStatus().ready, false);
+      assert.equal(native.state().removal_finalized, true, 'Lost local ownership does not undo native finalization');
+
+      const clean = storageFixture(nativeRemovalLocalFixture());
+      const cleanNative = nativeRemovalHarness(clean), cleanStore = nativeRemovalStore(cleanNative.plugin, clean);
+      await cleanStore.ensureSecurityState();
+      assert.equal((await cleanStore.removeEnrollment({ beforeRemove: cleanNative.remoteComplete })).removed, true);
+      assert.equal(clean.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
+      assert.equal(JSON.parse(clean.value(CUSTODIAL_REMOVAL_COMPLETION_KEY)).operation_id, removalOperationId);
+      assert.equal(cleanNative.remoteCalls(), 1); assert.equal(cleanNative.finalizeAttempts(), 1);
+
+      // Newly affected partial writes: the fixture supports errors both before
+      // and after the real Storage effect. Each case runs the actual caller.
+      for (const key of [CUSTODIAL_INSTALLATION_MARKER_KEY, CUSTODIAL_REMOVAL_COMPLETION_KEY, CUSTODIAL_REMOVAL_OPERATION_KEY]) {
+        for (const after of [false, true]) {
+          const operation = key === CUSTODIAL_REMOVAL_COMPLETION_KEY ? 'set' : 'remove';
+          const partial = storageFixture(nativeRemovalLocalFixture(), { operation, key, after });
+          const partialNative = nativeRemovalHarness(partial), partialStore = nativeRemovalStore(partialNative.plugin, partial);
+          await partialStore.ensureSecurityState();
+          await assert.rejects(partialStore.removeEnrollment({ beforeRemove: partialNative.remoteComplete }));
+          for (const deviceKey of CUSTODIAL_DEVICE_KEYS) assert.equal(partial.value(deviceKey), deviceId);
+          assert.equal(partial.value(CUSTODIAL_INSTALLATION_MARKER_KEY), seal);
+          const retained = JSON.parse(partial.value(CUSTODIAL_REMOVAL_OPERATION_KEY));
+          assert.equal(retained.operation_id, removalOperationId); assert.equal(retained.phase, 'server_logged_out');
+          assert.equal(partial.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+          assert.equal(partialStore.getStatus().ready, false);
+          assert.equal(partialNative.finalizeAttempts(), key === CUSTODIAL_INSTALLATION_MARKER_KEY ? 0 : 1);
+        }
+      }
+
+      const reentrant = storageFixture(nativeRemovalLocalFixture());
+      const reentrantNative = nativeRemovalHarness(reentrant), reentrantStore = nativeRemovalStore(reentrantNative.plugin, reentrant);
+      await reentrantStore.ensureSecurityState();
+      const write = reentrant.setItem;
+      reentrant.setItem = (key, value) => {
+        write(key, value);
+        if (key === CUSTODIAL_REMOVAL_COMPLETION_KEY) write(CUSTODIAL_REMOVAL_OPERATION_KEY, replacement);
+      };
+      await assert.rejects(reentrantStore.removeEnrollment({ beforeRemove: reentrantNative.remoteComplete }));
+      assert.equal(reentrant.value(CUSTODIAL_REMOVAL_OPERATION_KEY), replacement);
+      assert.equal(reentrant.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined, 'Own acknowledgement is withdrawn on a changed journal');
+
+      const checkpointStorage = storageFixture(nativeRemovalLocalFixture());
+      const checkpointNative = nativeRemovalHarness(checkpointStorage), checkpointStore = nativeRemovalStore(checkpointNative.plugin, checkpointStorage);
+      await checkpointStore.ensureSecurityState();
+      await assert.rejects(checkpointStore.removeEnrollment({ beforeRemove: async args => {
+        checkpointStorage.setItem(CUSTODIAL_REMOVAL_OPERATION_KEY, replacement);
+        await checkpointNative.remoteComplete(args);
+      } }));
+      assert.equal(checkpointStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), replacement);
+      assert.equal(checkpointStorage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+      assert.equal(checkpointNative.finalizeAttempts(), 0);
+      console.log('CALLER_ROLLBACK_NEW original/positive/6partial/reentrant/checkpoint cases PASS');
+    },
+  };
+  const selection = process.argv.find(arg => arg.startsWith('--original-retirement-case='))?.split('=')[1];
+  for (const [name, run] of Object.entries(cases)) if (!selection || selection === name) { await run(); console.log(`ORIGINAL_RETIREMENT_NEW ${name} PASS`); }
+  if (selection) assert.ok(Object.hasOwn(cases, selection));
+  process.exit(0);
+}
 
 // Credential recovery owns a new operation, but the installation belongs to
 // the original enrollment. Native authority must not conflate these identities.
@@ -332,7 +1711,9 @@ function nativeRemovalStore(plugin, storage) {
   return createCustodialCredentialStore({
     secureStorage: createNativeProtectedStorage(plugin, storage),
     storage,
-    indexedDb: null,
+    // Zero-work removal requires an inspected empty browser inventory, not an
+    // unavailable API treated as empty. Keep all native finalization assertions.
+    indexedDb: {databases:async()=>[],open(){throw new Error('No absent database should be opened');}},
     cryptoApi: { randomUUID: () => removalOperationId },
     now: () => '2026-08-01T02:15:00.000Z',
   });
@@ -853,7 +2234,7 @@ for (const failJournalRetirement of [false, true]) {
   const restarted = createCustodialCredentialStore({
     secureStorage: adapter,
     storage,
-    indexedDb: null,
+    indexedDb: {databases:async()=>[],open(){throw new Error('No absent database should be opened');}},
     cryptoApi: { randomUUID: () => removalOperationId },
   });
   await restarted.removeEnrollment({ beforeRemove: async () => assert.fail('revoked backend removal must not replay') });

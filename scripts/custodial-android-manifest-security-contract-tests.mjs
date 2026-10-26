@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import {compiledReviewedProviderReleases,selectReviewedProviderRelease,PROVIDER_SERVICE,LEGACY_PROVIDER_SERVICES} from '../mobile/scripts/custodial-provider-release-policy.mjs';
+import {syntheticProviderAudioInputs} from './fixtures/provider-paired-release-input.mjs';
 import {
   CUSTODIAL_ANDROID_COMPILED_APPLICATION_ATTRIBUTE_POLICY,
   CUSTODIAL_ANDROID_COMPONENT_POLICY,
@@ -17,8 +19,43 @@ import {
 } from '../mobile/scripts/custodial-android-manifest-security.mjs';
 
 const resourceReference = '@0x7f0f0001';
+const protectedPreparationOnly=process.argv.includes('--protected-preparation-only');
+const finalizationStatusOnly=process.argv.includes('--finalization-status-no-startup-only');
+if(finalizationStatusOnly){
+ const root='../mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/';
+ const activity=readFileSync(new URL(root+'NativeProtectedRecoveryPreparationActivity.java',import.meta.url),'utf8');
+ const runtime=readFileSync(new URL(root+'CustodialNativeRuntime.java',import.meta.url),'utf8');
+ const requireStatusExistingRuntime=source=>{
+  const at=source.indexOf('CustodialNativeRuntime runtime=');assert.ok(at>=0);
+  const end=source.indexOf('requireCurrent();',at);assert.ok(end>at);
+  const selection=source.slice(at,end);
+  const arm=selection.match(/:([^?]+)\?CustodialNativeRuntime\.existingForProtectedHeldRead\(getApplicationContext\(\)\)/);
+  assert.ok(arm,'The existing-runtime branch must remain the actual Activity dispatcher');
+  const actions=[...arm[1].matchAll(/preparation==Preparation\.([A-Z_]+)/g)].map(row=>row[1]);
+  assert.equal(actions.filter(name=>name==='READ_LOCAL_FINALIZATION_STATUS').length,1,
+   'A status-only action cannot construct Runtime or run startup recovery');
+  const read=source.match(/preparation==Preparation\.READ_LOCAL_FINALIZATION_STATUS\)\{([\s\S]*?)\}else if/);
+  assert.ok(read);assert.match(read[1],/runtime\.inspectExistingOriginalEnrollmentFinalization\(control\)/);
+  assert.doesNotMatch(read[1],/CustodialNativeRuntime\.get\(|forProtectedHeldOriginalVerification\(|separateHeldOriginalEnrollmentKeepingWork\(/);
+ };
+ requireStatusExistingRuntime(activity);
+ // Source regression sensitivities only: no fake Runtime, owner, Android
+ // lifecycle or effect result is supplied, and no old test group runs.
+ assert.throws(()=>requireStatusExistingRuntime(activity.replace('||preparation==Preparation.READ_LOCAL_FINALIZATION_STATUS','')));
+ assert.throws(()=>requireStatusExistingRuntime(activity.replace('?CustodialNativeRuntime.existingForProtectedHeldRead(getApplicationContext())',
+  '?CustodialNativeRuntime.get(getApplicationContext())')));
+ const at=runtime.indexOf('static synchronized CustodialNativeRuntime existingForProtectedHeldRead(');
+ const end=runtime.indexOf('/** Explicit protected VERIFY only',at);assert.ok(at>=0&&end>at);
+ const accessor=runtime.slice(at,end);
+ assert.match(accessor,/instance==null/);assert.match(accessor,/return instance;/);
+ assert.doesNotMatch(accessor,/new CustodialNativeRuntime\(|recoverExistingMutationEpochJournal\(|attachExistingMutationEpochJournal\(/);
+ console.log(JSON.stringify({scope:'NEW_FINALIZATION_STATUS_ACTUAL_SOURCE_DISPATCH_NO_STARTUP',positive:1,denials:2,
+  Android_compile:false,runtime:false,positive_finalization:false,APK:false,install:false,physical:false,old_groups_replayed:0}));
+ process.exit(0);
+}
 const networkResourceId = '0x7f110001';
 const filePathsResourceId = '0x7f110002';
+if(!protectedPreparationOnly){
 const capacitorWebChromeClientSource = readFileSync(new URL(
   '../node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/BridgeWebChromeClient.java',
   import.meta.url,
@@ -43,6 +80,7 @@ assert.match(
   /permissionLauncher\.launch\(geoPermissions\)/,
   'the pinned Capacitor WebView bridge must launch the native location permission request',
 );
+}
 
 function materialize(value) {
   if (value instanceof RegExp) return resourceReference;
@@ -70,6 +108,17 @@ function compiledFixtureTree() {
   applicationAttributes['android:dataExtractionRules'] = '@0x7f110004';
   const components = ['activity', 'provider', 'service', 'receiver']
     .flatMap((type) => Object.values(CUSTODIAL_ANDROID_COMPONENT_POLICY[type]).map(materializedPolicyNode));
+  const activationName = 'org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver';
+  const activationIndex = components.findIndex((entry) => entry.attributes['android:name'] === activationName);
+  if (activationIndex >= 0) components.splice(activationIndex, 1);
+  components.push(node('receiver', {
+    'android:name': activationName,
+    'android:permission': 'android.permission.DUMP',
+    'android:exported': 'true',
+  }, [node('intent-filter', {}, [
+    node('action', { 'android:name': 'org.memphiszoo.custodial.ACTIVATE_ASSIGNED_DEVICE' }),
+    node('action', { 'android:name': 'org.memphiszoo.custodial.ASSIGNED_ACTIVATION_STATUS' }),
+  ])]));
   const fileProvider = components.find((entry) => (
     entry.name === 'provider'
     && entry.attributes['android:name'] === 'androidx.core.content.FileProvider'
@@ -148,15 +197,45 @@ function clone(value) {
   return structuredClone(value);
 }
 
-function compiledProof({ manifest = compiledFixtureTree(), resources = compiledResourcesDump, network = networkTree, paths = filePathsTree } = {}) {
+function compiledProof({ manifest = compiledFixtureTree(), resources = compiledResourcesDump, network = networkTree, paths = filePathsTree, providerRelease = null } = {}) {
   return assertCompiledCustodialAndroidManifestSecurity({
     manifestDump: dumpTree(manifest),
     resourcesDump: resources,
     networkSecurityDump: dumpTree(network),
     fileProviderPathsDump: dumpTree(paths),
+    providerRelease,
   });
 }
 
+if(protectedPreparationOnly){
+ const name=CUSTODIAL_ANDROID_PACKAGE+'.vault.NativeProtectedRecoveryPreparationActivity';
+ const source=readFileSync(new URL('../mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml',import.meta.url),'utf8');
+ const entry=source.match(/<activity\b[^>]*android:name="org\.memphiszoo\.custodial\.vault\.NativeProtectedRecoveryPreparationActivity"[^>]*>[\s\S]*?<\/activity>/g);
+ assert.equal(entry?.length,1);assert.match(entry[0],/android:permission="android\.permission\.DUMP"/);
+ assert.match(entry[0],/android:excludeFromRecents="true"/);assert.match(entry[0],/android:noHistory="true"/);
+ assert.equal((entry[0].match(/<action\b/g)||[]).length,1);
+ assert.match(entry[0],/android:name="org\.memphiszoo\.custodial\.ORIGINAL_RECOVERY_PREPARATION"/);
+ assert.doesNotMatch(entry[0],/<category\b|<data\b/);assert.equal(CUSTODIAL_ANDROID_PERMISSIONS.includes('android.permission.DUMP'),false);
+ assert.ok(CUSTODIAL_ANDROID_COMPONENTS.activities.includes(name));
+ compiledProof(); // Synthetic compiled graph only; not an APK/install admission.
+ let denials=0;
+ for(const mutation of [
+  x=>{delete x.attributes['android:permission'];},
+  x=>{x.attributes['android:permission']='android.permission.READ_LOGS';},
+  x=>{x.children[0].children.push(node('category',{'android:name':'android.intent.category.BROWSABLE'}));},
+  x=>{x.children[0].children[0].attributes['android:name']='org.memphiszoo.custodial.ARBITRARY_EFFECT';},
+  x=>{x.attributes['android:excludeFromRecents']='false';},
+ ]){
+  const tree=compiledFixtureTree(),app=tree.children.find(x=>x.name==='application');
+  mutation(app.children.find(x=>x.attributes['android:name']===name));
+  assert.throws(()=>compiledProof({manifest:tree}));denials++;
+ }
+ const duplicate=compiledFixtureTree(),app=duplicate.children.find(x=>x.name==='application');
+ app.children.push(clone(app.children.find(x=>x.attributes['android:name']===name)));
+ assert.throws(()=>compiledProof({manifest:duplicate}));denials++;
+ console.log(JSON.stringify({scope:'NEW_PROTECTED_PREPARATION_SOURCE_MANIFEST_AND_SYNTHETIC_COMPILED_GRAPH_ONLY',positive:1,denials,APK:false,install:false,physical:false}));
+ process.exit(0);
+}
 const generatedManifestInput = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <application
@@ -282,10 +361,23 @@ assert.throws(
   /FileProvider paths differ/,
 );
 
-export const custodialAndroidManifestSecurityProofFixture = compiledProof();
-const proof = custodialAndroidManifestSecurityProofFixture;
+const proof = compiledProof();
+// Closed synthetic ticket/fixture, never a real profile or APK. Exact qualified
+// release acceptance must test the ONE owner graph, not the historical two-SDK graph.
+const providerBytes=JSON.stringify({schema:'custodial.native-provider-reviewed-releases.v1',package_name:CUSTODIAL_ANDROID_PACKAGE,releases:[{
+  version_code:16,version_name:'1.0.0',backend_protocol_evidence_sha256:'a'.repeat(64),composition_evidence_sha256:'b'.repeat(64),
+  profile:{id:'synthetic-fixture',api:'fixture-api',build:'fixture-build',device:'fixture-device',quantization_nanos:1,rate_ppm:1,max_age_nanos:1000000,evidence_sha256:'c'.repeat(64)}
+}]});
+const providerRelease=selectReviewedProviderRelease({policyBytes:providerBytes,compiledSource:compiledReviewedProviderReleases(providerBytes),...syntheticProviderAudioInputs(JSON.parse(providerBytes).releases),versionCode:16,versionName:'1.0.0',required:true});
+const qualifiedManifest=compiledFixtureTree(),qualifiedApplication=qualifiedManifest.children.find(n=>n.name==='application');
+qualifiedApplication.children=qualifiedApplication.children.filter(n=>!LEGACY_PROVIDER_SERVICES.includes(n.attributes['android:name']));
+qualifiedApplication.children.push(node('service',{'android:name':PROVIDER_SERVICE,'android:exported':'false'},[
+  node('intent-filter',{},[node('action',{'android:name':'com.google.firebase.MESSAGING_EVENT'})])
+]));
+export const custodialAndroidManifestSecurityProofFixture=compiledProof({manifest:qualifiedManifest,providerRelease});
+const qualifiedProof=custodialAndroidManifestSecurityProofFixture;
 assert.equal(proof.verifier_version, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
-assert.equal(proof.policy, 'exact-custodial-android-manifest-v7');
+assert.equal(proof.policy, 'exact-custodial-android-manifest-v11-private-audio');
 assert.deepEqual(proof.permissions, [...CUSTODIAL_ANDROID_PERMISSIONS].sort());
 assert.deepEqual(proof.components.activities, [...CUSTODIAL_ANDROID_COMPONENTS.activities].sort());
 assert.deepEqual(proof.components.services, [...CUSTODIAL_ANDROID_COMPONENTS.services].sort());
@@ -311,6 +403,24 @@ const applicationOf = (manifest) => manifest.children.find((entry) => entry.name
 const componentOf = (manifest, type, name) => applicationOf(manifest).children.find((entry) => (
   entry.name === type && entry.attributes['android:name'] === name
 ));
+
+const audioService = `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`;
+for(const field of ['android:exported','android:foregroundServiceType']) {
+  assert.throws(mutated(manifest=>{
+    componentOf(manifest,'service',audioService).attributes[field]=field==='android:exported'?'true':'0x00000080';
+  }), /CustodialProviderAudioService.*differs from policy/);
+}
+assert.throws(mutated(manifest=>{
+  delete componentOf(manifest,'service',audioService).attributes['android:foregroundServiceType'];
+}), /CustodialProviderAudioService.*attributes differ/);
+assert.throws(mutated(manifest=>{
+  componentOf(manifest,'service',audioService).children.push(node('intent-filter',{},[node('action',{'android:name':'android.intent.action.BOOT_COMPLETED'})]));
+}), /CustodialProviderAudioService.*child graph differs/);
+for(const permission of ['android.permission.FOREGROUND_SERVICE','android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK']) {
+  assert.throws(mutated(manifest=>{
+    manifest.children=manifest.children.filter(entry=>entry.attributes['android:name']!==permission);
+  }), /permission set differs/);
+}
 
 assert.throws(mutated((manifest) => {
   manifest.children.splice(1, 0, node('uses-permission', { 'android:name': 'android.permission.READ_SMS' }));
@@ -439,5 +549,77 @@ assert.throws(
   }),
   /one safe unqualified packaged file/,
 );
+
+const activationName = 'org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver';
+const activationOf = (manifest) => componentOf(manifest, 'receiver', activationName);
+assert.equal(proof.components.receivers.length, 8);
+assert.equal(proof.components.receivers.filter((name) => name === activationName).length, 1);
+const activationMutations = [
+  ['missing receiver', (m) => { applicationOf(m).children = applicationOf(m).children.filter((n) => n !== activationOf(m)); }, /receiver component set differs/],
+  ['duplicate receiver', (m) => applicationOf(m).children.push(clone(activationOf(m))), /receiver component set differs/],
+  ['unexpected receiver', (m) => applicationOf(m).children.push(node('receiver', { 'android:name': 'org.example.UnreviewedReceiver' })), /receiver component set differs/],
+  ['missing permission', (m) => { delete activationOf(m).attributes['android:permission']; }, /attributes differ/],
+  ['weaker permission', (m) => { activationOf(m).attributes['android:permission'] = 'android.permission.INTERNET'; }, /android:permission differs/],
+  ['missing exported attribute', (m) => { delete activationOf(m).attributes['android:exported']; }, /attributes differ/],
+  ['changed exported attribute', (m) => { activationOf(m).attributes['android:exported'] = 'false'; }, /android:exported differs/],
+  ['unexpected process', (m) => { activationOf(m).attributes['android:process'] = ':alternate'; }, /attributes differ/],
+  ['unexpected direct-boot access', (m) => { activationOf(m).attributes['android:directBootAware'] = 'true'; }, /attributes differ/],
+  ['missing action', (m) => activationOf(m).children[0].children.pop(), /child graph differs/],
+  ['changed action', (m) => { activationOf(m).children[0].children[0].attributes['android:name'] = 'org.example.OTHER'; }, /android:name differs/],
+  ['additional action', (m) => activationOf(m).children[0].children.push(node('action', { 'android:name': 'org.example.EXTRA' })), /child graph differs/],
+  ['additional category', (m) => activationOf(m).children[0].children.push(node('category', { 'android:name': 'android.intent.category.DEFAULT' })), /child graph differs/],
+  ['additional filter', (m) => activationOf(m).children.push(node('intent-filter')), /child graph differs/],
+];
+for (const [label, mutate, expected] of activationMutations) {
+  assert.throws(mutated(mutate), expected, `assigned activation must reject ${label}`);
+}
+const acceptanceSchema = JSON.parse(readFileSync(new URL('../mobile/scripts/custodial-android-release-acceptance.schema.json', import.meta.url), 'utf8'));
+const manifestSchema = acceptanceSchema.properties.android_manifest_security.properties;
+assert.equal(manifestSchema.verifier_version.const, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
+assert.equal(manifestSchema.policy.const, qualifiedProof.policy);
+assert.deepEqual(manifestSchema.permissions.prefixItems.map(x=>x.const),qualifiedProof.permissions);
+assert.equal(manifestSchema.permissions.minItems,12);
+assert.equal(manifestSchema.permissions.maxItems,12);
+assert.deepEqual(manifestSchema.components.properties.receivers.prefixItems.map((item) => item.const), proof.components.receivers);
+assert.equal(manifestSchema.components.properties.receivers.minItems, 8);
+assert.equal(manifestSchema.components.properties.receivers.maxItems, 8);
+assert.equal(manifestSchema.components.properties.receivers.items, false);
+assert.equal(acceptanceSchema.properties.verifier.properties.android_manifest_security_verifier_version.const, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
+console.log(`ASSIGNED_ACTIVATION_MANIFEST_DENIALS_PASS ${activationMutations.length}`);
+
+let providerDenials = 0;
+for (const [type, name] of [
+  ['activity', 'ProviderNotificationOpenActivity'],
+  ['receiver', 'ProviderNotificationActionReceiver'],
+  ['service', 'CustodialProviderSyncJobService'],
+]) {
+  const fullName = `org.memphiszoo.custodial.vault.${name}`;
+  const component = (manifest) => componentOf(manifest, type, fullName);
+  for (const [label, mutate] of [
+    ['missing', (m) => { applicationOf(m).children = applicationOf(m).children.filter((n) => n !== component(m)); }],
+    ['duplicated', (m) => applicationOf(m).children.push(clone(component(m)))],
+    ['exported', (m) => { component(m).attributes['android:exported'] = 'true'; }],
+    ['alternate process', (m) => { component(m).attributes['android:process'] = ':provider'; }],
+    ['direct boot', (m) => { component(m).attributes['android:directBootAware'] = 'true'; }],
+    ['intent filter', (m) => component(m).children.push(node('intent-filter'))],
+  ]) {
+    assert.throws(mutated(mutate), undefined, `${name} rejects ${label}`); providerDenials++;
+  }
+}
+for (const permission of [null, 'android.permission.INTERNET']) {
+  assert.throws(mutated((m) => {
+    const attributes = componentOf(m, 'service', 'org.memphiszoo.custodial.vault.CustodialProviderSyncJobService').attributes;
+    if (permission === null) delete attributes['android:permission'];
+    else attributes['android:permission'] = permission;
+  }), /attributes differ|android:permission differs/); providerDenials++;
+}
+for (const kind of ['activities', 'services', 'receivers']) {
+  const schema = manifestSchema.components.properties[kind];
+  assert.deepEqual(schema.prefixItems.map((item) => item.const), qualifiedProof.components[kind]);
+  assert.equal(schema.minItems, qualifiedProof.components[kind].length);
+  assert.equal(schema.maxItems, qualifiedProof.components[kind].length);
+  assert.equal(schema.items, false);
+}
+console.log(`PROVIDER_COMPONENT_MANIFEST_DENIALS_PASS ${providerDenials}`);
 
 console.log('CUSTODIAL_ANDROID_MANIFEST_SECURITY_CONTRACT_PASS');

@@ -1,12 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {runInNewContext} from 'node:vm';
+import {createScanOwnerVm,FixtureStorage} from './scan-owner-vm-context.mjs';
 // Actual worker functions, synthetic native/storage adapters. Not device proof.
 const source=readFileSync(new URL('../memphis-scan-sync.js',import.meta.url),'utf8');
 const section=(a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,start);assert.ok(start>=0&&end>start);return source.slice(start,end)};
-const code=section('  async function verifiedServerCompletionReceipt(item){','  async function processAction(item)')+
- section('  const nativeLegacyCompletionBindings = new WeakMap();','  async function recoverLocalCompletionIntents()')+
- '\n({validateLocalCompletion,persistLocalCompletionUnlocked,recoverLocalCompletionIntentsUnlocked,localCompletionReceipt});';
+const owningEntries=['validateLocalCompletion','persistLocalCompletionUnlocked','recoverLocalCompletionIntentsUnlocked','localCompletionReceipt','sessionKey'];
 const sessionId='00000000-0000-4000-8000-000000000001',completionId='00000000-0000-4000-8000-000000000002';
 function fixture({accepted=true,services=['Floor'],editDuringNative=false,throwNative=false,durableEditDuringNative=false,missingLock=false,durableChange=null}={}){
  const response={services_performed:services,note:'Original unchanged saved work'};
@@ -18,13 +16,13 @@ function fixture({accepted=true,services=['Floor'],editDuringNative=false,throwN
   p_client_started_at:session.started_at,p_client_ended_at:session.ended_at,p_response_json:structuredClone(response),p_scan_evidence:[]};
  const action={type:'commit_workflow',payload,server_completion_receipt:{result:{status:'closed'},integrity_sha256:'editable'}};
  session.completion_outbox=action;
- const stored=[session],queue=[];let nativeCalls=0,writes=0;
- const api=runInNewContext(code,{
+ const stored=[session],queue=[];let nativeCalls=0,writes=0;const storage=new FixtureStorage();let api;
+ api=createScanOwnerVm(source,owningEntries,{localStorage:storage,
   safeText:v=>String(v??'').trim(),canonicalJson:JSON.stringify,isUuid:v=>/^[a-f0-9-]{36}$/.test(v),
   navigator:missingLock?{}:{locks:{request(){throw new Error('unlocked-function unit harness does not exercise actual Web Locks');}}},
   storageFailure:(_area,e)=>e,state:{deviceId:'TEST_DEVICE'},allSessions:()=>structuredClone(stored),
   readSession:()=>structuredClone(stored[0]),listActions:async()=>queue,enqueueUnlocked:async a=>{queue.push(structuredClone(a));writes++},
-  saveSession:s=>{stored[0]=structuredClone(s);writes++},mutateProtectedQueue:async fn=>fn(),
+  saveSession:s=>{stored[0]=structuredClone(s);storage.setItem(api.sessionKey(s.session_uuid),JSON.stringify(s));writes++},
   validateProcessResult:(item,result)=>{assert.equal(result.client_session_id,item.payload.p_client_session_id);assert.equal(result.client_completion_id,item.payload.p_client_completion_id)},
   processResultFailure:message=>new Error(message),
   window:{MemphisMobile:{getAuthenticatedCompletion:async({completionPayload})=>{
@@ -40,6 +38,8 @@ function fixture({accepted=true,services=['Floor'],editDuringNative=false,throwN
    return {found:accepted,result:{status:'closed',client_session_id:sessionId,client_completion_id:completionId}};
   }}},
  });
+ // Exact serialized fixture preimage is seeded once before any recovery action.
+ storage.setItem(api.sessionKey(session.session_uuid),JSON.stringify(session));
  return {api,session,action,stored,queue,counters:()=>({nativeCalls,writes})};
 }
 let passed=0;

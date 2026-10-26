@@ -1,4 +1,4 @@
-import type { AppEdition } from './types';
+import type { AppEdition, RemovableListener, RuntimePorts } from './types';
 import {
   isCustodialKioskIdentifier,
   normalizeDeviceIdentifier,
@@ -35,4 +35,65 @@ export function handoffToLegacy(
 
 export function resolveHardwareBackAction(currentRouteId: string, homeRouteId: string): 'pop' | 'home' {
   return currentRouteId === homeRouteId ? 'home' : 'pop';
+}
+
+export function bindHardwareBackLifecycle({
+  deepLinks,
+  currentRouteId,
+  homeRouteId,
+  edition,
+  onBack,
+  isCurrent,
+  reportFailure,
+}: {
+  deepLinks: Pick<RuntimePorts['deepLinks'], 'addBackListener' | 'handleRootBack'>;
+  currentRouteId: string;
+  homeRouteId: string;
+  edition: AppEdition;
+  onBack: () => void;
+  isCurrent: () => boolean;
+  reportFailure: (error: Error) => void;
+}): () => void {
+  let active = true;
+  let failed = false;
+  let listener: RemovableListener | null = null;
+  let removed = false;
+  const current = () => active && !failed && isCurrent();
+  const remove = () => {
+    if (!listener || removed) return;
+    removed = true;
+    try {
+      void Promise.resolve(listener.remove()).catch(() => {});
+    } catch {
+      // Teardown is best-effort and must not replace the primary active failure.
+    }
+  };
+  const fail = () => {
+    if (!current()) return;
+    failed = true;
+    remove();
+    reportFailure(new Error('Hardware Back failed.'));
+  };
+  try {
+    void deepLinks.addBackListener(() => {
+      if (!current()) return;
+      try {
+        const action = resolveHardwareBackAction(currentRouteId, homeRouteId);
+        const result = action === 'pop' ? onBack() : deepLinks.handleRootBack(edition);
+        void Promise.resolve(result).catch(fail);
+      } catch {
+        fail();
+      }
+    }).then((nextListener) => {
+      listener = nextListener;
+      if (!current()) remove();
+    }).catch(fail);
+  } catch {
+    fail();
+  }
+  return () => {
+    if (!active) return;
+    active = false;
+    remove();
+  };
 }

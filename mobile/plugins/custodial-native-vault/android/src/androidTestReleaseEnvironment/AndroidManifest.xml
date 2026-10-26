@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:debuggable="false">
+        <activity
+            android:name="org.memphiszoo.custodial.vault.RemovalTestActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name="org.memphiszoo.custodial.vault.BridgeSmokeActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <service
+            android:name="org.memphiszoo.custodial.vault.NfcRecoveryVerifierService"
+            android:exported="false"
+            android:process=":nfc_recovery_verifier" />
+    </application>
+</manifest>

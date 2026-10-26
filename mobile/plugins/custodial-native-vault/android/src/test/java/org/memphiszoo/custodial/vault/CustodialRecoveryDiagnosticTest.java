@@ -1,10 +1,79 @@
 package org.memphiszoo.custodial.vault;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotSame;
 
 import org.junit.Test;
 
 public final class CustodialRecoveryDiagnosticTest {
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1 || !"--startup-refusal-code-only".equals(args[0]))
+            throw new IllegalArgumentException("new pure startup-code cases required");
+        CustodialRecoveryDiagnosticTest test = new CustodialRecoveryDiagnosticTest();
+        test.STARTUP_CODE_nestedMetadataRetainsOriginalSafeCode();
+        test.STARTUP_CODE_workWrapperRetainsOriginalSafeCode();
+        test.STARTUP_CODE_unknownCauseExposesNoPrivateData();
+        test.STARTUP_CODE_cycleAndDepthRemainBoundedUnknown();
+        System.out.println("PASS 4 NEW pure startup-code cases; actual private sanitizer, no Plugin instance/Context/Log/callback/runtime proof");
+    }
+
+    private static VaultFailure startupCode(RuntimeException error) throws Exception {
+        java.lang.reflect.Method method = CustodialNativeVaultPlugin.class.getDeclaredMethod(
+            "boundedStartupRefusal", RuntimeException.class);
+        method.setAccessible(true);
+        return (VaultFailure) method.invoke(null, error);
+    }
+
+    private static void onlyCode(VaultFailure value, String code) {
+        assertEquals(code, value.code);
+        assertEquals(code, value.getMessage());
+        assertEquals(0, value.httpStatus);
+        assertEquals("", value.remoteReason);
+        assertNull(value.getCause());
+        assertEquals(0, value.getSuppressed().length);
+    }
+
+    @Test public void STARTUP_CODE_nestedMetadataRetainsOriginalSafeCode() throws Exception {
+        VaultFailure original = new VaultFailure(NativePrivateMutationEpochStore.FAILURE,
+            new IllegalStateException("synthetic private details must not be retained"));
+        RuntimeException thrown = new IllegalStateException(AndroidProtectedWorkPreferences.FAILURE,
+            new VaultFailure(AndroidProtectedWorkPreferences.FAILURE, original));
+        VaultFailure retained = startupCode(thrown);
+        onlyCode(retained, NativePrivateMutationEpochStore.FAILURE);
+        assertNotSame(original, retained);
+        assertEquals(original, thrown.getCause().getCause());
+    }
+
+    @Test public void STARTUP_CODE_workWrapperRetainsOriginalSafeCode() throws Exception {
+        VaultFailure original = new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        onlyCode(startupCode(new IllegalStateException("unavailable", original)), AndroidProtectedWorkPreferences.FAILURE);
+        assertEquals(AndroidProtectedWorkPreferences.FAILURE, original.code);
+    }
+
+    @Test public void STARTUP_CODE_unknownCauseExposesNoPrivateData() throws Exception {
+        for (RuntimeException error : new RuntimeException[] {
+            new IllegalStateException("synthetic private details"),
+            new IllegalStateException("unknown", new VaultFailure("not_allowlisted", 409, "private remote reason")),
+            new IllegalStateException(NativePrivateMutationEpochStore.FAILURE),
+            new IllegalStateException("unknown", new Exception(NativePrivateMutationEpochStore.FAILURE))
+        }) onlyCode(startupCode(error), "custodial_native_security_unavailable");
+        onlyCode(startupCode(null), "custodial_native_security_unavailable");
+    }
+
+    @Test public void STARTUP_CODE_cycleAndDepthRemainBoundedUnknown() throws Exception {
+        final class Cyclic extends RuntimeException {
+            int reads;
+            @Override public synchronized Throwable getCause() { reads++; return this; }
+        }
+        Cyclic cyclic = new Cyclic();
+        onlyCode(startupCode(cyclic), "custodial_native_security_unavailable");
+        assertEquals(8, cyclic.reads);
+        Throwable deep = new VaultFailure(NativePrivateMutationEpochStore.FAILURE);
+        for (int index=0; index<9; index++) deep=new IllegalStateException("synthetic deep cause", deep);
+        onlyCode(startupCode((RuntimeException) deep), "custodial_native_security_unavailable");
+    }
+
     @Test
     public void acceptsOnlyKnownRecoveryCodes() {
         assertEquals(

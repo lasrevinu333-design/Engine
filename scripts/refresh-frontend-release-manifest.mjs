@@ -15,6 +15,9 @@ import { fileURLToPath } from 'node:url';
 export const FRONTEND_MANIFEST_NAME = 'frontend-release-manifest.json';
 export const FRONTEND_DEPLOYMENT_MANIFEST_NAME = 'frontend-deployment-manifest.json';
 export const RUNTIME_ASSET_MANIFEST_NAME = 'runtime-asset-manifest.json';
+// Approved PNGs can exceed Node's default 1 MiB child-process buffer. Keep a
+// finite source-blob read cap; this is not a network or permission relaxation.
+export const GIT_BINARY_MAX_BUFFER_BYTES = 16 * 1024 * 1024;
 export const FRONTEND_HASH_EXCLUDED_FILES = [
   FRONTEND_DEPLOYMENT_MANIFEST_NAME,
   FRONTEND_MANIFEST_NAME,
@@ -22,7 +25,7 @@ export const FRONTEND_HASH_EXCLUDED_FILES = [
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const DEFAULT_ROOT = resolve(dirname(SCRIPT_PATH), '..');
-const PARSEABLE_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.svg']);
+const PARSEABLE_EXTENSIONS = new Set(['.css', '.html', '.js', '.mjs', '.json', '.svg']);
 const RUNTIME_EXTENSIONS = new Set([
   '.css',
   '.html',
@@ -30,6 +33,7 @@ const RUNTIME_EXTENSIONS = new Set([
   '.jpeg',
   '.jpg',
   '.js',
+  '.mjs',
   '.json',
   '.png',
   '.svg',
@@ -97,6 +101,10 @@ function referenceCandidates(source) {
   collect(/@import\s+(?:url\(\s*)?["']([^"']+)["']/gi);
   collect(/\bnew\s+URL\(\s*["'`]([^"'`]+)["'`]/gi);
   collect(/\b(?:fetch|importScripts|import)\(\s*["'`]([^"'`]+)["'`]/gi);
+  // Required local ES module dependencies, including .mjs. Do not silently
+  // omit a mounted display or a static re-export from the exact asset graph.
+  collect(/\b(?:import|export)\s+[^;\n]*?\bfrom\s*["']([^"']+)["']/g);
+  collect(/\bimport\s*["']([^"']+)["']/g);
   collect(/\b(?:location(?:\.href)?|window\.location(?:\.href)?|\.src|\.href)\s*=\s*["'`]([^"'`]+)["'`]/gi);
   // Bare string literals are a discovery aid for assets inserted later by
   // application code, but are not on their own proof of a runtime reference.
@@ -263,7 +271,7 @@ function gitText(root, args, executeGit = execFileSync) {
 }
 
 function gitBytes(root, args, executeGit = execFileSync) {
-  return gitCommand(root, args, executeGit);
+  return gitCommand(root, args, executeGit, { maxBuffer: GIT_BINARY_MAX_BUFFER_BYTES });
 }
 
 function parseForbiddenIndexFlagPaths(records) {

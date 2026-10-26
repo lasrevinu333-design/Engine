@@ -22,6 +22,8 @@
         <label class="choice"><input type="radio" name="category" value="improvement_idea" required><span>The app confused me</span></label>
       </div>
       <label class="label" for="message">Tell us more (optional)</label><textarea id="message" maxlength="2000" placeholder="What happened?"></textarea>
+      <input id="photo" type="file" accept="image/*" capture="environment" hidden><button id="add-photo" class="photoButton" type="button">Add Photo</button>
+      <section id="preview" class="preview" hidden><img id="preview-image" alt="Your photo"><button id="remove-photo" class="remove" type="button">Remove Photo</button></section>
       <button id="send" class="send" type="submit">Send</button><div id="status" class="status" aria-live="polite"></div>
     </form>
   </main>
@@ -29,18 +31,95 @@
   <script>
   (()=>{'use strict';
     const API='https://memphis-zoo-mcp.onrender.com',PREFIX='mz_employee_feedback_outbox:';
-    const els={form:document.getElementById('form'),message:document.getElementById('message'),send:document.getElementById('send'),status:document.getElementById('status')};
-    let busy=false,statusRevision=0;
-    const operationId=()=>crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const els={form:document.getElementById('form'),message:document.getElementById('message'),photo:document.getElementById('photo'),addPhoto:document.getElementById('add-photo'),preview:document.getElementById('preview'),previewImage:document.getElementById('preview-image'),removePhoto:document.getElementById('remove-photo'),send:document.getElementById('send'),status:document.getElementById('status')};
+    let busy=false,image=null,statusOperation=null,pendingSubmission=null,recovered=false,recoverySequence=0;
+    const confirmedOperations=new Set(); // Only this page's matching live cleanup results; never persisted.
+    const operationId=()=>{if(typeof crypto.randomUUID!=='function')throw new Error('not_ready');return crypto.randomUUID();};
     const deviceId=()=>String(window.MemphisMobile?.deviceId?.()||window.MemphisCustodialSecurity?.getStatus?.()?.deviceId||'').trim().toUpperCase();
     const employeeName=()=>String(window.MemphisMobile?.readCustodialHomeCache?.()?.profile?.employee_name||window.MemphisMobile?.readCustodialHomeCache?.()?.profile?.employee?.display_name||'Employee').trim()||'Employee';
-    function setStatus(value='',kind=''){statusRevision++;els.status.textContent=value;els.status.className=`status${kind?` ${kind}`:''}`;}
+    function setStatus(value='',kind=''){els.status.textContent=value;els.status.className=`status${kind?` ${kind}`:''}`;}
     async function mutate(operation){const secure=window.MemphisCustodialSecurity?.mutateProtectedWork;if(typeof secure!=='function')throw new Error('not_ready');return secure(operation);}
     async function flush(){return window.MemphisMobile?.flushEmployeeFeedback?.()||[];}
-    // New feedback is text-only. Existing protected outbox records, including
-    // historical attachments, remain owned by the unchanged bridge transport.
-    els.form.addEventListener('submit',async(event)=>{event.preventDefault();if(busy)return;const category=els.form.querySelector('input[name="category"]:checked')?.value||'';if(!category)return setStatus('Choose one option.','error');busy=true;els.send.disabled=true;setStatus('Saving…','info');try{await window.MemphisMobile?.ready;const id=deviceId();if(!id)throw new Error('identity');const operation=operationId();const body={operation_id:operation,category,priority:'normal',message:els.message.value.trim()||'No details added.',submitted_by:employeeName(),hub_context:'employee',device_id:id,page_url:'employee-feedback.html',page_title:'Feedback'};const save=window.MemphisMobile?.saveEmployeeFeedback;if(typeof save!=='function')throw new Error('not_ready');await save(body);els.form.reset();setStatus('Saved on this phone. Waiting to upload.','ok');const savedStatusRevision=statusRevision;void flush().then(ids=>{if(statusRevision===savedStatusRevision&&ids.includes(operation))setStatus('Received by the program.','ok');}).catch(()=>{});}catch(error){setStatus('Feedback could not be saved. Try again.','error');}finally{busy=false;els.send.disabled=false;}});
-    window.addEventListener('online',()=>void flush().catch(()=>{}));document.addEventListener('visibilitychange',()=>{if(!document.hidden)void flush().catch(()=>{});});void (window.MemphisMobile?.ready||Promise.resolve()).then(()=>flush()).catch(()=>{});
+    function controls(){
+      for(const field of els.form.elements||[])field.disabled=busy||!recovered||Boolean(pendingSubmission);
+      els.send.disabled=busy||!recovered;
+      els.send.textContent=pendingSubmission?'Retry Sync':'Send';
+    }
+    async function recover(){
+      const sequence=++recoverySequence;recovered=false;controls();
+      try{
+        await window.MemphisMobile?.ready;
+        const read=window.MemphisMobile?.pendingEmployeeFeedback;
+        if(typeof read!=='function')throw new Error('not_ready');
+        const value=await read();if(sequence!==recoverySequence)return false;
+        if(value?.state==='pending'){
+          const originals=value.originals===undefined?[value.body]:value.originals;
+          if(!Array.isArray(originals)||!originals.length||originals.some(body=>!body||typeof body!=='object'||Array.isArray(body)))throw new Error('held');
+          const original=originals.find(body=>!confirmedOperations.has(body.operation_id));
+          if(original){
+            if(pendingSubmission&&pendingSubmission.operation_id!==original.operation_id)throw new Error('held');
+            pendingSubmission=Object.freeze(original);statusOperation=pendingSubmission.operation_id;
+            setStatus('Saved on this phone. It will retry automatically.','info');
+          }
+        }else if(value?.state!=='clear')throw new Error('held');
+        // Absence is not acceptance: keep an already-known uncertain original.
+        recovered=true;controls();return true;
+      }catch{
+        if(sequence===recoverySequence){recovered=false;controls();setStatus('Saved feedback recovery is unavailable. Keep the original pending.','error');}
+        return false;
+      }
+    }
+    async function sync(){
+      const original=pendingSubmission,operation=original?.operation_id;
+      const ids=await flush();
+      if(original&&pendingSubmission===original&&statusOperation===operation&&Array.isArray(ids)&&ids.includes(operation)){
+        confirmedOperations.add(operation);
+        pendingSubmission=null;statusOperation=null;els.form.reset();if(image?.preview)URL.revokeObjectURL(image.preview);clearPhoto();
+        setStatus('Saved in the program.','ok');controls();
+      }
+      return ids;
+    }
+    function clearPhoto(){image=null;els.photo.value='';els.preview.hidden=true;els.previewImage.removeAttribute('src');}
+    async function compress(file){if(!file||!String(file.type).startsWith('image/')||file.size>5*1024*1024)throw new Error('photo');const url=URL.createObjectURL(file);try{const bitmap=await createImageBitmap(file);const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();const dataUrl=canvas.toDataURL('image/jpeg',.78);if(dataUrl.length>3_000_000)throw new Error('photo');return{name:String(file.name||'feedback-photo.jpg').slice(0,120),type:'image/jpeg',data_url:dataUrl,preview:url};}catch(error){URL.revokeObjectURL(url);throw error;}}
+    els.addPhoto.addEventListener('click',()=>els.photo.click());els.removePhoto.addEventListener('click',()=>{if(image?.preview)URL.revokeObjectURL(image.preview);clearPhoto();});
+    els.photo.addEventListener('change',async()=>{els.addPhoto.disabled=true;setStatus('Adding photo…','info');try{if(image?.preview)URL.revokeObjectURL(image.preview);image=await compress(els.photo.files?.[0]);els.previewImage.src=image.preview;els.preview.hidden=false;setStatus();}catch{clearPhoto();setStatus('That photo could not be added. Try a different photo.','error');}finally{els.addPhoto.disabled=false;}});
+    els.form.addEventListener('submit',async(event)=>{
+      event.preventDefault();if(busy)return;
+      const draft={category:els.form.querySelector('input[name="category"]:checked')?.value||'',message:els.message.value.trim()||'No details added.',
+        image:image?Object.freeze({name:image.name,type:image.type,data_url:image.data_url}):null};
+      if(!await recover())return;
+      const category=pendingSubmission?.category||draft.category;
+      if(!category)return setStatus('Choose one option.','error');
+      busy=true;statusOperation=null;
+      for(const field of els.form.elements||[])field.disabled=true;
+      els.send.disabled=true;setStatus('Saving…','info');
+      try{
+        // Capture the original content/key before readiness or protected Save awaits.
+        // A failed Save may already have stored it; Retry must keep those bytes.
+        if(!pendingSubmission){
+          const original={operation_id:operationId(),category,priority:'normal',message:draft.message,
+            hub_context:'employee',page_url:'employee-feedback.html',page_title:'Feedback'};
+          if(draft.image)original.image_attachment=draft.image;
+          pendingSubmission=Object.freeze(original);
+        }
+        await window.MemphisMobile?.ready;
+        const id=deviceId();if(!id)throw new Error('identity');
+        if(!pendingSubmission.device_id)pendingSubmission=Object.freeze({...pendingSubmission,device_id:id,submitted_by:employeeName()});
+        const original=pendingSubmission,operation=original.operation_id;
+        const save=window.MemphisMobile?.saveEmployeeFeedback;if(typeof save!=='function')throw new Error('not_ready');
+        await save(original);
+        statusOperation=operation;setStatus('Saved on this phone. It will retry automatically.','info');
+        // Prefer the exact protected persisted body, including original actor pins.
+        if(await recover())void sync().catch(()=>{});
+      }catch{
+        els.send.textContent=pendingSubmission?'Retry Save':'Send';
+        setStatus(pendingSubmission?'Save not confirmed. Retry keeps the same feedback.':'Feedback could not be saved. Try again.','error');
+      }finally{
+        busy=false;controls();
+      }
+    });
+    const resume=()=>void recover().then(current=>current?sync():[]).catch(()=>{});
+    window.addEventListener('online',resume);document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume();});controls();resume();
   })();
   </script>
 </body>

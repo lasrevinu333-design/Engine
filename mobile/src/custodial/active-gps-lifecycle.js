@@ -33,7 +33,9 @@ export function resolveActiveGpsSession(storage, deviceId) {
     const session = normalizedSession(row, expectedDevice);
     if (session) matches.push(session);
   }
-  const unique = [...new Map(matches.map((item) => [item.clientSessionId, item])).values()];
+  const byId=new Map();
+  for(const item of matches){const prior=byId.get(item.clientSessionId);if(prior&&JSON.stringify(prior)!==JSON.stringify(item))return Object.freeze({state:'ambiguous',session:null});byId.set(item.clientSessionId,item);}
+  const unique = [...byId.values()];
   if (unique.length === 0) return Object.freeze({ state: 'none', session: null });
   if (unique.length !== 1) return Object.freeze({ state: 'ambiguous', session: null });
   return Object.freeze({ state: 'active', session: unique[0] });
@@ -41,8 +43,10 @@ export function resolveActiveGpsSession(storage, deviceId) {
 
 function normalizedPosition(position) {
   const coords = position?.coords || position || {};
-  const latitude = Number(coords.latitude);
-  const longitude = Number(coords.longitude);
+  // Missing/boolean/string coordinates are not a measured zero.
+  if(typeof coords.latitude!=='number'||typeof coords.longitude!=='number')return null;
+  const latitude = coords.latitude;
+  const longitude = coords.longitude;
   const accuracyRaw = coords.accuracy ?? position?.accuracy_m;
   const accuracy = accuracyRaw == null || String(accuracyRaw).trim() === '' ? null : Number(accuracyRaw);
   const timestamp = Number(position?.timestamp);
@@ -62,6 +66,8 @@ export function createActiveGpsLifecycle({
   setTimer = (fn, ms) => setInterval(fn, ms),
   clearTimer = (id) => clearInterval(id),
   intervalMs = 30000,
+  setCaptureTimer = (fn,ms) => setTimeout(fn,ms),
+  clearCaptureTimer = id => clearTimeout(id),
   onStatus = () => {},
 } = {}) {
   if (!storage || typeof deviceId !== 'function' || typeof enqueue !== 'function') {
@@ -69,6 +75,7 @@ export function createActiveGpsLifecycle({
   }
   let timer = null;
   let flight = null;
+  let finishCapture = null;
   let disposed = false;
   let lastSessionId = '';
   let lastObservedAt = 0;
@@ -98,11 +105,15 @@ export function createActiveGpsLifecycle({
     if (flight) return flight;
     const requested = before.session;
     flight = new Promise((resolve) => {
-      geolocation.getCurrentPosition(resolve, () => resolve(null), {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 10000,
-      });
+      let settled=false;
+      const finish=value=>{if(settled)return;settled=true;clearCaptureTimer(captureTimer);finishCapture=null;resolve(value);};
+      const captureTimer=setCaptureTimer(()=>finish(null),15000);
+      captureTimer?.unref?.();finishCapture=finish;
+      // The platform timeout option alone is not a lifecycle guarantee. Own a
+      // bounded fallback and settle it on page disposal as well.
+      try{geolocation.getCurrentPosition(finish,()=>finish(null),{
+        enableHighAccuracy:true,timeout:15000,maximumAge:10000,
+      });}catch{finish(null);}
     }).then(async (position) => {
       if (disposed) return Object.freeze({ state: 'disposed' });
       const sample = normalizedPosition(position);
@@ -111,14 +122,14 @@ export function createActiveGpsLifecycle({
         return Object.freeze({ state: 'gps_unavailable' });
       }
       const after = current();
-      if (after.state !== 'active' || after.session.clientSessionId !== requested.clientSessionId) {
+      if (after.state !== 'active' || JSON.stringify(after.session) !== JSON.stringify(requested)) {
         return Object.freeze({ state: 'session_changed' });
       }
+      const started=Date.parse(requested.startedAt||'');
+      if(Number.isFinite(started)&&sample.timestamp<started){onStatus({state:'stale_capture',sessionId:requested.clientSessionId});return Object.freeze({state:'stale_capture'});}
       if (lastSessionId === requested.clientSessionId && sample.timestamp <= lastObservedAt) {
         return Object.freeze({ state: 'duplicate_capture' });
       }
-      lastSessionId = requested.clientSessionId;
-      lastObservedAt = sample.timestamp;
       const eventId = `gps:${requested.clientSessionId}:${randomUuid()}`;
       const payload = Object.freeze({
         p_location_code: requested.locationCode,
@@ -136,10 +147,12 @@ export function createActiveGpsLifecycle({
         client_id: eventId,
         payload,
       }));
-      onStatus({ state: 'queued', sessionId: requested.clientSessionId, observedAt: payload.p_observed_at });
+      // Mark a sample consumed only after its exact durable enqueue succeeds.
+      lastSessionId=requested.clientSessionId;lastObservedAt=sample.timestamp;
+      if(!disposed)onStatus({ state: 'queued', sessionId: requested.clientSessionId, observedAt: payload.p_observed_at });
       return Object.freeze({ state: 'queued', payload });
     }).catch((error) => {
-      onStatus({ state: 'queue_unavailable', sessionId: requested.clientSessionId });
+      if(!disposed)onStatus({ state: 'queue_unavailable', sessionId: requested.clientSessionId });
       return Object.freeze({ state: 'queue_unavailable', error });
     }).finally(() => { flight = null; });
     return flight;
@@ -163,6 +176,7 @@ export function createActiveGpsLifecycle({
   }
   function dispose() {
     disposed = true;
+    finishCapture?.(null);
     stopTimer();
     lastSessionId = '';
   }

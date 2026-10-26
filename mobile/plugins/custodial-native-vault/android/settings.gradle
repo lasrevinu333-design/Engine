@@ -17,3 +17,40 @@ dependencyResolutionManagement {
 rootProject.name = 'custodial-native-vault'
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File(settingsDir, '../../../../node_modules/@capacitor/android/capacitor')
+include ':capacitor-firebase-messaging'
+project(':capacitor-firebase-messaging').projectDir = new File(settingsDir, '../../../../node_modules/@capacitor-firebase/messaging/android')
+
+// Only the existing full-app instrumentation profile mounts these installed
+// normal plugins. Default smoke and shipping library project graphs stay put.
+if (providers.gradleProperty('custodialProtectedRecoveryRuntime').getOrElse('false') == 'true'
+    && providers.gradleProperty('custodialProtectedRecoveryFullAppRuntime').getOrElse('false') == 'true') {
+    ['app', 'network'].each { name ->
+        def pluginDirectory = new File(settingsDir, "../../../../node_modules/@capacitor/${name}/android")
+        if (!new File(pluginDirectory, 'build.gradle').isFile()
+            || !new File(pluginDirectory, '../package.json').isFile()) {
+            throw new GradleException("Full-app instrumentation requires the already-installed @capacitor/${name} Android plugin")
+        }
+        include ":capacitor-${name}"
+        project(":capacitor-${name}").projectDir = pluginDirectory
+    }
+}
+
+// Only the explicitly selected disposable normal-vendor qualification mounts
+// the SAME installed module. Existing default/full-app graphs are unchanged.
+def notificationRuntime = providers.gradleProperty('custodialRecurringNotificationRuntime').getOrElse('false')
+if (!(notificationRuntime in ['false', 'true'])) {
+    throw new GradleException('custodialRecurringNotificationRuntime must be true or false')
+}
+if (notificationRuntime == 'true') {
+    if (providers.gradleProperty('custodialProtectedRecoveryRuntime').getOrElse('false') != 'true'
+        || providers.gradleProperty('custodialProtectedRecoveryFullAppRuntime').getOrElse('false') != 'true'
+        || providers.gradleProperty('custodialProtectedRecoveryReleaseInstrumentation').getOrElse('false') != 'true') {
+        throw new GradleException('Normal vendor qualification requires the existing disposable protected full-app release profile')
+    }
+    def directory = new File(settingsDir, '../../../../node_modules/@capacitor/local-notifications/android')
+    if (!new File(directory, 'build.gradle').isFile() || !new File(directory, '../package.json').isFile()) {
+        throw new GradleException('Normal installed @capacitor/local-notifications module is required')
+    }
+    include ':capacitor-local-notifications'
+    project(':capacitor-local-notifications').projectDir = directory
+}

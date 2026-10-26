@@ -29,7 +29,7 @@
     <nav class="mz-page-header feedbackNav" aria-label="Page navigation">
       <div class="mz-nav-stack">
         <a class="mz-back-link" data-mz-back href="./start_page1.html">Back</a>
-        <a class="mz-secondary-link" data-mz-annie-back hidden href="https://memphis-zoo-mcp.onrender.com/moxie/">Back to Annie</a>
+
       </div>
     </nav>
 
@@ -64,6 +64,17 @@
           <span><strong>This is blocking work</strong><span>Use this only when the problem prevents someone from completing the job.</span></span>
         </label>
 
+        <div class="field" style="margin-top:15px">
+          <label>Screenshot or photo <span class="uxMuted">(optional)</span></label>
+          <input id="image-input" type="file" accept="image/*" hidden>
+          <div class="imageActions">
+            <button id="choose-image" class="uxButton compact" type="button">Add Image</button>
+            <button id="remove-image" class="uxButton compact" type="button" hidden>Remove</button>
+          </div>
+          <div id="image-status" class="uxStatus">No image selected.</div>
+          <div id="image-preview" class="imagePreview hidden"><img id="image-preview-img" alt="Selected image"><div><strong id="image-preview-name"></strong><div class="uxMuted">Ready to send with your feedback.</div></div></div>
+        </div>
+
         <div class="feedbackActions">
           <button id="send-feedback" class="uxButton primary" type="submit">Send Feedback</button>
           <div id="feedback-status" class="uxStatus" aria-live="polite"></div>
@@ -77,6 +88,7 @@
         <div class="feedbackInboxTools">
           <select id="feedback-inbox-status" class="uxSelect"><option value="new">New</option><option value="acknowledged">Acknowledged</option><option value="">All</option></select>
           <button id="feedback-inbox-refresh" class="uxButton compact" type="button">Refresh</button>
+          <button id="feedback-original-status" class="uxButton compact" type="button" hidden disabled>Check original action status</button>
         </div>
       </div>
       <div id="feedback-inbox-state" class="uxStatus" aria-live="polite"></div>
@@ -89,21 +101,31 @@
   <script>
   (() => {
     const API = 'https://memphis-zoo-mcp.onrender.com';
+    const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
     const MAX_AUTHORIZED_REQUEST_BYTES = 4 * 1024 * 1024;
     const REQUEST_SAFETY_BYTES = 64 * 1024;
     const MAX_FEEDBACK_REQUEST_BYTES = MAX_AUTHORIZED_REQUEST_BYTES - REQUEST_SAFETY_BYTES;
     const MAX_IMAGE_DATA_URL_BYTES = 3 * 1024 * 1024;
-    const state = { deviceId: '', hub: 'manager', operationId: '' };
+    const MAX_IMAGE_DIMENSION = 1920;
+    const state = { deviceId: '', hub: 'manager', image: null, operationId: '' };
     const els = {
       form: document.getElementById('feedback-form'),
       category: document.getElementById('category'),
       message: document.getElementById('message'),
       blocking: document.getElementById('blocking'),
+      imageInput: document.getElementById('image-input'),
+      chooseImage: document.getElementById('choose-image'),
+      removeImage: document.getElementById('remove-image'),
+      imageStatus: document.getElementById('image-status'),
+      preview: document.getElementById('image-preview'),
+      previewImage: document.getElementById('image-preview-img'),
+      previewName: document.getElementById('image-preview-name'),
       send: document.getElementById('send-feedback'),
       status: document.getElementById('feedback-status'),
       inbox: document.getElementById('feedback-inbox'),
       inboxStatus: document.getElementById('feedback-inbox-status'),
       inboxRefresh: document.getElementById('feedback-inbox-refresh'),
+      inboxCheck: document.getElementById('feedback-original-status'),
       inboxState: document.getElementById('feedback-inbox-state'),
       inboxList: document.getElementById('feedback-inbox-list'),
     };
@@ -145,48 +167,430 @@
       els.status.textContent = text || '';
       els.status.className = `uxStatus${kind ? ` ${kind}` : ''}`;
     }
+    function clearImage() {
+      state.image = null;
+      els.imageInput.value = '';
+      els.preview.classList.add('hidden');
+      els.previewImage.removeAttribute('src');
+      els.previewName.textContent = '';
+      els.removeImage.hidden = true;
+      els.imageStatus.textContent = 'No image selected.';
+    }
+    function fileToDataUrl(file) {
+      return new Promise((resolveFile, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolveFile(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read the selected image.'));
+        reader.readAsDataURL(file);
+      });
+    }
+    function decodeImage(file) {
+      return new Promise((resolveImage, reject) => {
+        const objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+        const finish = () => URL.revokeObjectURL(objectUrl);
+        image.onload = () => { finish(); resolveImage(image); };
+        image.onerror = () => { finish(); reject(new Error('The selected image could not be decoded.')); };
+        image.src = objectUrl;
+      });
+    }
+    function jpegDataUrl(image, width, height, quality) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const context = canvas.getContext('2d', { alpha: false });
+      if (!context) throw new Error('Image processing is unavailable on this device.');
+      context.fillStyle = '#fff'; context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      const value = canvas.toDataURL('image/jpeg', quality);
+      if (!value.startsWith('data:image/jpeg;base64,')) throw new Error('Image compression failed.');
+      return value;
+    }
+    function jpegName(value) {
+      const name = String(value || 'feedback-image').replace(/\.[^.]{1,10}$/u, '');
+      return `${name || 'feedback-image'}.jpg`;
+    }
+    async function prepareImage(file) {
+      const original = await fileToDataUrl(file);
+      if (encodedBytes(original) <= MAX_IMAGE_DATA_URL_BYTES) {
+        return { name: file.name || 'feedback-image', type: file.type || 'image/jpeg', dataUrl: original, optimized: false };
+      }
+      const image = await decodeImage(file);
+      const sourceWidth = Number(image.naturalWidth || image.width || 0);
+      const sourceHeight = Number(image.naturalHeight || image.height || 0);
+      if (!sourceWidth || !sourceHeight) throw new Error('The selected image has invalid dimensions.');
+      const initialScale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(sourceWidth, sourceHeight));
+      let width = Math.max(1, Math.round(sourceWidth * initialScale));
+      let height = Math.max(1, Math.round(sourceHeight * initialScale));
+      for (let resize = 0; resize < 6; resize += 1) {
+        for (const quality of [0.86, 0.76, 0.66, 0.56, 0.46]) {
+          const dataUrl = jpegDataUrl(image, width, height, quality);
+          if (encodedBytes(dataUrl) <= MAX_IMAGE_DATA_URL_BYTES) {
+            return { name: jpegName(file.name), type: 'image/jpeg', dataUrl, optimized: true };
+          }
+        }
+        width = Math.max(320, Math.round(width * 0.78));
+        height = Math.max(320, Math.round(height * 0.78));
+      }
+      throw new Error('The image could not be made small enough to send safely.');
+    }
+    async function chooseImage() {
+      const file = els.imageInput.files?.[0];
+      if (!file) return;
+      if (!String(file.type || '').startsWith('image/')) return setStatus('Choose an image file.', 'error');
+      if (file.size > MAX_IMAGE_BYTES) return setStatus('Image must be 5 MB or smaller.', 'error');
+      setStatus('Preparing image…', 'info');
+      let prepared;
+      try { prepared = await prepareImage(file); }
+      catch (error) { clearImage(); return setStatus(safe(error), 'error'); }
+      state.image = prepared;
+      els.previewImage.src = prepared.dataUrl;
+      els.previewName.textContent = state.image.name;
+      els.preview.classList.remove('hidden');
+      els.removeImage.hidden = false;
+      els.imageStatus.textContent = prepared.optimized ? 'Image optimized and ready.' : 'Image ready.';
+      setStatus('');
+    }
     function submittedBy() {
       const session = window.MemphisAuth?.readSession?.();
       return String(session?.manager_display_name || '').trim();
     }
     function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character])); }
-    function formatDate(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || '') : date.toLocaleString(); }
+    function formatDate(value) {
+      if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value))return 'Date unavailable';
+      const date=new Date(value);return Number.isNaN(date.getTime())?'Date unavailable':date.toLocaleString();
+    }
     async function managerHeaders() { return window.MemphisAuth?.opsManagerAuthHeaders?.() || {}; }
+    const TRIAGE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const TRIAGE_HASH = /^[a-f0-9]{64}$/;
+    const TRIAGE_ORIGINAL_KEY='memphis.feedback.triage.original.v1';
+    const inboxState = {actor:null,link:null,rows:new Map(),generation:0,pending:null,originalGuard:null,guardFault:false,busy:false,statusRead:null,reads:new Set(),images:new Set(),imageByItem:new Map(),downloads:new Map(),controls:null,timer:null,stopped:false};
+    function originalTriageRecord(raw) {
+      if(typeof raw!=='string'||raw.length>2048)throw Error('Original triage guard unavailable.');
+      const r=JSON.parse(raw),keys=['schema','feedback_id','encoded'];
+      if(!r||Array.isArray(r)||Object.keys(r).length!==keys.length||!keys.every(k=>Object.hasOwn(r,k))
+        ||r.schema!=='custodial.feedback-triage-original-guard.v1'||typeof r.feedback_id!=='string'||!TRIAGE_UUID.test(r.feedback_id)
+        ||typeof r.encoded!=='string'||!r.encoded||r.encoded.length>1024||JSON.stringify(r)!==raw)throw Error('Original triage guard unavailable.');
+      const b=JSON.parse(r.encoded),bodyKeys=['request_id','status','expected_version','expected_manager_id','expected_credential_id'];
+      if(!b||Array.isArray(b)||Object.keys(b).length!==bodyKeys.length||!bodyKeys.every(k=>Object.hasOwn(b,k))
+        ||!['acknowledged','resolved','closed'].includes(b.status)||typeof b.expected_version!=='string'||!TRIAGE_HASH.test(b.expected_version)
+        ||!['request_id','expected_manager_id','expected_credential_id'].every(k=>typeof b[k]==='string'&&TRIAGE_UUID.test(b[k]))
+        ||JSON.stringify(b)!==r.encoded)throw Error('Original triage guard unavailable.');
+      return {record:Object.freeze(r),body:Object.freeze(b)};
+    }
+    function originalTriageBlocked() {return inboxState.guardFault||!!inboxState.originalGuard;}
+    function originalTriageMessage() {
+      if(inboxState.guardFault||['INVALID','UNAVAILABLE'].includes(inboxState.originalGuard?.kind))
+        return inboxState.pending?.phase==='ACCEPTED'?'Triage accepted. Changes are disabled.':'Triage guard unavailable. Changes are disabled.';
+      if(inboxState.originalGuard?.kind==='FOREIGN')return 'Triage is locked to an earlier sign-in. Changes are disabled.';
+      if(inboxState.pending?.restored)return 'Unconfirmed triage retained. Changes are disabled; do not repeat.';
+      return '';
+    }
+    function inspectOriginalTriage(actor,restore=false) {
+      let raw;try{raw=window.sessionStorage.getItem(TRIAGE_ORIGINAL_KEY);}catch{inboxState.guardFault=true;return true;}
+      if(inboxState.originalGuard){if(raw!==inboxState.originalGuard.raw)inboxState.guardFault=true;return true;}
+      if(inboxState.guardFault)return true;
+      if(raw===null)return false;
+      let parsed;try{parsed=originalTriageRecord(raw);}catch{inboxState.originalGuard={kind:'INVALID',raw};return true;}
+      const same=parsed.body.expected_manager_id===actor.manager_id&&parsed.body.expected_credential_id===actor.credential_id;
+      inboxState.originalGuard={kind:same?'RETAINED':'FOREIGN',raw,...parsed};
+      if(restore&&same&&!inboxState.pending)inboxState.pending={feedbackId:parsed.record.feedback_id,body:parsed.body,encoded:parsed.record.encoded,
+        sent:true,phase:'OUTCOME_UNKNOWN',restored:true,guardRaw:raw};
+      return true;
+    }
+    function retainOriginalTriage(command) {
+      const actor=inboxGuard(true);if(inspectOriginalTriage(actor))throw Error('Original triage guard blocks new commands.');
+      const raw=JSON.stringify({schema:'custodial.feedback-triage-original-guard.v1',feedback_id:command.feedbackId,encoded:command.encoded});
+      const parsed=originalTriageRecord(raw);
+      try{window.sessionStorage.setItem(TRIAGE_ORIGINAL_KEY,raw);if(window.sessionStorage.getItem(TRIAGE_ORIGINAL_KEY)!==raw)throw Error('Original triage guard unavailable.');}
+      catch(error){inboxState.guardFault=true;throw error;}
+      inboxState.originalGuard={kind:'RETAINED',raw,...parsed};command.guardRaw=raw;
+    }
+    function releaseOriginalTriage(command) {
+      const actor=inboxGuard(true);
+      if(command.restored||!command.sent||inboxState.guardFault||!command.guardRaw
+        ||actor.manager_id!==command.body.expected_manager_id||actor.credential_id!==command.body.expected_credential_id
+        ||inboxState.originalGuard?.raw!==command.guardRaw){inboxState.guardFault=true;return false;}
+      try{
+        if(window.sessionStorage.getItem(TRIAGE_ORIGINAL_KEY)!==command.guardRaw)throw Error('Original triage guard changed.');
+        window.sessionStorage.removeItem(TRIAGE_ORIGINAL_KEY);
+        if(window.sessionStorage.getItem(TRIAGE_ORIGINAL_KEY)!==null)throw Error('Original triage guard changed.');
+        inboxState.originalGuard=null;return true;
+      }catch{inboxState.guardFault=true;return false;}
+    }
+    function feedbackLink() {
+      const values=new URL(location.href).searchParams.getAll('feedback');
+      return {pin:JSON.stringify(values),id:values.length===1&&TRIAGE_UUID.test(values[0])?values[0].toLowerCase():null,
+        invalid:values.length>0&&(values.length!==1||!TRIAGE_UUID.test(values[0]))};
+    }
+    function inboxActor() {
+      const s=window.MemphisAuth?.readSession?.(),p=s?.permissions;
+      if(state.hub!=='manager'||isNativeCustodialAuthority()||s?.role!=='ops_manager'||!TRIAGE_UUID.test(s.manager_id||'')
+        ||!TRIAGE_UUID.test(s.credential_id||'')||typeof s.token!=='string'||!s.token||typeof s.device_id!=='string'||!s.device_id
+        ||!(Date.parse(s.expires_at)>Date.now())||p?.schema!=='custodial.manager-permissions.v1'||p.read!==true)throw Error('Current named-manager access is unavailable.');
+      return {manager_id:s.manager_id,credential_id:s.credential_id,device_id:s.device_id,token:s.token,expires_at:s.expires_at,
+        write:s.read_only===false&&s.access_level!=='read_only'&&p.owner===true};
+    }
+    function sameInboxActor(a,b) {return !!a&&!!b&&Object.keys(a).every(k=>a[k]===b[k]);}
+    function stopInbox() {
+      inboxState.stopped=true;inboxState.generation++;inboxState.rows.clear();
+      inboxState.controls?.();inboxState.controls=null;
+      for(const a of inboxState.reads)a.abort();inboxState.reads.clear();
+      for(const u of inboxState.images)URL.revokeObjectURL(u);inboxState.images.clear();inboxState.imageByItem.clear();inboxState.downloads.clear();
+      if(inboxState.timer!==null)window.clearInterval(inboxState.timer);inboxState.timer=null;
+      els.inboxList.innerHTML='';els.inboxRefresh.disabled=true;els.inboxStatus.disabled=true;
+      els.inboxCheck.hidden=els.inboxCheck.disabled=true;
+      els.inboxState.textContent=inboxState.pending?.sent?'Access changed. Triage outcome unconfirmed. Do not repeat it.':'Access changed. Sign in again.';
+    }
+    function inboxGuard(write=false) {
+      try {const actor=inboxActor();if(inboxState.stopped||!sameInboxActor(inboxState.actor,actor)||write&&!actor.write
+        ||inboxState.link&&feedbackLink().pin!==inboxState.link.pin)throw Error('Manager/session or linked feedback changed.');return actor;}
+      catch(error){stopInbox();throw error;}
+    }
+    async function inboxHeaders(actor,write=false) {
+      inboxGuard(write);
+      await window.MemphisAuth.requireOpsManagerSession({accessLevel:write?'full_access':'read_only',redirect:false,interactive:false,throwOnFailure:true});
+      inboxGuard(write);
+      const headers=await managerHeaders();inboxGuard(write);
+      if(headers.Authorization!==`Bearer ${actor.token}`||headers['X-Device-Id']!==actor.device_id)throw Error('Unconfirmed current manager headers.');
+      return headers;
+    }
+    function triageActionAllowed(row,status) {
+      return row&&TRIAGE_HASH.test(row.triage_version||'')&&(status==='acknowledged'&&row.status==='new'
+        ||status==='resolved'&&['new','acknowledged'].includes(row.status)||status==='closed'&&row.status==='resolved');
+    }
+    function disableTriageButtons() {
+      for(const b of els.inboxList.querySelectorAll('button[data-action]:not([data-action="image"])'))b.disabled=true;
+    }
+    function originalStatusCommand(actor) {
+      inspectOriginalTriage(actor);
+      const command=inboxState.pending,guard=inboxState.originalGuard;
+      if(!actor.write||inboxState.guardFault||guard?.kind!=='RETAINED'||!command?.sent||command.phase!=='OUTCOME_UNKNOWN'
+        ||command.guardRaw!==guard.raw||command.feedbackId!==guard.record.feedback_id||command.encoded!==guard.record.encoded
+        ||JSON.stringify(command.body)!==command.encoded||actor.manager_id!==command.body.expected_manager_id
+        ||actor.credential_id!==command.body.expected_credential_id)return null;
+      return command;
+    }
+    function syncOriginalStatusControl() {
+      let available=false;
+      if(!inboxState.stopped&&inboxState.actor)try{available=!!originalStatusCommand(inboxGuard());}catch{}
+      els.inboxCheck.hidden=!available;els.inboxCheck.disabled=!available||!!inboxState.statusRead||inboxState.busy;
+    }
+    function guardOriginalStatus(check) {
+      const actor=inboxGuard(true);
+      if(!sameInboxActor(check.actor,actor)||inboxState.statusRead!==check||check.abort.signal.aborted
+        ||inboxState.generation!==check.generation||originalStatusCommand(actor)!==check.command
+        ||inboxState.originalGuard!==check.guard||check.command.guardRaw!==check.raw)throw Error('Original status check changed.');
+    }
+    function exactTriageAcceptedAt(value) {
+      if(typeof value!=='string'||value.length>32)return false;
+      const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(?:Z|[+-](\d{2}):(\d{2}))$/.exec(value);
+      if(!m||m[0]!==value)return false;
+      const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
+      const leap=year%4===0&&(year%100!==0||year%400===0);
+      const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+      return year>=1&&month>=1&&month<=12&&day>=1&&day<=days[month-1]
+        &&Number(m[4])<=23&&Number(m[5])<=59&&Number(m[6])<=59
+        &&(m[8]===undefined||Number(m[8])<=23&&Number(m[9])<=59);
+    }
+    function exactOriginalStatus(payload,command) {
+      const closed=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(value)
+        &&Object.keys(value).length===keys.length&&keys.every(k=>Object.hasOwn(value,k));
+      if(!closed(payload,['ok','outcome','retry_safe','command','receipt'])||payload.ok!==true||payload.outcome!=='APPLIED'||payload.retry_safe!==false)return false;
+      const c=payload.command,b=command.body,r=payload.receipt;
+      if(!closed(c,['request_id','feedback_id','status','expected_version','expected_manager_id','expected_credential_id'])
+        ||c.feedback_id!==command.feedbackId||!Object.keys(b).every(k=>c[k]===b[k]))return false;
+      return closed(r,['request_id','feedback_id','status','triage_version','actor_manager_id','actor_credential_id','accepted_at'])
+        &&r.request_id===b.request_id&&r.feedback_id===command.feedbackId&&r.status===b.status
+        &&r.actor_manager_id===b.expected_manager_id&&r.actor_credential_id===b.expected_credential_id
+        &&typeof r.triage_version==='string'&&TRIAGE_HASH.test(r.triage_version)&&r.triage_version!==b.expected_version
+        &&exactTriageAcceptedAt(r.accepted_at);
+    }
+    async function checkOriginalTriageStatus() {
+      let check;
+      try {
+        const actor=inboxGuard(true),command=originalStatusCommand(actor);
+        if(!command||inboxState.statusRead||inboxState.busy)return;
+        check={actor,command,guard:inboxState.originalGuard,raw:command.guardRaw,generation:inboxState.generation,abort:new AbortController()};
+        inboxState.statusRead=check;inboxState.reads.add(check.abort);syncOriginalStatusControl();
+        els.inboxState.textContent='Checking the retained original action only…';
+        const headers=await inboxHeaders(actor,true);guardOriginalStatus(check);
+        // This is a receipt READ. A missing reader must never fall back to the writer.
+        const response=await fetch(`${API}/dashboard-api/system-feedback/${encodeURIComponent(command.feedbackId)}/triage-status`,{
+          method:'POST',credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json',...headers},body:command.encoded,signal:check.abort.signal});
+        guardOriginalStatus(check);
+        const payload=await response.json().catch(()=>null);guardOriginalStatus(check);
+        if(!response.ok||!exactOriginalStatus(payload,command))throw Error('Original receipt unavailable.');
+        try{
+          if(window.sessionStorage.getItem(TRIAGE_ORIGINAL_KEY)!==check.raw)throw Error('Original guard changed.');
+          guardOriginalStatus(check);
+          window.sessionStorage.removeItem(TRIAGE_ORIGINAL_KEY);
+          if(window.sessionStorage.getItem(TRIAGE_ORIGINAL_KEY)!==null)throw Error('Original guard removal unconfirmed.');
+        }catch(error){inboxState.guardFault=true;throw error;}
+        inboxState.originalGuard=null;command.phase='ACCEPTED';command.receipt=payload.receipt;
+        els.inboxState.textContent='Original action receipt verified. Refreshing…';
+        await loadInbox();
+      }catch{
+        if(check&&!inboxState.stopped&&inboxState.generation===check.generation)
+          els.inboxState.textContent='Original action unconfirmed. Receipt reader unavailable, denied or unmatched. Changes remain locked; do not resend.';
+      }finally{
+        if(check){inboxState.reads.delete(check.abort);if(inboxState.statusRead===check)inboxState.statusRead=null;}
+        syncOriginalStatusControl();
+      }
+    }
+    function renderInbox(rows) {
+      const actor=inboxGuard();inspectOriginalTriage(actor);
+      const canWrite=actor.write&&!originalTriageBlocked()&&!inboxState.pending&&!inboxState.busy;
+      els.inboxList.innerHTML=rows.length?rows.map(row=>{
+        const valid=TRIAGE_UUID.test(row.id||'')&&TRIAGE_HASH.test(row.triage_version||''),actions=[];
+        if(row.metadata_json?.image_attachment&&TRIAGE_UUID.test(row.id||''))actions.push('<button class="uxButton compact" type="button" data-action="image">View image</button>');
+        if(canWrite&&valid)for(const [status,label]of [['acknowledged','Acknowledge'],['resolved','Resolve'],['closed','Close']])
+          if(triageActionAllowed(row,status))actions.push(`<button class="uxButton compact" type="button" data-action="${status}">${label}</button>`);
+        const note=!inboxState.actor.write?'Read-only manager view.':!valid?'Version unavailable. Refresh.':originalTriageMessage()|| (inboxState.pending?'Triage outcome pending.':'');
+        return `<article class="feedbackItem" data-feedback-id="${escapeHtml(row.id)}" data-triage-version="${valid?row.triage_version:''}"><h3>${escapeHtml(row.summary||row.category||'Program feedback')}</h3><div class="feedbackMeta">${escapeHtml(row.priority||'normal')} · ${escapeHtml(row.status||'new')} · ${escapeHtml(formatDate(row.created_at))}</div><div>${escapeHtml(row.message||'')}</div><div class="feedbackItemActions">${actions.join('')}</div><div class="uxStatus">${escapeHtml(note)}</div><div class="uxStatus" data-image-state aria-live="polite"></div><div data-image-slot></div></article>`;
+      }).join(''):'<div class="uxStatus">No feedback in this view.</div>';
+    }
     async function loadInbox() {
-      if (state.hub !== 'manager' || els.inbox.hidden) return;
+      if (state.hub !== 'manager' || els.inbox.hidden || inboxState.stopped) return;
+      if(inboxState.link?.invalid){inboxState.rows.clear();els.inboxList.innerHTML='';els.inboxStatus.disabled=els.inboxRefresh.disabled=true;
+        els.inboxState.textContent='Invalid feedback link.';return;}
+      let actor;try{actor=inboxGuard();}catch{return;}
+      inspectOriginalTriage(actor);
+      const mine=++inboxState.generation,filter=els.inboxStatus.value,abort=new AbortController();
+      const linkedId=inboxState.link?.id;
+      for(const a of inboxState.reads)a.abort();inboxState.reads.clear();inboxState.reads.add(abort);
+      inboxState.rows.clear();disableTriageButtons();
+      for(const u of inboxState.images)URL.revokeObjectURL(u);inboxState.images.clear();inboxState.imageByItem.clear();inboxState.downloads.clear();els.inboxList.innerHTML='';
       els.inboxState.textContent = 'Refreshing…';
       try {
-        const url = new URL(`${API}/dashboard-api/system-feedback`);
-        if (els.inboxStatus.value) url.searchParams.set('status', els.inboxStatus.value);
-        const response = await fetch(url, { cache:'no-store', credentials:'include', headers:await managerHeaders() });
+        const url = new URL(`${API}/dashboard-api/system-feedback${linkedId?'/'+encodeURIComponent(linkedId):''}`);
+        if (!linkedId&&filter) url.searchParams.set('status', filter);
+        const headers=await inboxHeaders(actor);
+        if(mine!==inboxState.generation||filter!==els.inboxStatus.value||abort.signal.aborted)return;
+        const response = await fetch(url, { cache:'no-store', credentials:'include', headers,signal:abort.signal });
         const payload = await response.json().catch(() => null);
+        inboxGuard();if(mine!==inboxState.generation||filter!==els.inboxStatus.value||abort.signal.aborted)return;
+        if(linkedId&&[401,403].includes(response.status)){stopInbox();els.inboxState.textContent=inboxState.pending?
+          'Feedback access denied. Triage outcome unconfirmed. Do not repeat it.':
+          'Feedback access denied. Sign in again.';return;}
+        if(linkedId&&response.status===404){const error=Error('Feedback not found. Check the link.');error.linkMissing=true;throw error;}
         if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
-        const rows = Array.isArray(payload.data) ? payload.data : [];
-        els.inboxState.textContent = `${rows.length} item${rows.length === 1 ? '' : 's'}`;
-        els.inboxList.innerHTML = rows.length ? rows.map((row) => `<article class="feedbackItem" data-feedback-id="${escapeHtml(row.id)}"><h3>${escapeHtml(row.summary || row.category || 'Program feedback')}</h3><div class="feedbackMeta">${escapeHtml(row.priority || 'normal')} · ${escapeHtml(row.status || 'new')} · ${escapeHtml(formatDate(row.created_at))}</div><div>${escapeHtml(row.message || '')}</div><div class="feedbackItemActions">${row.metadata_json?.image_attachment ? '<button class="uxButton compact" type="button" data-action="image">View image</button>' : ''}${row.status === 'new' ? '<button class="uxButton compact" type="button" data-action="acknowledged">Acknowledge</button>' : ''}${!['resolved','closed'].includes(row.status) ? '<button class="uxButton compact primary" type="button" data-action="resolved">Resolve</button>' : ''}</div><div data-image-slot></div></article>`).join('') : '<div class="uxStatus">No feedback in this view.</div>';
-      } catch (error) { els.inboxState.textContent = safe(error); els.inboxList.innerHTML = ''; }
+        let rows;
+        if(linkedId){const row=payload.data;if(!row||typeof row!=='object'||Array.isArray(row)||!TRIAGE_UUID.test(row.id||'')||row.id.toLowerCase()!==linkedId)throw Error('Exact linked feedback identity unavailable.');
+          rows=[{...row,id:linkedId}];}
+        else{if(!Array.isArray(payload.data)||payload.data.length>500)throw Error('Feedback rows unavailable.');rows=payload.data;}
+        const seen=new Set();for(const row of rows){if(!row||typeof row!=='object'||seen.has(row.id))throw Error('Feedback identity unavailable.');seen.add(row.id);
+          if(TRIAGE_UUID.test(row.id||''))inboxState.rows.set(row.id,{id:row.id,status:row.status,triage_version:row.triage_version,generation:mine});}
+        if(!originalTriageBlocked()&&['REJECTED','NOT_SENT'].includes(inboxState.pending?.phase))inboxState.pending=null;
+        if(!originalTriageBlocked()&&inboxState.pending?.phase==='ACCEPTED'){
+          const acceptedRow=rows.find(row=>row.id===inboxState.pending.feedbackId),receipt=inboxState.pending.receipt;
+          if(!acceptedRow||acceptedRow.status===receipt.status&&acceptedRow.triage_version===receipt.triage_version)inboxState.pending=null;
+        }
+        renderInbox(rows);
+        els.inboxState.textContent=originalTriageMessage()||(inboxState.pending?.phase==='ACCEPTED'?'Triage receipt accepted; refreshed version unconfirmed. Refresh.':inboxState.pending?'Triage outcome unconfirmed. Do not repeat it.':`${linkedId?'Exact linked feedback':`${rows.length} item${rows.length === 1 ? '' : 's'}`}${actor.write?'':' · Read-only'}`);
+      } catch (error) {if(mine===inboxState.generation&&!inboxState.stopped){inboxState.rows.clear();els.inboxState.textContent=originalTriageMessage()||(inboxState.pending?'Triage outcome unconfirmed. Do not repeat it.':error.linkMissing?error.message:'Feedback unavailable. Refresh.');els.inboxList.innerHTML='';}}
+      finally{inboxState.reads.delete(abort);syncOriginalStatusControl();}
     }
-    async function updateInboxItem(feedbackId, status) {
-      const response = await fetch(`${API}/dashboard-api/system-feedback/${encodeURIComponent(feedbackId)}/status`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json', ...(await managerHeaders())}, body:JSON.stringify({status}) });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
-      await loadInbox();
+    function exactTriageReceipt(payload,command) {
+      const r=payload?.receipt,b=command.body,keys=['request_id','feedback_id','status','triage_version','actor_manager_id','actor_credential_id','accepted_at'];
+      return payload?.ok===true&&typeof payload.replayed==='boolean'&&r&&Object.keys(r).length===keys.length&&keys.every(k=>Object.hasOwn(r,k))
+        &&r.request_id===b.request_id&&r.feedback_id===command.feedbackId&&r.status===b.status&&r.actor_manager_id===b.expected_manager_id
+        &&r.actor_credential_id===b.expected_credential_id&&TRIAGE_HASH.test(r.triage_version||'')&&r.triage_version!==b.expected_version
+        &&exactTriageAcceptedAt(r.accepted_at);
+    }
+    async function updateInboxItem(feedbackId,status,expectedVersion) {
+      const actor=inboxGuard(true),row=inboxState.rows.get(feedbackId);
+      if(inspectOriginalTriage(actor)){els.inboxState.textContent=originalTriageMessage()||'Triage outcome unconfirmed. Do not repeat it.';disableTriageButtons();throw Error('Original triage guard blocks new commands.');}
+      if(inboxState.busy||inboxState.pending)throw Error('Original triage request must be resolved before another action.');
+      if(!TRIAGE_UUID.test(feedbackId||'')||row?.triage_version!==expectedVersion||row.generation!==inboxState.generation||!triageActionAllowed(row,status))throw Error('Displayed feedback/version is stale. Refresh and review before acting.');
+      const requestId=crypto.randomUUID();if(!TRIAGE_UUID.test(requestId))throw Error('Original request identity unavailable.');
+      const body=Object.freeze({request_id:requestId,status,expected_version:expectedVersion,expected_manager_id:actor.manager_id,expected_credential_id:actor.credential_id});
+      const command={feedbackId,body,encoded:JSON.stringify(body),actor,generation:row.generation,sent:false,phase:'PREPARING'};
+      inboxState.pending=command;inboxState.busy=true;disableTriageButtons();els.inboxRefresh.disabled=els.inboxStatus.disabled=true;
+      els.inboxState.textContent='Checking access…';
+      try {
+        const headers=await inboxHeaders(actor,true);inboxGuard(true);
+        const current=inboxState.rows.get(feedbackId);
+        if(inboxState.pending!==command||current?.triage_version!==expectedVersion||current.generation!==command.generation||inboxState.generation!==command.generation)throw Error('Displayed feedback changed before submission.');
+        retainOriginalTriage(command);
+        command.sent=true;command.phase='PENDING';
+        const response=await fetch(`${API}/dashboard-api/system-feedback/${encodeURIComponent(feedbackId)}/status`,{method:'POST',credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json',...headers},body:command.encoded});
+        const payload=await response.json().catch(()=>null);inboxGuard(true);
+        if(inboxState.pending!==command||inboxState.generation!==command.generation)throw Error('Original displayed feedback changed while the command was awaited.');
+        if(!response.ok||payload?.ok!==true){
+          if(payload?.command_rejected===true&&[400,401,403,404,409,422].includes(response.status)){command.phase='REJECTED';releaseOriginalTriage(command);}
+          throw Error('Exact triage receipt unavailable.');
+        }
+        if(!exactTriageReceipt(payload,command))throw Error('Exact triage receipt unavailable.');
+        command.phase='ACCEPTED';command.receipt=payload.receipt;
+        releaseOriginalTriage(command);
+        inboxState.busy=false;
+        els.inboxState.textContent='Triage accepted. Refreshing…';
+        await loadInbox();
+      }catch(error){
+        if(!command.sent)command.phase='NOT_SENT';else if(command.phase!=='REJECTED'&&command.phase!=='ACCEPTED')command.phase='OUTCOME_UNKNOWN';
+        if(!inboxState.stopped)els.inboxState.textContent=originalTriageMessage()||(command.phase==='REJECTED'?'Triage rejected or stale. Refresh and review.':command.phase==='NOT_SENT'?'Not sent. Refresh and review.':'Triage outcome unconfirmed. Do not repeat it.');
+        throw error;
+      }finally{inboxState.busy=false;if(!inboxState.stopped){els.inboxRefresh.disabled=false;els.inboxStatus.disabled=!!inboxState.link?.id;}syncOriginalStatusControl();}
     }
     async function loadInboxImage(article, feedbackId) {
-      const response = await fetch(`${API}/feedback-api/image/${encodeURIComponent(feedbackId)}`, { credentials:'include', headers:await managerHeaders() });
-      if (!response.ok) throw new Error(`Image HTTP ${response.status}`);
-      const objectUrl = URL.createObjectURL(await response.blob());
-      const slot = article.querySelector('[data-image-slot]');
-      slot.innerHTML = `<img class="feedbackImage" alt="Feedback attachment" src="${objectUrl}">`;
+      const actor=inboxGuard(),mine=inboxState.generation;if(!inboxState.rows.has(feedbackId))throw Error('Current feedback identity unavailable.');
+      if(inboxState.downloads.has(feedbackId))return;
+      const slot=article.querySelector('[data-image-slot]'),status=article.querySelector('[data-image-state]'),abort=new AbortController();
+      const download={article,abort};inboxState.downloads.set(feedbackId,download);inboxState.reads.add(abort);
+      const current=()=>{inboxGuard();return mine===inboxState.generation&&!abort.signal.aborted&&inboxState.rows.has(feedbackId)&&inboxState.downloads.get(feedbackId)===download;};
+      const clearImage=()=>{const previous=inboxState.imageByItem.get(feedbackId);if(previous){URL.revokeObjectURL(previous);inboxState.images.delete(previous);inboxState.imageByItem.delete(feedbackId);}slot.innerHTML='';};
+      status.textContent='Loading image…';
+      try{
+        const headers=await inboxHeaders(actor);if(!current())return;
+        const response=await fetch(`${API}/feedback-api/image/${encodeURIComponent(feedbackId)}`,{credentials:'include',cache:'no-store',headers,signal:abort.signal});
+        if(!current())return;
+        if([401,403].includes(response.status)){stopInbox();els.inboxState.textContent=inboxState.pending?'Image access denied. Original triage outcome is unconfirmed; do not repeat it.':'Image access denied. Sign in again.';return;}
+        if(!response.ok){clearImage();status.textContent=response.status===404?'Image unavailable.':'Could not load image. Try again.';return;}
+        const blob=await response.blob();if(!current())return;
+        clearImage();const objectUrl=URL.createObjectURL(blob);inboxState.images.add(objectUrl);inboxState.imageByItem.set(feedbackId,objectUrl);
+        slot.innerHTML=`<img class="feedbackImage" alt="Feedback attachment" src="${objectUrl}">`;status.textContent='';
+        const image=slot.querySelector('img');if(image)image.addEventListener('error',()=>{
+          if(inboxState.stopped||mine!==inboxState.generation||inboxState.imageByItem.get(feedbackId)!==objectUrl)return;
+          clearImage();status.textContent='Image unavailable.';
+        },{once:true});
+      }catch{if(!inboxState.stopped&&mine===inboxState.generation&&!abort.signal.aborted){clearImage();status.textContent='Could not load image. Try again.';}}
+      finally{inboxState.reads.delete(abort);if(inboxState.downloads.get(feedbackId)===download)inboxState.downloads.delete(feedbackId);}
+    }
+    function bindInboxControls() {
+      if(inboxState.controls)return;
+      const click=async(event)=>{
+        const button=event.target.closest('button[data-action]');if(!button||button.disabled)return;
+        const article=button.closest('[data-feedback-id]'),feedbackId=article?.dataset.feedbackId;if(!feedbackId)return;
+        button.disabled=true;
+        try{if(button.dataset.action==='image')await loadInboxImage(article,feedbackId);else await updateInboxItem(feedbackId,button.dataset.action,article.dataset.triageVersion);}
+        catch{if(!inboxState.stopped&&!inboxState.pending)els.inboxState.textContent='Refresh feedback and review before acting.';}
+        finally{if(button.dataset.action==='image'&&!inboxState.stopped)button.disabled=false;}
+      };
+      els.inboxRefresh.addEventListener('click',loadInbox);els.inboxStatus.addEventListener('change',loadInbox);els.inboxList.addEventListener('click',click);
+      const canCheck=inboxState.actor.write;
+      if(canCheck)els.inboxCheck.addEventListener('click',checkOriginalTriageStatus);
+      inboxState.controls=()=>{els.inboxRefresh.removeEventListener('click',loadInbox);els.inboxStatus.removeEventListener('change',loadInbox);els.inboxList.removeEventListener('click',click);if(canCheck)els.inboxCheck.removeEventListener('click',checkOriginalTriageStatus);};
     }
     async function initManagerInbox() {
-      if (state.hub !== 'manager') return;
+      if (state.hub !== 'manager'||isNativeCustodialAuthority()) return;
+      inboxState.link=feedbackLink();
+      if(inboxState.link.invalid){els.inbox.hidden=false;await loadInbox();return;}
       try {
-        const session = await window.MemphisAuth?.requireOpsManagerSession?.({redirect:false,interactive:false,throwOnFailure:true});
-        if (!session) return;
+        const session = await window.MemphisAuth?.requireOpsManagerSession?.({accessLevel:'read_only',redirect:false,interactive:false,throwOnFailure:true});
+        if (!session) throw Error('Normal manager session unavailable.');
+        inboxState.actor=inboxActor();inboxState.stopped=false;
+        inspectOriginalTriage(inboxState.actor,true);
+        els.inboxStatus.disabled=!!inboxState.link.id||inboxState.link.invalid;
         els.inbox.hidden = false;
         await loadInbox();
-      } catch { els.inbox.hidden = true; }
+        if(inboxState.stopped||inboxState.link.invalid)return;
+        bindInboxControls();
+        inboxState.timer=window.setInterval(()=>{try{inboxGuard();}catch{}},1000);
+        window.addEventListener('pagehide',stopInbox,{once:true});
+        window.addEventListener('beforeunload',event=>{if(inboxState.pending?.sent&&inboxState.pending.phase!=='REJECTED'){event.preventDefault();event.returnValue='';}});
+        window.addEventListener('memphis:custodial-security-state',()=>{try{inboxGuard();}catch{}});
+        document.addEventListener('visibilitychange',()=>{if(document.hidden)stopInbox();});
+      } catch {if(inboxState.link.id){stopInbox();els.inbox.hidden=false;els.inboxState.textContent='Manager access required. Sign in again.';}else els.inbox.hidden=true;}
     }
     async function submit(event) {
       event.preventDefault();
@@ -211,10 +615,14 @@
           page_url: location.href,
           page_title: document.title,
         };
-        // New submissions are text-only; historical inbox images remain readable.
+        if (state.image) body.image_attachment = {
+          name: state.image.name,
+          type: state.image.type,
+          data_url: state.image.dataUrl,
+        };
         const serializedBody = JSON.stringify(body);
         if (!serializedBodyFits(serializedBody)) {
-          throw new Error('This feedback is too large to send safely. Shorten the message and try again.');
+          throw new Error('This feedback is too large to send safely. Remove the image and try again.');
         }
         const identityHeaders = state.hub === 'manager' ? await managerHeaders() : {};
         const response = await fetch(`${API}/feedback-api/submit`, {
@@ -227,8 +635,9 @@
         if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
         state.operationId = '';
         els.form.reset();
+        clearImage();
         window.MemphisUI?.markSaved?.(els.form);
-        setStatus('Received by the program. Thank you.', 'ok');
+        setStatus('Sent. Thank you.', 'ok');
       } catch (error) {
         setStatus(safe(error), 'error');
       } finally {
@@ -236,16 +645,9 @@
       }
     }
     els.form.addEventListener('submit', submit);
-    els.inboxRefresh.addEventListener('click', loadInbox);
-    els.inboxStatus.addEventListener('change', loadInbox);
-    els.inboxList.addEventListener('click', async (event) => {
-      const button = event.target.closest('button[data-action]'); if (!button) return;
-      const article = button.closest('[data-feedback-id]'); const feedbackId = article?.dataset.feedbackId; if (!feedbackId) return;
-      button.disabled = true;
-      try { if (button.dataset.action === 'image') await loadInboxImage(article, feedbackId); else await updateInboxItem(feedbackId, button.dataset.action); }
-      catch (error) { els.inboxState.textContent = safe(error); }
-      finally { button.disabled = false; }
-    });
+    els.chooseImage.addEventListener('click', () => els.imageInput.click());
+    els.imageInput.addEventListener('change', () => void chooseImage());
+    els.removeImage.addEventListener('click', clearImage);
     void resolve().then(() => initManagerInbox()).catch((error) => setStatus(safe(error), 'error'));
   })();
   </script>

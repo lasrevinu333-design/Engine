@@ -21,6 +21,91 @@ final class NativeAttestation {
 
     private NativeAttestation() {}
 
+    /** Purpose-separated native RAW inventory evidence. Not Start/Finish/time
+     * authority; no browser route accepts the context or a digest to be signed. */
+    static String protectedSnapshotSignature(NativeSeparationContext context,String bodyDigest,char[] credential)throws VaultFailure{
+        try{
+            String originalId=context.originalPrincipal().getString("credential_id");
+            requireStoredCredentialId(credential,originalId);
+            return hmac(credential,String.join("\n",NativeSeparationEvidence.VERSION,originalId,
+                canonicalHex(bodyDigest,NativeProtectedWorkSnapshot.FAILURE)));
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE,error);}
+    }
+
+    /** Only a closed SAME engine/current saved-record observation may supply
+     * this message. No caller body/digest, WebView signer, key or token getter. */
+    static String privateCustodyOwnerSignature(VaultEngine.NativePrivateCustodyOwnerProofObservation original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure("custodial_native_private_custody_owner_proof_refused");
+        requireStoredCredentialId(credential,original.credentialForFixedNativeSigner());
+        String result=hmac(credential,original.messageForFixedNativeSigner());
+        original.messageForFixedNativeSigner();return result;
+    }
+
+    /** Fixed purpose-separated exchange only. Closed SAME owner record chooses
+     * original body/nonce/time; no caller message, digest or general signer. */
+    static String privateCustodyExchangeSignature(VaultEngine.NativePrivateCustodyPreparedExchange original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure("custodial_native_private_custody_exchange_refused");
+        requireStoredCredentialId(credential,original.credentialForFixedPrivateCustodySigner());
+        String result=hmac(credential,original.messageForFixedPrivateCustodySigner());original.messageForFixedPrivateCustodySigner();return result;
+    }
+
+    /** Only the actual locked current-query birth may restore its original
+     * WRITE/QUERY purpose HMAC. Its private constructor and consumed live
+     * restoration owner, not a caller message/digest or validation flag, bind
+     * the same original bytes and credential on BOTH sides of HMAC. */
+    static String privateCustodyRestoredExchangeSignature(
+        VaultEngine.NativePrivateCustodyExchangeJournal.CurrentQueryDispatchBirth original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure("custodial_native_private_custody_exchange_refused");
+        original.requireFixedOriginalRestorationCredential(credential);
+        String message=original.messageForFixedOriginalRestorationSigner();
+        String result=hmac(credential,message);
+        if(!message.equals(original.messageForFixedOriginalRestorationSigner()))throw new VaultFailure("custodial_native_private_custody_exchange_refused");
+        original.requireFixedOriginalRestorationCredential(credential);return result;
+    }
+
+    /** Historical WRITE/QUERY HMAC verification inside the actual read-only
+     * preflight lock owner. No current outer request or signing mode exists. */
+    static String privateCustodyReadOnlyRestoredExchangeSignature(
+        VaultEngine.NativePrivateCustodyExchangeJournal.ReadOnlyQueryOriginalDataRestoration original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure("custodial_native_private_custody_exchange_refused");
+        original.requireFixedOriginalRestorationCredential(credential);
+        String message=original.messageForFixedOriginalRestorationSigner();
+        String result=hmac(credential,message);
+        if(!message.equals(original.messageForFixedOriginalRestorationSigner()))throw new VaultFailure("custodial_native_private_custody_exchange_refused");
+        original.requireFixedOriginalRestorationCredential(credential);return result;
+    }
+
+    /** Actual absent-only first WRITE/QUERY publication owner. No raw body,
+     * digest, caller timestamp or reusable successful verdict is accepted. */
+    static String privateCustodyFirstRequestSignature(
+        VaultEngine.NativePrivateCustodyExchangeJournal.FirstOriginalRequestPublication original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure("custodial_native_private_custody_exchange_refused");
+        original.requireFixedFirstRequestCredential(credential);
+        String message=original.messageForFixedFirstRequestSigner();String result=hmac(credential,message);
+        if(!message.equals(original.messageForFixedFirstRequestSigner()))throw new VaultFailure("custodial_native_private_custody_exchange_refused");
+        original.requireFixedFirstRequestCredential(credential);return result;
+    }
+
+    /** Only the closed same-issuer retained-original request chooses the
+     * purpose binding. No WebView body, digest or generic signer is accepted. */
+    static String originalInventoryAckRequestPurposeSignature(
+        VaultEngine.NativeOriginalInventoryAckRequestControl original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure(NativeRetainedAttempt.FAILURE);
+        requireStoredCredentialId(credential,original.credentialForFixedInventoryRequestSigner());
+        String result=hmac(credential,original.messageForFixedInventoryRequestSigner());
+        original.messageForFixedInventoryRequestSigner();return result;
+    }
+
+    /** Fixed private manifest-piece purpose. The Engine's closed actual
+     * original chooses piece/index/binding; no caller message/digest signer. */
+    static String originalInventoryManifestChunkPurposeSignature(
+        VaultEngine.NativeOriginalInventoryManifestChunk original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure(NativeRetainedAttempt.FAILURE);
+        requireStoredCredentialId(credential,original.credentialForFixedManifestSigner());
+        String result=hmac(credential,original.messageForFixedManifestSigner());
+        original.messageForFixedManifestSigner();return result;
+    }
+
     static Map<String, Object> offlineStart(
         String deviceId,
         String locationCode,

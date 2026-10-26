@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "custodial.forward-transition-admission-adapter.v1",
+  "title": "Custodial forward transition source-only admission DTO",
+  "description": "Closed inactive source metadata consumed by the normal verifier. It cannot select, admit, build, sign, install, or prove recovery.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_generation", "purpose", "fleet_promotion", "scope", "target_id", "installed_target", "candidate", "recovery", "retained_store_compatibility", "evidence_refs"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "policy_generation": {"type": "string", "minLength": 1},
+    "purpose": {"enum": ["source_compatibility_diagnostic", "operational_release", "build_preparation"]},
+    "fleet_promotion": {"const": false},
+    "scope": {"const": "one_explicit_target_only"},
+    "target_id": {"type": "string", "minLength": 1},
+    "installed_target": {"allOf": [{"$ref": "#/$defs/descriptor"}, {"$ref": "#/$defs/builtDescriptor"}]},
+    "candidate": {"$ref": "#/$defs/descriptor"},
+    "recovery": {"$ref": "#/$defs/descriptor"},
+    "retained_store_compatibility": {"type": "object"},
+    "evidence_refs": {"type": "object"}
+  },
+  "allOf": [{"if": {"properties": {"purpose": {"const": "build_preparation"}}}, "else": {"properties": {"candidate": {"$ref": "#/$defs/builtDescriptor"}, "recovery": {"$ref": "#/$defs/builtDescriptor"}}}}],
+  "$defs": {
+    "builtDescriptor": {"type": "object", "properties": {"artifact_sha256": {"$ref": "#/$defs/sha"}, "runtime_sha256": {"$ref": "#/$defs/sha"}}},
+    "optionalBuiltHash": {"anyOf": [{"$ref": "#/$defs/sha"}, {"type": "null"}]},
+    "sha": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "source": {"type": "object", "additionalProperties": false, "required": ["ref", "commit", "tree"], "properties": {"ref": {"type": "string", "pattern": "^refs/(heads|tags)/"}, "commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "tree": {"type": "string", "pattern": "^[a-f0-9]{40}$"}}},
+    "descriptor": {"type": "object", "additionalProperties": false, "required": ["version_code", "package_name", "signer_certificate_sha256", "signer_public_key_sha256", "source", "artifact_sha256", "schema_sha256", "native_sha256", "runtime_sha256"], "properties": {"version_code": {"type": "integer", "minimum": 1, "maximum": 2100000000}, "package_name": {"const": "org.memphiszoo.custodial"}, "signer_certificate_sha256": {"$ref": "#/$defs/sha"}, "signer_public_key_sha256": {"$ref": "#/$defs/sha"}, "source": {"$ref": "#/$defs/source"}, "artifact_sha256": {"$ref": "#/$defs/optionalBuiltHash"}, "schema_sha256": {"$ref": "#/$defs/sha"}, "native_sha256": {"$ref": "#/$defs/sha"}, "runtime_sha256": {"$ref": "#/$defs/optionalBuiltHash"}}}
+  }
+}

@@ -104,6 +104,15 @@ final class MemoryPersistence implements VaultPersistence {
 }
 
 final class TestCipher implements CredentialCipher {
+    private final int maximumCiphertextCharacters;
+    TestCipher(){this(16_384);}
+    /** Same synthetic base64/IV recipe as the existing receipt-store capacity
+     * fixture; only explicitly purpose-sized WORK fixtures opt in. */
+    TestCipher(int maximumCiphertextCharacters){
+        if(maximumCiphertextCharacters<16_384||maximumCiphertextCharacters>32*1024*1024)
+            throw new IllegalArgumentException("bounded_synthetic_cipher_required");
+        this.maximumCiphertextCharacters=maximumCiphertextCharacters;
+    }
     int destroyCalls;
     int failEncrypts;
     int failDecrypts;
@@ -118,7 +127,7 @@ final class TestCipher implements CredentialCipher {
             throw new VaultFailure("test_encrypt_failure");
         }
         String encoded = java.util.Base64.getEncoder().encodeToString(new String(cleartext).getBytes(StandardCharsets.UTF_8));
-        return new EncryptedSecret(encoded, "dGVzdC1pdi12Mg==");
+return new EncryptedSecret(encoded, "dGVzdC1pdi12Mg==",maximumCiphertextCharacters);
     }
 
     @Override
@@ -199,6 +208,11 @@ final class FakeLegacySource implements LegacyVaultSource {
     @Override
     public synchronized LegacyMaterial read() throws VaultFailure {
         return credential == null ? null : new LegacyMaterial(credential, binding, seal);
+    }
+
+    @Override
+    public synchronized void cleanupAfterRead(LegacyMaterial original) throws VaultFailure {
+        cleanup(); // synthetic fixture only; actual adapter binds exact read identity
     }
 
     @Override
@@ -307,7 +321,9 @@ final class FakeTransport implements EnrollmentTransport {
                     request.deviceId,
                     request.flow,
                     code,
-                    request.operationId + ".test-device-secret-" + request.deviceId
+                    request.operationId + "." + (Boolean.getBoolean("custodial.fixture.backend-admissible-credential")
+                        ? "SYNTHETIC_LONG_DEVICE_SECRET_SOURCE_OWNER_" + request.deviceId
+                        : "test-device-secret-" + request.deviceId)
                 );
                 operations.put(request.operationId, operation);
                 activeOperationByDevice.put(request.deviceId, request.operationId);

@@ -15,8 +15,9 @@ public final class CustodialNavigationPolicy {
         "/", "/app-shell.html", "/index.html", "/scan.html",
         "/employee-hub.html", "/start_page1.html",
         "/messages.html", "/messages-chatscope.html", "/thread.html",
-        "/employee-schedule.html", "/employee-events.html", "/events.html",
-        "/employee-feedback.html", "/system-feedback.html"
+        "/employee-schedule.html", "/events.html",
+        "/employee-feedback.html", "/system-feedback.html",
+        "/supply-coming-soon.html"
     ));
 
     private CustodialNavigationPolicy() {}

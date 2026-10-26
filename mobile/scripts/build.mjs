@@ -13,6 +13,9 @@ import {
 } from '../../scripts/refresh-frontend-release-manifest.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
 import { assertCustodialNavigationAssets } from './custodial-navigation-assets.mjs';
+import { custodialInitialReleaseHome, containCustodialPackagedHtml, deferCleaningFirstPackagedPages } from './custodial-initial-release-pages.mjs';
+import { removeManagerHeldReviewSurface } from './manager-held-review-edition-boundary.mjs';
+import {readCustodialBuildScope,isCleaningScope,scopeModule,scopeBuildRecord,SCOPE_ASSET} from './custodial-new-producer-scope-policy.mjs';
 
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repoRoot = resolve(mobileRoot, '..');
@@ -23,6 +26,8 @@ async function buildJavascript(options) {
   });
 }
 const edition = resolveAppEdition(process.env.MZ_APP_EDITION);
+let nativeOriginalBrowserBootstrap = null;
+let nativeRecurringApplicationBootstrap = null;
 const proofDist = `build/batch-0b-shell-browser/${edition}`;
 const configuredDist = process.env.MZ_MOBILE_DIST?.replaceAll('\\', '/');
 const browserTestFlag = process.env.MZ_CUSTODIAL_BROWSER_TEST;
@@ -86,6 +91,8 @@ if (!configuredDist) {
   throw new Error(`MZ_MOBILE_DIST may only target ${proofDist} or a private Custodial Codemagic admission runtime`);
 }
 const source = join(mobileRoot, 'src', edition);
+const newProducerScope=edition==='custodial'?readCustodialBuildScope(mobileRoot):null;
+let cleaningFirstScopeRecord=null;
 const sourceBuildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
 
 function parseSourceTreeEntries(records) {
@@ -178,8 +185,8 @@ const nativeBuildNumber = (() => {
 })();
 const rootPackage = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
 const custodialCompatibilityFiles = new Set([
+  'assets/supply_request_icon.svg',
   'Background1_optimized.webp',
-  'Event_Icon_Pink_ui.webp',
   'Event_Icon_ui.webp',
   'Header_ui.webp',
   'Zoo_Logo_ui.webp',
@@ -188,13 +195,18 @@ const custodialCompatibilityFiles = new Set([
   'chatscope-mobile-overrides.css',
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
-  'employee-events.html',
   'employee-feedback.html',
   'employee-hub.html',
   'employee-schedule.html',
   'events.html',
+  'events-view.js',
+  'events-view.css',
+  'operations-dashboard-data.js',
+  'operations-dashboard.css',
   'manager-ux.css',
   'memphis-alert-tone.wav',
+  'memphis-completion-taxonomy.js',
+  'memphis-recurring-schedule-target.js',
   'memphis-device-identity.js',
   'memphis-device-reminders.js',
   'memphis-gps.js',
@@ -205,6 +217,7 @@ const custodialCompatibilityFiles = new Set([
   'messages-chatscope.html',
   'messages.html',
   'scheduler_icon_ui.webp',
+  'supply-coming-soon.html',
   'system-feedback.html',
   'thread.html',
 ]);
@@ -222,6 +235,14 @@ const custodialProhibitedFiles = [
   'phone-assignments.html',
   'schedule-simple.html',
   'schedule-weekly.html',
+  'schedule-weekly.js',
+  'memphis-approved-schedule.js',
+  'memphis-scheduler-actions.js',
+  'staffing-management.html',
+  'manager-staffing-actions.mjs',
+  'manager-staffing-page.mjs',
+  'manager-staffing-runtime.mjs',
+  'memphis-ticket-actions.js',
   'schedule.html',
 ];
 
@@ -261,11 +282,30 @@ async function injectNativeScripts(bridgeFile) {
     if (!entry.isFile() || extname(entry.name).toLowerCase() !== '.html') continue;
     const path = join(dist, entry.name);
     let html = await readFile(path, 'utf8');
+    if (bridgeFile === 'memphis-custodial-bridge.js' && entry.name === 'events.html') {
+      html = removeManagerHeldReviewSurface(html);
+    }
     const authScript = /<script[^>]+src=["'][^"']*memphis-auth\.js[^"']*["'][^>]*><\/script>/i;
     if (bridgeFile === 'memphis-custodial-bridge.js' && authScript.test(html)) {
       html = html.replace(authScript, `<script src="./${bridgeFile}"></script>`);
     } else if (authScript.test(html) && !new RegExp(bridgeFile.replace('.', '\\.')).test(html)) {
       html = html.replace(authScript, `$&\n<script src="./${bridgeFile}"></script>`);
+    }
+    if (bridgeFile === 'memphis-custodial-bridge.js' && entry.name === 'employee-schedule.html') {
+      const source = await readFile(join(repoRoot, 'employee-schedule.html'), 'utf8');
+      const begin = source.indexOf("  (()=>{'use strict';");
+      const end = source.indexOf('\n  </script>', begin);
+      if (begin < 0 || end < begin) throw new Error('Exact employee owner source unavailable.');
+      const owner = source.slice(begin, end);
+      if (!owner.endsWith('})();') || html.split(owner).length !== 2) throw new Error('Duplicate or changed employee owner.');
+      html = html.replace(owner, '  // The bundled normal bridge owns this native document.');
+    }
+    // Shared Events is also a custodial destination. Keep the existing
+    // protected scan outbox running there without starting it on the web Map.
+    if (bridgeFile === 'memphis-custodial-bridge.js' && entry.name === 'events.html'
+        && !/src=["'][^"']*memphis-scan-sync\.js/.test(html)) {
+      html = html.replace(`<script src="./${bridgeFile}"></script>`,
+        `$&\n<script src="./memphis-scan-sync.js"></script>`);
     }
     if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
     if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
@@ -387,8 +427,7 @@ async function buildRoleShell() {
     }
   }
   if (edition === 'custodial') {
-    assertCustodialNavigationAssets(after, await readFile(join(mobileRoot,
-      'plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java'), 'utf8'));
+    assertCustodialNavigationAssets(after, await readFile(join(mobileRoot, 'plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java'),'utf8'));
     for (const path of custodialProhibitedFiles) {
       if (after.has(path)) throw new Error(`Custodial distribution contains prohibited manager file: ${path}`);
     }
@@ -457,14 +496,12 @@ if (edition === 'manager') {
   await injectNativeScripts('memphis-mobile-bridge.js');
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
   await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
-  await cp(join(source, 'moxie.html'), join(dist, 'moxie-mobile.html'));
   await cp(join(source, 'manager-access.html'), join(dist, 'manager-access.html'));
   await cp(join(source, 'notifications.html'), join(dist, 'notifications.html'));
   await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-manager.js'), target: ['es2022'] });
-  await buildJavascript({ entryPoints: [join(source, 'moxie.js')], bundle: true, format: 'iife', outfile: join(dist, 'moxie-mobile.js'), target: ['es2022'] });
   await buildJavascript({ entryPoints: [join(source, 'manager-access.js')], bundle: true, format: 'iife', outfile: join(dist, 'manager-access-mobile.js'), target: ['es2022'] });
   await buildJavascript({ entryPoints: [join(source, 'notifications.js')], bundle: true, format: 'iife', outfile: join(dist, 'notifications-mobile.js'), target: ['es2022'] });
-  for (const name of ['index.html', 'start_page1.html', 'moxie-mobile.html', 'manager-access.html', 'notifications.html']) {
+  for (const name of ['index.html', 'start_page1.html', 'manager-access.html', 'notifications.html']) {
     const path = join(dist, name); let html = await readFile(path, 'utf8');
     if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
     if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
@@ -485,6 +522,35 @@ if (edition === 'manager') {
     },
     dropLabels: custodialBrowserTestBuild ? [] : ['MZ_CUSTODIAL_BROWSER_TEST'],
   });
+  // Native injects this CJS asset inside its own document-start IIFE, with a
+  // local module object and transient private source stamps. Never add it as
+  // an HTML script/global factory or accept caller-supplied bootstrap bytes.
+  const originalBrowserAsset = 'memphis-custodial-original-browser.js';
+  await buildJavascript({
+    entryPoints: [join(source, 'native-original-browser-preparation.js')],
+    bundle: true, format: 'cjs', platform: 'browser',
+    outfile: join(dist, originalBrowserAsset), target: ['es2022'],
+    minify: !custodialBrowserTestBuild,
+  });
+  nativeOriginalBrowserBootstrap = {
+    schema: 'custodial.native-original-browser-bootstrap-asset.v1',
+    asset: originalBrowserAsset,
+    sha256: createHash('sha256').update(await readFile(join(dist, originalBrowserAsset))).digest('hex'),
+  };
+  const recurringApplicationAsset = 'memphis-custodial-recurring-application.js';
+  await buildJavascript({
+    entryPoints: [join(source, 'native-recurring-application.js')],
+    bundle: true, format: 'cjs', platform: 'browser',
+    outfile: join(dist, recurringApplicationAsset), target: ['es2022'],
+    minify: !custodialBrowserTestBuild,
+    define: { __MZ_CUSTODIAL_BROWSER_TEST__: JSON.stringify(custodialBrowserTestBuild) },
+    dropLabels: custodialBrowserTestBuild ? [] : ['MZ_CUSTODIAL_BROWSER_TEST'],
+  });
+  nativeRecurringApplicationBootstrap = {
+    schema: 'custodial.native-recurring-application-asset.v1',
+    asset: recurringApplicationAsset,
+    sha256: createHash('sha256').update(await readFile(join(dist, recurringApplicationAsset))).digest('hex'),
+  };
   await buildSharedNativeFiles();
   await injectNativeScripts('memphis-custodial-bridge.js');
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
@@ -492,6 +558,7 @@ if (edition === 'manager') {
   await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-custodial.js'), target: ['es2022'] });
   for (const name of ['index.html', 'start_page1.html']) {
     const path = join(dist, name); let html = await readFile(path, 'utf8');
+    html = custodialInitialReleaseHome(html,{cleaningFirst:isCleaningScope(newProducerScope)});
     if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
     if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
     await writeFile(path, html);
@@ -500,7 +567,6 @@ if (edition === 'manager') {
   // employee experience. Keep the filenames because deployed notifications and
   // bookmarks can still contain them, but do not package the generic manager UI.
   await cp(join(dist, 'index.html'), join(dist, 'employee-hub.html'));
-  await cp(join(dist, 'employee-events.html'), join(dist, 'events.html'));
   await cp(join(dist, 'employee-feedback.html'), join(dist, 'system-feedback.html'));
 } else {
   await cp(join(repoRoot, 'Zoo_Logo_ui.webp'), join(dist, 'Zoo_Logo_ui.webp'));
@@ -509,10 +575,16 @@ if (edition === 'manager') {
   await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-viewer.js'), target: ['es2022'] });
 }
 
+if(edition==='custodial'&&isCleaningScope(newProducerScope)){
+  cleaningFirstScopeRecord=scopeBuildRecord(newProducerScope,await readFile(join(dist,'memphis-custodial-bridge.js')));
+  await writeFile(join(dist,SCOPE_ASSET),JSON.stringify(cleaningFirstScopeRecord)+'\n');
+  await writeFile(join(dist,'custodial-new-producer-scope-source.txt'),scopeModule(newProducerScope.profile));
+}
 await writeFile(join(dist, 'memphis-build-identity.js'), `globalThis.MemphisMobileBuild=${JSON.stringify(nativeBuildNumber || '')};globalThis.MemphisMobileBuildIdentity=${JSON.stringify({
   edition,
   ...buildIdentity,
   native_build_number: nativeBuildNumber ? Number(nativeBuildNumber) : null,
+  ...(cleaningFirstScopeRecord?{cleaning_first_scope:cleaningFirstScopeRecord}:{}),
 })};\n`);
 for (const entry of await readdir(dist, { withFileTypes: true })) {
   if (!entry.isFile() || extname(entry.name).toLowerCase() !== '.html') continue;
@@ -528,10 +600,15 @@ await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
 await cp(join(mobileRoot, 'src/shared/field-guide.css'), join(dist, 'field-guide.css'));
 await installWebAppFiles();
 await buildRoleShell();
+if(edition==='custodial'&&isCleaningScope(newProducerScope))await deferCleaningFirstPackagedPages(dist);
+if (edition === 'custodial') await containCustodialPackagedHtml(dist);
 await writeFile(join(dist, 'build.json'), `${JSON.stringify({
   edition,
   ...buildIdentity,
   native_build_number: nativeBuildNumber ? Number(nativeBuildNumber) : null,
+  native_original_browser_bootstrap: nativeOriginalBrowserBootstrap,
+  native_recurring_application_bootstrap: nativeRecurringApplicationBootstrap,
+  ...(cleaningFirstScopeRecord?{cleaning_first_scope:cleaningFirstScopeRecord}:{}),
   messenger: edition === 'viewer' ? null : 'chatscope',
 }, null, 2)}\n`);
 const runtimeManifest = writeRuntimeAssetManifest({

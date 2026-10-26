@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {createScanOwnerVm,assertOwnerContextClosed} from './scan-owner-vm-context.mjs';
 
 // Actual worker/parser/settlement/scheduler; synthetic clock, queue and timers.
 // No browser, production service, native process or real IndexedDB is used.
@@ -12,33 +13,27 @@ const check=(actual,expected,label)=>{checks++;try{assert.deepEqual(actual,expec
 function fixture(){
   let time=clock,claimed=false,saved=null,applied=0,deleted=0;
   const row={id:7,type:'commit_workflow',payload:{p_answers:{work_result:'check_only',services_performed:[]}},
-    operation_id:'same-operation',semantic_fingerprint:'same-binding',security_generation:4,
+    operation_id:'98000000-0000-4000-8000-000000000007',semantic_fingerprint:'same-binding',security_generation:4,
     lease_owner:'worker',lease_token:'lease',retry_count:49,dead_letter:false,state:'processing'};
   const timers=new Map();let timerId=0;const schedules=[];
-  const context=vm.createContext({navigator:{onLine:true},
+  const context=createScanOwnerVm(source,['scheduleSync','actionCanRun','nextClaimableAction','finishClaim','parseRetryAfter','runWorker'],{navigator:{onLine:true},
     CONFIG:{STORE_NAME:'actions',MAX_RETRIES:50,POLL_MS:30000},Date,Math:Object.assign(Object.create(Math),{random:()=>0}),
     now:()=>time,safeText:value=>String(value??'').trim(),
     state:{workerId:'worker',deviceId:'device',startupRecoveryPending:false,db:{transaction(){
-      const tx={},request={result:row};tx.objectStore=()=>({get:()=>request,put:value=>{saved=structuredClone(value);},delete:()=>{deleted++;}});
-      queueMicrotask(()=>{request.onsuccess();tx.oncomplete();});return tx;
+      const tx={},request={result:row};let aborted=false;tx.abort=()=>{aborted=true;queueMicrotask(()=>tx.onabort?.({target:tx}));};tx.objectStore=()=>({get:()=>request,put:value=>{saved=structuredClone(value);},delete:()=>{deleted++;}});
+      queueMicrotask(()=>{request.onsuccess();if(!aborted)tx.oncomplete({target:tx});});return tx;
     }}},
-    window:{setTimeout:(fn,delay)=>{const id=++timerId;timers.set(id,{fn,delay,due:time+delay});schedules.push(delay);return id;},clearTimeout:id=>timers.delete(id)},
-    observeSync:promise=>promise,sync:async()=>{},securityPause:async()=>null,custodialSecurity:()=>null,
-    securityErrorIsPause:()=>false,dispatchSecurityPause(){},dispatchStatus(){},
+    window:{setTimeout:(fn,delay)=>{const id=++timerId;if(delay===0){queueMicrotask(fn);return id;}timers.set(id,{fn,delay,due:time+delay});schedules.push(delay);return id;},clearTimeout:id=>timers.delete(id)},
+    observeSync:promise=>promise,sync:async()=>{},
+    dispatchSecurityPause(){},dispatchStatus(){},
     recoverOrphanedClaims:async()=>{},verifyWorkerBackendCompatibility:async()=>true,
     claimNextAction:async()=>{if(claimed)return null;claimed=true;return row;},
     processAction:async()=>{throw Object.assign(new Error('temporary'),{httpStatus:503,retryAfter:'120'});},
-    mutateProtectedQueue:async(fn,options)=>{check(options.expectedGeneration,4,'security generation preserved');return fn();},
-    storageRecord:value=>value,isTerminalReconciliation:()=>false,applyProcessResult:()=>{applied++;},
-    listActions:async()=>saved?[saved]:[],hasUnresolvedReconciliationWork:()=>false,
-    nextClaimableAction:rows=>rows.find(item=>item.dead_letter!==true&&Number(item.next_attempt_at||0)<=time) || null,
+    isTerminalReconciliation:()=>false,applyProcessResult:()=>{applied++;},
+    listActions:async()=>saved?[context.normalizeRecord(saved)]:[],hasUnresolvedReconciliationWork:()=>false,
     reportDeviceSyncStatus:async()=>{},
-  });
-  vm.runInContext(slice('  function scheduleSync(','  function releaseStartupRecoveryGate(')+
-    slice('  function actionCanRun(','  function nextRecoveryAction(')+
-    slice('  function finishClaim(','  function latestQueueError(')+
-    slice('  async function runWorker(','  async function reconcileStartupRecovery('),context);
-  return {context,row,timers,schedules,get saved(){return saved;},get deleted(){return deleted;},
+  },{onMutationOptions:options=>check(options.expectedGeneration,4,'security generation preserved')});
+  return {context,row,timers,schedules,get saved(){return saved;},get current(){return saved?context.normalizeRecord(saved):null;},get deleted(){return deleted;},
     get applied(){return applied;},setTime:value=>{time=value;}};
 }
 
@@ -46,7 +41,10 @@ for(const status of [408,429,500,502,503,504,599]){
   const f=fixture();f.context.processAction=async()=>{throw Object.assign(new Error('temporary'),{httpStatus:status,retryAfter:'1800'});};
   await f.context.runWorker();
   check(f.saved.next_attempt_at,clock+1800000,'actual worker honors server not-before for HTTP '+status);
-  check(f.saved.dead_letter,false,'outage remains automatic for HTTP '+status);
+  check(f.saved.dead_letter,true,'raw downgrade fence remains for HTTP '+status);
+  check(f.saved.type,'forward-replay-fenced:commit_workflow','raw action remains fenced');
+  check(f.saved.current_dead_letter,false,'serialized current eligibility remains automatic');
+  check(f.current.dead_letter,false,'outage remains automatic for HTTP '+status);
   check(f.saved.operation_id,f.row.operation_id,'same operation');check(f.saved.payload,f.row.payload,'same answers');
   check(f.deleted,0,'no saved work deletion');
 }
@@ -58,11 +56,13 @@ for(const status of [408,429,503]){
 {
   const f=fixture();
   const sessionId='00000000-0000-4000-8000-000000000123';
-  const start={id:1,type:'start_session',created_at:1,dead_letter:false,next_attempt_at:clock+900000,lease_until:0};
-  const finish={id:2,type:'finish_session',created_at:2,dead_letter:false,next_attempt_at:0,lease_until:0};
-  f.context.normalizeRecord=item=>item;
-  f.context.recoveryChainFor=item=>({session_id:sessionId,phase:item.type==='start_session'?1:2});
-  vm.runInContext(slice('  function nextRecoveryAction(','  function storageRecord('),f.context);
+  const start={id:1,type:'start_session',operation_id:'00000000-0000-4000-8000-000000000121',
+    payload:{p_client_session_id:sessionId},created_at:1,dead_letter:false,next_attempt_at:clock+900000,lease_until:0};
+  const finish={id:2,type:'finish_session',operation_id:'00000000-0000-4000-8000-000000000122',
+    payload:{p_client_session_id:sessionId},created_at:2,dead_letter:false,next_attempt_at:0,lease_until:0};
+  // Actual normalizeRecord/recoveryChainFor stay installed; valid payload
+  // session identities let their real ordering grammar derive the phases.
+  const recoveryCode=slice('  function nextRecoveryAction(','  function storageRecord(');assertOwnerContextClosed(recoveryCode,f.context,'ordered recovery selector');vm.runInContext(recoveryCode,f.context);
   f.context.listActions=async()=>[start,finish];
   f.context.claimNextAction=async()=>null;
   for(let turn=0;turn<3;turn++)await f.context.runWorker();
@@ -76,7 +76,8 @@ for(const value of invalid){
   check(delay,0,'invalid/out-of-range header rejected: '+value.slice(0,30));
   await f.context.finishClaim(f.row,{succeeded:false,automaticRetry:true,retryAfterMs:delay});
   check(f.saved.next_attempt_at,clock+900000,'invalid header uses finite backoff');
-  check(f.saved.dead_letter,false,'invalid header does not hold work');
+  check(f.saved.dead_letter,true,'invalid header keeps physical downgrade fence');
+  check(f.current.dead_letter,false,'invalid header does not hold work');
 }
 for(const value of [Infinity,-Infinity,NaN,-1,Number.MAX_SAFE_INTEGER]){
   const f=fixture();await f.context.finishClaim(f.row,{succeeded:false,automaticRetry:true,retryAfterMs:value});
@@ -119,9 +120,9 @@ for(const seconds of [2147484,4000000,Math.floor((8640000000000000-clock)/1000)]
   check(Number.isSafeInteger(f.saved.next_attempt_at),true,'persisted eligibility is a finite exact integer');
   check(f.schedules.length,1,'one timer scheduled');
   check(f.schedules[0],2147483647,'long delay uses timer-safe chunk');
-  check(f.context.actionCanRun(f.saved,clock+interval-1),false,'not eligible before server deadline');
-  check(f.context.actionCanRun(f.saved,clock+interval),true,'eligible at server deadline');
-  f.saved.lease_until=clock+interval+1;check(f.context.actionCanRun(f.saved,clock+interval),false,'live lease still prevents action');
+  check(f.context.actionCanRun(f.current,clock+interval-1),false,'not eligible before server deadline');
+  check(f.context.actionCanRun(f.current,clock+interval),true,'eligible at server deadline');
+  f.saved.lease_until=clock+interval+1;check(f.context.actionCanRun(f.current,clock+interval),false,'live lease still prevents action');
   const next=[...f.timers.values()][0];f.timers.clear();f.setTime(next.due);next.fn();
   await f.context.runWorker();
   check(f.timers.size,1,'chunk wake re-arms one next timer');

@@ -1,0 +1,71 @@
+{
+  "schema": "custodial.normal-local-notifications-writers-source.v1",
+  "package": "@capacitor/local-notifications",
+  "version": "8.2.1",
+  "npm_integrity": "sha512-Bkim+MGl7UrDTjDferV4ECq0aWciTsa0k15+MX2jnx2PeWgEPvlBy5yrqzBlwEZPrtHFUvPVxPi5V66MPGHkAw==",
+  "original_manifest_sha256": "02522598e88c3a8a7e3056b728bb37c64dcd7af6f3462a36b4830dc65a629f1c",
+  "java_files": {
+    "DateMatch.java": {
+      "original_sha256": "412446ce20015d45b909b531bed542caa98b4819fcf47e73267104f89a4635a8",
+      "patched_sha256": "412446ce20015d45b909b531bed542caa98b4819fcf47e73267104f89a4635a8",
+      "modified": false
+    },
+    "LocalNotification.java": {
+      "original_sha256": "99f8d2e3b384be5abe0ed551147683cc0d9a97262e64e0c121352f7edffcc55d",
+      "patched_sha256": "a952d468957b5db96620141e72e25ab6f8c13c1b84d1e84dddb35aaeac51780c",
+      "modified": true
+    },
+    "LocalNotificationAttachment.java": {
+      "original_sha256": "3eee92a9c94de50ddb9b5866890f6fae24e9253fc30a246c60a61320f454ad8f",
+      "patched_sha256": "3eee92a9c94de50ddb9b5866890f6fae24e9253fc30a246c60a61320f454ad8f",
+      "modified": false
+    },
+    "LocalNotificationManager.java": {
+      "original_sha256": "5fa3d70ed56f210a5507b40f453ed79d87bfcdb620029e4a1ce5c818ea689739",
+      "patched_sha256": "932ab7e14c20dad31c0daa7dc4db377016cfaaadb190a8f198db71a01862d39e",
+      "modified": true
+    },
+    "LocalNotificationRestoreReceiver.java": {
+      "original_sha256": "6644578f9c8d6d592c8995030dc9447bc245b506686d1af834182d0d408d8b10",
+      "patched_sha256": "18251447bbc67402eb594b4f56edec2a66f399d6cc8f080ce2aee279ae02689a",
+      "modified": true
+    },
+    "LocalNotificationSchedule.java": {
+      "original_sha256": "d425fa65884ad8ead6969a079baa001ebfff8ea1235c422a481b44d2ba14f29a",
+      "patched_sha256": "d425fa65884ad8ead6969a079baa001ebfff8ea1235c422a481b44d2ba14f29a",
+      "modified": false
+    },
+    "LocalNotificationsPlugin.java": {
+      "original_sha256": "64857cdd614a436d9da9821a77a4efc843503f5bf3bfe1bd4c5294422a8b24d2",
+      "patched_sha256": "214f8a4eae372b0eb2341855ddad1eb264ba800d5fb8b880275d08a58a2f9607",
+      "modified": true
+    },
+    "NotificationAction.java": {
+      "original_sha256": "0bebc83b4436651c0579a39771eb88cd2dc1a6dd420b8c8fbb2b0d31b85eaaf6",
+      "patched_sha256": "0bebc83b4436651c0579a39771eb88cd2dc1a6dd420b8c8fbb2b0d31b85eaaf6",
+      "modified": false
+    },
+    "NotificationChannelManager.java": {
+      "original_sha256": "44b0e9a1a522509bc678079d63b4ace640d2e2ba66a45e04895b09fd2a35e820",
+      "patched_sha256": "ee40b7604e7b7f9d416d600d887e825287e9fcd795910b4d4e9c1eb7028ce3c1",
+      "modified": true
+    },
+    "NotificationDismissReceiver.java": {
+      "original_sha256": "1a4970f9942691247bab4599d46ce26b0b285e9c91b98459e25f3ea29de7baba",
+      "patched_sha256": "c9bda9de6c5458ccbf450061ce024c42cab4bf442b7a14b4aea719cc927ab17c",
+      "modified": true
+    },
+    "NotificationStorage.java": {
+      "original_sha256": "739bd70923a4d23d86f353c16a9ba0ce3c1f5b261d2e4a208226d80417c4f702",
+      "patched_sha256": "658f284d527eacb100fa39cadf9856c55bb36b25001bd7f53d16ab568ac4331e",
+      "modified": true
+    },
+    "TimedNotificationPublisher.java": {
+      "original_sha256": "c6f39bf6e58524ff33f52d58c7ed72ff8b64d68b89c7c96d21c3c523352bc500",
+      "patched_sha256": "00c3415667de8bc92389770cb6dfbe774027ea2b2c812636031585c5eccb7aeb",
+      "modified": true
+    }
+  },
+  "coordination_class": "org.memphiszoo.custodial.vault.CustodialNativeNotificationWriter",
+  "native_receipt_authority": false
+}

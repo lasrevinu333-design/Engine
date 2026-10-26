@@ -43,6 +43,19 @@ final class NativeProviderDisplayDriver {
             throw new VaultFailure("custodial_provider_os_display_failed", error);
         }
     }
+    /** Actual existing provider card observation only. Never prepares a
+     * notification, writes a presentation, cancels or fabricates active state. */
+    void requireOriginalDisplayed(NativeProviderPrincipal principal,NativeProviderJournal.Presentation presentation,Guard guard)throws VaultFailure {
+        try{
+            NativeProviderJournal.Observation now=guard.current();
+            NativeProviderJournal.OsDisplayIntent intent=journal.observeOriginalDisplayed(principal,presentation,now);
+            guard.current();
+            if(!surface.enabled(presentation.payload)||surface.active(intent)!=Active.MATCH)
+                throw new VaultFailure("custodial_provider_os_display_unconfirmed");
+            guard.current();journal.requirePresentationCurrent(principal,presentation);
+        }catch(VaultFailure unavailable){throw unavailable;}
+        catch(Exception unavailable){throw new VaultFailure("custodial_provider_os_display_unconfirmed",unavailable);}
+    }
     int cancelPending(int limit) throws VaultFailure {
         if (limit < 1 || limit > 32) throw new VaultFailure("custodial_provider_cancel_limit_invalid");
         int count = 0;
@@ -56,5 +69,24 @@ final class NativeProviderDisplayDriver {
             return count;
         } catch (VaultFailure error) { throw error; }
         catch (Exception error) { throw new VaultFailure("custodial_provider_os_cancel_failed", error); }
+    }
+    /** Denial only under the runtime's actual preservation fence. Count is local
+     * absence observation, NOT durable confirmation/ACK. Keep every intent and
+     * ciphertext for the normal admission path after the hold has settled. */
+    int cancelRetainedPending(int limit) throws VaultFailure {
+        if(limit<1||limit>32)throw new VaultFailure("custodial_provider_cancel_limit_invalid");
+        int count=0;
+        try{
+            NativeProviderJournal.RetainedCancellationBatch batch=journal.retainedPendingOsCancellations();
+            for(int i=0;i<batch.size()&&count<limit;i++){
+                NativeProviderJournal.OsCancellation original=journal.requireRetainedCancellationCurrent(batch,i);
+                surface.cancel(original.tag);
+                journal.requireRetainedCancellationCurrent(batch,i);
+                if(!surface.absent(original.tag))throw new VaultFailure("custodial_provider_os_cancel_unconfirmed");
+                journal.requireRetainedCancellationCurrent(batch,i);count++;
+            }
+            return count;
+        }catch(VaultFailure refusal){throw refusal;}
+        catch(Exception unavailable){throw new VaultFailure("custodial_provider_os_cancel_failed",unavailable);}
     }
 }

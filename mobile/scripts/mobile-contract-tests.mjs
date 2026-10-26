@@ -28,11 +28,213 @@ import {
   reconcileEnrollmentConfirmationRequired,
 } from '../src/custodial/transport-policy.js';
 
+// New V2 input-admission cases only; never browser enforcement or dynamic
+// child-context containment. Keep the V1 selected groups unchanged below.
+if(process.argv.includes('--custodial-single-document-only')){
+  const variant=process.argv.find(arg=>arg.startsWith('--single-document-case='))?.slice('--single-document-case='.length);
+  assert(['active-contexts','harmless-literals','atomic-inputs'].includes(variant));
+  const pages=await import('./custodial-initial-release-pages.mjs');
+  const shape='<!doctype html><html><head><meta charset="utf-8"><title>Original</title></head><body><script src="./app.js"></script></body></html>';
+  const inserted='\n<meta http-equiv="Content-Security-Policy" content="'+pages.CUSTODIAL_PACKAGED_REALM_POLICY+'">\n';
+  const body=content=>shape.replace('<body>','<body>'+content);
+  if(variant==='active-contexts'){
+    const inputs=[
+      ['iframe-srcdoc','<iframe srcdoc="&lt;script&gt;child()&lt;/script&gt;"></iframe>'],
+      ['iframe-src','<iframe src="about:blank"></iframe>'],
+      ['frame','<frame src="about:blank">'],
+      ['frameset','<frameset><frame src="about:blank"></frameset>'],
+      ['object-pdf','<object data="./original.pdf" type="application/pdf">Original PDF fallback</object>'],
+      ['embed-pdf','<embed src="./original.pdf" type="application/pdf">'],
+      ['portal','<portal src="./child.html"></portal>'],
+      ['fencedframe','<fencedframe src="./child.html"></fencedframe>'],
+      ['mixed-case','<IFraME\n title="original" srcdoc="text"></IFraME>'],
+    ];
+    const accepted=[];
+    for(const [name,content]of inputs){
+      try{pages.custodialPackagedRealmContainment(body(content));accepted.push(name);}
+      catch(error){assert.match(error.message,/active child context (iframe|frame|frameset|object|embed|portal|fencedframe)$/);}
+    }
+    assert.deepEqual(accepted,[],'active opening child-context inputs must refuse, not receive CSP and remain executable');
+    assert.throws(()=>pages.custodialPackagedRealmContainment(body('<iframe />')),/active child context iframe$/);
+  }else if(variant==='harmless-literals'){
+    const documents=[
+      body('<script>const original = "<iframe srcdoc=\'x\'></iframe><frame><frameset><object><embed><portal><fencedframe>";</script>'),
+      shape.replace('</head>','<style>/* <iframe><frame><frameset><object><embed><portal><fencedframe> */ .original{color:inherit}</style></head>'),
+      body('<!-- <iframe srcdoc="x"><frame><frameset><object><embed><portal><fencedframe> -->'),
+      body('<p data-original="<iframe srcdoc=\'x\'><object><embed><portal><fencedframe>">Original text</p>'),
+      shape.replace('<title>Original</title>','<title>Original <iframe><object><embed><portal><fencedframe></title>'),
+      body('<textarea><iframe><frame><frameset><object><embed><portal><fencedframe></textarea>'),
+      body('<xmp><iframe><object><embed><portal><fencedframe></xmp>'),
+      body('<p>iframe frame frameset object embed portal fencedframe &lt;iframe srcdoc="x"&gt;</p>'),
+      body('<iframe-like></iframe-like><my-object></my-object><object-data></object-data><portal-note></portal-note>'),
+      body('<a href="./original.pdf" download>Original PDF</a><script>const history = ["frame", "object"]; ordinaryRequest();</script>'),
+    ];
+    for(const html of documents){
+      const out=pages.custodialPackagedRealmContainment(html);
+      assert.equal(out.replace(inserted,''),html,'ordinary bytes and inert literals must survive exactly');
+      assert.equal(out.split(inserted).length,2);
+    }
+  }else{
+    const fs=await import('node:fs/promises');
+    const {join}=await import('node:path');
+    const {tmpdir}=await import('node:os');
+    const directory=await fs.mkdtemp(join(tmpdir(),'custodial-single-document-'));
+    try{
+      await fs.mkdir(join(directory,'z-child'));
+      const originals=new Map([
+        ['a-original.html',Buffer.from(shape)],
+        ['z-child/retained.HTML',Buffer.from(body('<iframe srcdoc="&lt;script&gt;child()&lt;/script&gt;"></iframe>'))],
+        ['app.js',Buffer.from('ordinaryRequest(); // original')],
+        ['original.pdf',Buffer.from([0x25,0x50,0x44,0x46,0,255])],
+      ]);
+      for(const [name,bytes]of originals)await fs.writeFile(join(directory,name),bytes);
+      await assert.rejects(pages.containCustodialPackagedHtml(directory),/active child context iframe$/);
+      for(const [name,bytes]of originals)assert.deepEqual(await fs.readFile(join(directory,name)),bytes,'refusal before any output: '+name);
+    }finally{await fs.rm(directory,{recursive:true});}
+  }
+  console.log(JSON.stringify({case:'CUSTODIAL_SINGLE_DOCUMENT_INPUT_NEW',variant,result:'PASS',
+    proof:'Packaged Source input admission only; NOT browser/dynamic realm/all-writer/native/ACK authority'}));
+  process.exit(0);
+}
+
+// Selected Source composition only. This does not launch the build, browser,
+// native runtime or old credential/contract groups.
+if(process.argv.includes('--custodial-realm-containment-only')){
+  const variant=process.argv.find(arg=>arg.startsWith('--realm-case='))?.slice('--realm-case='.length);
+  assert(['home-boundary','actual-pages','ambiguous-html','existing-policy','distribution-stage','edition-boundary'].includes(variant));
+  const pages=await import('./custodial-initial-release-pages.mjs');
+  const fs=await import('node:fs/promises');
+  const {join}=await import('node:path');
+  const {tmpdir}=await import('node:os');
+  const {createHash}=await import('node:crypto');
+  const {runInNewContext}=await import('node:vm');
+  const source=path=>readFile(new URL('../../'+path,import.meta.url),'utf8');
+  const policy="frame-src 'none'; worker-src 'none'; object-src 'none'";
+  const inserted='\n<meta http-equiv="Content-Security-Policy" content="'+policy+'">\n';
+  const shape='<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Original</title></head><body><script src="./app.js"></script></body></html>';
+  const transform=pages.custodialPackagedRealmContainment;
+  const actualPages=async()=>{
+    const home=pages.custodialInitialReleaseHome(await source('mobile/src/custodial/index.html'));
+    const result=new Map([['index.html',home],['start_page1.html',home],['employee-hub.html',home],
+      ['scan.html',await source('index.html')],['app-shell.html',await source('mobile/app-shell.html')]]);
+    for(const file of ['employee-feedback.html','employee-schedule.html','events.html','messages.html','messages-chatscope.html','thread.html','supply-coming-soon.html'])
+      result.set(file,await source(file));
+    result.set('system-feedback.html',result.get('employee-feedback.html'));
+    return result;
+  };
+  if(variant==='home-boundary'){
+    const original=await source('mobile/src/custodial/index.html');
+    // On original Source, the real existing Home transform is the last
+    // available page transform. Its missing restriction is the baseline
+    // counterexample ONLY, never a real WebView enforcement result.
+    const result=typeof transform==='function'?transform(pages.custodialInitialReleaseHome(original)):pages.custodialInitialReleaseHome(original);
+    assert(result.includes(inserted),'actual original Custodial Home pipeline lacks the fixed frame/worker/object policy');
+    assert(result.indexOf(inserted)<result.indexOf('<script'));
+    assert.equal(result.replace(inserted,''),original);
+  }else if(variant==='actual-pages'){
+    const actual=await actualPages();
+    for(const [name,html]of actual){
+      const result=transform(html);
+      assert(result.includes(inserted),name);assert.equal(result.split(inserted).length,2,name);
+      assert.equal(result.replace(inserted,''),html,name+' must preserve all original bytes except fixed inserted policy');
+      const executable=result.toLowerCase().indexOf('<script');
+      assert(executable<0||result.indexOf(inserted)<executable,name);
+    }
+    assert.equal(transform(actual.get('index.html')),transform(actual.get('employee-hub.html')));
+    assert.equal(transform(actual.get('employee-feedback.html')),transform(actual.get('system-feedback.html')));
+    // Generated shell shape after ordinary bundler script/preload injection.
+    const generated=actual.get('app-shell.html').replace('</head>','<link rel="modulepreload" crossorigin href="./shell-assets/chunk.js"><script type="module" crossorigin src="./shell-assets/main.js"></script></head>');
+    assert.equal(transform(generated).replace(inserted,''),generated);
+  }else if(variant==='ambiguous-html'){
+    const csp='<meta http-equiv="Content-Security-Policy" content="img-src \'self\'">';
+    const invalid=[
+      '<!--><script>early()</script>-->'+shape,
+      '<!---><script>early()</script>-->'+shape,
+      shape.replace('<head>','<script>early()</script><head>'),
+      shape.replace('<head>','<link rel="modulepreload" href="./early.js"><head>'),
+      shape.replace('</body>','<head></head></body>'),
+      shape.replace('</head>','<head></head></head>'),
+      shape.replace('<head>','<head/>'),shape.replace('</head>',''),
+      shape.replace('<head>','<head><meta http-equiv="Content-Security-Policy" content="img-src \'self\'">'+csp),
+      shape.replace('<head>','<head><meta http-equiv="Content&#45;Security-Policy" content="object-src \'none\'">'),
+      shape.replace('<head>','<head><meta http-equiv="refresh" HTTP-EQUIV="Content-Security-Policy" content="0">'),
+      shape.replace('<meta charset="utf-8">','<meta charset="utf-16">'),
+      shape.replace('<meta charset="utf-8">',''),shape.replace('<meta charset="utf-8">','<meta charset="utf-8"><meta charset="utf-8">'),
+      shape.replace('<head>','<head><!--'+'x'.repeat(1100)+'-->'),
+      shape.replace('<html lang="en">','<html lang="en"><!-- malformed --!>'),
+      shape.replace('<head>','<head><template><meta charset="utf-8"></template>'),
+      shape.replace('<head>','<head>not metadata'),
+      shape.replace('<title>Original</title>','<script><!--<script></script></script>'),
+      shape.replace('<head>','<head><meta name="unterminated>'),
+      shape.replace('<!doctype html>','<?xml version="1.0"?>'),
+      shape.replace('</head>','</head><meta http-equiv="Content-Security-Policy" content="frame-src \'none\'">'),
+    ];
+    for(const html of invalid)assert.throws(()=>transform(html),/Custodial|unsupported|CSP/i);
+    assert.throws(()=>transform(transform(shape)),/Custodial|CSP/i,'reapplication must not silently duplicate a policy');
+  }else if(variant==='existing-policy'){
+    const old='<meta content="default-src \'self\'; connect-src https://example.invalid; script-src \'unsafe-inline\'; worker-src blob:" HTTP-EQUIV = \'Content-Security-Policy\'>';
+    const html='\ufeff<!-- prolog --><!DOCTYPE HTML><HTML data-caption="<head>"><HEAD>\n<meta charset = \'UTF-8\'>'
+      +old+'<!-- <head><meta http-equiv="Content-Security-Policy"> --><title>literal &lt;head&gt;</title>'
+      +'<script>const literal="<meta http-equiv=Content-Security-Policy>";</script></HEAD><BODY><textarea><head>not an HTML head</textarea></BODY></HTML>';
+    const out=transform(html);
+    assert.equal(out.replace(inserted,''),html);assert(out.includes(old));
+    assert(out.indexOf(inserted)<out.indexOf(old));assert(out.indexOf(inserted)<out.indexOf('<script>'));
+    assert(!inserted.includes('default-src'));assert(!inserted.includes('script-src'));assert(!inserted.includes('connect-src'));assert(!inserted.includes('style-src'));
+  }else{
+    const directory=await fs.mkdtemp(join(tmpdir(),'custodial-realm-source-'));
+    try{
+      const build=await source('mobile/scripts/build.mjs');
+      const start=build.indexOf('await buildRoleShell();');
+      const end=build.indexOf("await writeFile(join(dist, 'build.json')",start);
+      assert(start>=0&&end>start);
+      const owningStage=build.slice(start+'await buildRoleShell();'.length,end);
+      const execute=async(edition,dist)=>runInNewContext('(async()=>{'+owningStage+'})()',{
+        edition,dist,containCustodialPackagedHtml:pages.containCustodialPackagedHtml});
+      if(variant==='distribution-stage'){
+        const actual=await actualPages();
+        await fs.mkdir(join(directory,'help'),{recursive:true});
+        actual.set('help/LocalSupplies.HTML',await source('supply-coming-soon.html'));
+        for(const [name,html]of actual)await fs.writeFile(join(directory,name),html);
+        const script='/* original ordinary application requests/capabilities */';
+        await fs.writeFile(join(directory,'app.js'),script);
+        await execute('custodial',directory); // real builder branch, real exported stage
+        for(const [name,html]of actual)assert.equal((await fs.readFile(join(directory,name),'utf8')).replace(inserted,''),html,name);
+        assert.equal(await fs.readFile(join(directory,'app.js'),'utf8'),script);
+        const {writeRuntimeAssetManifest}=await import('../../scripts/refresh-frontend-release-manifest.mjs');
+        const identity={release_id:'SYNTHETIC_SOURCE_COMPOSITION_ONLY',source_commit:'0'.repeat(40),source_tree:'1'.repeat(40),source_commit_exact:false,build_id:'SYNTHETIC_NOT_RELEASE'};
+        const manifest=writeRuntimeAssetManifest({directory,edition:'custodial',identity});
+        for(const name of actual.keys()){
+          const bytes=await fs.readFile(join(directory,name));
+          assert.equal(manifest.asset_hashes_sha256[name],createHash('sha256').update(bytes).digest('hex'));
+          assert(bytes.includes(Buffer.from(inserted)));
+        }
+        const bad=await fs.mkdtemp(join(directory,'unsupported-'));
+        await fs.writeFile(join(bad,'valid.html'),shape);await fs.writeFile(join(bad,'bad.html'),'<script>before head</script>'+shape);
+        await assert.rejects(pages.containCustodialPackagedHtml(bad),/Custodial|unsupported/i);
+        assert.equal(await fs.readFile(join(bad,'valid.html'),'utf8'),shape,'validate all inputs before writing any output');
+      }else{
+        for(const edition of ['manager','viewer']){
+          const dist=join(directory,edition);await fs.mkdir(dist);
+          const html=await source('mobile/src/'+edition+'/index.html');
+          const worker=await source('mobile/src/web-install/'+edition+'/service-worker.js');
+          await fs.writeFile(join(dist,'index.html'),html);await fs.writeFile(join(dist,'service-worker.js'),worker);
+          await execute(edition,dist);
+          assert.equal(await fs.readFile(join(dist,'index.html'),'utf8'),html);
+          assert.equal(await fs.readFile(join(dist,'service-worker.js'),'utf8'),worker);
+        }
+      }
+    }finally{await fs.rm(directory,{recursive:true});}
+  }
+  console.log(JSON.stringify({case:'CUSTODIAL_REALM_CONTAINMENT_NEW',variant,result:'PASS',
+    proof:'Source HTML/module/filesystem composition only; NOT browser enforcement/pre-existing worker absence/all-writer/native/ACK'}));
+  process.exit(0);
+}
+
 const root = new URL('../', import.meta.url);
 const files = async (path) => readFile(new URL(path, root), 'utf8');
 const [
   config, packageJson, buildScript, managerHtml, managerJs, managerBridge, nativeLayout, interaction,
-  moxieHtml, moxieJs, accessHtml, accessJs, viewerHtml, viewerJs,
+  accessHtml, accessJs, viewerHtml, viewerJs,
   messengerHtml, messengerApp, retiredChatScope, notificationHtml, notificationJs,
   notificationClient, firebaseConfig, brandingConfig, nativeLinks, codemagic, feedbackHtml, phoneAssignmentsHtml, phoneAssignmentsJs,
   insightsHtml, insightsJs, insightsNativeAuth, custodialHtml, custodialJs, custodialBridge, custodialShellAuth,
@@ -41,7 +243,7 @@ const [
 ] = await Promise.all([
   files('capacitor.config.ts'), files('package.json'), files('scripts/build.mjs'), files('src/manager/index.html'), files('src/manager/app.js'),
   files('src/shared/mobile-bridge.js'), files('src/shared/native-layout.js'), files('src/shared/interaction-feedback.js'),
-  files('src/manager/moxie.html'), files('src/manager/moxie.js'), files('src/manager/manager-access.html'), files('src/manager/manager-access.js'),
+  files('src/manager/manager-access.html'), files('src/manager/manager-access.js'),
   files('src/viewer/index.html'), files('src/viewer/app.js'), files('../messages.html'), files('src/chatscope/app.jsx'), files('../messages-chatscope.html'),
   files('src/manager/notifications.html'), files('src/manager/notifications.js'), files('src/manager/notifications-client.js'),
   files('scripts/configure-firebase.mjs'), files('scripts/configure-branding.mjs'), files('scripts/configure-native-links.mjs'),
@@ -104,7 +306,7 @@ for (const module of [
   'Decisions', 'Coverage', 'Absence / PTO', 'Schedule change', 'Correct record', 'Maintenance problem',
   'Saved work needs review', 'Phone problem', 'Admin Tools', 'Phone enrollment', 'Phone assignment',
   'Manager Access', 'Device Security', 'Diagnostics', 'Offline evidence details', 'Release / canary',
-  'Rollback / recovery', 'Audit logs', 'Moxie administration', 'Gemini administration',
+  'Rollback / recovery', 'Audit logs', 'Gemini administration',
 ]) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
 assert.doesNotMatch(managerHtml, /<h2 class="sectionTitle">Operations tools<\/h2>/, 'manager home must not mix occasional tools into daily work');
 assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
@@ -137,11 +339,6 @@ assert.match(messengerApp, /filter\(\(row\) => !isRetiredThread\(row\)\)/);
 assert.doesNotMatch(messengerApp, /window\.fetch\s*=|MutationObserver/);
 assert.match(retiredChatScope, /messages\.html/);
 
-assert.match(moxieHtml, /Private workspace/);
-assert.match(moxieHtml, /New Chat/);
-assert.match(moxieHtml, /Clear Chat/);
-for (const tab of ['Chat','Notes','Reminders','Contacts']) assert.match(moxieHtml, new RegExp(`>${tab}<`));
-assert.match(moxieJs, /savedChats/);
 assert.match(accessHtml, /single-use personal code/i);
 assert.match(accessJs, /leadership-api\/managers\/.*enrollment-code/);
 
@@ -173,7 +370,8 @@ assert.doesNotMatch(nativeLinks, /android\.nfc\.action\.TAG_DISCOVERED/);
 assert.match(nativeLinks, /Intent\.ACTION_VIEW\.equals\(action\)/);
 assert.match(nativeLinks, /NfcAdapter\.ReaderCallback/);
 assert.match(nativeLinks, /LegacyCustodialNfcUrl\.normalize\(url\)/);
-assert.match(nativeLinks, /LegacyCustodialNfcUrl\.normalize\(readPhysicalNfcUrl\(tag\)\)/);
+assert.match(nativeLinks, /String url = readPhysicalNfcUrl\(tag\);[\s\S]*dispatchPhysicalNfcUrlFromReader\(url, readPhysicalNfcIdentity\(tag\)\)/);
+assert.match(nativeLinks, /private void dispatchPhysicalNfcUrlFromReader\(String url, String identity\) \{[\s\S]*LegacyCustodialNfcUrl\.normalize\(url\)/);
 assert.match(nativeLinks, /NdefRecord\.RTD_TEXT/);
 assert.match(nativeLinks, /WindowManager\.LayoutParams\.FLAG_KEEP_SCREEN_ON/);
 assert.match(nativeLinks, /recordPhysicalNfcHandoff/);
@@ -275,7 +473,7 @@ assert.doesNotMatch(custodialHtml, /bottomNav|navLabel|employee-phone|areas-list
 assert.doesNotMatch(custodialHtml, /remove-enrollment|Remove Enrollment From This Phone/);
 assert.doesNotMatch(custodialJs, /function removeEnrollment|els\.remove/);
 assert.match(custodialHtml, /employee-feedback\.html[^>]*>[\s\S]*class="homeLabel">Program Feedback<\/span>/);
-assert.match(custodialHtml, /employee-events\.html[^>]*>[\s\S]*class="homeLabel">Upcoming Events<\/span>/);
+assert.match(custodialHtml, /events\.html[^>]*>[\s\S]*class="homeLabel">Upcoming Events<\/span>/);
 assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/);
 assert.match(custodialBridge, /App\.addListener\('appUrlOpen'/);
 assert.match(custodialBridge, /status\.state !== 'enrolled'/);
@@ -298,10 +496,12 @@ assert.match(custodialBridge, /loadOfflineAuthoritySnapshot/);
 assert.match(custodialBridge, /authorizeOfflineNewWork/);
 assert.match(custodialBridge, /beginRollbackFence/);
 assert.match(custodialBridge, /clearRollbackFence/);
-assert.match(custodialJs, /async function prepareOfflineAuthority\(\) \{\s*if \(!navigator\.onLine \|\| !deviceId\(\)\) return;\s*try \{\s*const snapshot=await request\('\/scan-api\/rpc',\{method:'POST',body:\{device_id:deviceId\(\),fn:'tool_get_offline_scan_authority_snapshot',args:\{p_device_id:deviceId\(\)\}\}\}\);\s*if \(snapshot\) await window\.MemphisMobile\?\.saveOfflineScanAuthoritySnapshot\?\.\(snapshot\);\s*\} catch \{/,
+assert.match(custodialJs, /async function prepareOfflineAuthority\(\) \{\s*if \(!navigator\.onLine \|\| !deviceId\(\)\) return false;\s*try \{\s*const snapshot=await request\('\/scan-api\/rpc',\{method:'POST',body:\{device_id:deviceId\(\),fn:'tool_get_offline_scan_authority_snapshot',args:\{p_device_id:deviceId\(\)\}\}\}\);\s*if \(snapshot\) return await window\.MemphisMobile\?\.saveOfflineScanAuthoritySnapshot\?\.\(snapshot\) === true;\s*\} catch \{/,
   'Home may prepare offline work only from an online identity-bound server snapshot admitted through the native bridge; failure must preserve existing authority');
-assert.equal((custodialJs.match(/void prepareOfflineAuthority\(\);/g) || []).length, 1,
+assert.equal((custodialJs.match(/void prepareOfflineAuthority\(\)\.then\(snapshotAnchored => \{/g) || []).length, 1,
   'Restoring the native-enrolled phone must prepare offline authority without blocking the employee');
+assert.match(custodialJs, /readinessObservation\.accept\(readinessToken, readinessPrincipal\(\), \{ serverConfirmed: true, snapshotAnchored,/,
+  'A late snapshot result may update readiness only under its original principal/generation observation token');
 assert.doesNotMatch(custodialJs, /await prepareOfflineAuthority\(\)/,
   'An offline-authority refresh must never delay the employee Home screen');
 assert.match(custodialBridge, /native-notification-outbox\.v1/);

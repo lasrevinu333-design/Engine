@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stable roster positions · Memphis Zoo Custodial</title>
+  <style>
+    :root{font:17px/1.5 system-ui,sans-serif;color:#193b33;background:#f3f6f4}body{margin:0}main{max-width:960px;margin:auto;padding:24px}h1{line-height:1.2}label{display:block;font-weight:600;margin:12px 0}input,select,textarea,button{box-sizing:border-box;font:inherit;padding:10px;max-width:100%;min-height:44px}input,select,textarea{display:block;width:100%}button{cursor:pointer;border:1px solid #275a4c;border-radius:6px;background:#fff;color:#193b33}button:disabled{cursor:default;opacity:.55}:focus-visible{outline:3px solid #c48600;outline-offset:3px}[hidden]{display:none!important}.toolbar{display:flex;align-items:end;gap:16px;flex-wrap:wrap}.toolbar label{max-width:250px}.staffing-card,section{background:#fff;border:1px solid #ccd8d1;border-radius:8px;padding:18px;margin:16px 0}#staffing-roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}#staffing-roster article{margin:0}#staffing-preview-text,#staffing-separation-text{white-space:pre-wrap;overflow-wrap:anywhere}#staffing-binding{overflow-wrap:anywhere;color:#3f5c50}textarea{min-height:90px}a{color:#175c47}.help{color:#3f5c50}
+  </style>
+</head>
+<body>
+<main id="staffing-workspace">
+  <a href="./start_page1.html" data-mz-back>Back to Manager Hub</a>
+  <h1>Stable roster positions</h1>
+  <p>Vacate an occupied position or fill an eligible vacancy. These actions are separate from legacy departure/replacement. No staffing change clears protected work or transfers a phone.</p>
+  <p>To publish or restore a recurring <strong>position pattern</strong>, <a id="staffing-pattern-link" href="./schedule-weekly.html?hub=manager">review the current approved pattern in Schedule</a>. Current people and availability must validate before confirmation; historical source identities never reactivate employees.</p>
+  <p id="staffing-status" role="status" aria-live="polite">Normal manager staffing integration must be mounted before this page can read or change anything.</p>
+  <div class="toolbar"><label>Service date (Central)<input id="staffing-date" type="date" required></label><button id="staffing-refresh" type="button">Refresh current roster</button></div>
+  <p id="staffing-binding"></p>
+  <div id="staffing-roster" aria-label="Current stable roster positions"></div>
+  <section id="staffing-action" aria-labelledby="staffing-action-title" hidden>
+    <h2 id="staffing-action-title">Review a staffing action</h2>
+    <p id="staffing-action-note" class="help"></p>
+    <form id="staffing-form" hidden>
+      <label>Stable position<select id="staffing-slot" required><option value="">Choose a position</option></select></label>
+      <label>Action<select id="staffing-kind" required><option value="">Choose an eligible action</option></select></label>
+      <label id="staffing-new-name-field" hidden>New employee name<input id="staffing-new-name" type="text" minlength="2" maxlength="160" autocomplete="off"></label>
+      <label id="staffing-existing-employee-field" hidden>Eligible existing employee<select id="staffing-existing-employee"><option value="">Current-source identity required</option></select></label>
+      <label>Reason<textarea id="staffing-reason" maxlength="500" required></textarea></label>
+      <button id="staffing-preview-button" type="submit">Preview intended action</button>
+    </form>
+    <button id="staffing-read-separation" type="button">Read protected separation status</button>
+  </section>
+  <section id="staffing-preview" aria-labelledby="staffing-preview-title" hidden>
+    <h2 id="staffing-preview-title">Factual preview — nothing accepted yet</h2><p id="staffing-preview-text"></p>
+    <button id="staffing-confirm" type="button" disabled>Confirm this exact action once</button>
+  </section>
+  <button id="staffing-check-outcome" type="button" hidden disabled>Check the original saved outcome</button>
+  <section id="staffing-separation" aria-labelledby="staffing-separation-title" hidden>
+    <h2 id="staffing-separation-title">Protected separation readback</h2><p id="staffing-separation-text" role="status" aria-live="polite"></p>
+  </section>
+</main>
+<!-- Main mounts the normal manager session/service and the existing owning
+     saved-request/source/outcome adapters by importing mountStaffingPage.
+     No standalone auth script, arbitrary URL, or storage fallback is installed. -->
+<script src="./memphis-auth.js"></script><script src="./memphis-scheduler-actions.js"></script>
+<script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+<script type="module" src="./manager-staffing-runtime.mjs"></script>
+</body>
+</html>

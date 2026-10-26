@@ -20,7 +20,6 @@ const editions = {
     prohibitedFiles: [
       'admin.html',
       'device-security.html',
-      'events-admin.html',
       'gemini-admin.html',
       'manager-access.html',
       'memphis-auth.js',

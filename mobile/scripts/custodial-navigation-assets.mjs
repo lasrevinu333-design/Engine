@@ -11,11 +11,11 @@ export function assertCustodialNavigationAssets(hashes, policySource) {
     if(!hashes.has(path))throw new Error('Allowed Custodial page absent from final assets: '+path);
   }
   for(const [alias,employee] of [['start_page1.html','index.html'],['employee-hub.html','index.html'],
-    ['events.html','employee-events.html'],['system-feedback.html','employee-feedback.html']]){
+    ['system-feedback.html','employee-feedback.html']]){
     if(!hashes.has(employee)||hashes.get(alias)!==hashes.get(employee))
       throw new Error('Custodial employee alias differs from exact employee page: '+alias);
   }
-  for(const manager of ['manager-access.html','schedule-weekly.html','events-admin.html','ops-manager-hub.html','moxie-mobile.html']){
+  for(const manager of ['manager-access.html','schedule-weekly.html','events-admin.html','employee-events.html','ops-manager-hub.html']){
     if(hashes.has(manager)||pages.includes('/'+manager))throw new Error('Manager page in Custodial navigation assets: '+manager);
   }
 }

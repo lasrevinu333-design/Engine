@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <application android:debuggable="false">
+        <activity
+            android:name="org.memphiszoo.custodial.vault.RemovalTestActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name="org.memphiszoo.custodial.vault.BridgeSmokeActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name="org.memphiszoo.custodial.vault.NfcRecoveryVerifierService"
+            android:exported="false"
+            android:process=":nfc_recovery_verifier" />
+    </application>
+</manifest>

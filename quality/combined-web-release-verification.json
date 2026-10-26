@@ -1,0 +1,36 @@
+{
+  "recorded_at": "2026-10-06T14:58:43.241690+00:00",
+  "base_frontend": "d068106ca216d76fa04310e0a4adc40e9f3b27df",
+  "changes": {
+    "capacitor_patch": "8.4.2 -> 8.4.3",
+    "vitest_patch": "4.1.10 -> 4.1.11",
+    "grpc": "1.9.16 -> 1.13.6",
+    "firebase": "12.16.0 unchanged; declared at workspace root so the root override is applied"
+  },
+  "frontend_vulnerabilities": {
+    "total": 0,
+    "high": 0,
+    "critical": 0
+  },
+  "tests": {
+    "shared_events_and_map_vm": 39,
+    "manager_access_vm": 12,
+    "rendered_events_browser": 8,
+    "shell_unit": 33,
+    "shell_typecheck": true,
+    "shell_contracts": true
+  },
+  "native_apk_built": false,
+  "phone_installed": false,
+  "logs": {
+    "frontend-shell.log": "a09bfe120940687a6a9a0fc05a052651df1575984f20765ceec0a2be16cded1d",
+    "frontend-dependency-check.log": "7fcc0b63d19270387ace014909ad857cce611dae11d454061289e2c1d3ba3bbe",
+    "frontend-install.log": "499dae1e833057f2c6b45924f1668e547f9203eb9023b47ac7943af0e573f03d",
+    "frontend-clean-resolution.log": "093b16a02c294b217693fe4f867cca09055b8859e02db82bedd4057cb97ed123",
+    "frontend-shared.log": "b35e0e134f63cae907580078712ef3a10afd2abfc0cd4302c9fc243c390773c4",
+    "frontend-browser.log": "94e90bd3e2b492b315869d217745a57596cee9d7f6c83eab2be1b5d700d4d302",
+    "frontend-clean-install.log": "10420af5f773343403a42ead102ff8f14d30fd1a12481ba9ab63f654ccd33467",
+    "frontend-rendered.log": "677b6aae8aedea0aa30c6dc207ab8e6a0ebe09a96eb8b72d2b3e80a0b807a33e",
+    "frontend-owner.log": "1db12ba598be491a6970a65c3b2ba40de7aa4ce21771a21b37a0c42e7728361e"
+  }
+}

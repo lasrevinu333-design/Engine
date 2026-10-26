@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "kind": "custodial.callback-reference-evidence-policy.v1",
+  "evidence_only": true,
+  "installable": false,
+  "release_admission": false,
+  "provider": "codemagic",
+  "app_id": "6a6d4421515324b1cc5709c9",
+  "repository": "lasrevinu333-design/Engine",
+  "workflow": {
+    "id": "custodial-callback-reference",
+    "name": "Custodial callback reference - evidence only",
+    "source": "file"
+  },
+  "instance_type": "mac_mini_m2",
+  "toolchain": {
+    "xcode": "26.2",
+    "node": "22.23.1",
+    "java": 21
+  },
+  "package_name": "org.memphiszoo.custodial",
+  "source_boundary_sha256": "55e49c6d0003592daf05e405b5eaf4ce4921207dfdabc30bb686f89cc71f514a",
+  "locked_inputs": [
+    {
+      "path": "package.json",
+      "sha256": "e6831e7a6992f22d515a3e605a44474e6ff46e1697a5a8e1f2e64a5a50798892",
+      "bytes": 6263
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "7d1113d44b8369355b062635c2a3a019b864e728f0bea0aa4ab53ae1355bc4b5",
+      "bytes": 155385
+    },
+    {
+      "path": "mobile/scripts/custodial-android-toolchain-policy.mjs",
+      "sha256": "3c1dd2fef6c6b927b22b5672c9c26baf641014c972d8fc831586bb00826f4595",
+      "bytes": 4264
+    },
+    {
+      "path": "mobile/native-locks/android/custodial/verification-metadata.xml",
+      "sha256": "287c945fdce44b2c01e68644629b39d1c1429ac56b40423a3d964d09eb503d0e",
+      "bytes": 200682
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/build.gradle",
+      "sha256": "189e720be97bd3e68ad6214d4eb202411b5ce599a3dc67146d2ffd7c78896938",
+      "bytes": 25435
+    }
+  ],
+  "maximum_apk_bytes": 262144000,
+  "maximum_manifest_bytes": 1048576,
+  "source_commit_tree_version": "EXACT_EXISTING_PRIVATELY_REVIEWED_FORWARD_BUILD",
+  "required_profile": "EXACT_CANDIDATE_SOURCE_SCOPE_PROFILE",
+  "reference_source": "full frozen pre-cleaning guarded Source roots, not installed56 or a second changed-Source APK"
+}

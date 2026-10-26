@@ -14,18 +14,89 @@
   let opsSession=null;
   let opsSessionRequest=null;
   let deviceSecurityCsrfToken='';
+  const RETIRED_CLIENT_KEYS=Object.freeze([
+    'memphisOpsManagerSession.v2','memphisOpsManagerOpenSession.v1','memphisOpsAccessKey.v1',
+    'memphisOpsFullAccessKey.v1','memphisOpsReadOnlyAccessKey.v1','memphisGeminiAdminSession.v1',
+  ]);
+  const CACHE_KEYS=new Set([DEVICE_KEY,...RETIRED_CLIENT_KEYS]);
+  let cacheOwnerPromise=null,cacheUncertain=false,nativeCacheObserved=false,identityCacheSelection=null,browserIdData='';
+
+  // These values are non-authoritative browser cache DATA. Retired access
+  // strings are never read as sessions or permissions, even if a hold defers
+  // their deletion. No login/token/server authorization path is changed here.
+  function browserCacheSource(){
+    const area=localStorage,prototype=Object.getPrototypeOf(area),nav=window.navigator,
+      locks=nav?.locks,request=locks?.request,methods={};
+    const unavailable=()=>new Error('Original manager browser cache unavailable.');
+    const native=()=>{
+      try{
+        const security=window.MemphisCustodialSecurity;
+        if((security!=null&&security.native!==false)||window.MemphisMobile?.edition==='custodial'
+          ||window.MemphisMobileBuildIdentity?.edition==='custodial'||window.Capacitor?.isNativePlatform?.()===true
+          ||['android','ios'].includes(window.Capacitor?.getPlatform?.()))nativeCacheObserved=true;
+      }catch{nativeCacheObserved=true;}
+      if(nativeCacheObserved)throw unavailable();
+    };
+    for(const name of ['getItem','setItem','removeItem']){
+      const descriptor=Object.getOwnPropertyDescriptor(prototype,name);
+      if(!descriptor||descriptor.writable!==true||descriptor.configurable!==true
+        ||typeof descriptor.value!=='function'||area[name]!==descriptor.value)throw unavailable();
+      methods[name]=descriptor.value;
+    }
+    const current=()=>{
+      native();
+      if(localStorage!==area||window.localStorage!==area||Object.getPrototypeOf(area)!==prototype
+        ||window.navigator!==nav||nav?.locks!==locks||typeof request!=='function'||locks.request!==request)throw unavailable();
+      for(const name of Object.keys(methods)){
+        const descriptor=Object.getOwnPropertyDescriptor(prototype,name);
+        if(area[name]!==methods[name]||descriptor?.value!==methods[name]
+          ||descriptor.writable!==true||descriptor.configurable!==true)throw unavailable();
+      }
+    };
+    const read=key=>{current();const value=methods.getItem.call(area,key);current();
+      if(value!==null&&typeof value!=='string')throw unavailable();return value;};
+    const set=(key,value)=>{current();methods.setItem.call(area,key,value);current();};
+    const remove=key=>{current();methods.removeItem.call(area,key);current();};
+    current();return {current,read,set,remove,locks,storage:Object.freeze({getItem:read,setItem:set})};
+  }
+  function managerCacheOwner(source){
+    if(!cacheOwnerPromise)cacheOwnerPromise=(async()=>{
+      const module=await import('./mobile/src/custodial/protected-browser-admission.js');source.current();
+      const gate=module.createProtectedBrowserAdmission({storage:source.storage,locks:source.locks});
+      source.current();return {gate,current:source.current};
+    })();
+    return cacheOwnerPromise;
+  }
+  function mutateOriginalCache(changes,requireSelection=()=>{}){
+    let effectAttempted=false;
+    try{
+      if(cacheUncertain||changes.some(([key,value])=>!CACHE_KEYS.has(key)||value!==null&&typeof value!=='string'))throw Error('Cache refused');
+      const source=browserCacheSource(),original=changes.map(([key])=>source.read(key)),expected=original.slice();
+      let owner=null,entered=false;
+      const current=()=>{if(cacheUncertain)throw Error('Cache outcome unresolved');requireSelection();source.current();if(owner)owner.current();};
+      const exact=()=>{for(let i=0;i<changes.length;i++){current();if(source.read(changes[i][0])!==expected[i])throw Error('Original cache changed');current();}};
+      const checkpoint=()=>{current();owner.gate.requireMutation();current();};
+      return(async()=>{
+        owner=await managerCacheOwner(source);current();exact();
+        const result=await owner.gate.mutate(()=>{
+          if(entered)throw Error('Original cache callback repeated');entered=true;
+          for(let i=0;i<changes.length;i++){
+            checkpoint();exact();checkpoint();const [key,value]=changes[i];
+            if(expected[i]!==value){
+              effectAttempted=true;if(value===null)source.remove(key);else source.set(key,value);expected[i]=value;
+              checkpoint();exact();checkpoint();
+            }
+          }
+          return true;
+        });
+        if(result!==true||!entered)throw Error('Cache save unconfirmed');
+        current();owner.gate.requireAdmission();exact();owner.gate.requireAdmission();current();return true;
+      })().catch(()=>{if(effectAttempted)cacheUncertain=true;return false;});
+    }catch{return Promise.resolve(false);}
+  }
 
   function purgeRetiredClientAccessState(){
-    try{
-      [
-        'memphisOpsManagerSession.v2',
-        'memphisOpsManagerOpenSession.v1',
-        'memphisOpsAccessKey.v1',
-        'memphisOpsFullAccessKey.v1',
-        'memphisOpsReadOnlyAccessKey.v1',
-        'memphisGeminiAdminSession.v1',
-      ].forEach((key)=>localStorage.removeItem(key));
-    }catch{}
+    return mutateOriginalCache(RETIRED_CLIENT_KEYS.map(key=>[key,null]));
   }
   purgeRetiredClientAccessState();
 
@@ -74,15 +145,21 @@
     let value='';
     try{value=normalizeDeviceId(localStorage.getItem(DEVICE_KEY)||'');}catch{}
     if(value&&!/^(visitor|device)-/i.test(value))return value;
-    value=`manager-browser-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
-    try{localStorage.setItem(DEVICE_KEY,value);}catch{}
-    return value;
+    if(!browserIdData)browserIdData=`manager-browser-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+    return persistDeviceId(browserIdData);
   }
 
   function persistDeviceId(value){
     const normalized=normalizeDeviceId(value);
     if(!normalized)return '';
-    try{localStorage.setItem(DEVICE_KEY,normalized);}catch{}
+    if(identityCacheSelection?.value!==normalized){
+      const original={value:normalized,settled:null};identityCacheSelection=original;
+      original.settled=mutateOriginalCache([[DEVICE_KEY,normalized]],()=>{
+        if(identityCacheSelection!==original)throw Error('Original manager browser identity changed');
+      });
+    }
+    // As before, the synchronous return is an identity selection, NOT a
+    // persistence receipt. No unknown result is retried or rolled back.
     return normalized;
   }
 
@@ -146,8 +223,40 @@
     const url=new URL(OPS_SESSION_URL);
     url.searchParams.set('access_level',normalized);
     return parseSessionResponse(await fetch(url.toString(),{
-      method:'GET',cache:'no-store',credentials:'include',headers:{'X-Device-Id':getDeviceId()}
+      method:'GET',cache:'no-store',credentials:'include',signal:AbortSignal.timeout(10000),headers:{'X-Device-Id':getDeviceId()}
     }));
+  }
+
+  function hasPermission(action,session=window.MemphisAuth?.readSession?.()){
+    const p=session?.permissions;
+    return p?.schema==='custodial.manager-permissions.v1'&&p.read===true&&p[action]===true;
+  }
+  async function signInWithMap(email,password){
+    const configResponse=await fetch(`${AUTH_URL}/map-config`,{cache:'no-store',signal:AbortSignal.timeout(15000)});
+    const config=await configResponse.json();
+    if(!configResponse.ok||!config?.ok||config.data?.url!=='https://dwzdqekusvivjbxsapdu.supabase.co'||!String(config.data?.publishable_key||'').startsWith('sb_publishable_'))throw new Error('Map sign-in is unavailable.');
+    // Password goes directly to the same Map identity provider. Never store it,
+    // the provider refresh token, or a Custodial bearer in browser storage.
+    const loginResponse=await fetch(`${config.data.url}/auth/v1/token?grant_type=password`,{
+      method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000),
+      headers:{'Content-Type':'application/json',apikey:config.data.publishable_key},
+      body:JSON.stringify({email:String(email||'').trim(),password:String(password||'')})
+    });
+    const login=await loginResponse.json().catch(()=>null);
+    if(!loginResponse.ok||!login?.access_token)throw new Error('The Map email or password was not accepted.');
+    const response=await fetch(`${AUTH_URL}/map-session`,{method:'POST',credentials:'include',cache:'no-store',
+      signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId()},
+      body:JSON.stringify({access_token:login.access_token})});
+    return parseSessionResponse(response);
+  }
+  async function ownerCoverage(change=null){
+    const response=await fetch(`${BACKEND_ORIGIN}/admin-api/access/coverage`,{
+      method:change===null?'GET':'POST',credentials:'include',cache:'no-store',signal:AbortSignal.timeout(15000),
+      headers:{'Content-Type':'application/json',...(await opsManagerAuthHeaders())},
+      ...(change===null?{}:{body:JSON.stringify(change)})});
+    const result=await response.json().catch(()=>null);
+    if(!response.ok||!result?.ok)throw new Error(result?.error||'Coverage settings could not be read.');
+    return result.data;
   }
 
   async function listOpsManagerTrustedDevices(){
@@ -249,7 +358,7 @@
     const redirect=options.redirect===true;
     const requested=requestedAccessLevel(options);
     const existing=readSession();
-    if(existing&&sessionAccessLevel(existing)===requested)return existing;
+    if(options.forceRefresh!==true&&existing&&(sessionAccessLevel(existing)===requested||existing.permissions?.schema==='custodial.manager-permissions.v1'))return existing;
 
     if(!opsSessionRequest){
       opsSessionRequest=(async()=>{
@@ -263,7 +372,7 @@
       const session=await opsSessionRequest;
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw new Error('This browser is not trusted for Operations Leadership access. Enter the personal enrollment code on the Hub entry page.');
+      if(options.throwOnFailure===true)throw new Error('Sign in on the Hub entry page using your existing Memphis Zoo Map email and password.');
       return null;
     }catch(error){
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
@@ -293,7 +402,7 @@
     deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
     requireOpsManagerSession,opsManagerAuthHeaders,
     readSession,clearSession,getDeviceId,isOpsManager,isReadOnlySession,
-    canMutateOpsManagerSurface,hasRole,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
+    canMutateOpsManagerSurface,hasRole,hasPermission,signInWithMap,ownerCoverage,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
     opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,getOperationalServiceDate,getChicagoMinutes,
     isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };

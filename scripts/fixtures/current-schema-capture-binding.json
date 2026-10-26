@@ -1,0 +1,89 @@
+{
+  "schema": "custodial.isolated-test-canonical-source-binding.v1",
+  "scope": "SAME_EXCLUSIVE_POST293_DATA_TEST_ONLY",
+  "schema_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
+  "selection_clock_utc": "2026-10-25T15:12:05Z",
+  "schema_transition": {
+    "transition_id": "custodial-post293-test-20261025",
+    "from_fingerprint": "b496c72630100da8173006aa34886c7868b3ead5bea43e056135df64cf53b4ce",
+    "to_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
+    "expires_at": "2026-11-01T15:12:05Z"
+  },
+  "source_query_sections": 26,
+  "counts": {
+    "extensions": 8,
+    "types": 0,
+    "sequences": 0,
+    "tables": 274,
+    "columns": 2997,
+    "constraints": 1884,
+    "indexes": 917,
+    "functions": 963,
+    "views": 33,
+    "triggers": 608,
+    "policies": 50,
+    "owned_scheduler_roles": 3,
+    "owned_scheduler_role_memberships": 3,
+    "privilege_bearing_roles": 4,
+    "role_memberships": 10,
+    "table_grants": 1531,
+    "column_grants": 43,
+    "sequence_grants": 0,
+    "routine_grants": 587,
+    "type_grants": 0,
+    "schema_grants": 11,
+    "default_privileges": 12,
+    "cron_jobs": 9,
+    "recovery_schema_owners": 1
+  },
+  "raw_rowstream": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-first-test-renewed-hour-20261025T022330Z/current-post293-test-catalog-c2a3db2912f244b58133ff01cac224c8/10_ONE_READONLY_CATALOG_TRANSACTION.stdout",
+    "sha256": "937d920067b4c93ba2d702de21c02ba3c8504793c1c73d2c67d0166ed3abd595",
+    "bytes": 6070099
+  },
+  "normalized": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-first-test-renewed-hour-20261025T022330Z/current-post293-test-catalog-c2a3db2912f244b58133ff01cac224c8/catalog-output/TEST_CATALOG_NORMALIZED.json",
+    "sha256": "0684ddbdf2dbc6b850dc2463425fc4cf20764c3970d45bb74d08c8ba438e7560",
+    "bytes": 6739761
+  },
+  "fingerprint_file": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-first-test-renewed-hour-20261025T022330Z/current-post293-test-catalog-c2a3db2912f244b58133ff01cac224c8/catalog-output/TEST_CATALOG_FINGERPRINT.txt",
+    "sha256": "df80418f04f887c33650b5fe5a62041d2fe048ae97b38c226e9f65be28b09c91",
+    "bytes": 65
+  },
+  "catalog_summary": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-first-test-renewed-hour-20261025T022330Z/current-post293-test-catalog-c2a3db2912f244b58133ff01cac224c8/catalog-output/TEST_CATALOG_SUMMARY.json",
+    "sha256": "f632981d6342fb1d5afeb4011b4f038479f0549404e63fef7d320cdbaabeb46d",
+    "bytes": 2188
+  },
+  "Root_closed_actual_catalog": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-first-test-renewed-hour-20261025T022330Z/current-post293-test-catalog-outer-da53b11178cd40688b2afd5dea9a9480/ROOT_CURRENT_TEST_CATALOG_ACTUAL_FULL_CLOSED_RESULT.json",
+    "sha256": "16e16773b00f410d95be1c17afdf418972228b6e9f352fb698c1176534cacb7f",
+    "bytes": 38619
+  },
+  "reader_adapter": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/inventory-ack/post293-same-DATA-maintained-TEST-catalog-Root-launcher-source01/reader/normalize_actual_TEST_catalog_with_maintained_module.mjs",
+    "sha256": "f3ccba542492ba1d35cfb580172ed23375e0e908e2d0b28ed595913ddfd4394b",
+    "bytes": 5329
+  },
+  "catalog_module": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/inventory-ack/post293-same-DATA-maintained-TEST-catalog-Root-launcher-source01/reader/schema-fingerprint-catalog.mjs",
+    "sha256": "2d9a6c581d434630257fdb9c915bf196380af96d15af7185fb3f6d19a6cfafad",
+    "bytes": 20327
+  },
+  "catalog_sql": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/inventory-ack/post293-same-DATA-maintained-TEST-catalog-Root-launcher-source01/reader/CAPTURE_SAME_SNAPSHOT_TEST_CATALOG.sql",
+    "sha256": "939c887aa1cf727d6be654e08b187e4fefb40661baa38ee7670bb82d957570f1",
+    "bytes": 18992
+  },
+  "read_only_same_snapshot": true,
+  "ledger293_observed_by_this_reader": null,
+  "production_observation": false,
+  "production_applicability": false,
+  "production": false,
+  "independent_review": false,
+  "release_admission": false,
+  "frontend_pair_admission": false,
+  "classification": "ACTUAL_SAME_EXCLUSIVE_POST293_DATA_TEST_CATALOG_SOURCE_TARGET_NOT_RELEASE",
+  "limits": "TEST catalog only. Selection clock is not capture time. No NORMAL252 provenance, production observation, live compatibility, final pair, build, install, signature or physical admission."
+}

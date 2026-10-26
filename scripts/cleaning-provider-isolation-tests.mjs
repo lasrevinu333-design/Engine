@@ -1,42 +1,59 @@
 import assert from 'node:assert/strict';
-import {execFileSync} from 'node:child_process';
 import {readFileSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
+import {withoutProviderRegistration} from './provider-clock-source-boundary.mjs';
+import {assertLocalProviderBoundary} from './provider-local-owner-source-boundary.mjs';
+import {withoutReadinessObservation} from './native-readiness-source-boundary.mjs';
+import {assertNativeBaseline} from './native-source-baselines.mjs';
+import {withoutProviderInterval} from './provider-interval-source-boundary.mjs';
+import {withoutReleaseAdmission} from './provider-release-admission-source-boundary.mjs';
+import './provider-release-admission-contract-tests.mjs';
 
-// Changed-input SOURCE comparison only. This cannot certify Android startup,
-// preference I/O, class loading, real NFC or physical clock qualification.
+// Changed-input SOURCE comparison against the admitted current NFC core, not
+// the pre-core df36d323 historical snapshot. This cannot certify Android
+// startup, preference I/O, class loading, real NFC or clock qualification.
 const directory='mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/';
-const base='df36d32368b6f0ecf5e2e04f433ba2d831ff3053';
+const base='bd0113e5be9567ab4d4220ad61603f7eac9cf487';
 const read=name=>readFileSync(directory+name,'utf8');
 // Immutable packet reviewers may supply its manifest-bound exact baseline;
-// normal repository execution reads the same frozen commit directly.
-const prior=name=>process.argv[2] ? readFileSync(join(process.argv[2],name),'utf8')
-  : execFileSync('git',['show',base+':'+directory+name],{encoding:'utf8'});
+// normal execution uses tracked hashes, not local-only historical Git objects.
+const verify=(name,current,normalization='raw',normalize=x=>x)=>{
+  assertNativeBaseline(base,directory+name,current,normalization);
+  if(process.argv[2])assert.equal(current,normalize(readFileSync(join(process.argv[2],name),'utf8')));
+};
 const sha=value=>createHash('sha256').update(value).digest('hex');
 let checks=0;const comparisons=[];
-function unchangedAfterRemovingAddition(name,from,to){
-  const current=read(name),before=prior(name),start=current.indexOf(from),end=current.indexOf(to,start);
-  assert.ok(start>=0&&end>start,'exact addition delimiters '+name);checks++;
-  assert.equal(current.slice(0,start)+current.slice(end),before,'ALL earlier code byte-identical outside provider addition '+name);checks++;
-  comparisons.push({name,baseline_sha256:sha(before),current_sha256:sha(current),removed_addition_sha256:sha(current.slice(start,end))});
+function unchanged(name){
+  const current=withoutReadinessObservation(name,withoutProviderInterval(name,read(name)));
+  verify(name,current);checks++;
+  comparisons.push({name,baseline_sha256:sha(current),current_sha256:sha(current)});
 }
-unchangedAfterRemovingAddition('OfflineAuthorityTime.java','    /** Read-only provider clock observation.','    synchronized void authorizeNewWork(');
-unchangedAfterRemovingAddition('VaultEngine.java','    /** Internal typed provider registration/status,','    synchronized Map<String, Object> attestOfflineStart(');
-unchangedAfterRemovingAddition('RequestPolicy.java','        // Native-only provider operations','        if (CREDENTIAL_MANAGEMENT_PREFIXES');
+unchanged('OfflineAuthorityTime.java');
+verify('VaultEngine.java',withoutProviderRegistration(read('VaultEngine.java')),'provider-registration-removal',withoutProviderRegistration); checks++;
+unchanged('RequestPolicy.java');
 const all=readdirSync(directory).filter(name=>name.endsWith('.java')).map(name=>[name,read(name)]);
 for(const method of ['registerNativeProvider','sendNativeProviderEvents','recoverNativeProviderInventory']){
   const uses=all.flatMap(([name,source])=>[...source.matchAll(new RegExp('\\b'+method+'\\s*\\(','g'))].map(()=>name));
-  assert.deepEqual(uses,['VaultEngine.java'],'new provider effect has no production caller: '+method);checks++;
+  const expected=method==='registerNativeProvider'?['NativeProviderRegistrationCoordinator.java','VaultEngine.java']:['NativeProviderRuntimeOwner.java','VaultEngine.java'];
+  assert.deepEqual(uses,expected,'typed provider effects remain restricted to the deferred native owner: '+method);checks++;
 }
 const observationUsers=all.filter(([,source])=>/\.providerObservation\s*\(/.test(source)).map(([name])=>name);
-assert.deepEqual(observationUsers,['VaultEngine.java'],'provider observation is reached only by uncalled provider method');checks++;
+assert.deepEqual(observationUsers,[],'retired cleaning point adapter has no provider consumer');checks++;
 const manifest=readFileSync('mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml','utf8');
-assert.doesNotMatch(manifest,/NativeProvider|JobService|MESSAGING_EVENT/,'new provider service is not registered by the vault manifest');checks++;
-assert.doesNotMatch(read('CustodialNativeRuntime.java'),/new AndroidProviderStore|new NativeProviderJournal|AndroidProviderCipher/,
-  'cleaning startup must not access the deferred provider preference/key namespace');checks++;
+assert.doesNotMatch(manifest,/MESSAGING_EVENT/,'provider ingress is not activated by component registration');checks++;
+const historicalRuntime=withoutReleaseAdmission('CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
+assert.match(historicalRuntime, /static NativeProviderComponentRuntime providerComponents\(Context context\)\s*\{\s*return NativeProviderComponentRuntime\.SUSPENDED;\s*\}/,
+  'registered components remain fail-closed without production provider authority');checks++;
+assert.match(historicalRuntime, /static NativeProviderIngressRuntime providerIngress\(Context context\)\s*\{\s*return NativeProviderIngressRuntime\.SUSPENDED;\s*\}/,
+  'SDK ingress remains hard suspended');checks++;
+assert.deepEqual(all.filter(([,source])=>/new NativeProviderRegistrationCoordinator\s*\(/.test(source)).map(([name])=>name),['NativeProviderRuntimeOwner.java'],
+  'conditional registration is constructed only inside the single native owner');checks++;
+assert.match(historicalRuntime,/new NativeProviderRuntimeOwner.Delivery\(NativeProviderTime.Profiles.NONE,/,
+  'conditional dependencies do not select a qualified production profile');checks++;
+assertLocalProviderBoundary(read('CustodialNativeRuntime.java'));checks++;
 for(const name of ['NativeCompletionJournal.java','AndroidOfflineAuthorityTimeStore.java','NativeNfcScanHandoff.java','NativeNfcScanAuthority.java']){
-  assert.equal(read(name),prior(name),'existing physical handoff/receipt/store implementation unchanged '+name);checks++;
+  verify(name,withoutReadinessObservation(name,read(name)));checks++;
 }
 console.log(JSON.stringify({status:'PASS_CLEANING_PROVIDER_SOURCE_ISOLATION',checks,baseline:base,comparisons,
   limits:'source comparison only; shared runtime constructor and Android/manifest merger behavior still require review and runtime proof'},null,2));

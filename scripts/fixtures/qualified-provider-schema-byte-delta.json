@@ -1,0 +1,63 @@
+{
+  "schema": "custodial.qualified-provider-schema-delta.v1",
+  "path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+  "base": "3db165ff4b08b7af4109d8787a0f6e96374f33c0",
+  "tip": "793aa7e831b0acb477c076edb6a5c649f8873b32",
+  "prior_sha256": "03eec86c1d2a746567a77a9b4d59574b3a152bf8a4bbaf425ff8e845cdaff428",
+  "current_sha256": "44fe431c3ed16fd5d5a31d613e85f4cda498b8915266e4e7f529e223fbe87933",
+  "hunks": [
+    {
+      "old_start": 271,
+      "old_count": 2,
+      "new_start": 271,
+      "new_count": 2,
+      "before": [
+        "        \"verifier_version\": { \"const\": \"1.7.0\" },",
+        "        \"policy\": { \"const\": \"exact-custodial-android-manifest-v9\" },"
+      ],
+      "after": [
+        "        \"verifier_version\": { \"const\": \"1.8.0\" },",
+        "        \"policy\": { \"const\": \"exact-custodial-android-manifest-v10-qualified-provider\" },"
+      ]
+    },
+    {
+      "old_start": 320,
+      "old_count": 2,
+      "new_start": 320,
+      "new_count": 2,
+      "before": [
+        "              \"minItems\": 6,",
+        "              \"maxItems\": 6,"
+      ],
+      "after": [
+        "              \"minItems\": 5,",
+        "              \"maxItems\": 5,"
+      ]
+    },
+    {
+      "old_start": 327,
+      "old_count": 2,
+      "new_start": 327,
+      "new_count": 1,
+      "before": [
+        "                { \"const\": \"com.google.firebase.messaging.FirebaseMessagingService\" },",
+        "                { \"const\": \"io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService\" },"
+      ],
+      "after": [
+        "                { \"const\": \"org.memphiszoo.custodial.vault.CustodialProviderMessagingService\" },"
+      ]
+    },
+    {
+      "old_start": 650,
+      "old_count": 1,
+      "new_start": 649,
+      "new_count": 1,
+      "before": [
+        "        \"android_manifest_security_verifier_version\": { \"const\": \"1.7.0\" },"
+      ],
+      "after": [
+        "        \"android_manifest_security_verifier_version\": { \"const\": \"1.8.0\" },"
+      ]
+    }
+  ]
+}

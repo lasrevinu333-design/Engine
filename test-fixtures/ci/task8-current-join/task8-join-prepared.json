@@ -1,0 +1,543 @@
+{
+  "state": "PREPARED",
+  "preview": {
+    "weeks": [
+      {
+        "week_start": "2026-10-12",
+        "assignments": [
+          {
+            "status": "assigned",
+            "work_id": "CAPACITY_AREA_1-0",
+            "owner_kind": "CONTRACTOR_CAPACITY",
+            "capacity_id": "30000000-0000-4000-8000-000000000001",
+            "day_of_week": 1,
+            "explanation": {},
+            "reason_code": null,
+            "owner_digest": "c48978741ca87de7a3836eb4880f108ed9ec8d9c88d8fdefebb1abef8d643566",
+            "plan_work_id": "1:CAPACITY_AREA_1-0",
+            "service_date": "2026-10-12",
+            "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "work_snapshot": {
+              "window": {
+                "end": "07:10",
+                "start": "07:00"
+              },
+              "workId": "CAPACITY_AREA_1-0",
+              "priority": 2,
+              "required": true,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000001",
+              "manualLock": false,
+              "overlayWork": false,
+              "serviceMode": "scan_tracked",
+              "originSlotId": "20000000-0000-4000-8000-000000000001",
+              "restrictions": [],
+              "coveragePolicy": null,
+              "manualLockSlotId": null,
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000001",
+                  "locationNameSnapshot": "Synthetic area 1"
+                }
+              ],
+              "restrictedSlotIds": [],
+              "bestEffortCoverage": false,
+              "priorityProvenance": "explicit synthetic priority",
+              "coveragePolicyOrder": null,
+              "locationCodeSnapshot": "CAPACITY_AREA_1",
+              "locationNameSnapshot": "Synthetic area 1",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort",
+              "coveragePolicyProvenance": null
+            },
+            "owner_person_id": null,
+            "baseline_owner_name": "Synthetic employee 1",
+            "original_actor_name": "Synthetic employee 1",
+            "exact_owner_identity": "7ba7ef3c39972ba203f95b0a40f1976a3c45e1b125225e795ad8a268eb3f7692",
+            "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+            "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+            "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+            "optimized_owner_person_id": null
+          },
+          {
+            "status": "assigned",
+            "work_id": "CAPACITY_AREA_1-1",
+            "owner_kind": "CONTRACTOR_CAPACITY",
+            "capacity_id": "30000000-0000-4000-8000-000000000001",
+            "day_of_week": 1,
+            "explanation": {},
+            "reason_code": null,
+            "owner_digest": "42483886e189f1e0baa450ad03ce8d9ac7c8f7a8b014b83905221910dc7c3b16",
+            "plan_work_id": "1:CAPACITY_AREA_1-1",
+            "service_date": "2026-10-12",
+            "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "work_snapshot": {
+              "window": {
+                "end": "07:25",
+                "start": "07:15"
+              },
+              "workId": "CAPACITY_AREA_1-1",
+              "priority": 2,
+              "required": true,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000001",
+              "manualLock": false,
+              "overlayWork": false,
+              "serviceMode": "scan_tracked",
+              "originSlotId": "20000000-0000-4000-8000-000000000001",
+              "restrictions": [],
+              "coveragePolicy": null,
+              "manualLockSlotId": null,
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000001",
+                  "locationNameSnapshot": "Synthetic area 1"
+                }
+              ],
+              "restrictedSlotIds": [],
+              "bestEffortCoverage": false,
+              "priorityProvenance": "explicit synthetic priority",
+              "coveragePolicyOrder": null,
+              "locationCodeSnapshot": "CAPACITY_AREA_1",
+              "locationNameSnapshot": "Synthetic area 1",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort",
+              "coveragePolicyProvenance": null
+            },
+            "owner_person_id": null,
+            "baseline_owner_name": "Synthetic employee 1",
+            "original_actor_name": "Synthetic employee 1",
+            "exact_owner_identity": "fc211652504075fc729ae75e960685d11d414bdcd4b43bbb74e95eb4a69c8f07",
+            "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+            "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+            "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+            "optimized_owner_person_id": null
+          },
+          {
+            "status": "assigned",
+            "work_id": "CAPACITY_AREA_1-2",
+            "owner_kind": "CONTRACTOR_CAPACITY",
+            "capacity_id": "30000000-0000-4000-8000-000000000001",
+            "day_of_week": 1,
+            "explanation": {},
+            "reason_code": null,
+            "owner_digest": "273d7eed22c999afd25923021e412413cf51cb391ca6da7ca4be74968243c569",
+            "plan_work_id": "1:CAPACITY_AREA_1-2",
+            "service_date": "2026-10-12",
+            "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "work_snapshot": {
+              "window": {
+                "end": "07:40",
+                "start": "07:30"
+              },
+              "workId": "CAPACITY_AREA_1-2",
+              "priority": 2,
+              "required": true,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000001",
+              "manualLock": false,
+              "overlayWork": false,
+              "serviceMode": "scan_tracked",
+              "originSlotId": "20000000-0000-4000-8000-000000000001",
+              "restrictions": [],
+              "coveragePolicy": null,
+              "manualLockSlotId": null,
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000001",
+                  "locationNameSnapshot": "Synthetic area 1"
+                }
+              ],
+              "restrictedSlotIds": [],
+              "bestEffortCoverage": false,
+              "priorityProvenance": "explicit synthetic priority",
+              "coveragePolicyOrder": null,
+              "locationCodeSnapshot": "CAPACITY_AREA_1",
+              "locationNameSnapshot": "Synthetic area 1",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort",
+              "coveragePolicyProvenance": null
+            },
+            "owner_person_id": null,
+            "baseline_owner_name": "Synthetic employee 1",
+            "original_actor_name": "Synthetic employee 1",
+            "exact_owner_identity": "355ba4499ed59b067990e2dccfd0ec1fc64711de89ff20e9641314c5b9172765",
+            "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+            "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+            "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+            "optimized_owner_person_id": null
+          },
+          {
+            "status": "assigned",
+            "work_id": "CAPACITY_AREA_2-0",
+            "owner_kind": "CONTRACTOR_CAPACITY",
+            "capacity_id": "30000000-0000-4000-8000-000000000001",
+            "day_of_week": 1,
+            "explanation": {},
+            "reason_code": null,
+            "owner_digest": "280558e418af5331844f3f0372a3526d2a849355ab68f3b6962d4b042ecbeb74",
+            "plan_work_id": "1:CAPACITY_AREA_2-0",
+            "service_date": "2026-10-12",
+            "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "work_snapshot": {
+              "window": {
+                "end": "07:55",
+                "start": "07:45"
+              },
+              "workId": "CAPACITY_AREA_2-0",
+              "priority": 2,
+              "required": true,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000002",
+              "manualLock": false,
+              "overlayWork": false,
+              "serviceMode": "scan_tracked",
+              "originSlotId": "20000000-0000-4000-8000-000000000001",
+              "restrictions": [],
+              "coveragePolicy": null,
+              "manualLockSlotId": null,
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000002",
+                  "locationNameSnapshot": "Synthetic area 2"
+                }
+              ],
+              "restrictedSlotIds": [],
+              "bestEffortCoverage": false,
+              "priorityProvenance": "explicit synthetic priority",
+              "coveragePolicyOrder": null,
+              "locationCodeSnapshot": "CAPACITY_AREA_2",
+              "locationNameSnapshot": "Synthetic area 2",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort",
+              "coveragePolicyProvenance": null
+            },
+            "owner_person_id": null,
+            "baseline_owner_name": "Synthetic employee 1",
+            "original_actor_name": "Synthetic employee 1",
+            "exact_owner_identity": "719e93984256db2a63093b054e8384cf1a9dc4c1e68823c509ee5f3fa4e00de0",
+            "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+            "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+            "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+            "optimized_owner_person_id": null
+          },
+          {
+            "status": "assigned",
+            "work_id": "CAPACITY_AREA_2-1",
+            "owner_kind": "CONTRACTOR_CAPACITY",
+            "capacity_id": "30000000-0000-4000-8000-000000000001",
+            "day_of_week": 1,
+            "explanation": {},
+            "reason_code": null,
+            "owner_digest": "71068deb329c381bd569a06b82efdf051f4499084eb937cef70f0f5ec5d99c4c",
+            "plan_work_id": "1:CAPACITY_AREA_2-1",
+            "service_date": "2026-10-12",
+            "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "work_snapshot": {
+              "window": {
+                "end": "08:10",
+                "start": "08:00"
+              },
+              "workId": "CAPACITY_AREA_2-1",
+              "priority": 2,
+              "required": true,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000002",
+              "manualLock": false,
+              "overlayWork": false,
+              "serviceMode": "scan_tracked",
+              "originSlotId": "20000000-0000-4000-8000-000000000001",
+              "restrictions": [],
+              "coveragePolicy": null,
+              "manualLockSlotId": null,
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000002",
+                  "locationNameSnapshot": "Synthetic area 2"
+                }
+              ],
+              "restrictedSlotIds": [],
+              "bestEffortCoverage": false,
+              "priorityProvenance": "explicit synthetic priority",
+              "coveragePolicyOrder": null,
+              "locationCodeSnapshot": "CAPACITY_AREA_2",
+              "locationNameSnapshot": "Synthetic area 2",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort",
+              "coveragePolicyProvenance": null
+            },
+            "owner_person_id": null,
+            "baseline_owner_name": "Synthetic employee 1",
+            "original_actor_name": "Synthetic employee 1",
+            "exact_owner_identity": "62bd8c82dcc6ae1137f73527a80e5ac10545e8ed8f7b11d3f39d3d1ed313f14d",
+            "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+            "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+            "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+            "optimized_owner_person_id": null
+          },
+          {
+            "status": "assigned",
+            "work_id": "CAPACITY_AREA_2-2",
+            "owner_kind": "CONTRACTOR_CAPACITY",
+            "capacity_id": "30000000-0000-4000-8000-000000000001",
+            "day_of_week": 1,
+            "explanation": {},
+            "reason_code": null,
+            "owner_digest": "0a988ea2f8f6a9b475f58b1e8c1b9cb9da2af419f8c30b966f9eb2ed04a2a357",
+            "plan_work_id": "1:CAPACITY_AREA_2-2",
+            "service_date": "2026-10-12",
+            "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "work_snapshot": {
+              "window": {
+                "end": "08:25",
+                "start": "08:15"
+              },
+              "workId": "CAPACITY_AREA_2-2",
+              "priority": 2,
+              "required": true,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000002",
+              "manualLock": false,
+              "overlayWork": false,
+              "serviceMode": "scan_tracked",
+              "originSlotId": "20000000-0000-4000-8000-000000000001",
+              "restrictions": [],
+              "coveragePolicy": null,
+              "manualLockSlotId": null,
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000002",
+                  "locationNameSnapshot": "Synthetic area 2"
+                }
+              ],
+              "restrictedSlotIds": [],
+              "bestEffortCoverage": false,
+              "priorityProvenance": "explicit synthetic priority",
+              "coveragePolicyOrder": null,
+              "locationCodeSnapshot": "CAPACITY_AREA_2",
+              "locationNameSnapshot": "Synthetic area 2",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort",
+              "coveragePolicyProvenance": null
+            },
+            "owner_person_id": null,
+            "baseline_owner_name": "Synthetic employee 1",
+            "original_actor_name": "Synthetic employee 1",
+            "exact_owner_identity": "e286846127999c14d227e67d7c850e4ebc2dccde241472aeb79f98a00276c44c",
+            "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+            "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+            "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+            "optimized_owner_person_id": null
+          }
+        ],
+        "lunch_loans": [
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "4bae372398aa7e9c5e055ab49a246e959827a7a3243e2818c23fc4aef39799d5",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "13:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "12:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "20000000-0000-4000-8000-000000000002",
+            "normal_owner_person_id": "10000000-0000-4000-8000-000000000002",
+            "total_distance_minutes": 0
+          },
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "ab3251ca760a0ee15092423e787d8a5efefebd82135a97521b4634cc5192e450",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "14:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "13:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "20000000-0000-4000-8000-000000000003",
+            "normal_owner_person_id": "10000000-0000-4000-8000-000000000003",
+            "total_distance_minutes": 0
+          },
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "a01dcdf59012e0b297fc3eb5c78dfa61acfde51fb8f088ec19bea2f5feaa5ad8",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "12:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "11:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "20000000-0000-4000-8000-000000000004",
+            "normal_owner_person_id": "10000000-0000-4000-8000-000000000004",
+            "total_distance_minutes": 0
+          },
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "83d936d37730bd469ee5008b67b6af462100f89bafac69d117743f2a9a4e880c",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "13:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "12:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "20000000-0000-4000-8000-000000000005",
+            "normal_owner_person_id": "10000000-0000-4000-8000-000000000005",
+            "total_distance_minutes": 0
+          },
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "597cdf604aec135cbe6d4c2225e922f3a766f5c970895f817cf5fcae4f44fd98",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "14:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "13:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "20000000-0000-4000-8000-000000000006",
+            "normal_owner_person_id": "10000000-0000-4000-8000-000000000006",
+            "total_distance_minutes": 0
+          },
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "a644fc661be88c387bd2eb466b21be2d3a00a7afb3de2dbeacd7d0c70e04a5a8",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "12:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "11:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "20000000-0000-4000-8000-000000000007",
+            "normal_owner_person_id": "10000000-0000-4000-8000-000000000007",
+            "total_distance_minutes": 0
+          },
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "361556761a227dfe13327cd87361c7ef60b7fd2c8f8b69cf5f8d7a04294a82cc",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "13:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "12:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "20000000-0000-4000-8000-000000000008",
+            "normal_owner_person_id": "10000000-0000-4000-8000-000000000008",
+            "total_distance_minutes": 0
+          },
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "054371908d94d994ba5d5ec0748d098fbe513e5c94074899a1b8f24fdda71331",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "14:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "13:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "20000000-0000-4000-8000-000000000009",
+            "normal_owner_person_id": "10000000-0000-4000-8000-000000000009",
+            "total_distance_minutes": 0
+          },
+          {
+            "reason": null,
+            "status": "NO_AREAS",
+            "loan_id": "54246d0b9de55c1c4493e8c3b6e3404cbb32bef296d8130c0a0b5cdfd0f6ca90",
+            "fallback": null,
+            "day_of_week": 1,
+            "coverage_end": "12:00",
+            "service_date": "2026-10-12",
+            "coverage_start": "11:00",
+            "helper_slot_ids": [],
+            "normal_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+            "normal_owner_person_id": null,
+            "total_distance_minutes": 0,
+            "normal_owner_capacity_id": "30000000-0000-4000-8000-000000000001"
+          }
+        ],
+        "lunch_responsibilities": []
+      }
+    ],
+    "schema": "memphis-zoo.staffing-command-preview.v1"
+  },
+  "created_at": "2026-10-12T00:02:20.924343+00:00",
+  "accepted_at": null,
+  "prepared_at": "2026-10-12T00:02:25.220686+00:00",
+  "input_digest": "04305cd02534ab9348485f736830afc5ddb26c085f0adcbeb68f4d661cbe8ea6",
+  "operation_id": "04415019-eb19-4add-ac4b-c41ad11540c4",
+  "semantic_body": {
+    "endDate": "2026-10-12",
+    "startDate": "2026-10-12",
+    "employeeId": "10000000-0000-4000-8000-000000000001",
+    "absenceKind": "daily_absence",
+    "commandKind": "absence",
+    "targetAbsenceId": null
+  },
+  "preview_digest": "cf78dac96b617f708ae0fb30410be17096442edb4561b0436acea4557f60228b",
+  "candidate_bytes": 706043,
+  "semantic_digest": "49abe276604a3e55d4b83316dca4877ece91c513d07cc515a61f1095085d8aad",
+  "accepted_receipt": null,
+  "accepted_revision": null,
+  "candidate_summary": {
+    "weeks": 1,
+    "lunches": 1,
+    "projections": 1,
+    "scheduleRefreshes": 1
+  },
+  "expected_revision": 6,
+  "publication_vector": {
+    "weeks": [
+      {
+        "versionId": "60000000-0000-4000-8000-000000000001",
+        "weekStart": "2026-10-12",
+        "publicationId": "70000000-0000-4000-8000-000000000001",
+        "authorityRevision": 6
+      }
+    ],
+    "expectedRevision": 6
+  },
+  "candidate_row_count": 3,
+  "candidate_set_digest": "65d61ce743b22a4f1c88f847c532db29e7aff97a1726a583d0c26bd3b6d66778",
+  "current_service_date": "2026-10-11",
+  "prepared_by_manager_id": "00000000-0000-4000-8000-000000000001"
+}

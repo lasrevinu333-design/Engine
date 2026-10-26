@@ -50,8 +50,12 @@ final class AndroidKeystoreCipher implements CredentialCipher {
     }
 
     @Override
-    public synchronized EncryptedSecret encrypt(char[] cleartext) throws VaultFailure {
-        return encrypt(cleartext, false);
+    public EncryptedSecret encrypt(char[] cleartext) throws VaultFailure {
+        // The only key-creating path takes WORK before the cipher monitor.
+        // Existing-key-only/retained readers never acquire WORK from here.
+        synchronized (AndroidProtectedWorkPreferences.retainedCommitLock()) {
+            synchronized (this) { return encrypt(cleartext, false); }
+        }
     }
 
     @Override
@@ -78,7 +82,8 @@ final class AndroidKeystoreCipher implements CredentialCipher {
             encrypted = cipher.doFinal(clear);
             return new EncryptedSecret(
                 Base64.encodeToString(encrypted, Base64.NO_WRAP),
-                Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP)
+                Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP),
+                Math.max(16_384,4*maxCleartextCharacters+64)
             );
         } catch (VaultFailure error) {
             throw error;
@@ -121,11 +126,78 @@ final class AndroidKeystoreCipher implements CredentialCipher {
 
     @Override
     public synchronized void destroyKey() throws VaultFailure {
+        // This alias also protects retained offline authority/work records.
+        // Different AAD domains do not make it an enrollment-only key. Neither
+        // a remote removal tombstone nor an empty browser queue proves that all
+        // native ciphertext has been retired. Refuse before any key-store access;
+        // VaultEngine must retain the exact pending tombstone, not finalize EMPTY.
+        // Safe purpose-specific retirement requires a separately reviewed owner
+        // and existing-data recovery contract; never rotate/delete this key here.
+        throw new VaultFailure("custodial_native_shared_key_retirement_refused");
+    }
+
+    /** UNMOUNTED fixed all8 capsule adapter. Existing shared-V2 key ONLY;
+     * no create fallback, exported key, caller cipher/domain or storage write. */
+    synchronized NativeRetainedNamespacePrivateCapsule preparePrivateNamespaceCapsule(
+        NativeRetainedNamespaceValues values, byte[] original, NativeRetainedNamespaceCustodyLayout.Observation layout,
+        VaultSnapshot vault, NativeRetainedWorkCapture frozenWork, NativeProviderPrincipal principal) throws VaultFailure {
         try {
-            KeyStore store = store();
-            if (store.containsAlias(KEY_ALIAS)) store.deleteEntry(KEY_ALIAS);
-        } catch (Exception error) {
-            throw new VaultFailure("custodial_native_vault_key_cleanup_failed", error);
+            SecretKey key = requireExistingKey();
+            requireOriginalVaultAndWorkWithKey(key, vault.secret, frozenWork, principal);
+            return NativeRetainedNamespacePrivateCapsule.prepare(values, original, layout, key);
+        }
+        catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeRetainedNamespacePrivateCapsule.FAILURE); }
+    }
+
+    synchronized void verifyPrivateNamespaceCapsule(NativeRetainedNamespacePrivateCapsule capsule,
+        NativeRetainedNamespaceValues values, byte[] original, NativeRetainedNamespaceCustodyLayout.Observation layout,
+        VaultSnapshot vault, NativeRetainedWorkCapture frozenWork, NativeProviderPrincipal principal) throws VaultFailure {
+        try {
+            SecretKey key = requireExistingKey();
+            requireOriginalVaultAndWorkWithKey(key, vault.secret, frozenWork, principal);
+            capsule.verify(values, original, layout, key);
+        }
+        catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeRetainedNamespacePrivateCapsule.FAILURE); }
+    }
+
+    /** Fixed same-device restore ONLY. Reuses original encrypted record and
+     * loaded original key; never creates a key/capsule/IV or applies raw rows. */
+    synchronized NativeRetainedNamespacePrivateCapsule restorePrivateNamespaceCapsule(
+        NativeRetainedNamespaceValues values, byte[] original, NativeRetainedNamespaceCustodyLayout.Observation layout,
+        NativeRetainedNamespacePrivateCapsule.SavedLocalRecord record, VaultSnapshot vault,
+        NativeRetainedWorkCapture frozenWork, NativeProviderPrincipal principal) throws VaultFailure {
+        try {
+            SecretKey key = requireExistingKey();
+            requireOriginalVaultAndWorkWithKey(key, vault.secret, frozenWork, principal);
+            return NativeRetainedNamespacePrivateCapsule.restoreSavedLocalRecord(values, original, layout, record, key);
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeRetainedNamespacePrivateCapsule.FAILURE); }
+    }
+
+    synchronized void requireOriginalNamespaceCustodyKey(VaultSnapshot vault,
+        NativeRetainedWorkCapture frozenWork, NativeProviderPrincipal principal) throws VaultFailure {
+        try { requireOriginalVaultAndWorkWithKey(requireExistingKey(), vault.secret, frozenWork, principal); }
+        catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeRetainedNamespacePrivateCapsule.FAILURE); }
+    }
+
+    /** The exact loaded key must decrypt the ORIGINAL vault-AAD snapshot
+     * credential AND verify the original frozen WORK HMAC. Merely finding a
+     * replacement key under the same alias is not same-original-key proof.
+     * No credential is returned; no HMAC/signature is refreshed. */
+    private static void requireOriginalVaultAndWorkWithKey(SecretKey key, EncryptedSecret secret,
+        NativeRetainedWorkCapture frozenWork, NativeProviderPrincipal principal) throws VaultFailure {
+        byte[] encrypted = null, iv = null;
+        try {
+            if (key == null || secret == null || frozenWork == null || principal == null) throw new VaultFailure(NativeRetainedNamespacePrivateCapsule.FAILURE);
+            encrypted = Base64.decode(secret.ciphertext, Base64.NO_WRAP); iv = Base64.decode(secret.iv, Base64.NO_WRAP);
+            NativeRetainedNamespacePrivateCapsule.requireOriginalVaultAndWorkKey(key, encrypted, iv, frozenWork, principal);
+        } catch (Exception error) { throw new VaultFailure(NativeRetainedNamespacePrivateCapsule.FAILURE); }
+        finally {
+            if (encrypted != null) Arrays.fill(encrypted, (byte) 0);
+            if (iv != null) Arrays.fill(iv, (byte) 0);
         }
     }
 
@@ -137,6 +209,11 @@ final class AndroidKeystoreCipher implements CredentialCipher {
 
     private SecretKey getOrCreateKey() throws Exception {
         KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry) store().getEntry(KEY_ALIAS, null);
+        if (entry != null) return entry.getSecretKey();
+        AndroidProtectedWorkPreferences.requireUnjournaledInitialSharedKeyCreation();
+        // Recheck the fixed alias while retaining the SAME coordinator and
+        // cipher monitor; never overwrite a concurrently supplied old key.
+        entry = (KeyStore.SecretKeyEntry) store().getEntry(KEY_ALIAS, null);
         if (entry != null) return entry.getSecretKey();
         KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
         generator.init(new KeyGenParameterSpec.Builder(

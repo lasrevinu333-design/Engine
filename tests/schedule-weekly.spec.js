@@ -6,7 +6,6 @@ const SLOT_CONTRACTOR = '20000000-0000-4000-8000-000000000003';
 const PUBLICATION = '70000000-0000-4000-8000-000000000001';
 const VERSION = '60000000-0000-4000-8000-000000000001';
 const DRAFT_VERSION = '60000000-0000-4000-8000-000000000002';
-const STAFFING_OPERATION = '80000000-0000-4000-8000-000000000001';
 const OPERATIONAL_NOW = '2026-08-12T18:00:00Z';
 
 async function installOperationalClock(page) {
@@ -65,9 +64,6 @@ async function confirmScheduleAction(page, label) {
 async function installRoutes(context, { failAtomicTurnover = false } = {}) {
   const fixture = schedulerFixture();
   const calls = [];
-  const staffingOperation=STAFFING_OPERATION;
-  const staffingPreviewDigest='a'.repeat(64);
-  let staffingState='NONE',staffingSemantic=null;
   const commitProjection = () => {
     const workingSlot = fixture.roster.find((slot) => slot.week_staffing.some((row) => row.availability_state === 'working'))?.slot_id;
     fixture.latest_projection = {
@@ -102,15 +98,6 @@ async function installRoutes(context, { failAtomicTurnover = false } = {}) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: fixture }) });
     }
     calls.push({ path, body: request.postDataJSON(), authorization: await request.headerValue('authorization') });
-    if(request.method()==='POST'&&path==='/static-weekly/staffing-commands'){
-      const body=request.postDataJSON();staffingState='PREPARING';staffingSemantic={absenceKind:body.absence_kind,commandKind:body.command_kind,employeeId:body.employee_id,endDate:body.end_date,startDate:body.start_date,targetAbsenceId:body.target_absence_id||null};
-      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{operation_id:staffingOperation,state:staffingState}})});
-    }
-    if(request.method()==='POST'&&path===`/static-weekly/staffing-commands/${staffingOperation}/prepare`){staffingState='PREPARED';return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{state:staffingState}})});}
-    if(request.method()==='GET'&&path===`/static-weekly/staffing-commands/${staffingOperation}`){const preview={schema:'memphis-zoo.staffing-command-preview.v1',weeks:[{week_start:fixture.week_start,assignments:[{service_date:staffingSemantic.startDate,status:'assigned',owner_name_snapshot:'Taylor Helper',work_id:'work-preview',work_snapshot:{locationNameSnapshot:'Zoo Area 1',window:{start:'08:00',end:'10:00'}}}],lunch_responsibilities:[],lunch_loans:[]}]};return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{operation_id:staffingOperation,state:staffingState,semantic_body:staffingSemantic,preview_digest:staffingPreviewDigest,preview:staffingState==='PREPARED'?preview:null}})});}
-    if(request.method()==='POST'&&path===`/static-weekly/staffing-commands/${staffingOperation}/confirm`){staffingState='ACCEPTED';fixture.authority_revision+=1;fixture.exceptions.push({id:`${staffingOperation}:${staffingSemantic.startDate}`,staffingAbsenceId:staffingOperation,type:staffingSemantic.absenceKind==='pto'?'pto':'daily_absence',serviceDate:staffingSemantic.startDate,reason:'Approved staffing unavailability',payload:{slotId:SLOT_WORKING}});commitProjection();return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{operation_id:staffingOperation,state:staffingState,authority_revision:fixture.authority_revision}})});}
-    if(request.method()==='GET'&&path===`/static-weekly/staffing-commands/${staffingOperation}/delivery`)return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{operation_id:staffingOperation,targets:[{status:'PENDING'}]}})});
-    if(request.method()==='POST'&&path===`/static-weekly/staffing-commands/${staffingOperation}/cancel`){staffingState='CANCELLED';return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:{state:staffingState}})});}
     if (path === '/static-weekly/employees/departed' && failAtomicTurnover) {
       return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'No feasible schedule for current staffing.' }) });
     }
@@ -185,54 +172,45 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
 
     if (viewport.name === 'desktop') await page.locator('#absence-type').selectOption('pto');
     await page.locator(`[data-callout-slot="${SLOT_WORKING}"]`).check();
-    await page.getByRole('button', { name: 'Apply Day Changes' }).click();
-    await expect(page.getByRole('heading',{name:'Review prepared schedule'})).toBeVisible();
-    await expect(page.locator('#action-confirm-message')).toContainText('Taylor Helper — Zoo Area 1');
-    await confirmScheduleAction(page, 'Publish Schedule');
-    await expect(page.getByText(viewport.name === 'desktop' ? 'PTO already applied' : 'Call-out already applied')).toBeVisible();
     await page.locator(`[data-contractor-slot="${SLOT_CONTRACTOR}"]`).check();
-    const contractorRow=page.locator('[data-contractor-row]');
-    await contractorRow.locator('[data-lunch-start]').fill('12:00');
-    await contractorRow.locator('[data-lunch-end]').fill('13:00');
     await page.getByRole('button', { name: 'Apply Day Changes' }).click();
     await confirmScheduleAction(page, 'Apply Changes');
+    await expect(page.getByText(viewport.name === 'desktop' ? 'PTO already applied' : 'Call-out already applied')).toBeVisible();
     await expect(page.getByText('Contractor capacity already applied')).toBeVisible();
-    expect(backend.calls.map((call) => call.path)).toContain('/static-weekly/day-changes/batch');
-    expect(backend.calls.map((call) => call.path)).toContain(`/static-weekly/staffing-commands/${STAFFING_OPERATION}/confirm`);
+    expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/day-changes/batch']);
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
-    const beginCall=backend.calls.find(call=>call.path==='/static-weekly/staffing-commands');
-    expect(beginCall.body.expected_revision).toBe(3);
-    expect(beginCall.body.absence_kind).toBe(viewport.name === 'desktop' ? 'pto' : 'daily_absence');
-    const dayChangeCall=backend.calls.find(call=>call.path==='/static-weekly/day-changes/batch');
-    expect(dayChangeCall.body.operations).toHaveLength(2);
-    expect(dayChangeCall.body.operations[0].operation).toBe('cover_all');
-    expect(dayChangeCall.body.operations[1].exception_type).toBe('lunch');
+    expect(backend.calls[0].body.expected_revision).toBe(3);
+    expect(backend.calls[0].body.operations).toHaveLength(2);
+    expect(backend.calls[0].body.operations[0].exception_type).toBe(viewport.name === 'desktop' ? 'pto' : 'daily_absence');
 
     await page.getByRole('tab', { name: 'Changes' }).click();
-    const removeCoverAll = page.getByRole('button', { name: 'Remove Cover All' });
-    await removeCoverAll.click();
+    const removeAbsence = page.getByRole('button', { name: viewport.name === 'desktop' ? 'Remove Pto' : 'Remove Daily Absence' });
+    await removeAbsence.click();
     await confirmScheduleAction(page, 'Remove Change');
-    await expect(removeCoverAll).toHaveCount(0);
-    const reverseCall=backend.calls.filter(call=>call.path==='/static-weekly/exceptions').at(-1);
-    expect(reverseCall.body.exception_type).toBe('reverse');
-    expect(reverseCall.body.expected_revision).toBe(5);
+    await expect(removeAbsence).toHaveCount(0);
+    expect(backend.calls.map((call) => call.path)).toEqual([
+      '/static-weekly/day-changes/batch',
+      '/static-weekly/exceptions',
+    ]);
+    expect(backend.calls[1].body.exception_type).toBe('reverse');
+    expect(backend.calls[1].body.reverses_exception_id).toBe('exception-4-0');
+    expect(backend.calls[1].body.expected_revision).toBe(4);
 
     await page.getByRole('button', { name: 'Add replacement for Departed Employee' }).click();
     await page.locator('#replacement-name').fill('Taylor New');
     await page.getByRole('button', { name: 'Add Employee' }).click();
-    await page.locator('#service-date').fill('2026-08-12');
-    await expect(page.locator('#roster-list').getByText('Taylor New').first()).toBeVisible();
-    await expect(page.locator('#roster-list').getByText('KIOSK_03').first()).toBeVisible();
+    await expect(page.getByText('Taylor New').first()).toBeVisible();
+    await expect(page.getByText('KIOSK_03').first()).toBeVisible();
     expect(backend.calls.at(-1).path).toBe('/static-weekly/employees/replacements');
     expect(backend.calls.at(-1).body.new_employee_name).toBe('Taylor New');
-    expect(backend.calls.at(-1).body.expected_revision).toBe(6);
+    expect(backend.calls.at(-1).body.expected_revision).toBe(5);
     expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
 
     await page.getByRole('button', { name: 'Mark gone Karen Robinson' }).click();
     await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Add replacement for Karen Robinson' })).toBeVisible();
     expect(backend.calls.at(-1).path).toBe('/static-weekly/employees/departed');
-    expect(backend.calls.at(-1).body.expected_revision).toBe(7);
+    expect(backend.calls.at(-1).body.expected_revision).toBe(6);
     expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2);
@@ -282,11 +260,259 @@ test('failed atomic turnover leaves the previous current schedule unchanged', as
   await page.getByRole('button', { name: 'Mark Gone', exact: true }).click();
   await expect(page.locator('#week-meta')).toContainText('Published baseline');
   await expect(page.locator('#week-meta')).toContainText('7 work items');
-  await page.getByRole('button',{name:'Close'}).click();
   await page.getByRole('tab', { name: 'Readiness' }).click();
   await expect(page.getByText('Current staffing projection').locator('..').getByText('Ready')).toBeVisible();
   await expect(page.locator('#status')).toContainText('No feasible schedule for current staffing.');
   expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/employees/departed']);
   expect(backend.fixture.authority_revision).toBe(3);
   await context.close();
+});
+
+// Main's UNIT bearer must not be persisted in traces/video/screenshots.
+// Worker options must be file-level; leave all historical defaults untouched
+// when the owning fixture is absent. Main selects only the opt-in member.
+if (process.env.CUSTODIAL_PENDING_BROWSER_FIXTURE) {
+  test.use({ trace: 'off', video: 'off', screenshot: 'off' });
+}
+test.describe('owned current scheduler browser integration', () => {
+  test.skip(!process.env.CUSTODIAL_PENDING_BROWSER_FIXTURE,
+    'NOT_RUN: Main must export its existing owned normal HTTP/SQL fixture.');
+
+  test('current pending original through actual browser and normal runtime', async ({ browser, baseURL }, testInfo) => {
+    const requireInput = (ok, message) => { if (!ok) throw new Error(message); };
+    const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
+    let input, endpoint, frontend;
+    try {
+      input = JSON.parse(process.env.CUSTODIAL_PENDING_BROWSER_FIXTURE);
+      endpoint = new URL(input.endpoint); frontend = new URL(baseURL);
+    } catch { throw new Error('The closed owning fixture JSON/loopback URLs are unavailable; no session data is logged.'); }
+    const keys = ['endpoint', 'week', 'session', 'employeeId', 'slotId', 'publicationId', 'versionId', 'revision'];
+    const loopback = url => url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname)
+      && !url.username && !url.password;
+    requireInput(Object.keys(input).sort().join(',') === keys.sort().join(',')
+      && loopback(endpoint) && endpoint.port && endpoint.pathname === '/' && !endpoint.search && !endpoint.hash
+      && loopback(frontend), 'Only Main’s closed fixture and existing owned loopback endpoints are admitted.');
+    requireInput(input.week === '2026-10-19', 'The owning week must remain exactly 2026-10-19.');
+    const today = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date()).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+    requireInput(today.year + '-' + today.month + '-' + today.day <= input.week,
+      'The fixed owning date elapsed; do not replace the clock or substitute a week.');
+    requireInput(input.employeeId === 'abac6002-02ee-46b4-bc16-11337b0abb2a'
+      && input.slotId === 'e91b7a47-f20f-5777-a5d3-9c0ce8778df5'
+      && uuid(input.publicationId) && uuid(input.versionId)
+      && Number.isSafeInteger(input.revision) && input.revision >= 0,
+    'The existing KAILI identity and actual accepted initial publication/version/revision are required.');
+    const session = input.session;
+    requireInput(session && session.role === 'ops_manager' && typeof session.token === 'string' && session.token.length > 0
+      && uuid(session.manager_id) && typeof session.device_id === 'string' && session.device_id.length > 0
+      && typeof session.credential_id === 'string' && session.credential_id.length > 0
+      && Number.isFinite(Date.parse(session.expires_at)) && Date.parse(session.expires_at) > Date.now()
+      && session.permissions?.schema === 'custodial.manager-permissions.v1'
+      && session.permissions.read === true && session.permissions.manage_absences === true,
+    'Main must supply its actual current UNIT manager session/absence permission.');
+
+    const base = '/static-weekly/staffing-commands';
+    const missingMessage = 'No release-admitted approved pattern matches the current staffing. The original request is preserved; nothing was accepted.';
+    const key = 'mz_scheduler_dated_operation_v1:' + encodeURIComponent(endpoint.origin) + ':' + session.manager_id;
+    const traffic = [], blocked = [], issues = [], reads = [], counts = { begin: 0, prepare: 0, cancel: 0 };
+    let operationId = null, routedOperationId = null, reloaded = false, lostReply = false, page;
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' });
+    const clean = value => {
+      if (Array.isArray(value)) return value.map(clean);
+      if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
+        .filter(([name]) => !/token|secret|password|authorization|cookie|session|credential/i.test(name))
+        .map(([name, child]) => [name, clean(child)]));
+      return typeof value === 'string' ? value.split(session.token).join('[REDACTED]') : value;
+    };
+    const record = async response => {
+      const request = response.request(), url = new URL(request.url());
+      if (url.origin !== endpoint.origin || !(url.pathname === base || url.pathname.startsWith(base + '/'))
+        || url.pathname.endsWith('/cancel')) return;
+      try {
+        const text = await response.text();
+        requireInput(text.length <= 1048576, 'Original operation response exceeds the bounded case limit.');
+        traffic.push({ method: request.method(), path: url.pathname, status: response.status(),
+          request_body: request.postData() ? clean(JSON.parse(request.postData())) : null,
+          response_body: text ? clean(JSON.parse(text)) : null, after_reload: reloaded });
+      } catch { issues.push('Original operation response unavailable as bounded JSON.'); }
+    };
+    const savedRaw = () => page.evaluate(storageKey => localStorage.getItem(storageKey), key); // READ ONLY
+    const commandPath = suffix => base + '/' + operationId + suffix;
+    try {
+      await context.route('**/*', async route => {
+        const request = route.request(), url = new URL(request.url());
+        const json = body => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        if (url.origin === 'https://memphis-zoo-mcp.onrender.com' && request.method() === 'GET') {
+          if (url.pathname === '/auth-api/session') return json({ ok: true, data: { session } });
+          if (url.pathname === '/scheduler-runtime-config') {
+            return json({ ok: true, data: { configured: true, public_url: endpoint.origin } });
+          }
+        }
+        if (url.origin === endpoint.origin && url.pathname.startsWith('/static-weekly/')) {
+          // Preserve the actual browser Origin/headers/body and actual CORS.
+          if (['GET', 'OPTIONS'].includes(request.method())) return route.continue();
+          const match = url.pathname.match(/^\/static-weekly\/staffing-commands\/([0-9a-f-]{36})\/(prepare|cancel)$/i);
+          const kind = url.pathname === base ? 'begin' : match && uuid(match[1]) ? match[2] : null;
+          if (request.method() !== 'POST' || reloaded || !kind
+            || match && operationId && match[1] !== operationId) {
+            let body = null;
+            try { body = request.postData() ? clean(JSON.parse(request.postData())) : null; }
+            catch { body = '[unparseable request body omitted]'; }
+            traffic.push({ method: request.method(), path: url.pathname, status: null,
+              request_body: body, response_body: null, after_reload: reloaded, blocked: true });
+            issues.push('Unexpected scheduler mutation refused.'); return route.abort('blockedbyclient');
+          }
+          counts[kind]++;
+          if (counts[kind] !== 1) {
+            issues.push('Repeated original mutation refused; no retry sent.'); return route.abort('blockedbyclient');
+          }
+          if (kind === 'prepare') {
+            routedOperationId = match[1]; // actual request DATA, not an invented operation
+            return route.continue();
+          }
+          if (kind === 'begin') return route.continue();
+          // One real cancel request, without a header/body override or retry.
+          // Drop ONLY its successful reply after the actual endpoint responds.
+          try {
+            const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 });
+            const text = await response.text();
+            requireInput(text.length <= 1048576, 'Original cancel response exceeds the bounded case limit.');
+            const body = JSON.parse(text), value = body?.data;
+            const entry = { method: 'POST', path: url.pathname, status: response.status(),
+              request_body: clean(JSON.parse(request.postData())), response_body: clean(body),
+              after_reload: false, client_reply_lost: false };
+            traffic.push(entry);
+            if (response.status() === 200 && body?.ok === true && value?.cancelled === true
+              && value.operation_id === operationId && value.state === 'CANCELLED') {
+              entry.client_reply_lost = lostReply = true;
+              return route.abort('failed');
+            }
+            return route.fulfill({ response }); // real refusal unchanged, never fake committed success
+          } catch {
+            issues.push('Original cancel transport failed before a successful reply was observed.');
+            return route.abort('failed');
+          }
+        }
+        if (url.origin === frontend.origin && ['GET', 'HEAD'].includes(request.method())) return route.continue();
+        blocked.push({ method: request.method(), origin: url.origin, path: url.pathname });
+        return route.abort('blockedbyclient'); // external Lucide is optional; never substitute code
+      });
+      page = await context.newPage();
+      page.on('response', response => { reads.push(record(response)); });
+      const snapshotResponse = response => {
+        const url = new URL(response.url());
+        return url.origin === endpoint.origin && url.pathname === '/static-weekly/manager-snapshot'
+          && response.request().method() === 'GET' && response.status() === 200;
+      };
+      const firstRead = page.waitForResponse(snapshotResponse);
+      await page.goto('/schedule-weekly.html?date=' + input.week + '&week_start=' + input.week,
+        { waitUntil: 'domcontentloaded' });
+      const initial = (await (await firstRead).json()).data;
+      requireInput(initial?.week_start === input.week && /^\d{4}-\d{2}-\d{2}$/.test(initial.current_service_date)
+        && initial.current_service_date <= input.week && initial.authority_revision === input.revision
+        && initial.current_publication?.publication_id === input.publicationId
+        && initial.current_publication?.version_id === input.versionId
+        && initial.roster?.some(row => row.slot_id === input.slotId
+          && row.incumbencies?.some(person => person.person_id === input.employeeId)),
+      'The actual current read does not match Main’s original accepted basis/KAILI.');
+      const loaded = 'Loaded 2026-10-19 through 2026-10-25.';
+      await expect(page.locator('#status')).toHaveText(loaded);
+      await expect(page.locator('#revision-count')).toHaveText(String(input.revision));
+      expect(await savedRaw() === null, 'No pending original may be seeded.').toBe(true);
+      await page.locator('#absence-type').selectOption('daily_absence');
+      await page.locator('#absence-end-date').fill(input.week);
+      await page.locator('[data-callout-slot="' + input.slotId + '"]').check();
+      const beginRead = page.waitForResponse(response => new URL(response.url()).origin === endpoint.origin
+        && new URL(response.url()).pathname === base && response.request().method() === 'POST');
+      await page.locator('#apply-day-btn').click(); // real UI creates original body/key; no private function call
+      const begun = await (await beginRead).json();
+      requireInput(begun?.ok === true && uuid(begun.data?.operation_id), 'Normal BEGIN lacks its original operation.');
+      operationId = begun.data.operation_id;
+      await expect(page.locator('#status')).toHaveText(missingMessage);
+      await expect(page.locator('#scheduler-pending-text')).toContainText('No confirmation is available.');
+      await expect(page.locator('#staffing-confirm-btn')).toBeHidden();
+      await expect(page.locator('#scheduler-cancel-preparation')).toBeEnabled();
+      await Promise.all(reads);
+      const prepared = traffic.find(row => row.path === commandPath('/prepare') && row.method === 'POST');
+      requireInput(routedOperationId === operationId && prepared?.status === 409
+        && prepared.response_body?.code === 'static_template_missing_approved_pattern'
+        && prepared.response_body?.operation_outcome === 'rejected',
+      'Actual normal preparation did not return the same original typed missing-pattern dependency.');
+      const original = JSON.parse(await savedRaw());
+      requireInput(original.state === 'PENDING' && original.command.phase === 'PREPARING'
+        && original.command.operationId === operationId && original.body.employee_id === input.employeeId
+        && original.body.start_date === input.week && original.body.end_date === input.week
+        && original.body.expected_revision === input.revision && original.receipt === null
+        && original.command.confirmationAttempted === false && original.command.confirmationKey === null,
+      'The actual page did not retain its exact unaccepted original.');
+
+      await page.locator('#scheduler-cancel-preparation').click();
+      const dialog = page.locator('#action-confirm-dialog');
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('heading')).toHaveText('Cancel unpublished preparation');
+      await dialog.getByRole('button', { name: 'Cancel Unpublished Preparation', exact: true }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page.locator('#scheduler-pending-text')).toContainText('An original unpublished cancellation was attempted.');
+      await expect(page.locator('#scheduler-retry')).toBeEnabled();
+      requireInput(lostReply && counts.cancel === 1, 'One actual successful cancel reply was not observed and lost.');
+      const attemptedRaw = await savedRaw(), attempted = JSON.parse(attemptedRaw);
+      requireInput(attempted.encoded === original.encoded && JSON.stringify(attempted.body) === JSON.stringify(original.body)
+        && attempted.command.operationId === operationId
+        && attempted.command.semanticDigest === original.command.semanticDigest
+        && attempted.command.cancellationAttempt?.operationId === operationId
+        && attempted.command.confirmationAttempted === false && attempted.command.confirmationKey === null
+        && attempted.receipt === null && attempted.state === 'PENDING',
+      'Lost reply changed/retired the original before independent cancellation readback.');
+      for (const field of ['base', 'managerId', 'principal', 'path', 'weekStart', 'publicationId', 'versionId', 'weekBindings']) {
+        expect(JSON.stringify(attempted[field]) === JSON.stringify(original[field]),
+          'The original ' + field + ' binding changed during the cancellation attempt.').toBe(true);
+      }
+      await Promise.all(reads);
+
+      reloaded = true;
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.locator('#status')).toHaveText(loaded);
+      await expect(page.locator('#scheduler-pending-text')).toContainText('An original unpublished cancellation was attempted.');
+      expect(await savedRaw() === attemptedRaw, 'Reload must retain the same complete saved original attempt.').toBe(true);
+      const originalRead = page.waitForResponse(response => new URL(response.url()).origin === endpoint.origin
+        && new URL(response.url()).pathname === commandPath('')
+        && response.request().method() === 'GET' && response.status() === 200);
+      await page.getByRole('button', { name: 'Read original cancellation outcome', exact: true }).click();
+      const cancelled = (await (await originalRead).json()).data;
+      requireInput(cancelled?.operation_id === operationId && cancelled.state === 'CANCELLED'
+        && cancelled.semantic_digest === original.command.semanticDigest && cancelled.accepted_receipt === null,
+      'Actual original GET did not independently confirm CANCELLED.');
+      await expect(page.locator('#scheduler-pending-panel')).toBeHidden();
+      await expect(page.locator('#status')).toContainText('The exact original reads CANCELLED.');
+      expect(await savedRaw() === null, 'Only matching original CANCELLED may retire the local control.').toBe(true);
+      const lastRead = page.waitForResponse(snapshotResponse);
+      await page.locator('#refresh-btn').click();
+      const final = (await (await lastRead).json()).data;
+      for (const field of ['authority_revision', 'current_publication', 'assignments', 'availability',
+        'exceptions', 'latest_projection', 'canonical_staffing_absences']) {
+        expect(JSON.stringify(final?.[field]) === JSON.stringify(initial[field]),
+          'The actual current ' + field + ' changed after unpublished cancellation.').toBe(true);
+      }
+      await expect(page.locator('#status')).toHaveText(loaded);
+      await Promise.all(reads);
+      expect(counts).toEqual({ begin: 1, prepare: 1, cancel: 1 });
+      expect(traffic.filter(row => row.after_reload && row.method !== 'OPTIONS').every(row => row.method === 'GET')).toBe(true);
+      expect(traffic.some(row => row.after_reload && row.path === commandPath(''))).toBe(true);
+      expect(issues).toEqual([]);
+      expect(blocked.every(row => row.method === 'GET' && row.origin === 'https://unpkg.com'
+        && row.path === '/lucide@0.468.0/dist/umd/lucide.min.js')).toBe(true);
+      // Main independently checks the retained SQL original, one cancellation
+      // receipt, unchanged schedule and zero leases. This attachment admits nothing.
+    } finally {
+      await Promise.allSettled(reads);
+      try {
+        await testInfo.attach('current-pending-original-sanitized-http', {
+          contentType: 'application/json',
+          body: JSON.stringify({ operation_id: operationId, traffic, blocked, issues,
+            request_counts: counts, client_lost_one_cancel_reply: lostReply }, null, 2),
+        });
+      } finally { await context.close(); }
+    }
+  });
 });

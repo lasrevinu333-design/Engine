@@ -4,6 +4,77 @@
   "title": "Memphis Zoo Custodial Android release acceptance",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "forward_transition": {}
+        },
+        "required": [
+          "forward_transition"
+        ]
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "pattern": "^refs/heads/[A-Za-z0-9._/-]+$"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "source": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "$ref": "#/$defs/legacySourceRef"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cleaning_first_scope": {}
+        },
+        "required": [
+          "cleaning_first_scope"
+        ]
+      },
+      "then": {
+        "properties": {
+          "android_manifest_security": {
+            "type": "object",
+            "properties": {
+              "policy": {
+                "const": "exact-custodial-android-manifest-v13-cleaning-first-retained-continuity"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "android_manifest_security": {
+            "type": "object",
+            "properties": {
+              "policy": {
+                "const": "exact-custodial-android-manifest-v12-qualified-provider-private-audio"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "required": [
     "schema_id",
     "schema_version",
@@ -23,18 +94,39 @@
     "verifier"
   ],
   "properties": {
-    "schema_id": { "const": "urn:memphis-zoo:custodial-android-release-acceptance:v6" },
-    "schema_version": { "const": 6 },
-    "accepted": { "const": true },
-    "generated_at": { "type": "string", "format": "date-time" },
+    "schema_id": {
+      "const": "urn:memphis-zoo:custodial-android-release-acceptance:v6"
+    },
+    "schema_version": {
+      "const": 6
+    },
+    "accepted": {
+      "const": true
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "artifact": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["file_name", "apk_sha256", "size_bytes"],
+      "required": [
+        "file_name",
+        "apk_sha256",
+        "size_bytes"
+      ],
       "properties": {
-        "file_name": { "type": "string", "minLength": 1 },
-        "apk_sha256": { "$ref": "#/$defs/sha256" },
-        "size_bytes": { "type": "integer", "minimum": 1 }
+        "file_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "apk_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "application": {
@@ -50,13 +142,28 @@
         "test_only"
       ],
       "properties": {
-        "package_name": { "const": "org.memphiszoo.custodial" },
-        "version_code": { "type": "integer", "minimum": 11 },
-        "version_name": { "const": "1.0.0" },
-        "min_sdk_version": { "const": 26 },
-        "target_sdk_version": { "const": 36 },
-        "debuggable": { "const": false },
-        "test_only": { "const": false }
+        "package_name": {
+          "const": "org.memphiszoo.custodial"
+        },
+        "version_code": {
+          "type": "integer",
+          "minimum": 11
+        },
+        "version_name": {
+          "const": "1.0.0"
+        },
+        "min_sdk_version": {
+          "const": 26
+        },
+        "target_sdk_version": {
+          "const": 36
+        },
+        "debuggable": {
+          "const": false
+        },
+        "test_only": {
+          "const": false
+        }
       }
     },
     "embedded_provenance": {
@@ -79,61 +186,157 @@
         "build_identity_js_sha256"
       ],
       "properties": {
-        "edition": { "const": "custodial" },
-        "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
-        "source_tree": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
-        "source_commit_exact": { "const": true },
-        "custodial_native_vault_source_sha256": { "$ref": "#/$defs/sha256" },
-        "release_id": { "type": "string", "minLength": 1 },
-        "build_id": { "type": "string", "minLength": 1 },
-        "native_build_number": { "type": "integer", "minimum": 11 },
-        "runtime_asset_count": { "type": "integer", "minimum": 1 },
-        "runtime_assets_verified": { "const": true },
+        "edition": {
+          "const": "custodial"
+        },
+        "source_commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "source_tree": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "source_commit_exact": {
+          "const": true
+        },
+        "custodial_native_vault_source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "release_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "build_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "native_build_number": {
+          "type": "integer",
+          "minimum": 11
+        },
+        "runtime_asset_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "runtime_assets_verified": {
+          "const": true
+        },
         "capacitor_generated_assets_sha256": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["cordova.js", "cordova_plugins.js"],
+          "required": [
+            "cordova.js",
+            "cordova_plugins.js"
+          ],
           "properties": {
-            "cordova.js": { "$ref": "#/$defs/sha256" },
-            "cordova_plugins.js": { "$ref": "#/$defs/sha256" }
+            "cordova.js": {
+              "$ref": "#/$defs/sha256"
+            },
+            "cordova_plugins.js": {
+              "$ref": "#/$defs/sha256"
+            }
           }
         },
-        "build_json_sha256": { "$ref": "#/$defs/sha256" },
-        "runtime_asset_manifest_sha256": { "$ref": "#/$defs/sha256" },
-        "build_identity_js_sha256": { "$ref": "#/$defs/sha256" }
+        "build_json_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "runtime_asset_manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "build_identity_js_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
       }
     },
     "source": {
+      "description": "Legacy refs are unchanged unless the separately bound forward_transition metadata is present.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["commit", "tree", "commit_exact", "ref"],
+      "required": [
+        "commit",
+        "tree",
+        "commit_exact",
+        "ref"
+      ],
       "properties": {
-        "commit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
-        "tree": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
-        "commit_exact": { "const": true },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "tree": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40,64}$"
+        },
+        "commit_exact": {
+          "const": true
+        },
         "ref": {
+          "type": "string"
+        }
+      }
+    },
+    "forward_transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_id",
+        "policy_generation",
+        "trusted_pins_sha256",
+        "role",
+        "installed_version_code",
+        "candidate_version_code",
+        "recovery_version_code",
+        "source_ref",
+        "fleet_promotion",
+        "installation_admitted",
+        "physical_verified"
+      ],
+      "properties": {
+        "target_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_generation": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "trusted_pins_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "role": {
           "enum": [
-            "refs/heads/main",
-            "refs/heads/release/custodial-build29-recovery-v34-implementation-20260820",
-            "refs/heads/release/custodial-build29-recovery-v36-implementation-20260824",
-            "refs/heads/release/custodial-build29-recovery-v37-implementation-20260824",
-            "refs/heads/release/custodial-build29-recovery-v38-implementation-20260825",
-            "refs/heads/release/custodial-build29-recovery-v39-implementation-20260825",
-            "refs/heads/release/custodial-build29-recovery-v40-implementation-20260825",
-            "refs/heads/release/custodial-build29-recovery-v41-implementation-20260825",
-            "refs/heads/release/custodial-build29-recovery-v42-implementation-20260825",
-            "refs/heads/release/custodial-build29-recovery-v43-implementation-20260825",
-            "refs/heads/release/custodial-build29-recovery-v44-implementation-20260825",
-            "refs/heads/release/custodial-build29-recovery-v45-implementation-20260826",
-            "refs/heads/release/custodial-build29-recovery-v46-implementation-20260826",
-            "refs/heads/release/custodial-build29-recovery-v47-implementation-20260826",
-            "refs/heads/release/custodial-build29-recovery-v48-implementation-20260826",
-            "refs/heads/release/custodial-build29-recovery-v49-implementation-20260826",
-            "refs/heads/release/custodial-build29-recovery-v50-implementation-20260826",
-            "refs/heads/release/custodial-build29-recovery-v51-implementation-20260827",
-            "refs/heads/release/custodial-build29-recovery-v52-implementation-20260914",
-            "refs/heads/release/custodial-build29-recovery-v53-implementation-20260918"
+            "candidate",
+            "recovery"
           ]
+        },
+        "installed_version_code": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2100000000
+        },
+        "candidate_version_code": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2100000000
+        },
+        "recovery_version_code": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2100000000
+        },
+        "source_ref": {
+          "type": "string",
+          "pattern": "^refs/heads/[A-Za-z0-9._/-]+$"
+        },
+        "fleet_promotion": {
+          "const": false
+        },
+        "installation_admitted": {
+          "const": false
+        },
+        "physical_verified": {
+          "const": false
         }
       }
     },
@@ -148,11 +351,25 @@
         "minimum_next_version_code"
       ],
       "properties": {
-        "run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
-        "workflow": { "const": "custodial-android" },
-        "number": { "type": "integer", "minimum": 11 },
-        "highest_fleet_version_code": { "type": "integer", "minimum": 1 },
-        "minimum_next_version_code": { "type": "integer", "minimum": 2 }
+        "run_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$"
+        },
+        "workflow": {
+          "const": "custodial-android"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 11
+        },
+        "highest_fleet_version_code": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minimum_next_version_code": {
+          "type": "integer",
+          "minimum": 2
+        }
       }
     },
     "signing": {
@@ -166,7 +383,9 @@
         "v2_or_newer"
       ],
       "properties": {
-        "signer_count": { "const": 1 },
+        "signer_count": {
+          "const": 1
+        },
         "signer_sha256": {
           "const": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf"
         },
@@ -177,20 +396,37 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "number", "minimum": 2 },
-          "contains": { "const": 2 }
+          "items": {
+            "type": "number",
+            "minimum": 2
+          },
+          "contains": {
+            "const": 2
+          }
         },
-        "v2_or_newer": { "const": true }
+        "v2_or_newer": {
+          "const": true
+        }
       }
     },
     "alignment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["verified", "page_alignment_bytes", "zip_entry_alignment_bytes"],
+      "required": [
+        "verified",
+        "page_alignment_bytes",
+        "zip_entry_alignment_bytes"
+      ],
       "properties": {
-        "verified": { "const": true },
-        "page_alignment_bytes": { "const": 16384 },
-        "zip_entry_alignment_bytes": { "const": 4 }
+        "verified": {
+          "const": true
+        },
+        "page_alignment_bytes": {
+          "const": 16384
+        },
+        "zip_entry_alignment_bytes": {
+          "const": 4
+        }
       }
     },
     "backup": {
@@ -205,230 +441,737 @@
         "data_extraction_resource"
       ],
       "properties": {
-        "verifier_version": { "const": "2.0.1" },
-        "policy": { "const": "deny-cloud-backup-and-device-transfer" },
-        "allow_backup": { "const": false },
+        "verifier_version": {
+          "const": "2.0.1"
+        },
+        "policy": {
+          "const": "deny-cloud-backup-and-device-transfer"
+        },
+        "allow_backup": {
+          "const": false
+        },
         "excluded_domains": {
           "type": "array",
           "minItems": 9,
           "maxItems": 9,
           "uniqueItems": true,
           "prefixItems": [
-            { "const": "root" },
-            { "const": "file" },
-            { "const": "database" },
-            { "const": "sharedpref" },
-            { "const": "external" },
-            { "const": "device_root" },
-            { "const": "device_file" },
-            { "const": "device_database" },
-            { "const": "device_sharedpref" }
+            {
+              "const": "root"
+            },
+            {
+              "const": "file"
+            },
+            {
+              "const": "database"
+            },
+            {
+              "const": "sharedpref"
+            },
+            {
+              "const": "external"
+            },
+            {
+              "const": "device_root"
+            },
+            {
+              "const": "device_file"
+            },
+            {
+              "const": "device_database"
+            },
+            {
+              "const": "device_sharedpref"
+            }
           ],
           "items": false
         },
         "legacy_resource": {
           "allOf": [
-            { "$ref": "#/$defs/compiledBackupResource" },
+            {
+              "$ref": "#/$defs/compiledBackupResource"
+            },
             {
               "type": "object",
-              "properties": { "logical_name": { "const": "xml/memphis_zoo_backup_rules" } }
+              "properties": {
+                "logical_name": {
+                  "const": "xml/memphis_zoo_backup_rules"
+                }
+              }
             }
           ]
         },
         "data_extraction_resource": {
           "allOf": [
-            { "$ref": "#/$defs/compiledBackupResource" },
+            {
+              "$ref": "#/$defs/compiledBackupResource"
+            },
             {
               "type": "object",
-              "properties": { "logical_name": { "const": "xml/memphis_zoo_data_extraction_rules" } }
+              "properties": {
+                "logical_name": {
+                  "const": "xml/memphis_zoo_data_extraction_rules"
+                }
+              }
             }
           ]
         }
       }
     },
     "android_manifest_security": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "verifier_version",
-        "policy",
-        "permissions",
-        "custom_permission",
-        "components",
-        "main_activity_intent_filters_verified",
-        "uses_cleartext_traffic",
-        "extract_native_libs",
-        "shared_user_id_absent",
-        "legacy_external_storage_absent",
-        "network_security",
-        "file_provider",
-        "component_graph_semantic_sha256"
-      ],
-      "properties": {
-        "verifier_version": { "const": "1.5.0" },
-        "policy": { "const": "exact-custodial-android-manifest-v7" },
-        "permissions": {
-          "type": "array",
-          "minItems": 10,
-          "maxItems": 10,
-          "uniqueItems": true,
-          "prefixItems": [
-            { "const": "android.permission.ACCESS_COARSE_LOCATION" },
-            { "const": "android.permission.ACCESS_FINE_LOCATION" },
-            { "const": "android.permission.ACCESS_NETWORK_STATE" },
-            { "const": "android.permission.INTERNET" },
-            { "const": "android.permission.NFC" },
-            { "const": "android.permission.POST_NOTIFICATIONS" },
-            { "const": "android.permission.RECEIVE_BOOT_COMPLETED" },
-            { "const": "android.permission.WAKE_LOCK" },
-            { "const": "com.google.android.c2dm.permission.RECEIVE" },
-            { "const": "org.memphiszoo.custodial.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" }
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "verifier_version",
+            "policy",
+            "permissions",
+            "custom_permission",
+            "components",
+            "main_activity_intent_filters_verified",
+            "uses_cleartext_traffic",
+            "extract_native_libs",
+            "shared_user_id_absent",
+            "legacy_external_storage_absent",
+            "network_security",
+            "file_provider",
+            "component_graph_semantic_sha256"
           ],
-          "items": false
-        },
-        "custom_permission": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["name", "protection_level"],
           "properties": {
-            "name": { "const": "org.memphiszoo.custodial.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" },
-            "protection_level": { "const": "signature" }
-          }
-        },
-        "components": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["activities", "services", "providers", "receivers", "uses_libraries"],
-          "properties": {
-            "activities": {
+            "verifier_version": {
+              "const": "1.9.0"
+            },
+            "policy": {
+              "const": "exact-custodial-android-manifest-v12-qualified-provider-private-audio"
+            },
+            "permissions": {
               "type": "array",
-              "minItems": 2,
-              "maxItems": 2,
+              "minItems": 12,
+              "maxItems": 12,
               "uniqueItems": true,
               "prefixItems": [
-                { "const": "com.google.android.gms.common.api.GoogleApiActivity" },
-                { "const": "org.memphiszoo.custodial.MainActivity" }
+                {
+                  "const": "android.permission.ACCESS_COARSE_LOCATION"
+                },
+                {
+                  "const": "android.permission.ACCESS_FINE_LOCATION"
+                },
+                {
+                  "const": "android.permission.ACCESS_NETWORK_STATE"
+                },
+                {
+                  "const": "android.permission.FOREGROUND_SERVICE"
+                },
+                {
+                  "const": "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+                },
+                {
+                  "const": "android.permission.INTERNET"
+                },
+                {
+                  "const": "android.permission.NFC"
+                },
+                {
+                  "const": "android.permission.POST_NOTIFICATIONS"
+                },
+                {
+                  "const": "android.permission.RECEIVE_BOOT_COMPLETED"
+                },
+                {
+                  "const": "android.permission.WAKE_LOCK"
+                },
+                {
+                  "const": "com.google.android.c2dm.permission.RECEIVE"
+                },
+                {
+                  "const": "org.memphiszoo.custodial.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+                }
               ],
               "items": false
             },
-            "services": {
-              "type": "array",
-              "minItems": 5,
-              "maxItems": 5,
-              "uniqueItems": true,
-              "prefixItems": [
-                { "const": "com.google.android.datatransport.runtime.backends.TransportBackendDiscovery" },
-                { "const": "com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService" },
-                { "const": "com.google.firebase.components.ComponentDiscoveryService" },
-                { "const": "com.google.firebase.messaging.FirebaseMessagingService" },
-                { "const": "io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService" }
+            "custom_permission": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "protection_level"
               ],
-              "items": false
+              "properties": {
+                "name": {
+                  "const": "org.memphiszoo.custodial.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+                },
+                "protection_level": {
+                  "const": "signature"
+                }
+              }
             },
-            "providers": {
-              "type": "array",
-              "minItems": 3,
-              "maxItems": 3,
-              "uniqueItems": true,
-              "prefixItems": [
-                { "const": "androidx.core.content.FileProvider" },
-                { "const": "androidx.startup.InitializationProvider" },
-                { "const": "com.google.firebase.provider.FirebaseInitProvider" }
+            "components": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "activities",
+                "services",
+                "providers",
+                "receivers",
+                "uses_libraries"
               ],
-              "items": false
+              "properties": {
+                "activities": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "prefixItems": [
+                    {
+                      "const": "com.google.android.gms.common.api.GoogleApiActivity"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.MainActivity"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.NativeProtectedRecoveryPreparationActivity"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.ProviderNotificationOpenActivity"
+                    }
+                  ],
+                  "items": false
+                },
+                "services": {
+                  "type": "array",
+                  "minItems": 6,
+                  "maxItems": 6,
+                  "uniqueItems": true,
+                  "prefixItems": [
+                    {
+                      "const": "com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+                    },
+                    {
+                      "const": "com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+                    },
+                    {
+                      "const": "com.google.firebase.components.ComponentDiscoveryService"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.CustodialProviderAudioService"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.CustodialProviderMessagingService"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.CustodialProviderSyncJobService"
+                    }
+                  ],
+                  "items": false
+                },
+                "providers": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "uniqueItems": true,
+                  "prefixItems": [
+                    {
+                      "const": "androidx.core.content.FileProvider"
+                    },
+                    {
+                      "const": "androidx.startup.InitializationProvider"
+                    },
+                    {
+                      "const": "com.google.firebase.provider.FirebaseInitProvider"
+                    }
+                  ],
+                  "items": false
+                },
+                "receivers": {
+                  "type": "array",
+                  "minItems": 8,
+                  "maxItems": 8,
+                  "uniqueItems": true,
+                  "prefixItems": [
+                    {
+                      "const": "androidx.profileinstaller.ProfileInstallReceiver"
+                    },
+                    {
+                      "const": "com.capacitorjs.plugins.localnotifications.LocalNotificationRestoreReceiver"
+                    },
+                    {
+                      "const": "com.capacitorjs.plugins.localnotifications.NotificationDismissReceiver"
+                    },
+                    {
+                      "const": "com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher"
+                    },
+                    {
+                      "const": "com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+                    },
+                    {
+                      "const": "com.google.firebase.iid.FirebaseInstanceIdReceiver"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.ProviderNotificationActionReceiver"
+                    }
+                  ],
+                  "items": false
+                },
+                "uses_libraries": {
+                  "type": "array",
+                  "minItems": 0,
+                  "maxItems": 0,
+                  "uniqueItems": true,
+                  "items": false
+                }
+              }
             },
-            "receivers": {
-              "type": "array",
-              "minItems": 6,
-              "maxItems": 6,
-              "uniqueItems": true,
-              "prefixItems": [
-                { "const": "androidx.profileinstaller.ProfileInstallReceiver" },
-                { "const": "com.capacitorjs.plugins.localnotifications.LocalNotificationRestoreReceiver" },
-                { "const": "com.capacitorjs.plugins.localnotifications.NotificationDismissReceiver" },
-                { "const": "com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher" },
-                { "const": "com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver" },
-                { "const": "com.google.firebase.iid.FirebaseInstanceIdReceiver" }
+            "main_activity_intent_filters_verified": {
+              "const": true
+            },
+            "uses_cleartext_traffic": {
+              "const": false
+            },
+            "extract_native_libs": {
+              "const": false
+            },
+            "shared_user_id_absent": {
+              "const": true
+            },
+            "legacy_external_storage_absent": {
+              "const": true
+            },
+            "network_security": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cleartext_permitted",
+                "trust_anchors",
+                "logical_name",
+                "packaged_path",
+                "semantic_sha256"
               ],
-              "items": false
+              "properties": {
+                "cleartext_permitted": {
+                  "const": false
+                },
+                "trust_anchors": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "prefixItems": [
+                    {
+                      "const": "system"
+                    }
+                  ],
+                  "items": false
+                },
+                "logical_name": {
+                  "const": "xml/memphis_zoo_network_security_config"
+                },
+                "packaged_path": {
+                  "type": "string",
+                  "pattern": "^res/(?:[^/]+/)*[^/]+\\.xml$"
+                },
+                "semantic_sha256": {
+                  "$ref": "#/$defs/sha256"
+                }
+              }
             },
-            "uses_libraries": {
-              "type": "array",
-              "minItems": 0,
-              "maxItems": 0,
-              "uniqueItems": true,
-              "items": false
+            "file_provider": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "authority",
+                "exported",
+                "grant_uri_permissions",
+                "logical_name",
+                "packaged_path",
+                "roots",
+                "semantic_sha256"
+              ],
+              "properties": {
+                "authority": {
+                  "const": "org.memphiszoo.custodial.fileprovider"
+                },
+                "exported": {
+                  "const": false
+                },
+                "grant_uri_permissions": {
+                  "const": true
+                },
+                "logical_name": {
+                  "const": "xml/file_paths"
+                },
+                "packaged_path": {
+                  "type": "string",
+                  "pattern": "^res/(?:[^/]+/)*[^/]+\\.xml$"
+                },
+                "roots": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "prefixItems": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "type",
+                        "name",
+                        "path"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "external-files-path"
+                        },
+                        "name": {
+                          "const": "custodial_webview_capture"
+                        },
+                        "path": {
+                          "const": "Pictures/"
+                        }
+                      }
+                    }
+                  ],
+                  "items": false
+                },
+                "semantic_sha256": {
+                  "$ref": "#/$defs/sha256"
+                }
+              }
+            },
+            "component_graph_semantic_sha256": {
+              "$ref": "#/$defs/sha256"
             }
           }
         },
-        "main_activity_intent_filters_verified": { "const": true },
-        "uses_cleartext_traffic": { "const": false },
-        "extract_native_libs": { "const": false },
-        "shared_user_id_absent": { "const": true },
-        "legacy_external_storage_absent": { "const": true },
-        "network_security": {
+        {
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "cleartext_permitted",
-            "trust_anchors",
-            "logical_name",
-            "packaged_path",
-            "semantic_sha256"
+            "verifier_version",
+            "policy",
+            "permissions",
+            "custom_permission",
+            "components",
+            "main_activity_intent_filters_verified",
+            "uses_cleartext_traffic",
+            "extract_native_libs",
+            "shared_user_id_absent",
+            "legacy_external_storage_absent",
+            "network_security",
+            "file_provider",
+            "component_graph_semantic_sha256"
           ],
           "properties": {
-            "cleartext_permitted": { "const": false },
-            "trust_anchors": {
-              "type": "array",
-              "minItems": 1,
-              "maxItems": 1,
-              "prefixItems": [{ "const": "system" }],
-              "items": false
+            "verifier_version": {
+              "const": "1.9.0"
             },
-            "logical_name": { "const": "xml/memphis_zoo_network_security_config" },
-            "packaged_path": { "type": "string", "pattern": "^res/(?:[^/]+/)*[^/]+\\.xml$" },
-            "semantic_sha256": { "$ref": "#/$defs/sha256" }
-          }
-        },
-        "file_provider": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "authority",
-            "exported",
-            "grant_uri_permissions",
-            "logical_name",
-            "packaged_path",
-            "roots",
-            "semantic_sha256"
-          ],
-          "properties": {
-            "authority": { "const": "org.memphiszoo.custodial.fileprovider" },
-            "exported": { "const": false },
-            "grant_uri_permissions": { "const": true },
-            "logical_name": { "const": "xml/file_paths" },
-            "packaged_path": { "type": "string", "pattern": "^res/(?:[^/]+/)*[^/]+\\.xml$" },
-            "roots": {
+            "policy": {
+              "const": "exact-custodial-android-manifest-v13-cleaning-first-retained-continuity"
+            },
+            "permissions": {
               "type": "array",
-              "minItems": 1,
-              "maxItems": 1,
-              "prefixItems": [{
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["type", "name", "path"],
-                "properties": {
-                  "type": { "const": "external-files-path" },
-                  "name": { "const": "custodial_webview_capture" },
-                  "path": { "const": "Pictures/" }
+              "minItems": 12,
+              "maxItems": 12,
+              "uniqueItems": true,
+              "prefixItems": [
+                {
+                  "const": "android.permission.ACCESS_COARSE_LOCATION"
+                },
+                {
+                  "const": "android.permission.ACCESS_FINE_LOCATION"
+                },
+                {
+                  "const": "android.permission.ACCESS_NETWORK_STATE"
+                },
+                {
+                  "const": "android.permission.FOREGROUND_SERVICE"
+                },
+                {
+                  "const": "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+                },
+                {
+                  "const": "android.permission.INTERNET"
+                },
+                {
+                  "const": "android.permission.NFC"
+                },
+                {
+                  "const": "android.permission.POST_NOTIFICATIONS"
+                },
+                {
+                  "const": "android.permission.RECEIVE_BOOT_COMPLETED"
+                },
+                {
+                  "const": "android.permission.WAKE_LOCK"
+                },
+                {
+                  "const": "com.google.android.c2dm.permission.RECEIVE"
+                },
+                {
+                  "const": "org.memphiszoo.custodial.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
                 }
-              }],
+              ],
               "items": false
             },
-            "semantic_sha256": { "$ref": "#/$defs/sha256" }
+            "custom_permission": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "protection_level"
+              ],
+              "properties": {
+                "name": {
+                  "const": "org.memphiszoo.custodial.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+                },
+                "protection_level": {
+                  "const": "signature"
+                }
+              }
+            },
+            "components": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "activities",
+                "services",
+                "providers",
+                "receivers",
+                "uses_libraries"
+              ],
+              "properties": {
+                "activities": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "prefixItems": [
+                    {
+                      "const": "com.google.android.gms.common.api.GoogleApiActivity"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.MainActivity"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.NativeProtectedRecoveryPreparationActivity"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.ProviderNotificationOpenActivity"
+                    }
+                  ],
+                  "items": false
+                },
+                "services": {
+                  "type": "array",
+                  "minItems": 7,
+                  "maxItems": 7,
+                  "uniqueItems": true,
+                  "prefixItems": [
+                    {
+                      "const": "com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+                    },
+                    {
+                      "const": "com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+                    },
+                    {
+                      "const": "com.google.firebase.components.ComponentDiscoveryService"
+                    },
+                    {
+                      "const": "com.google.firebase.messaging.FirebaseMessagingService"
+                    },
+                    {
+                      "const": "io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.CustodialProviderAudioService"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.CustodialProviderSyncJobService"
+                    }
+                  ],
+                  "items": false
+                },
+                "providers": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "uniqueItems": true,
+                  "prefixItems": [
+                    {
+                      "const": "androidx.core.content.FileProvider"
+                    },
+                    {
+                      "const": "androidx.startup.InitializationProvider"
+                    },
+                    {
+                      "const": "com.google.firebase.provider.FirebaseInitProvider"
+                    }
+                  ],
+                  "items": false
+                },
+                "receivers": {
+                  "type": "array",
+                  "minItems": 8,
+                  "maxItems": 8,
+                  "uniqueItems": true,
+                  "prefixItems": [
+                    {
+                      "const": "androidx.profileinstaller.ProfileInstallReceiver"
+                    },
+                    {
+                      "const": "com.capacitorjs.plugins.localnotifications.LocalNotificationRestoreReceiver"
+                    },
+                    {
+                      "const": "com.capacitorjs.plugins.localnotifications.NotificationDismissReceiver"
+                    },
+                    {
+                      "const": "com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher"
+                    },
+                    {
+                      "const": "com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+                    },
+                    {
+                      "const": "com.google.firebase.iid.FirebaseInstanceIdReceiver"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.ProviderNotificationActionReceiver"
+                    }
+                  ],
+                  "items": false
+                },
+                "uses_libraries": {
+                  "type": "array",
+                  "minItems": 0,
+                  "maxItems": 0,
+                  "uniqueItems": true,
+                  "items": false
+                }
+              }
+            },
+            "main_activity_intent_filters_verified": {
+              "const": true
+            },
+            "uses_cleartext_traffic": {
+              "const": false
+            },
+            "extract_native_libs": {
+              "const": false
+            },
+            "shared_user_id_absent": {
+              "const": true
+            },
+            "legacy_external_storage_absent": {
+              "const": true
+            },
+            "network_security": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cleartext_permitted",
+                "trust_anchors",
+                "logical_name",
+                "packaged_path",
+                "semantic_sha256"
+              ],
+              "properties": {
+                "cleartext_permitted": {
+                  "const": false
+                },
+                "trust_anchors": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "prefixItems": [
+                    {
+                      "const": "system"
+                    }
+                  ],
+                  "items": false
+                },
+                "logical_name": {
+                  "const": "xml/memphis_zoo_network_security_config"
+                },
+                "packaged_path": {
+                  "type": "string",
+                  "pattern": "^res/(?:[^/]+/)*[^/]+\\.xml$"
+                },
+                "semantic_sha256": {
+                  "$ref": "#/$defs/sha256"
+                }
+              }
+            },
+            "file_provider": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "authority",
+                "exported",
+                "grant_uri_permissions",
+                "logical_name",
+                "packaged_path",
+                "roots",
+                "semantic_sha256"
+              ],
+              "properties": {
+                "authority": {
+                  "const": "org.memphiszoo.custodial.fileprovider"
+                },
+                "exported": {
+                  "const": false
+                },
+                "grant_uri_permissions": {
+                  "const": true
+                },
+                "logical_name": {
+                  "const": "xml/file_paths"
+                },
+                "packaged_path": {
+                  "type": "string",
+                  "pattern": "^res/(?:[^/]+/)*[^/]+\\.xml$"
+                },
+                "roots": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "prefixItems": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "type",
+                        "name",
+                        "path"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "external-files-path"
+                        },
+                        "name": {
+                          "const": "custodial_webview_capture"
+                        },
+                        "path": {
+                          "const": "Pictures/"
+                        }
+                      }
+                    }
+                  ],
+                  "items": false
+                },
+                "semantic_sha256": {
+                  "$ref": "#/$defs/sha256"
+                }
+              }
+            },
+            "component_graph_semantic_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
           }
-        },
-        "component_graph_semantic_sha256": { "$ref": "#/$defs/sha256" }
-      }
+        }
+      ]
     },
     "native_security": {
       "type": "object",
@@ -459,58 +1202,165 @@
         "dex_sha256"
       ],
       "properties": {
-        "plugin_package": { "const": "@memphis-zoo/custodial-native-vault" },
-        "plugin_class": { "const": "org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin" },
-        "plugin_registered_exactly_once": { "const": true },
-        "plugin_count": { "const": 6 },
+        "plugin_package": {
+          "const": "@memphis-zoo/custodial-native-vault"
+        },
+        "plugin_class": {
+          "const": "org.memphiszoo.custodial.vault.CustodialNativeVaultPlugin"
+        },
+        "plugin_registered_exactly_once": {
+          "const": true
+        },
+        "plugin_count": {
+          "const": 6
+        },
         "plugin_graph_sha256": {
           "const": "dbdf73d8324268e8c588b7653ed1bc37eb631bcd3929df30dd41b2741990393c"
         },
-        "include_plugins_match_manifest": { "const": true },
-        "capacitor_config_sha256": { "$ref": "#/$defs/sha256" },
+        "include_plugins_match_manifest": {
+          "const": true
+        },
+        "capacitor_config_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
         "capacitor_config_policy_sha256": {
           "const": "8e01e16a5e595cf983519a31dd000bde73e4132990fdca7e63fbe5160b65f92d"
         },
-        "dex_semantic_verifier_version": { "const": "1.0.0" },
-        "native_class_present": { "const": true },
-        "native_class_closure_verified": { "const": true },
-        "plugin_extends_capacitor_plugin": { "const": true },
-        "plugin_annotation_verified": { "const": true },
-        "plugin_methods_verified": { "const": true },
+        "dex_semantic_verifier_version": {
+          "const": "1.0.0"
+        },
+        "native_class_present": {
+          "const": true
+        },
+        "native_class_closure_verified": {
+          "const": true
+        },
+        "plugin_extends_capacitor_plugin": {
+          "const": true
+        },
+        "plugin_annotation_verified": {
+          "const": true
+        },
+        "plugin_methods_verified": {
+          "const": true
+        },
         "plugin_method_names": {
           "type": "array",
-          "minItems": 28,
-          "maxItems": 28,
+          "minItems": 37,
+          "maxItems": 37,
           "uniqueItems": true,
           "prefixItems": [
-            { "const": "acknowledgeOfflineCompletion" },
-            { "const": "anchorOfflineAuthoritySnapshot" },
-            { "const": "attestOfflineCompletion" },
-            { "const": "attestOfflineStart" },
-            { "const": "attestScanIntent" },
-            { "const": "authorizeOfflineNewWork" },
-            { "const": "authorizedRequest" },
-            { "const": "beginRollbackFence" },
-            { "const": "bindScanEntry" },
-            { "const": "cancelEnrollment" },
-            { "const": "captureOfflineCompletionTime" },
-            { "const": "clearRollbackFence" },
-            { "const": "completeLegacyBinding" },
-            { "const": "completeLocalBinding" },
-            { "const": "confirmEnrollment" },
-            { "const": "consumeScanEntry" },
-            { "const": "enroll" },
-            { "const": "finalizeRemoval" },
-            { "const": "getAuthenticatedCompletion" },
-            { "const": "getOfflineAuthorityState" },
-            { "const": "getState" },
-            { "const": "loadOfflineAuthoritySnapshot" },
-            { "const": "recoverPendingScanIntent" },
-            { "const": "removeEnrollment" },
-            { "const": "reportRecoveryDiagnostic" },
-            { "const": "resumeEnrollment" },
-            { "const": "retireAuthenticatedCompletion" },
-            { "const": "verifyScanEntry" }
+            {
+              "const": "acknowledgeOfflineCompletion"
+            },
+            {
+              "const": "anchorOfflineAuthoritySnapshot"
+            },
+            {
+              "const": "attestOfflineCompletion"
+            },
+            {
+              "const": "attestOfflineStart"
+            },
+            {
+              "const": "attestScanIntent"
+            },
+            {
+              "const": "authorizeOfflineNewWork"
+            },
+            {
+              "const": "authorizedRequest"
+            },
+            {
+              "const": "beginRollbackFence"
+            },
+            {
+              "const": "bindScanEntry"
+            },
+            {
+              "const": "cancelEnrollment"
+            },
+            {
+              "const": "captureOfflineCompletionTime"
+            },
+            {
+              "const": "checkRemovalAdmission"
+            },
+            {
+              "const": "clearRollbackFence"
+            },
+            {
+              "const": "completeLegacyBinding"
+            },
+            {
+              "const": "completeLocalBinding"
+            },
+            {
+              "const": "confirmEnrollment"
+            },
+            {
+              "const": "consumeScanEntry"
+            },
+            {
+              "const": "enroll"
+            },
+            {
+              "const": "finalizeRemoval"
+            },
+            {
+              "const": "getAuthenticatedCompletion"
+            },
+            {
+              "const": "getCustodialReadinessObservation"
+            },
+            {
+              "const": "getOfflineAuthorityState"
+            },
+            {
+              "const": "getState"
+            },
+            {
+              "const": "loadOfflineAuthoritySnapshot"
+            },
+            {
+              "const": "providerApplyAction"
+            },
+            {
+              "const": "providerClaimNext"
+            },
+            {
+              "const": "providerClaimState"
+            },
+            {
+              "const": "providerMirrorAttach"
+            },
+            {
+              "const": "providerMirrorDetach"
+            },
+            {
+              "const": "providerMirrorStopped"
+            },
+            {
+              "const": "providerRetireClaim"
+            },
+            {
+              "const": "recoverPendingScanIntent"
+            },
+            {
+              "const": "removeEnrollment"
+            },
+            {
+              "const": "reportRecoveryDiagnostic"
+            },
+            {
+              "const": "resumeEnrollment"
+            },
+            {
+              "const": "retireAuthenticatedCompletion"
+            },
+            {
+              "const": "verifyScanEntry"
+            }
           ],
           "items": false
         },
@@ -526,43 +1376,92 @@
             "Lorg/memphiszoo/custodial/vault/NativeAttestation;",
             "Lorg/memphiszoo/custodial/vault/OfflineAuthorityTime;",
             "Lorg/memphiszoo/custodial/vault/AndroidOfflineAuthorityTimeStore;",
+            "Lorg/memphiszoo/custodial/vault/AndroidProtectedWorkPreferences;",
+            "Lorg/memphiszoo/custodial/vault/AndroidReadOnlyPreferences;",
+            "Lorg/memphiszoo/custodial/vault/NativeReadinessObservation;",
             "Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;",
             "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;",
             "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;"
           ],
           "properties": {
-            "Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/VaultEngine;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/SharedPreferencesVaultPersistence;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/AndroidKeystoreCipher;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/HttpsEnrollmentTransport;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/NativeAttestation;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/OfflineAuthorityTime;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/AndroidOfflineAuthorityTimeStore;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;": { "$ref": "#/$defs/dexName" },
-            "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;": { "$ref": "#/$defs/dexName" }
+            "Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/VaultEngine;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/SharedPreferencesVaultPersistence;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/AndroidKeystoreCipher;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/HttpsEnrollmentTransport;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/NativeAttestation;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/OfflineAuthorityTime;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/AndroidOfflineAuthorityTimeStore;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/AndroidProtectedWorkPreferences;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/AndroidReadOnlyPreferences;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/NativeReadinessObservation;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;": {
+              "$ref": "#/$defs/dexName"
+            }
           }
         },
-        "old_secure_storage_absent": { "const": true },
-        "webview_plaintext_credential_transport_absent": { "const": true },
-        "status_only_shell_verified": { "const": true },
-        "webview_executable_count": { "type": "integer", "minimum": 1 },
+        "old_secure_storage_absent": {
+          "const": true
+        },
+        "webview_plaintext_credential_transport_absent": {
+          "const": true
+        },
+        "status_only_shell_verified": {
+          "const": true
+        },
+        "webview_executable_count": {
+          "type": "integer",
+          "minimum": 1
+        },
         "webview_executable_sha256": {
           "type": "object",
           "additionalProperties": false,
           "minProperties": 1,
           "patternProperties": {
-            "^assets/public/.+\\.(?:html|js|mjs)$": { "$ref": "#/$defs/sha256" }
+            "^assets/public/.+\\.(?:html|js|mjs)$": {
+              "$ref": "#/$defs/sha256"
+            }
           }
         },
-        "plugin_manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "plugin_manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
         "dex_sha256": {
           "type": "object",
           "additionalProperties": false,
           "minProperties": 1,
           "patternProperties": {
-            "^classes(?:[0-9]+)?\\.dex$": { "$ref": "#/$defs/sha256" }
+            "^classes(?:[0-9]+)?\\.dex$": {
+              "$ref": "#/$defs/sha256"
+            }
           }
         }
       }
@@ -582,20 +1481,45 @@
         "node"
       ],
       "properties": {
-        "android_build_tools_version": { "const": "35.0.1" },
-        "android_build_tools_platform": { "enum": ["linux", "macosx"] },
-        "aapt2": { "$ref": "#/$defs/tool" },
-        "apksigner": { "$ref": "#/$defs/tool" },
-        "apksigner_jar": { "$ref": "#/$defs/tool" },
-        "source_properties": { "$ref": "#/$defs/tool" },
-        "zipalign": { "$ref": "#/$defs/tool" },
-        "unzip": { "$ref": "#/$defs/tool" },
+        "android_build_tools_version": {
+          "const": "35.0.1"
+        },
+        "android_build_tools_platform": {
+          "enum": [
+            "linux",
+            "macosx"
+          ]
+        },
+        "aapt2": {
+          "$ref": "#/$defs/tool"
+        },
+        "apksigner": {
+          "$ref": "#/$defs/tool"
+        },
+        "apksigner_jar": {
+          "$ref": "#/$defs/tool"
+        },
+        "source_properties": {
+          "$ref": "#/$defs/tool"
+        },
+        "zipalign": {
+          "$ref": "#/$defs/tool"
+        },
+        "unzip": {
+          "$ref": "#/$defs/tool"
+        },
         "node": {
           "allOf": [
-            { "$ref": "#/$defs/tool" },
+            {
+              "$ref": "#/$defs/tool"
+            },
             {
               "type": "object",
-              "properties": { "version": { "const": "v22.23.1" } }
+              "properties": {
+                "version": {
+                  "const": "v22.23.1"
+                }
+              }
             }
           ]
         }
@@ -620,44 +1544,575 @@
         "toolchain_policy_sha256"
       ],
       "properties": {
-        "release_acceptance_version": { "const": "6.0.0" },
-        "release_acceptance_source_sha256": { "$ref": "#/$defs/sha256" },
-        "backup_verifier_version": { "const": "2.0.1" },
-        "backup_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
-        "capacitor_runtime_policy_version": { "const": "1.1.0" },
-        "capacitor_runtime_policy_source_sha256": { "$ref": "#/$defs/sha256" },
-        "android_manifest_security_verifier_version": { "const": "1.5.0" },
-        "android_manifest_security_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
-        "dex_semantic_verifier_version": { "const": "1.0.0" },
-        "dex_semantic_verifier_source_sha256": { "$ref": "#/$defs/sha256" },
-        "acceptance_schema_sha256": { "$ref": "#/$defs/sha256" },
-        "release_policy_sha256": { "$ref": "#/$defs/sha256" },
-        "toolchain_policy_sha256": { "$ref": "#/$defs/sha256" }
+        "release_acceptance_version": {
+          "const": "6.0.0"
+        },
+        "release_acceptance_source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "backup_verifier_version": {
+          "const": "2.0.1"
+        },
+        "backup_verifier_source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "capacitor_runtime_policy_version": {
+          "const": "1.1.0"
+        },
+        "capacitor_runtime_policy_source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "android_manifest_security_verifier_version": {
+          "const": "1.9.0"
+        },
+        "android_manifest_security_verifier_source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "dex_semantic_verifier_version": {
+          "const": "1.0.0"
+        },
+        "dex_semantic_verifier_source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "acceptance_schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "release_policy_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "toolchain_policy_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "cleaning_first_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "profile",
+        "policy_sha256",
+        "module_sha256",
+        "bridge_sha256",
+        "manifest_matched",
+        "native_scope_matched",
+        "new_entry_guards_verified",
+        "conditional_callbacks_preserved",
+        "full_system_qualification_unchanged",
+        "install_admission",
+        "dex",
+        "callback_continuity"
+      ],
+      "properties": {
+        "schema": {
+          "const": "custodial.cleaning-first-new-admissions-artifact.v1"
+        },
+        "profile": {
+          "const": "cleaning-first-retained-continuity-v1"
+        },
+        "policy_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "module_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bridge_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "manifest_matched": {
+          "const": true
+        },
+        "native_scope_matched": {
+          "const": true
+        },
+        "new_entry_guards_verified": {
+          "const": true
+        },
+        "conditional_callbacks_preserved": {
+          "const": true
+        },
+        "full_system_qualification_unchanged": {
+          "const": true
+        },
+        "install_admission": {
+          "type": "null"
+        },
+        "dex": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope_classes",
+            "guarded_public_new_methods",
+            "native_new_attachment_guard_verified",
+            "profile",
+            "policy_sha256"
+          ],
+          "properties": {
+            "scope_classes": {
+              "const": 3
+            },
+            "guarded_public_new_methods": {
+              "const": 9
+            },
+            "native_new_attachment_guard_verified": {
+              "const": true
+            },
+            "profile": {
+              "const": "cleaning-first-retained-continuity-v1"
+            },
+            "policy_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "callback_continuity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "scope",
+            "all_original_classes_compared",
+            "all_original_methods_compared",
+            "all_original_fields_compared",
+            "exact_new_guard_public_methods",
+            "exact_native_attachment_predicate",
+            "reference_dex_sha256",
+            "candidate_dex_sha256",
+            "conditional_callbacks_preserved",
+            "source_reference_admission"
+          ],
+          "properties": {
+            "schema": {
+              "const": "custodial.actual-dex-original-callback-comparison.v1"
+            },
+            "scope": {
+              "$ref": "#/properties/cleaning_first_scope/properties/dex"
+            },
+            "all_original_classes_compared": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "all_original_methods_compared": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "all_original_fields_compared": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "exact_new_guard_public_methods": {
+              "const": 9
+            },
+            "exact_native_attachment_predicate": {
+              "const": 1
+            },
+            "reference_dex_sha256": {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 16,
+              "patternProperties": {
+                "^classes(?:[2-9]|[1-9][0-9]+)?\\.dex$": {
+                  "$ref": "#/$defs/sha256"
+                }
+              },
+              "additionalProperties": false
+            },
+            "candidate_dex_sha256": {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 16,
+              "patternProperties": {
+                "^classes(?:[2-9]|[1-9][0-9]+)?\\.dex$": {
+                  "$ref": "#/$defs/sha256"
+                }
+              },
+              "additionalProperties": false
+            },
+            "conditional_callbacks_preserved": {
+              "const": true
+            },
+            "source_reference_admission": {
+              "$ref": "#/$defs/callbackReferenceEvidence"
+            }
+          }
+        }
       }
     }
   },
   "$defs": {
-    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "dexName": { "type": "string", "pattern": "^classes(?:[0-9]+)?\\.dex$" },
+    "legacySourceRef": {
+      "enum": [
+        "refs/heads/main",
+        "refs/heads/release/custodial-build29-recovery-v34-implementation-20260820",
+        "refs/heads/release/custodial-build29-recovery-v36-implementation-20260824",
+        "refs/heads/release/custodial-build29-recovery-v37-implementation-20260824",
+        "refs/heads/release/custodial-build29-recovery-v38-implementation-20260825",
+        "refs/heads/release/custodial-build29-recovery-v39-implementation-20260825",
+        "refs/heads/release/custodial-build29-recovery-v40-implementation-20260825",
+        "refs/heads/release/custodial-build29-recovery-v41-implementation-20260825",
+        "refs/heads/release/custodial-build29-recovery-v42-implementation-20260825",
+        "refs/heads/release/custodial-build29-recovery-v43-implementation-20260825",
+        "refs/heads/release/custodial-build29-recovery-v44-implementation-20260825",
+        "refs/heads/release/custodial-build29-recovery-v45-implementation-20260826",
+        "refs/heads/release/custodial-build29-recovery-v46-implementation-20260826",
+        "refs/heads/release/custodial-build29-recovery-v47-implementation-20260826",
+        "refs/heads/release/custodial-build29-recovery-v48-implementation-20260826",
+        "refs/heads/release/custodial-build29-recovery-v49-implementation-20260826",
+        "refs/heads/release/custodial-build29-recovery-v50-implementation-20260826",
+        "refs/heads/release/custodial-build29-recovery-v51-implementation-20260827",
+        "refs/heads/release/custodial-build29-recovery-v52-implementation-20260914",
+        "refs/heads/release/custodial-build29-recovery-v53-implementation-20260918",
+        "refs/heads/release/custodial-build29-recovery-v54-implementation-20260928",
+        "refs/heads/release/custodial-build29-recovery-v55-implementation-20260928",
+        "refs/heads/release/custodial-build29-recovery-v56-implementation-20260929"
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "dexName": {
+      "type": "string",
+      "pattern": "^classes(?:[0-9]+)?\\.dex$"
+    },
     "compiledBackupResource": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "logical_name", "packaged_path", "semantic_sha256"],
+      "required": [
+        "id",
+        "logical_name",
+        "packaged_path",
+        "semantic_sha256"
+      ],
       "properties": {
-        "id": { "type": "string", "pattern": "^0x[0-9a-f]+$" },
-        "logical_name": { "type": "string", "pattern": "^xml/[a-z0-9_]+$" },
-        "packaged_path": { "type": "string", "pattern": "^res/(?:[^/]+/)*[^/]+\\.xml$" },
-        "semantic_sha256": { "$ref": "#/$defs/sha256" }
+        "id": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]+$"
+        },
+        "logical_name": {
+          "type": "string",
+          "pattern": "^xml/[a-z0-9_]+$"
+        },
+        "packaged_path": {
+          "type": "string",
+          "pattern": "^res/(?:[^/]+/)*[^/]+\\.xml$"
+        },
+        "semantic_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
       }
     },
     "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "version", "sha256"],
+      "required": [
+        "path",
+        "version",
+        "sha256"
+      ],
       "properties": {
-        "path": { "type": "string", "minLength": 1 },
-        "version": { "type": "string", "minLength": 1 },
-        "sha256": { "$ref": "#/$defs/sha256" }
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "callbackReferenceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "evidence_only",
+        "installable",
+        "release_admission",
+        "source",
+        "version_code",
+        "profile",
+        "policy_sha256",
+        "reference_policy_sha256",
+        "source_boundary_sha256",
+        "provider_build",
+        "apk_sha256",
+        "apk_bytes",
+        "manifest_sha256",
+        "toolchain",
+        "locked_inputs",
+        "signature",
+        "provider_configuration_source_sha256",
+        "metadata_before_sha256",
+        "metadata_after_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "custodial.callback-reference-admitted-raw-evidence.v1"
+        },
+        "evidence_only": {
+          "const": true
+        },
+        "installable": {
+          "const": false
+        },
+        "release_admission": {
+          "const": false
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commit",
+            "tree",
+            "ref"
+          ],
+          "properties": {
+            "commit": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            },
+            "tree": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^refs/heads/[A-Za-z0-9._/-]+$"
+            }
+          }
+        },
+        "version_code": {
+          "type": "integer",
+          "minimum": 57,
+          "maximum": 2100000000
+        },
+        "profile": {
+          "const": "cleaning-first-retained-continuity-v1"
+        },
+        "policy_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "reference_policy_sha256": {
+          "const": "6a18ff6ad75c77d1f02c284ef550e2277cfb23171727d85da9d2794f1df6b80b"
+        },
+        "source_boundary_sha256": {
+          "const": "55e49c6d0003592daf05e405b5eaf4ce4921207dfdabc30bb686f89cc71f514a"
+        },
+        "provider_build": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "build_id",
+            "app_id",
+            "commit",
+            "branch",
+            "index",
+            "workflow",
+            "instance_type",
+            "created_at",
+            "started_at",
+            "finished_at",
+            "artifacts"
+          ],
+          "properties": {
+            "build_id": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{24}$"
+            },
+            "app_id": {
+              "const": "6a6d4421515324b1cc5709c9"
+            },
+            "commit": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            },
+            "branch": {
+              "type": "string",
+              "minLength": 1
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "workflow": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "source"
+              ],
+              "properties": {
+                "id": {
+                  "const": "custodial-callback-reference"
+                },
+                "name": {
+                  "const": "Custodial callback reference - evidence only"
+                },
+                "source": {
+                  "const": "file"
+                }
+              }
+            },
+            "instance_type": {
+              "const": "mac_mini_m2"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "started_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "finished_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "artifacts": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "type",
+                  "size"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "enum": [
+                      "apk",
+                      "bundle"
+                    ]
+                  },
+                  "size": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 262144000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "apk_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "apk_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 262144000
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "toolchain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "codemagic_xcode_image",
+            "android_build_tools_version",
+            "toolchain_policy_sha256",
+            "files_sha256"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": 1
+            },
+            "codemagic_xcode_image": {
+              "const": "26.2"
+            },
+            "android_build_tools_version": {
+              "const": "35.0.1"
+            },
+            "toolchain_policy_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "files_sha256": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        },
+        "locked_inputs": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "signature": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "verified",
+            "certificate_sha256",
+            "public_key_sha256",
+            "stdout_sha256"
+          ],
+          "properties": {
+            "verified": {
+              "const": true
+            },
+            "certificate_sha256": {
+              "const": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf"
+            },
+            "public_key_sha256": {
+              "const": "5bbf30c71444534f189f75cfa3e65779285a4e8e25ff3fd7cbfa1cbc86de1d4c"
+            },
+            "stdout_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "provider_configuration_source_sha256": {
+          "const": "870d09e2ef09fd5c1201784e2755cc10b0e54efe2adff78060048d07df9870ec"
+        },
+        "metadata_before_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "metadata_after_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
       }
     }
   }

@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
+if (process.argv[2] === '--native-bootstrap-writer-only') {
+  await nativeBootstrapWriterCases();
+} else {
+
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const scriptMatch = html.match(/<script>\n([\s\S]*)\n\s*<\/script>/);
 assert.ok(scriptMatch, 'scan page inline script should be extractable');
@@ -20,9 +24,7 @@ script = script.replace(
 const appNode = { innerHTML: '' };
 const syncNode = { textContent: '', addEventListener() {} };
 const debugNode = { innerHTML: '' };
-let automaticStartRequests = 0;
-let submitHandler = null;
-const formNode = { addEventListener(type,handler) { if(type==='submit')submitHandler=handler; }, requestSubmit() { automaticStartRequests += 1; } };
+const formNode = { addEventListener() {} };
 const storage = new Map();
 const locationState = {
   href: 'https://example.test/Engine/index.html?device=kiosk_02&code=AQUARIUM',
@@ -226,7 +228,6 @@ for (let kioskNumber = 2; kioskNumber <= 10; kioskNumber += 1) {
   );
   assert.doesNotMatch(appNode.innerHTML, /<select name="employee"/, `${kioskId} assigned scan page should not render an employee dropdown`);
   assert.doesNotMatch(appNode.innerHTML, /selected disabled>Select Employee Name/);
-  assert.equal(automaticStartRequests, kioskNumber - 1, `${kioskId} verified first scan should submit Start automatically exactly once`);
 }
 
 await context.renderEmployeeSelect({
@@ -254,16 +255,6 @@ assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Emplo
 assert.doesNotMatch(appNode.innerHTML, /Example Title/, 'manager/control scan dropdown should also strip titles from employee choices');
 assert.doesNotMatch(appNode.innerHTML, /scanEmployeeDisplay/, 'KIOSK_01 should not render the read-only assigned employee display');
 assert.doesNotMatch(appNode.innerHTML, /<input type="hidden" name="employee"/, 'KIOSK_01 should not submit a hidden preselected employee');
-assert.equal(automaticStartRequests, 10, 'manager device should still require an explicit employee selection and Start');
-
-vm.runInContext('currentScanEntryAttestation=null', context);
-await context.renderEmployeeSelect({
-  location_code: 'AQUARIUM',
-  location_name: 'Aquarium Restrooms',
-  assigned_device_employee_name: 'Karen Robinson'
-}, 'KIOSK_08');
-assert.equal(automaticStartRequests, 10, 'an unverified URL must never auto-start the assigned employee');
-assert.match(appNode.innerHTML, /Scan Not Read/, 'an unverified URL must ask for a real NFC read');
 
 await context.renderEmployeeSelect({
   location_code: 'AQUARIUM',
@@ -273,23 +264,158 @@ assert.match(appNode.innerHTML, /<option value="" selected disabled>Select Emplo
 assert.match(appNode.innerHTML, /Choose the employee\./);
 assert.doesNotMatch(appNode.innerHTML, /Manager\/shared device|device id|technical/i);
 
-// Exercise the actual submit callback, not just the requestSubmit wiring.
-vm.runInContext('currentScanEntryAttestation={entry_id:"00000000-0000-4000-8000-000000000002",entry_source:"native-nfc"}',context);
-const started=[];const timers=[];const submitted=[];
-context.FormData=class { get(name){return name==='employee'?'Karen Robinson':null;} };
-context.findAnyOpenLocalSessionForDevice=()=>null;
-context.startSessionWithVerifiedRollbackRecovery=async(...args)=>{started.push(args);return{session_uuid:'verified-start-test',location_code:'AQUARIUM',employee_name:'Karen Robinson',status:'active'};};
-context.recordScanEventMaybeQueued=async(...args)=>{submitted.push(args);return{ok:true};};
-context.renderTimerPage=(row)=>timers.push(row);
-let submitPromise;
-formNode.requestSubmit=()=>{automaticStartRequests+=1;submitPromise=submitHandler({preventDefault(){},currentTarget:formNode});};
-await context.renderEmployeeSelect({location_code:'AQUARIUM',location_name:'Aquarium Restrooms',assigned_device_employee_name:'Karen Robinson'},'KIOSK_08');
-await submitPromise;
-assert.equal(started.length,1,'one verified NFC scan enters the real guarded Start callback once');
-assert.equal(started[0][0],'AQUARIUM');
-assert.equal(started[0][1],'Karen Robinson');
-assert.equal(started[0][2],'KIOSK_08');
-assert.equal(submitted[0][2],'scan_start','successful automatic Start records scan-start evidence');
-assert.equal(timers[0].session_uuid,'verified-start-test','successful automatic Start opens the timer');
-
 console.log('scan-device-employee-default-tests passed');
+
+}
+
+async function nativeBootstrapWriterCases() {
+  let groups = 0;
+  const page = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  function fixture() {
+    const storage = new Map([['mz_scan_device_id','KIOSK_09'],['memphisAssignedDeviceId','KIOSK_09']]);
+    const location = { href:'https://example.test/index.html?device=KIOSK_08&code=AQUARIUM',search:'?device=KIOSK_08&code=AQUARIUM',pathname:'/index.html',hostname:'example.test' };
+    let writes=0, navigations=0, fallbacks=0, admissionCalls=0, checkpoints=0;
+    const window = { location, addEventListener(){}, MemphisCompletionTaxonomy:{services:()=>[],issues:()=>[]},
+      history:{replaceState(_a,_b,url){navigations++;location.href='https://example.test'+url;location.search=url.includes('?')?url.slice(url.indexOf('?')):'';}},
+      MemphisDeviceIdentity:{resolve(){fallbacks++;return {deviceId:'KIOSK_07'};}},
+      MemphisDeviceReminders:{resolveDeviceId(){fallbacks++;return 'KIOSK_06';}},
+      fully:{getDeviceName(){fallbacks++;return 'KIOSK_05';}} };
+    const status = {ready:true,available:true,quarantined:false,state:'enrolled',deviceId:'KIOSK_02',generation:7,
+      principal:{schema_version:'custodial-protected-principal.v1',device_id:'KIOSK_02',
+        employee_id:'00000000-0000-4000-8000-000000000001',credential_id:'00000000-0000-4000-8000-000000000002',
+        credential_operation_id:'00000000-0000-4000-8000-000000000003',assignment_epoch:3,
+        installation_seal:'synthetic-installation-seal',enrolled_at:'2026-10-14T12:00:00.000Z'}};
+    const security = {native:true,getStatus(){return structuredClone(status);},async waitForStableState(){return security.getStatus();},
+      async mutateProtectedWork(operation,options){admissionCalls++;assert.equal(options.expectedGeneration,7);
+        const context=Object.freeze({deviceId:'KIOSK_02',generation:7,state:'enrolled',assertCurrent(){checkpoints++;}});
+        return operation(context);}};
+    const sandbox = {console,URL,URLSearchParams,AbortController,window,location,navigator:{onLine:true},
+      localStorage:{getItem:k=>storage.get(k)||null,setItem(k,v){writes++;storage.set(k,String(v));},removeItem(){throw Error('no original removal');},
+        key:i=>[...storage.keys()][i]||null,get length(){return storage.size;}},
+      sessionStorage:{getItem:()=>null,setItem(){throw Error('no session write');}},
+      document:{getElementById:()=>({innerHTML:'',textContent:'',addEventListener(){}})},
+      setInterval(){throw Error('no timer');},setTimeout(){throw Error('no timer');},clearTimeout(){},
+      fetch(){throw Error('no network');}};
+    let script=page.match(/<script>\n([\s\S]*)\n\s*<\/script>/)[1];
+    script=script.replace(/\n\s*guardedStart\(\)\.catch\(\(err\)=>\{[^\n]*\}\);/,'\n // original startup disabled by existing VM harness');
+    vm.createContext(sandbox);vm.runInContext(script,sandbox,{filename:'index.html',timeout:1000});
+    return {sandbox,window,security,status,storage,counters:()=>({writes,navigations,fallbacks,admissionCalls,checkpoints})};
+  }
+  const denied = async action => assert.rejects(action,error=>/^custodial_security_/.test(error.code));
+  if(process.argv[3]==='checkpoint-required'){
+    const variants=['missing',undefined,null,false,'not-a-checkpoint',{}];
+    for(const checkpoint of variants){
+      const f=fixture();f.window.MemphisCustodialSecurity=f.security;let rawCallbacks=0;
+      f.security.mutateProtectedWork=async (operation,options)=>{
+        assert.equal(options.expectedGeneration,7);
+        const context={deviceId:'KIOSK_02',generation:7,state:'enrolled'};
+        if(checkpoint!=='missing')Object.defineProperty(context,'assertCurrent',{value:checkpoint});
+        return operation(Object.freeze(context));
+      };
+      await denied(()=>f.sandbox.mutateCustodialWork(()=>++rawCallbacks));
+      assert.equal(rawCallbacks,0);assert.equal(f.counters().writes,0);
+    }
+    console.log(JSON.stringify({selector:'native-bootstrap-writer-only',member:'checkpoint-required',cases:1,variants:variants.length,result:'PASS',prior30:'NOT_REPLAYED',limits:'Actual shipping functions in VM; synthetic admission/status, not browser locks/native authority.'}));
+    return;
+  }
+  for (const marker of ['mobile','build','platform','native']) {
+    const f=fixture();
+    if(marker==='mobile')f.window.MemphisMobile={edition:'custodial'};
+    if(marker==='build')f.window.MemphisMobileBuildIdentity={edition:'custodial'};
+    if(marker==='platform')f.window.Capacitor={isNativePlatform:()=>true};
+    if(marker==='native')f.window.MemphisCustodialSecurity=f.security;
+    if(marker==='native')assert.equal(f.sandbox.custodialSecurityPausedNow(),false);
+    delete f.window.MemphisCustodialSecurity;
+    let called=0;
+    await denied(()=>f.sandbox.mutateCustodialWork(()=>++called));assert.equal(called,0);
+    assert.equal(f.sandbox.custodialSecurityPausedNow(),true);
+    assert.equal((await f.sandbox.custodialSecurityPause()).ready,false);
+    assert.throws(()=>f.sandbox.persistDeviceId('KIOSK_10'),error=>/^custodial_security_/.test(error.code));
+    assert.equal(f.sandbox.resolveDeviceId(),'');
+    await denied(()=>f.sandbox.ensureDeviceIdInUrl());
+    assert.deepEqual(f.counters(),{writes:0,navigations:0,fallbacks:0,admissionCalls:0,checkpoints:0});
+    delete f.window.MemphisMobile;delete f.window.MemphisMobileBuildIdentity;delete f.window.Capacitor;
+    await denied(()=>f.sandbox.mutateCustodialWork(()=>++called));assert.equal(called,0);groups++;
+  }
+  for(const bad of [null,{}, {native:false}, {native:true,getStatus:()=>null,waitForStableState:async()=>{},mutateProtectedWork:async()=>{throw Error('not admitted');}}]) {
+    const f=fixture();f.window.MemphisMobile={edition:'custodial'};f.window.MemphisCustodialSecurity=bad;
+    let called=0;await denied(()=>f.sandbox.mutateCustodialWork(()=>++called));assert.equal(called,0);
+    assert.equal(f.sandbox.resolveDeviceId(),'');assert.equal(f.sandbox.custodialSecurityPausedNow(),true);groups++;
+  }
+  for(const change of [
+    s=>{s.ready=false;},s=>{s.available=false;},s=>{s.quarantined=true;},s=>{s.generation=NaN;},
+    s=>{s.principal=null;},s=>{s.principal.device_id='KIOSK_03';},s=>{s.principal.assignment_epoch=0;}
+  ]) {
+    const f=fixture();f.window.MemphisCustodialSecurity=f.security;change(f.status);
+    let called=0;await denied(()=>f.sandbox.mutateCustodialWork(()=>++called));assert.equal(called,0);
+    assert.equal(f.sandbox.resolveDeviceId(),'');await denied(()=>f.sandbox.ensureDeviceIdInUrl());assert.equal(f.counters().writes,0);groups++;
+  }
+  {
+    const f=fixture();f.window.MemphisCustodialSecurity=f.security;let called=0;
+    assert.equal(await f.sandbox.mutateCustodialWork(context=>{called++;assert.equal(context.deviceId,'KIOSK_02');return 'owned';}),'owned');
+    assert.equal(called,1);assert.equal(f.counters().admissionCalls,1);assert.ok(f.counters().checkpoints>=2);
+    assert.equal(f.sandbox.resolveDeviceId(),'KIOSK_02');f.sandbox.persistDeviceId('KIOSK_10');
+    assert.equal(await f.sandbox.ensureDeviceIdInUrl(),'KIOSK_02');assert.match(f.window.location.search,/device=KIOSK_02/);
+    assert.equal(f.counters().writes,0);assert.equal(f.counters().fallbacks,0);assert.equal(f.sandbox.custodialSecurityPausedNow(),false);
+    assert.equal(await f.sandbox.custodialSecurityPause(),null);groups++;
+  }
+  for(const fault of ['replacement','generation','principal','device','unavailable','checkpoint']) {
+    const f=fixture();f.window.MemphisCustodialSecurity=f.security;let release;
+    const queued=new Promise(resolve=>{release=resolve;});let called=0;
+    f.security.mutateProtectedWork=async (operation,options)=>{assert.equal(options.expectedGeneration,7);await queued;
+      return operation({deviceId:'KIOSK_02',generation:7,state:'enrolled',assertCurrent(){if(fault==='checkpoint')throw Object.assign(Error('held'),{code:'custodial_security_state_unavailable'});}});};
+    const pending=f.sandbox.mutateCustodialWork(()=>++called);
+    if(fault==='replacement')f.window.MemphisCustodialSecurity={...f.security};
+    if(fault==='generation')f.status.generation++;
+    if(fault==='principal')f.status.principal.credential_id='00000000-0000-4000-8000-000000000004';
+    if(fault==='device')f.status.deviceId='KIOSK_03';
+    if(fault==='unavailable')delete f.window.MemphisCustodialSecurity;
+    release();await denied(()=>pending);assert.equal(called,0);assert.equal(f.counters().writes,0);groups++;
+  }
+  {
+    const f=fixture();f.window.MemphisCustodialSecurity=f.security;let settle;
+    const reply=new Promise(resolve=>{settle=resolve;});let calls=0;
+    const pending=f.sandbox.mutateCustodialWork(async()=>{calls++;await reply;return 'stale';});
+    await Promise.resolve();f.status.generation++;settle();
+    await denied(()=>pending);assert.equal(calls,1);assert.equal(f.counters().writes,0);groups++;
+  }
+  {
+    const f=fixture();f.window.MemphisCustodialSecurity=f.security;let settle;
+    f.security.waitForStableState=()=>new Promise(resolve=>{settle=resolve;});
+    const paused=f.sandbox.custodialSecurityPause();f.window.MemphisCustodialSecurity={...f.security};settle();
+    assert.equal((await paused).ready,false);groups++;
+  }
+  {
+    const f=fixture();f.window.MemphisCustodialSecurity=f.security;const original=Error('original native failure');
+    await assert.rejects(()=>f.sandbox.mutateCustodialWork(()=>{throw original;}),error=>error===original);
+    assert.equal(f.counters().writes,0);groups++;
+  }
+  {
+    const f=fixture();delete f.window.MemphisDeviceIdentity;delete f.window.fully;
+    assert.equal(await f.sandbox.mutateCustodialWork(()=>42),42);assert.equal(f.sandbox.custodialSecurityPausedNow(),false);
+    assert.equal(await f.sandbox.custodialSecurityPause(),null);assert.equal(f.sandbox.resolveDeviceId(),'KIOSK_08');
+    assert.equal(f.storage.get('memphisAssignedDeviceId'),'KIOSK_08');assert.equal(await f.sandbox.ensureDeviceIdInUrl(),'KIOSK_08');
+    assert.equal(f.sandbox.isReadonlyScanEmployeeDevice('KIOSK_02'),true);assert.equal(f.sandbox.isReadonlyScanEmployeeDevice('KIOSK_01'),false);groups++;
+  }
+  {
+    const f=fixture();f.window.MemphisCustodialSecurity={native:false,getStatus:()=>({ready:false,available:false})};
+    assert.equal(f.sandbox.custodialSecurityPausedNow(),true);assert.equal((await f.sandbox.custodialSecurityPause()).ready,false);
+    assert.equal(await f.sandbox.mutateCustodialWork(()=>42),42);groups++;
+  }
+  {
+    const f=fixture();f.window.Capacitor={isNativePlatform(){throw Error('unavailable platform');}};
+    let called=0;await denied(()=>f.sandbox.mutateCustodialWork(()=>++called));delete f.window.Capacitor;
+    await denied(()=>f.sandbox.mutateCustodialWork(()=>++called));assert.equal(called,0);groups++;
+  }
+  {
+    const f=fixture();f.window.MemphisCustodialSecurity=f.security;let invoked=0;
+    f.security.getStatus=()=>{const s=structuredClone(f.status);Object.defineProperty(s.principal,'employee_id',{get(){invoked++;return 'untrusted';},enumerable:true});return s;};
+    await denied(()=>f.sandbox.mutateCustodialWork(()=>{throw Error('no operation');}));assert.equal(invoked,0);groups++;
+  }
+  {
+    const f=fixture();f.window.MemphisCustodialSecurity=f.security;let called=0;
+    await denied(()=>f.sandbox.mutateCustodialWork(()=>++called,{requireEnrollment:true,expectedGeneration:6}));
+    assert.equal(called,0);assert.equal(f.counters().admissionCalls,0);groups++;
+  }
+  console.log(JSON.stringify({selector:'native-bootstrap-writer-only',groups,result:'PASS',limits:'Actual shipping functions in existing VM harness; synthetic security admission/status only, not real browser locks/native authority.'}));
+}

@@ -18,7 +18,6 @@
   <div class="app">
     <nav class="mz-page-header" aria-label="Application navigation">
       <a id="back-hub-link" class="mz-back-link" data-mz-back href="./start_page1.html">Back</a>
-      <a class="mz-secondary-link" data-mz-annie-back hidden href="https://memphis-zoo-mcp.onrender.com/moxie/">Back to Annie</a>
     </nav>
     <section class="panel topbar">
       <div class="hero">
@@ -172,8 +171,6 @@
   <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
-    const ANNIE_RETURN_URL = 'https://memphis-zoo-mcp.onrender.com/moxie/';
-    const ANNIE_ORIGIN_SESSION_KEY = 'mz_annie_origin_session';
     const CONFIG = {
       EVENTS_ADMIN_URL: 'https://memphis-zoo-mcp.onrender.com/admin-api/events',
       EVENTS_PUBLIC_URL: 'https://memphis-zoo-mcp.onrender.com/dashboard-api/events',
@@ -229,7 +226,6 @@
     init().catch((error) => setStatus(`Startup failed: ${safe(error)}`, true));
 
     async function init() {
-      syncTopLinks();
       bindEvents();
       await requireManagerHubSession();
       await loadReferenceData();
@@ -272,25 +268,6 @@
       });
     }
 
-    function isAnnieOrigin(url = new URL(window.location.href)) {
-      const marker = String(url.searchParams.get('origin') || '').trim().toLowerCase() === 'annie';
-      const fromAnnie = String(document.referrer || '').startsWith(ANNIE_RETURN_URL);
-      if (marker || fromAnnie) {
-        try { sessionStorage.setItem(ANNIE_ORIGIN_SESSION_KEY, '1'); } catch (_error) {}
-        return true;
-      }
-      try { return sessionStorage.getItem(ANNIE_ORIGIN_SESSION_KEY) === '1'; } catch (_error) { return false; }
-    }
-    function preserveAnnieOrigin(url) { if (isAnnieOrigin()) url.searchParams.set('origin','annie'); return url; }
-    function syncTopLinks() {
-      if (!isAnnieOrigin()) return;
-      if (els.publicBoardLink) {
-        const url = preserveAnnieOrigin(new URL('./events.html', window.location.href));
-        url.searchParams.set('hub','manager');
-        url.searchParams.set('return','events-admin');
-        els.publicBoardLink.href = url.toString();
-      }
-    }
     function clearOpsSession() { window.MemphisAuth?.clearSession?.(); }
     async function requireManagerHubSession() {
       const session = await window.MemphisAuth.requireOpsManagerSession({ interactive: false, redirect: true });

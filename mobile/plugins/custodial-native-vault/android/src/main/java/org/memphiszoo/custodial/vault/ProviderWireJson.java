@@ -5,12 +5,15 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Bounded RFC8259 wire parser. Android JSONTokener alone allows duplicate keys,
  * single quotes, unquoted keys and trailing separators. Authority routes do not. */
 final class ProviderWireJson {
+    private static final Pattern NUMBER_TOKEN = Pattern.compile("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?");
+    private static final Pattern UNICODE_ESCAPE_HEX = Pattern.compile("[0-9A-Fa-f]{4}");
     private final String source;
     private int cursor, values;
     private ProviderWireJson(String source) { this.source = source; }
@@ -32,16 +35,21 @@ final class ProviderWireJson {
         if (integerA || integerB) return integerA && integerB && ((Number) a).longValue() == ((Number) b).longValue();
         return a != null && a.equals(b);
     }
-    static JSONObject object(byte[] bytes, int maximum) throws VaultFailure {
-        if (bytes == null || maximum < 1 || maximum > 262144 || bytes.length == 0 || bytes.length > maximum) throw invalid();
+    static Object parse(byte[] bytes, int maximum) throws VaultFailure {
+        if (bytes == null || maximum < 1 || maximum > 8 * 1024 * 1024 || bytes.length == 0 || bytes.length > maximum) throw invalid();
         try {
             String text = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
                 .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
             ProviderWireJson parser = new ProviderWireJson(text); Object result = parser.value(0); parser.space();
-            if (!(result instanceof JSONObject) || parser.cursor != text.length()) throw invalid();
-            return (JSONObject) result;
+            if (parser.cursor != text.length()) throw invalid();
+            return result;
         } catch (VaultFailure error) { throw error; }
         catch (Exception error) { throw new VaultFailure("custodial_provider_wire_json_invalid", error); }
+    }
+    static JSONObject object(byte[] bytes, int maximum) throws VaultFailure {
+        Object result=parse(bytes,maximum);
+        if (!(result instanceof JSONObject)) throw invalid();
+        return (JSONObject)result;
     }
     private Object value(int depth) throws Exception {
         if (++values > 10000 || depth > 16) throw invalid(); space();
@@ -66,19 +74,28 @@ final class ProviderWireJson {
         int start = cursor;
         while (cursor < source.length() && "-+0123456789.eE".indexOf(source.charAt(cursor)) >= 0) cursor++;
         String raw = source.substring(start, cursor);
-        if (raw.length() > 64 || !raw.matches("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?")) throw invalid();
+        if (raw.length() > 64 || !NUMBER_TOKEN.matcher(raw).matches()) throw invalid();
         if (raw.indexOf('.') < 0 && raw.indexOf('e') < 0 && raw.indexOf('E') < 0) return Long.valueOf(raw);
         Double number = Double.valueOf(raw);
         if (!Double.isFinite(number)) throw invalid();
         return number; // Keep decimal/exponent type: a typed integer field must reject 1.0/1e0.
     }
     private String string() throws Exception {
-        require('"'); StringBuilder result = new StringBuilder(); boolean closed = false;
+        require('"'); int span = cursor; StringBuilder result = null; String text = null;
         while (cursor < source.length()) {
             char next = source.charAt(cursor++);
-            if (next == '"') { closed = true; break; }
+            if (next == '"') {
+                // Most retained ciphertext/base64 strings contain no escapes.
+                // Copy each unchanged span once, not one builder append per
+                // character. This is DATA parsing, never a validation cache.
+                text = result == null ? source.substring(span, cursor - 1)
+                    : result.append(source, span, cursor - 1).toString();
+                break;
+            }
             if (next < 0x20) throw invalid();
             if (next == '\\') {
+                if (result == null) result = new StringBuilder();
+                result.append(source, span, cursor - 1);
                 if (cursor >= source.length()) throw invalid(); char escaped = source.charAt(cursor++);
                 switch (escaped) {
                     case '"': case '\\': case '/': result.append(escaped); break;
@@ -90,20 +107,21 @@ final class ProviderWireJson {
                     case 'u':
                         if (cursor + 4 > source.length()) throw invalid();
                         String digits = source.substring(cursor, cursor + 4);
-                        if (!digits.matches("[0-9A-Fa-f]{4}")) throw invalid();
+                        if (!UNICODE_ESCAPE_HEX.matcher(digits).matches()) throw invalid();
                         result.append((char) Integer.parseInt(digits, 16)); cursor += 4; break;
                     default: throw invalid();
                 }
-            } else result.append(next);
+                span = cursor;
+            }
         }
-        if (!closed) throw invalid();
-        for (int i = 0; i < result.length(); i++) {
-            char character = result.charAt(i);
+        if (text == null) throw invalid();
+        for (int i = 0; i < text.length(); i++) {
+            char character = text.charAt(i);
             if (Character.isHighSurrogate(character)) {
-                if (++i >= result.length() || !Character.isLowSurrogate(result.charAt(i))) throw invalid();
+                if (++i >= text.length() || !Character.isLowSurrogate(text.charAt(i))) throw invalid();
             } else if (Character.isLowSurrogate(character)) throw invalid();
         }
-        return result.toString();
+        return text;
     }
     private void space() { while (cursor < source.length() && " \t\r\n".indexOf(source.charAt(cursor)) >= 0) cursor++; }
     private char peek() throws VaultFailure { if (cursor >= source.length()) throw invalid(); return source.charAt(cursor); }

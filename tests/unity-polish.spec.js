@@ -86,7 +86,6 @@ const pageMatrix = [
   ['dashboard.html', 'Back', /start_page1\.html$/],
   ['device-security.html', 'Back', /start_page1\.html$/],
   ['employee-schedule.html?hub=employee&device=KIOSK_01', 'Back', /employee-hub\.html\?device=KIOSK_01&hub=employee$/],
-  ['events-admin.html', 'Back', /start_page1\.html$/],
   ['events.html?hub=manager', 'Back', /start_page1\.html$/],
   ['gemini-admin.html', 'Back', /start_page1\.html$/],
   ['guest-issues.html', 'Back', /start_page1\.html$/],

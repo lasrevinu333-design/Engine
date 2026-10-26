@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   HashRouter,
   MemoryRouter,
@@ -11,8 +11,8 @@ import {
 } from 'react-router';
 import type { EditionDefinition, RuntimePorts, ShellRoute } from './core/types';
 import {
+  bindHardwareBackLifecycle,
   handoffToLegacy,
-  resolveHardwareBackAction,
 } from './core/legacy-handoff';
 import { ShellProviders } from './providers/shell-providers';
 import { useAuth } from './providers/auth';
@@ -163,23 +163,42 @@ function ShellRouterContent({
     if (home) handoffToLegacy(home.legacyTarget, definition.edition, device.canonicalId, true);
   }, [deepLinks.ready, deepLinks.sequence, definition, device.canonicalId]);
 
+  const backScope = useMemo(() => ({}), [
+    current.id, definition.edition, definition.homeRouteId, returnFromDetail, runtime,
+  ]);
+  const latestBackScope = useRef<object | null>(null);
+  const [backFailure, setBackFailure] = useState<{
+    scope: object;
+    owner: { active: boolean };
+    error: Error;
+  } | null>(null);
+
+  // Only a committed replacement/unmount retires the previous Back scope.
+  useLayoutEffect(() => {
+    latestBackScope.current = backScope;
+    return () => {
+      if (latestBackScope.current === backScope) latestBackScope.current = null;
+    };
+  }, [backScope]);
+
   useEffect(() => {
-    let active = true;
-    let remove = () => {};
-    void runtime.deepLinks.addBackListener(() => {
-      if (!active) return;
-      const action = resolveHardwareBackAction(current.id, definition.homeRouteId);
-      if (action === 'pop') returnFromDetail();
-      else void runtime.deepLinks.handleRootBack(definition.edition);
-    }).then((listener) => {
-      remove = () => void listener.remove();
-      if (!active) remove();
+    const owner = { active: true };
+    const close = bindHardwareBackLifecycle({
+      deepLinks: runtime.deepLinks,
+      currentRouteId: current.id,
+      homeRouteId: definition.homeRouteId,
+      edition: definition.edition,
+      onBack: returnFromDetail,
+      isCurrent: () => latestBackScope.current === backScope,
+      reportFailure: (error) => setBackFailure({ scope: backScope, owner, error }),
     });
     return () => {
-      active = false;
-      remove();
+      owner.active = false;
+      close();
     };
-  }, [current.id, definition.edition, definition.homeRouteId, returnFromDetail, runtime]);
+  }, [backScope, current.id, definition.edition, definition.homeRouteId, returnFromDetail, runtime]);
+
+  if (backFailure?.scope === backScope && backFailure.owner.active) throw backFailure.error;
 
   return (
     <div

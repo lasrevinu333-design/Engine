@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import './feedback-outbox-binding-tests.mjs';
+// Existing actual-owner suite covers exact send acknowledgements AND deletion receipts.
+import './message-send-receipt-tests.mjs';
+import './nonemployee-capacity-headcount-tests.mjs';
+import {custodialInitialReleaseHome,cleaningFirstDeferredPage,CLEANING_FIRST_DEFERRED_PAGES} from '../mobile/scripts/custodial-initial-release-pages.mjs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const home = read('mobile/src/custodial/index.html');
@@ -7,7 +12,7 @@ const homeApp = read('mobile/src/custodial/app.js');
 const custodialBridge = read('mobile/src/custodial/bridge.js');
 const sharedUi = read('memphis-ui.js');
 const schedule = read('employee-schedule.html');
-const events = read('employee-events.html');
+const events = read('events.html');
 const feedback = read('employee-feedback.html');
 const feedbackOutbox = read('mobile/src/custodial/feedback-outbox.js');
 const messages = read('messages.html');
@@ -24,8 +29,20 @@ const routes = read('mobile/src/shell/roles/custodial/routes.ts');
 const build = read('mobile/scripts/build.mjs');
 
 const homeLabels = [...home.matchAll(/class="homeLabel">([^<]+)<\/span>/g)].map((match) => match[1].trim());
-assert.deepEqual(homeLabels, ['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
-assert.equal([...home.matchAll(/class="homeButton"/g)].length,4);
+assert.deepEqual(homeLabels, ['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback', 'Supplies']);
+assert.equal([...home.matchAll(/class="homeButton"/g)].length,5);
+assert.match(home, /href="\.\/supply-coming-soon\.html"/);
+const supplyPlaceholder=read('supply-coming-soon.html');
+assert.match(supplyPlaceholder,/Supplies are coming soon/);
+assert.match(supplyPlaceholder,/connect-src 'none'; form-action 'none'/);
+assert.doesNotMatch(supplyPlaceholder,/<(?:form|input|button|script)\b/i);
+// Positive full-system Source stays literal. Explicit pure cleaning transform
+// must retain ONLY the local placeholder, never enable the deferred producers.
+assert.equal(custodialInitialReleaseHome(home,{cleaningFirst:false}),home);
+const cleaningHome=custodialInitialReleaseHome(home,{cleaningFirst:true});
+assert.deepEqual([...cleaningHome.matchAll(/class="homeLabel">([^<]+)<\/span>/g)].map(match=>match[1].trim()),['Supplies']);
+for(const path of ['employee-schedule.html','messages.html','events.html','employee-feedback.html'])
+  assert.equal(cleaningHome.includes(`class="homeButton" href="./${path}`),false,path+' is not a new cleaning-scope entry');
 assert.match(home,/Today’s Weather/);assert.match(home,/Today’s Guest Entries/);assert.match(home,/id="home-clock"/);
 // September 21: retain the original menu, plus approved shift/lunch and full hourly facts.
 for(const id of ['home-shift','home-lunch','home-weather-hours','home-weather-alerts'])assert.ok(home.includes(`id="${id}"`),`Required Home fact ${id}`);
@@ -48,12 +65,12 @@ assert.match(homeApp, /This phone needs a manager/);
 assert.match(homeApp, /restore\(\{ quiet: !els\.home\.hidden \}\)/);
 assert.doesNotMatch(home, /boot-retry|>Try Again</);
 assert.doesNotMatch(homeApp, /Tap Try Again/);
-assert.match(homeApp, /This phone will reconnect automatically/);
+assert.match(homeApp, /This phone has no verified saved assignment\. Ask a manager for help\. Your saved work is retained\./);
 assert.match(homeApp, /restoreRetryTimer = window\.setTimeout\(\(\) => void restore\(\), 5000\)/);
 assert.match(homeApp, /function resumeProtectedCleaning\(\)/);
 assert.match(homeApp, /resolveOpenScanSession/);
 assert.match(homeApp, /Cleaning did not start at \$\{location\}\. Tap the location tag again\./);
-assert.match(homeApp, /You are cleaning \$\{location\}\. Tap the same location tag when you are done\./);
+assert.match(homeApp, /You are cleaning \$\{location\}\. Tap the same physical tag when you are done\./);
 assert.match(homeApp, /reconcileStartupRecovery/);
 assert.match(custodialBridge, /reconcileRecoveredPreStart/);
 assert.doesNotMatch(homeApp, /localStorage\.length|Math\.min\(localStorage\.length,\s*250\)|window\.location\.replace\(scan/);
@@ -83,20 +100,24 @@ assert.doesNotMatch(sharedUi, /function scanSessionRows/);
 
 for (const [name, source] of [['Schedule', schedule], ['Events', events], ['Feedback', feedback]]) {
   assert.match(source, /memphis-auth\.js/, `${name} must load the build-time native bridge placeholder`);
-  assert.match(source, /memphis-scan-sync\.js/, `${name} must keep saved cleaning work moving without adding employee UI`);
+  if(name!=='Events')assert.match(source, /memphis-scan-sync\.js/, `${name} must keep saved cleaning work moving without adding employee UI`);
+  else {assert.match(build,/entry\.name === 'events\.html'/);assert.match(build,/memphis-scan-sync\.js/);}
 }
 assert.match(home, /memphis-scan-sync\.js/);
-assert.match(build, /employee-events\.html/);
+assert.match(build, /'events\.html'/);
+assert.match(build, /'events-view\.js'/);
 assert.match(build, /employee-feedback\.html/);
 assert.match(build, /employee-hub\.html/);
-assert.match(build, /cp\(join\(dist, 'employee-events\.html'\), join\(dist, 'events\.html'\)\)/);
+assert.doesNotMatch(build, /cp\(join\(dist, 'employee-events\.html'/);
 assert.match(build, /cp\(join\(dist, 'employee-feedback\.html'\), join\(dist, 'system-feedback\.html'\)\)/);
 
 assert.match(schedule, />Your areas now</);
 assert.match(schedule, /Array\.isArray\(data\?\.current_items\)/);
 assert.doesNotMatch(schedule, /display_sections|all_items/);
 assert.doesNotMatch(schedule, />Refresh<|Assigned Areas|practical cleaning order/);
-assert.match(schedule, /No connection — showing only known active windows from your last update/);
+assert.match(schedule, /No current areas can be confirmed from the saved schedule\./);
+assert.match(schedule, /els\.notice\.textContent=!offline&&sameDay/);
+assert.match(schedule, /if\(usable&&cached\?\.data\)render\(cached\.data,\{offline:true/);
 assert.match(schedule, /id="lunch-areas"/);
 assert.match(schedule, /clock.seconds<end/);
 assert.match(schedule, /memphis:schedule-refresh/);
@@ -110,7 +131,7 @@ assert.match(messenger, /Tap the person you want to message/);
 assert.match(messenger, /\/thread\/direct/);
 assert.match(messenger, /!EMPLOYEE_CONTEXT && selected\.size > 1/);
 assert.match(messenger, /!EMPLOYEE_CONTEXT && <button className="mz-button primary"/);
-assert.match(messenger, /disabled=\{busy \|\| !selected\.size\}>Create<\/button>/);
+assert.match(messenger, /disabled=\{busy \|\| pendingGroup\.held \|\| \(pendingGroup\.legacyRaw !== null && pendingGroup\.raw === null\) \|\| !selected\.size\}>Create<\/button>/);
 assert.doesNotMatch(messenger, /Create Group|selectedUserIds|openMemphis/);
 assert.match(messenger, /function SwipeConversation/);
 assert.match(messenger, />Delete<\/button>/);
@@ -162,51 +183,56 @@ assert.match(nativeRuntimeTests, /malformedScanJournalIsPreservedAndNeverReplace
 assert.match(nativeRuntimeTests, /laterExactManagerRecoveryPreservesCorruptJournalAndStartsNewJournalExactlyOnce/);
 assert.match(nativeRuntimeTests, /corruptionAfterManagerRecoveryRequiresAnotherManagerRecovery/);
 
-assert.match(events, /<h1>Events<\/h1>/);
-assert.doesNotMatch(events, /Information only/);
-assert.match(events, /Expected guests:/);
-assert.match(events, /attendee_count===null\|\|row\.attendee_count===undefined\|\|row\.attendee_count===''/,
-  'Events must distinguish a supplied zero attendee count from a missing count');
-assert.match(events, /row\.notes/);
-assert.match(events, /Scheduled/);
-assert.match(events, /Cancelled/);
-assert.match(events, /\/employee-events-api/);
-assert.doesNotMatch(events, /\/dashboard-api\/events/);
-assert.match(events, /employee-events-snapshot\.v1/);
-assert.match(events, /mz_employee_events_snapshot:/);
-assert.match(events, /mutateProtectedWork/);
-assert.match(events, /No connection — showing your last update/);
-assert.match(events, /timeZone:'UTC'/);
-assert.match(events, /row\.display_location\|\|row\.venue_name/);
+// The owner replaced the independent employee Events page with the single
+// scrolling renderer. Its actual executable identity/offline/time/privacy
+// tests replace obsolete assumptions about a second inline controller.
+assert.match(events, /<h1[^>]*>Events<\/h1>/);
+assert.match(events, /events-view\.js/);
+const sharedEvents=read('events-view.js');
+assert.match(sharedEvents, /employee-events-api/);
+assert.match(sharedEvents, /shared-events-snapshot\.v2/);
+assert.match(sharedEvents, /mz_employee_events_snapshot:/);
+assert.match(sharedEvents, /mutateProtectedWork/);
+assert.match(sharedEvents, /same\(r\.owner,owner\)/);
+assert.match(sharedEvents, /\[401,403\]\.includes\(r\.status\)/);
+assert.doesNotMatch(sharedEvents,/method:\s*['"](?:POST|PUT|PATCH|DELETE)/i);
 assert.doesNotMatch(custodialBridge, /publicUnauthenticatedRoute[\s\S]{0,500}dashboard-api\/events/,
   'Employee Events must not bypass enrolled-phone authentication');
-assert.match(events, /if\(!endValue\)return `\$\{day\} · \$\{first\}`/);
-assert.match(events, /end\.getTime\(\)===start\.getTime\(\)/);
-assert.doesNotMatch(events, /\/schedule-api|reschedule|method:\s*['"](?:POST|PUT|PATCH|DELETE)/i,
-  'Employee Events must remain a read-only surface even though its cache is assignment-bound');
+await import('./shared-events-view-tests.mjs');
 
 assert.deepEqual(
   [...feedback.matchAll(/name="category" value="[^"]+" required><span>([^<]+)<\/span>/g)].map((match) => match[1]),
   ['Something is broken', 'I need help', 'The app confused me'],
 );
 assert.match(feedback, /Tell us more \(optional\)/);
-assert.match(feedback, />Add Photo<\/button>/);
+// Retain original feedback/attachments Source; actual cleaning packaging replaces
+// BOTH feedback entry paths with the maintained non-producing deferred page.
+for(const path of ['employee-feedback.html','system-feedback.html'])assert.ok(CLEANING_FIRST_DEFERRED_PAGES.includes(path));
+const deferredFeedback=cleaningFirstDeferredPage();
+assert.match(deferredFeedback,/Other modules are not enabled in this release/);
+assert.doesNotMatch(deferredFeedback,/<(?:form|input|button)\b|Add Photo|saveEmployeeFeedback|image_attachment|type=["']file["']/i);
+assert.match(build,/if\(edition==='custodial'&&isCleaningScope\(newProducerScope\)\)await deferCleaningFirstPackagedPages\(dist\)/);
 assert.match(feedbackOutbox, /mz_employee_feedback_outbox:/);
 assert.match(feedbackOutbox, /Idempotency-Key/);
-assert.match(feedback, /Saved on this phone\. Waiting to upload\./);
-assert.match(feedback, /Received by the program\./);
+assert.match(feedback, /Saved on this phone\. It will retry automatically\./);
+assert.match(feedback, /Saved in the program\./);
+assert.match(feedback, /Array\.isArray\(ids\)&&ids\.includes\(operation\)/);
 assert.doesNotMatch(feedback, /setStatus\('Sent\./);
 
 assert.match(scan, /<h1 class="title-green">Start Cleaning<\/h1>/);
 assert.match(scan, /Check the location and your name/);
 assert.match(scan, /Cleaning in Progress/);
-assert.match(scan, /Tap this same location tag again when you are done/);
+assert.match(scan, /Tap this same physical tag again when you are done/);
 assert.match(scan, /indexScanSession/);
 assert.doesNotMatch(scan, /function findAnyOpenLocalSessionForDevice\(deviceId\)\{cleanupStaleLocalSessions\(\);const sessions=\[\]/);
 assert.match(scan, /<h1 class="title-amber">Finish Cleaning<\/h1>/);
 assert.match(scan, /Full cleaning finished/);
 // OC24-02 separates problems from services; reporting one must not imply cleaning.
-assert.match(scan, /<section id="completion-issues"><div class="sectionTitle">Report a problem \(optional\)/);
+assert.match(scan, /Finished cleaning\?/);
+assert.match(scan, /Something needs attention\?/);
+assert.match(scan, /<section id="completion-issues" hidden><div class="sectionTitle">What needs attention\?/);
+assert.match(scan, /attention_needed.*checked.*value!=="yes"/);
+assert.match(scan, /Saved problem details remain\. Choose Yes to include them, or review and clear them yourself\./);
 assert.match(scan, /value="checked_no_cleaning_needed" required><span>Checked—no cleaning needed/);
 assert.match(scan, /Saved work must finish sending before new cleaning can start/);
 assert.match(scan, /getSystemSettingsSafe\(\)\{try\{return await rpcOne\("tool_get_system_settings"\)\}catch\{return null\}\}/);
@@ -249,7 +275,7 @@ assert.doesNotMatch(read('mobile/src/custodial/bridge.js'), /nativeNotifications
   'notification ownership must use the source-owned live mode, not a fixed flag');
 
 assert.doesNotMatch(shell, /compileProofRequested[\s\S]*shouldStayInShell/);
-for (const route of ['employee-schedule.html', 'messages.html', 'employee-events.html', 'employee-feedback.html']) {
+for (const route of ['employee-schedule.html', 'messages.html', 'events.html', 'employee-feedback.html']) {
   assert.match(routes, new RegExp(route.replace('.', '\\.')));
 }
 assert.doesNotMatch(routes, /navigation:\s*true/);

@@ -1,0 +1,34 @@
+{
+  "schema": "custodial.firebase-new-producer-scope-source.v1",
+  "package": "@capacitor-firebase/messaging",
+  "version": "8.3.0",
+  "integrity": "sha512-gjlpPH8nFN2D4PGpg+Bi7Pk1Apy+nRh6DHTI8hr4o3QfCmZPnNCT0mhhT8Rcdpwf2D+E5NxkaVy4/2GYiXoF8Q==",
+  "original_manifest_sha256": "6553ca63dc80bdbb60a4915cdf87b7241a312991dfd8f2da02ee1f68dfcf06b0",
+  "java_files": {
+    "FirebaseMessaging.java": {
+      "original_sha256": "66ccb77d9058edc1f4eea0c3bd90cd4013fdb6295d75c50eb164db2fe59d98a0",
+      "patched_sha256": "66ccb77d9058edc1f4eea0c3bd90cd4013fdb6295d75c50eb164db2fe59d98a0",
+      "modified": false
+    },
+    "FirebaseMessagingHelper.java": {
+      "original_sha256": "2be8fdc194995339438f81251b83c6a04efbc578280cbbc0bb97b6d37bfc2fee",
+      "patched_sha256": "2be8fdc194995339438f81251b83c6a04efbc578280cbbc0bb97b6d37bfc2fee",
+      "modified": false
+    },
+    "FirebaseMessagingPlugin.java": {
+      "original_sha256": "480f8521c7687aac1dd32bb44d1a26ef8657a2c86af36c9f71fc21a5c04d8b4d",
+      "patched_sha256": "b747a405b17260b44e6e2b33006e29b65e3424d2fc290d773ddb1bd365cfee10",
+      "modified": true
+    },
+    "GetTokenResultCallback.java": {
+      "original_sha256": "cd9d3a4b506a018541deb8886e70fe89cf4fe0412aad69c4f24ca8df12871940",
+      "patched_sha256": "cd9d3a4b506a018541deb8886e70fe89cf4fe0412aad69c4f24ca8df12871940",
+      "modified": false
+    },
+    "MessagingService.java": {
+      "original_sha256": "0cbf98089565c99b38c5fa02498ea7001eed4a3928ec6994df14b92f83f1c192",
+      "patched_sha256": "0cbf98089565c99b38c5fa02498ea7001eed4a3928ec6994df14b92f83f1c192",
+      "modified": false
+    }
+  }
+}

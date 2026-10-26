@@ -1,0 +1,254 @@
+{
+  "schema": "custodial.native-schedule-wire-exact-delta.v1",
+  "base_commit": "1e2cc71eb0fdd122db68098d5a6cae278e8af57b",
+  "files": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderPayload.java",
+      "name": "NativeProviderPayload.java",
+      "prior_sha256": "e4e08a0225f5684e481f0e3c8c64f541fde96f1701102332cc487857193228e4",
+      "current_sha256": "4025202c33c654b4e88bdaf8e7e9a33b505cfa447d70b5c2313fecf2a4f4ded3",
+      "hunks": [
+        {
+          "old_start": 7,
+          "old_count": 0,
+          "new_start": 8,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import java.time.ZoneId;"
+          ]
+        },
+        {
+          "old_start": 26,
+          "old_count": 0,
+          "new_start": 28,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    static final String SCHEDULE_SCHEMA = \"custodial.native-schedule-payload.v1\";"
+          ]
+        },
+        {
+          "old_start": 33,
+          "old_count": 0,
+          "new_start": 36,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "    private static final String[] SCHEDULE = {\"boundary_local\", \"source_reservation_id\", \"source_operation_id\", \"source_window_sha256\", \"server_source_sha256\",",
+            "        \"source_revision\", \"projection_id\", \"publication_id\", \"version_id\", \"assignment_occurrence_id\", \"source_valid_from\", \"source_valid_until\"};"
+          ]
+        },
+        {
+          "old_start": 53,
+          "old_count": 1,
+          "new_start": 57,
+          "new_count": 2,
+          "before": [
+            "            if (!lunch && !event && !message && !\"employee_location_status\".equals(copy.get(\"kind\"))) throw invalid();"
+          ],
+          "after": [
+            "            boolean schedule = \"employee_schedule_ownership\".equals(copy.get(\"kind\"));",
+            "            if (!lunch && !event && !message && !schedule && !\"employee_location_status\".equals(copy.get(\"kind\"))) throw invalid();"
+          ]
+        },
+        {
+          "old_start": 55,
+          "old_count": 2,
+          "new_start": 60,
+          "new_count": 2,
+          "before": [
+            "            fields.addAll(Arrays.asList(lunch ? LUNCH : event ? EVENT : message ? MESSAGE : LOCATION));",
+            "            if (!copy.keySet().equals(fields) || !(lunch ? SCHEMA : event ? EVENT_SCHEMA : message ? MESSAGE_SCHEMA : LOCATION_SCHEMA).equals(copy.get(\"schema\"))) throw invalid();"
+          ],
+          "after": [
+            "            fields.addAll(Arrays.asList(lunch ? LUNCH : event ? EVENT : message ? MESSAGE : schedule ? SCHEDULE : LOCATION));",
+            "            if (!copy.keySet().equals(fields) || !(lunch ? SCHEMA : event ? EVENT_SCHEMA : message ? MESSAGE_SCHEMA : schedule ? SCHEDULE_SCHEMA : LOCATION_SCHEMA).equals(copy.get(\"schema\"))) throw invalid();"
+          ]
+        },
+        {
+          "old_start": 72,
+          "old_count": 1,
+          "new_start": 77,
+          "new_count": 1,
+          "before": [
+            "            if (lunch) validateLunch(); else if (event) validateEvent(); else if (message) validateMessage(); else validateLocation();"
+          ],
+          "after": [
+            "            if (lunch) validateLunch(); else if (event) validateEvent(); else if (message) validateMessage(); else if (schedule) validateSchedule(); else validateLocation();"
+          ]
+        },
+        {
+          "old_start": 74,
+          "old_count": 1,
+          "new_start": 79,
+          "new_count": 1,
+          "before": [
+            "            recordId = NativeProviderPrincipal.hash(generationId + \"\\n\" + jobId + \"\\n\" + notificationKey);"
+          ],
+          "after": [
+            "            recordId = NativeProviderPrincipal.hash(generationId + \"\\n\" + (schedule ? get(\"source_reservation_id\") : jobId) + \"\\n\" + notificationKey);"
+          ]
+        },
+        {
+          "old_start": 84,
+          "old_count": 1,
+          "new_start": 89,
+          "new_count": 1,
+          "before": [
+            "            || \"employee_event\".equals(kind) || \"employee_message\".equals(kind)"
+          ],
+          "after": [
+            "            || \"employee_event\".equals(kind) || \"employee_message\".equals(kind) || \"employee_schedule_ownership\".equals(kind)"
+          ]
+        },
+        {
+          "old_start": 87,
+          "old_count": 1,
+          "new_start": 92,
+          "new_count": 1,
+          "before": [
+            "                || ((String) schema).startsWith(\"custodial.native-message-\")));"
+          ],
+          "after": [
+            "                || ((String) schema).startsWith(\"custodial.native-message-\") || ((String) schema).startsWith(\"custodial.native-schedule-\")));"
+          ]
+        },
+        {
+          "old_start": 184,
+          "old_count": 0,
+          "new_start": 190,
+          "new_count": 21,
+          "before": [],
+          "after": [
+            "    /** Conditional SCHEDULE wire only. Current source, original receipt and",
+            "     * native clock/audio policy remain the server/journal/effect owners' job. */",
+            "    private void validateSchedule() throws VaultFailure {",
+            "        if (!\"schedule_ownership\".equals(get(\"notification_type\")) || !\"employee-schedule-ownership\".equals(get(\"channel_id\"))",
+            "            || !\"employee-schedule.html?hub=employee\".equals(get(\"route\")) || !\"09:45\".equals(get(\"boundary_local\"))",
+            "            || !get(\"receipt_device_id\").matches(\"KIOSK_(?:0[2-9]|10)\")",
+            "            || !(\"schedule-ownership:\" + get(\"service_date\") + \":\" + get(\"receipt_employee_id\") + \":09:45\").equals(notificationKey)) throw invalid();",
+            "        for (String field : new String[]{\"source_reservation_id\", \"source_operation_id\", \"projection_id\", \"publication_id\", \"version_id\", \"assignment_occurrence_id\"}) uuid(get(field));",
+            "        digest(get(\"source_window_sha256\")); digest(get(\"server_source_sha256\")); positiveInteger(get(\"source_revision\"));",
+            "        Instant from = timestamp(get(\"source_valid_from\")), until = timestamp(get(\"source_valid_until\"));",
+            "        for (Instant value : new Instant[]{from, until, reservedAt, validUntil}) if (value.atZone(ZoneOffset.UTC).getYear() < 1) throw invalid();",
+            "        java.time.ZonedDateTime local = from.atZone(ZoneId.of(\"America/Chicago\"));",
+            "        if (!local.toLocalDate().toString().equals(get(\"service_date\")) || local.getHour() != 9 || local.getMinute() != 45",
+            "            || local.getSecond() != 0 || local.getNano() != 0 || !from.isBefore(until)",
+            "            || reservedAt.isBefore(from) || validUntil.isAfter(until)) throw invalid();",
+            "        for (String field : data.keySet()) {",
+            "            strictText(get(field), field.equals(\"title\") ? 180 : field.equals(\"notification_key\") ? 240 : 1000, false);",
+            "            if (get(field).getBytes(StandardCharsets.UTF_8).length > (field.equals(\"title\") ? 180 : field.equals(\"notification_key\") ? 240 : 1000)) throw invalid();",
+            "        }",
+            "    }",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderNotificationPolicy.java",
+      "name": "NativeProviderNotificationPolicy.java",
+      "prior_sha256": "7da9158762479cde9c62209e6bf82aea70407d6b3ff708a4276ee4075b8b7ca7",
+      "current_sha256": "6dab8c109ed1630994991b9dbd82e9a488d21ffd7ec7daac5256a3bf690fb74a",
+      "hunks": [
+        {
+          "old_start": 12,
+          "old_count": 0,
+          "new_start": 13,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        if (\"employee-schedule-ownership\".equals(channel)) return \"Assignment updates\";"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/provider-mirror-bridge.js",
+      "name": "provider-mirror-bridge.js",
+      "prior_sha256": "8d513cd3c63d5cd8ef6de8b3a00f433509447aeb1d4d602e098f1e9d6a657d71",
+      "current_sha256": "a5d8a56394e6f5d7ea2d56e0a857325a746eefcb26e4909f944d3cdbd560f12a",
+      "hunks": [
+        {
+          "old_start": 33,
+          "old_count": 0,
+          "new_start": 34,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  if(value.kind==='employee_schedule_ownership')return custodialProviderNotificationEnabled(value)&&schedulePayload(value);"
+          ]
+        },
+        {
+          "old_start": 37,
+          "old_count": 0,
+          "new_start": 39,
+          "new_count": 14,
+          "before": [],
+          "after": [
+            "function schedulePayload(value){",
+            "  const fields=['boundary_local','source_reservation_id','source_operation_id','source_window_sha256','server_source_sha256','source_revision',",
+            "    'projection_id','publication_id','version_id','assignment_occurrence_id','source_valid_from','source_valid_until'];",
+            "  return exact(value,[...common,...fields])",
+            "    &&['generation_id','receipt_job_id','receipt_credential_id','receipt_employee_id','source_reservation_id','source_operation_id','projection_id','publication_id','version_id','assignment_occurrence_id'].every(k=>wireUuid(value[k]))",
+            "    &&['principal_digest','token_digest','content_sha256','source_window_sha256','server_source_sha256'].every(k=>digest(value[k]))",
+            "    &&positive(value.receipt_assignment_epoch)&&positive(value.source_revision)&&/^KIOSK_(?:0[2-9]|10)$/.test(value.receipt_device_id)",
+            "    &&value.boundary_local==='09:45'&&value.channel_id==='employee-schedule-ownership'&&value.route==='employee-schedule.html?hub=employee'",
+            "    &&value.notification_key===`schedule-ownership:${value.service_date}:${value.receipt_employee_id}:09:45`",
+            "    &&/^\\d{4}-\\d{2}-\\d{2}$/.test(value.service_date)",
+            "    &&['reservation_at','valid_until','source_valid_from','source_valid_until'].every(k=>/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$/.test(value[k]));",
+            "  // Native Java owns calendar/digest/principal/interval and fresh claim checks.",
+            "  // This WebView projection must not become another clock or ingress owner.",
+            "}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/release-scope.js",
+      "name": "release-scope.js",
+      "prior_sha256": "d162ec3573b5f5638c6913b050df802139f78e14a61df8230948a5d5effcdcdb",
+      "current_sha256": "ad910749e382370bb3675734bd69daa81ad57e9b0163e26128809c7db6355f9f",
+      "hunks": [
+        {
+          "old_start": 39,
+          "old_count": 0,
+          "new_start": 40,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    employee_schedule_ownership:['custodial.native-schedule-payload.v1','schedule_ownership','schedule'],"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "memphis-device-reminders.js",
+      "name": "memphis-device-reminders.js",
+      "prior_sha256": "24edd4dc7ad983ec21d8761dc319bba2c007b887da20cb6589c439fa010c8c78",
+      "current_sha256": "31429725ea97d9e4628c3dc0f28f9c2ff06fbae7c3b1531a548af2cdab367918",
+      "hunks": [
+        {
+          "old_start": 1120,
+          "old_count": 0,
+          "new_start": 1121,
+          "new_count": 10,
+          "before": [],
+          "after": [
+            "    if(data.kind==='employee_schedule_ownership'){",
+            "      if(typeof boundReceiptAction!=='function'||boundReceiptAction.providerMirror!==true",
+            "        ||data.schema!=='custodial.native-schedule-payload.v1'||data.notification_type!=='schedule_ownership'",
+            "        ||data.channel_id!=='employee-schedule-ownership'||data.route!=='employee-schedule.html?hub=employee')return false;",
+            "      const body=safeText(notification.body);if(!body)return false;",
+            "      return showAlert({id:data.notification_key,notificationKey:data.notification_key,title:safeText(notification.title,'Memphis Zoo'),body,",
+            "        notificationType:'schedule_ownership',boundReceiptAction,kicker:'Assignment update',",
+            "        openLabel:'Open schedule',dismissLabel:'Dismiss',openUrl:new URL(data.route,window.location.href).toString(),",
+            "        speakerName:state.currentDisplayName,speechText:body},true);",
+            "    }"
+          ]
+        }
+      ]
+    }
+  ]
+}

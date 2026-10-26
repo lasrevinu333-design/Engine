@@ -13,6 +13,7 @@
   const MAX_INDEXED_SCAN_SESSIONS = 4;
   let phoneWakeNavigationAt = 0;
   let phoneWakeEventsBound = false;
+  let nativeCustodialObserved = false;
 
   function enforceTopLevelNavigation() {
     if (window.top === window.self) return;
@@ -38,9 +39,17 @@
   }
 
   function isNativeCustodialAuthority() {
-    return window.MemphisCustodialSecurity?.native === true
-      || window.MemphisMobile?.edition === "custodial"
-      || window.MemphisMobileBuildIdentity?.edition === "custodial";
+    // A bootstrap observation can require a writer, never grant one. Missing
+    // or unreadable successors cannot thaw this page to raw web mutation.
+    if (nativeCustodialObserved) return true;
+    try {
+      if (window.MemphisCustodialSecurity?.native === true
+        || window.MemphisMobile?.edition === "custodial"
+        || window.MemphisMobileBuildIdentity?.edition === "custodial"
+        || window.Capacitor?.isNativePlatform?.() === true
+        || ["android", "ios"].includes(window.Capacitor?.getPlatform?.())) nativeCustodialObserved = true;
+    } catch { nativeCustodialObserved = true; }
+    return nativeCustodialObserved;
   }
 
   async function waitForDeviceAuthority() {
@@ -162,21 +171,151 @@
     return { state: sessions.length ? "indexed" : "none", sessions };
   }
 
-  function writeScanIndex(deviceId, sessions) {
-    const normalizedDevice = normalizePhoneDeviceId(deviceId);
-    if (!normalizedDevice || !Array.isArray(sessions) || sessions.length > MAX_INDEXED_SCAN_SESSIONS) return false;
-    localStorage.setItem(scanResumeKey(normalizedDevice), JSON.stringify({
-      schema_version: SCAN_RESUME_SCHEMA_VERSION,
-      device_id: normalizedDevice,
-      sessions,
-      updated_at: new Date().toISOString(),
-    }));
-    return true;
+  function scanWriterUnavailable() {
+    return Object.assign(new Error("The original protected scan view is unavailable."), { code: "custodial_security_state_unavailable" });
+  }
+
+  function scanWriterOwner(deviceId) {
+    if (!isNativeCustodialAuthority()) return null;
+    const security = window.MemphisCustodialSecurity, mobile = window.MemphisMobile;
+    if (security?.native !== true || typeof security.mutateProtectedWork !== "function"
+      || typeof security.getStatus !== "function" || typeof mobile?.principalIdentity !== "function") throw scanWriterUnavailable();
+    const status = security.getStatus(), identity = mobile.principalIdentity();
+    if (status?.ready !== true || status.available !== true || status.quarantined !== false
+      || !Number.isSafeInteger(status.generation) || status.generation < 1
+      || !/^KIOSK_\d{2}$/.test(deviceId) || status.deviceId !== deviceId || status.principal?.device_id !== deviceId
+      || typeof identity !== "string" || !identity) throw scanWriterUnavailable();
+    return Object.freeze({ security, mobile, writer: security.mutateProtectedWork, reader: security.getStatus,
+      principalReader: mobile.principalIdentity, identity, generation: status.generation, deviceId });
+  }
+
+  function requireScanWriterOwner(original, context) {
+    if (!original) {
+      if (isNativeCustodialAuthority()) throw scanWriterUnavailable();
+      return;
+    }
+    const current = scanWriterOwner(original.deviceId);
+    if (!current || Object.keys(original).some(key => original[key] !== current[key])) throw scanWriterUnavailable();
+    if (context !== undefined) {
+      if (typeof context?.assertCurrent !== "function" || context.generation !== original.generation || context.deviceId !== original.deviceId) throw scanWriterUnavailable();
+      context.assertCurrent();
+    }
+  }
+
+  // Only scan-index metadata is written here. Capture the original owner and
+  // participating raw rows BEFORE enqueueing; never reread/adopt a successor
+  // as the intended write. No callback context is inferred from a sync caller.
+  function mutateScanIndex(deviceId, sessionIds, change, expectedRaw = undefined, asynchronous = false, confirmation = null) {
+    try {
+      const device = normalizePhoneDeviceId(deviceId);
+      if (!device) return false;
+      const owner = scanWriterOwner(device), key = scanResumeKey(device), raw = localStorage.getItem(key);
+      // The legacy checkpoint cannot acquire admission. Synchronous callers
+      // must already be inside this exact queue's private mutation callback.
+      const queue = owner ? null : window.MemphisScanSync;
+      const legacy = owner ? null : Object.freeze({ queue, writer: queue?.mutateProtectedWork,
+        checkpoint: queue?.requireLegacyBrowserMutation, storage: window.localStorage });
+      const requireLegacy = (context, active = true) => {
+        if (!legacy) return;
+        if (isNativeCustodialAuthority() || window.MemphisScanSync !== legacy.queue
+          || typeof legacy.writer !== "function" || typeof legacy.checkpoint !== "function"
+          || legacy.queue.mutateProtectedWork !== legacy.writer
+          || legacy.queue.requireLegacyBrowserMutation !== legacy.checkpoint
+          || window.localStorage !== legacy.storage || phoneDeviceId() !== device) throw scanWriterUnavailable();
+        if (active) {
+          legacy.checkpoint.call(legacy.queue);
+          if (context !== undefined) {
+            if (typeof context?.assertCurrent !== "function") throw scanWriterUnavailable();
+            context.assertCurrent();
+          }
+        }
+        if (isNativeCustodialAuthority() || window.MemphisScanSync !== legacy.queue
+          || legacy.queue.mutateProtectedWork !== legacy.writer
+          || legacy.queue.requireLegacyBrowserMutation !== legacy.checkpoint) throw scanWriterUnavailable();
+      };
+      requireLegacy(undefined, false);
+      // Sync native callers may already hold the protected FIFO. Never enter
+      // another admission on their behalf or call a caller-supplied checkpoint.
+      if (owner && !asynchronous) return false;
+      if (owner && confirmation && (confirmation.deviceId !== owner.deviceId || confirmation.generation !== owner.generation
+        || confirmation.principalIdentity !== owner.identity
+        || localStorage.getItem(`session:${confirmation.sessionId}`) !== confirmation.sessionRaw)) return false;
+      if (expectedRaw !== undefined && raw !== expectedRaw) return false;
+      if (raw !== null && (typeof raw !== "string" || !raw)) return false;
+      const current = readScanIndex(device);
+      if (current.state === "corrupted" || localStorage.getItem(key) !== raw) return false;
+      const sessions = Object.freeze(current.sessions.map(entry => Object.freeze({ ...entry })));
+      const originals = new Map([[key, raw]]);
+      if (legacy) for (const deviceKey of ["mz_scan_device_id", "mz_employee_hub_device_id", "memphisAssignedDeviceId"])
+        originals.set(deviceKey, localStorage.getItem(deviceKey));
+      for (const id of new Set([...sessions.map(entry => entry.session_uuid), ...sessionIds])) {
+        if (!scanSessionId({ session_uuid: id })) return false;
+        const sessionKey = `session:${id}`;originals.set(sessionKey, localStorage.getItem(sessionKey));
+      }
+      const assertOriginal = (context) => {
+        requireScanWriterOwner(owner, context);
+        requireLegacy(context);
+        for (const [originalKey, value] of originals) if (localStorage.getItem(originalKey) !== value) throw scanWriterUnavailable();
+        requireScanWriterOwner(owner, context);
+        requireLegacy(context);
+      };
+      let callbackConfirmed = false, writtenRaw;
+      const write = (context) => {
+        assertOriginal(context);
+        const next = change(sessions, originals);
+        if (next !== null && (!Array.isArray(next) || next.length > MAX_INDEXED_SCAN_SESSIONS)) throw scanWriterUnavailable();
+        const intended = next === null ? null : JSON.stringify({ schema_version: SCAN_RESUME_SCHEMA_VERSION,
+          device_id: device, sessions: next, updated_at: new Date().toISOString() });
+        assertOriginal(context);
+        // One Storage effect only. Failure/ambiguous readback NEVER triggers
+        // a blanket delete, retry or compensating write over foreign bytes.
+        if (intended !== raw) {
+          if (intended === null) localStorage.removeItem(key);else localStorage.setItem(key, intended);
+        }
+        requireScanWriterOwner(owner, context);
+        requireLegacy(context);
+        for (const [originalKey, value] of originals) if (originalKey !== key && localStorage.getItem(originalKey) !== value) throw scanWriterUnavailable();
+        if (localStorage.getItem(key) !== intended) throw scanWriterUnavailable();
+        requireScanWriterOwner(owner, context);
+        requireLegacy(context);
+        writtenRaw = intended;callbackConfirmed = true;return true;
+      };
+      if (owner) {
+        const pending = owner.writer.call(owner.security, write, { requireEnrollment: true, expectedGeneration: owner.generation });
+        // true only after the actual owner settles this original callback.
+        // false is UNKNOWN/unconfirmed, never no-write or retry authority.
+        return Promise.resolve(pending).then(result => {
+          try {
+            if (result !== true || !callbackConfirmed) return false;
+            requireScanWriterOwner(owner);
+            for (const [originalKey, value] of originals) if (originalKey !== key && localStorage.getItem(originalKey) !== value) return false;
+            return localStorage.getItem(key) === writtenRaw;
+          } catch { return false; }
+        }, () => false);
+      }
+      if (asynchronous) {
+        const pending = legacy.writer.call(legacy.queue, write);
+        return Promise.resolve(pending).then(result => {
+          try {
+            if (result !== true || !callbackConfirmed) return false;
+            // The owner has settled: never reuse its now-closed checkpoint.
+            requireLegacy(undefined, false);
+            for (const [originalKey, value] of originals)
+              if (originalKey !== key && localStorage.getItem(originalKey) !== value) return false;
+            if (localStorage.getItem(key) !== writtenRaw) return false;
+            requireLegacy(undefined, false);
+            return true;
+          } catch { return false; }
+        }, () => false);
+      }
+      return write();
+    } catch { return false; }
   }
 
   function recoverUnindexedScanSessions(deviceId) {
     const normalizedDevice = normalizePhoneDeviceId(deviceId);
     if (!normalizedDevice) return { state: "none", sessions: [] };
+    const originalIndex = localStorage.getItem(scanResumeKey(normalizedDevice));
     const sessions = [];
     const seen = new Set();
     try {
@@ -207,40 +346,92 @@
     }
     if (sessions.length === 0) return { state: "none", sessions: [] };
     if (sessions.length !== 1) return { state: "ambiguous", sessions: [] };
-    if (!writeScanIndex(normalizedDevice, sessions)) return { state: "corrupted", sessions: [] };
+    // Native synchronous recovery is a provisional read, not an admitted
+    // protected write or durable-index acknowledgement.
+    if (isNativeCustodialAuthority()) return { state: "provisional", sessions };
+    if (!mutateScanIndex(normalizedDevice, sessions.map(entry => entry.session_uuid), () => sessions, originalIndex)) return { state: "provisional", sessions };
     return { state: "indexed", sessions };
   }
 
   function indexScanSession(session, view = "timer", context = {}) {
     const entry = scanIndexEntry(session, view, context);
     if (!entry) return false;
-    const current = readScanIndex(entry.device_id);
-    if (current.state === "corrupted") return false;
-    const sessions = current.sessions.filter((candidate) => candidate.session_uuid !== entry.session_uuid);
-    sessions.push(entry);
-    return writeScanIndex(entry.device_id, sessions);
+    const original = Object.freeze(entry);
+    return mutateScanIndex(original.device_id, [original.session_uuid], current => [
+      ...current.filter(candidate => candidate.session_uuid !== original.session_uuid), original,
+    ]);
+  }
+
+  function scanViewConfirmation(session, original) {
+    // These four primitive comparisons carry NO authority. The current native
+    // runtime and its own fresh context still admit every write. Main captures
+    // them INSIDE the original session writer, before/with its exact raw write.
+    if (!original || Object.keys(original).sort().join("|") !== "deviceId|generation|principalIdentity|sessionRaw") throw scanWriterUnavailable();
+    const { deviceId, generation, principalIdentity, sessionRaw } = original;
+    const id = scanSessionId(session);
+    if (!id || !/^KIOSK_\d{2}$/.test(deviceId) || !Number.isSafeInteger(generation) || generation < 1
+      || typeof principalIdentity !== "string" || !principalIdentity || typeof sessionRaw !== "string" || !sessionRaw) throw scanWriterUnavailable();
+    const saved = JSON.parse(sessionRaw);
+    if (scanSessionId(saved) !== id || normalizePhoneDeviceId(saved?.device_id) !== deviceId
+      || normalizePhoneDeviceId(session?.device_id) !== deviceId) throw scanWriterUnavailable();
+    return Object.freeze({ deviceId, generation, principalIdentity, sessionRaw, sessionId: id, saved });
+  }
+
+  async function indexScanSessionConfirmed(session, view = "timer", original) {
+    try {
+      const confirmation = scanViewConfirmation(session, original);
+      const entry = scanIndexEntry(confirmation.saved, view, confirmation.saved);
+      if (!entry) return false;
+      const record = Object.freeze(entry);
+      return await mutateScanIndex(record.device_id, [record.session_uuid], current => [
+        ...current.filter(candidate => candidate.session_uuid !== record.session_uuid), record,
+      ], undefined, true, confirmation);
+    } catch { return false; }
   }
 
   function retireCompletedScanView(session) {
     if (window.MemphisScanSync?.isLocallyCompleted?.(session) !== true) return false;
     const device = normalizePhoneDeviceId(session.device_id);
-    const current = readScanIndex(device);
-    if (current.state === "corrupted") return false;
-    return writeScanIndex(device, current.sessions.filter(entry => entry.session_uuid !== scanSessionId(session)));
+    const id = scanSessionId(session), sync = window.MemphisScanSync, completion = sync?.isLocallyCompleted;
+    if (!id || typeof completion !== "function") return false;
+    return mutateScanIndex(device, [id], (sessions, originals) => {
+      if (window.MemphisScanSync !== sync || sync.isLocallyCompleted !== completion
+        || completion.call(sync, JSON.parse(originals.get(`session:${id}`) || "null")) !== true) throw scanWriterUnavailable();
+      return sessions.filter(entry => entry.session_uuid !== id);
+    });
+  }
+
+  async function retireCompletedScanViewConfirmed(session, original) {
+    try {
+      const confirmation = scanViewConfirmation(session, original), sync = window.MemphisScanSync, completion = sync?.isLocallyCompleted;
+      if (typeof completion !== "function" || completion.call(sync, confirmation.saved) !== true) return false;
+      return await mutateScanIndex(confirmation.deviceId, [confirmation.sessionId], (sessions, originals) => {
+        if (window.MemphisScanSync !== sync || sync.isLocallyCompleted !== completion
+          || completion.call(sync, JSON.parse(originals.get(`session:${confirmation.sessionId}`) || "null")) !== true) throw scanWriterUnavailable();
+        return sessions.filter(entry => entry.session_uuid !== confirmation.sessionId);
+      }, undefined, true, confirmation);
+    } catch { return false; }
   }
 
   function resolveOpenScanSession(deviceId = phoneDeviceId()) {
     const normalizedDevice = normalizePhoneDeviceId(deviceId);
+    try {
+    const owner = scanWriterOwner(normalizedDevice);
     let index = readScanIndex(normalizedDevice);
     if (index.state === "indexed") {
       for (const entry of index.sessions) {
         let saved;
         try { saved = JSON.parse(localStorage.getItem(`session:${entry.session_uuid}`) || "null"); }
         catch { return {state:"corrupted",session:null}; }
-        if (window.MemphisScanSync?.isLocallyCompleted?.(saved) === true && !retireCompletedScanView(saved))
+        if (!owner && window.MemphisScanSync?.isLocallyCompleted?.(saved) === true && !retireCompletedScanView(saved))
           return {state:"corrupted",session:null};
       }
-      index = readScanIndex(normalizedDevice);
+      if (owner) {
+        const sessions = index.sessions.filter(entry =>
+          window.MemphisScanSync?.isLocallyCompleted?.(JSON.parse(localStorage.getItem(`session:${entry.session_uuid}`) || "null")) !== true);
+        index = { state: sessions.length ? "indexed" : "none", sessions };
+      }
+      else index = readScanIndex(normalizedDevice);
     }
     if (index.state === "none") index = recoverUnindexedScanSessions(normalizedDevice);
     if (index.state === "corrupted") return { state: "corrupted", session: null };
@@ -259,7 +450,9 @@
       || verified.session_uuid !== entry.session_uuid
       || verified.device_id !== normalizedDevice
       || verified.location_code !== entry.location_code) return { state: "corrupted", session: null };
+    requireScanWriterOwner(owner);
     return { state: "open", session: { ...session, ...verified, view: entry.view } };
+    } catch { return { state: "corrupted", session: null }; }
   }
 
   function openScanSession(deviceId = phoneDeviceId()) {
@@ -270,12 +463,7 @@
   function rememberScanView(session, view = "timer", context = {}) {
     const record = scanIndexEntry(session, view, context);
     if (!record) return false;
-    const write = () => indexScanSession(record, record.view, record);
-    if (window.MemphisCustodialSecurity?.native === true) {
-      void window.MemphisCustodialSecurity.mutateProtectedWork(write).catch(() => {});
-      return true;
-    }
-    try { write(); return true; } catch { return false; }
+    return indexScanSession(record, record.view, record);
   }
 
   function scanResumeView(session, deviceId = phoneDeviceId()) {
@@ -286,21 +474,14 @@
   }
 
   function clearScanView(sessionUuid = "", deviceId = phoneDeviceId()) {
-    const key = scanResumeKey(deviceId);
-    const remove = () => {
-      if (!sessionUuid) return localStorage.removeItem(key);
-      const current = readScanIndex(deviceId);
-      if (current.state === "corrupted") return;
-      const normalizedSession = String(sessionUuid).trim().toLowerCase();
-      const remaining = current.sessions.filter((record) => record.session_uuid !== normalizedSession);
-      if (remaining.length) writeScanIndex(deviceId, remaining);
-      else localStorage.removeItem(key);
-    };
-    if (window.MemphisCustodialSecurity?.native === true) {
-      void window.MemphisCustodialSecurity.mutateProtectedWork(remove).catch(() => {});
-      return;
-    }
-    try { remove(); } catch { try { localStorage.removeItem(key); } catch {} }
+    const id = String(sessionUuid || "").trim().toLowerCase();
+    if (id && !scanSessionId({ session_uuid: id })) return false;
+    const pending = mutateScanIndex(deviceId, id ? [id] : [], current => {
+      if (!id) return null;
+      const remaining = current.filter(record => record.session_uuid !== id);
+      return remaining.length ? remaining : null;
+    }, undefined, true);
+    return Promise.resolve(pending).catch(() => false);
   }
 
   function buildPhoneWakeTarget() {
@@ -325,9 +506,81 @@
     return target;
   }
 
+  const PHONE_METADATA_KEYS = [PHONE_UNLOCKED_KEY, PHONE_SCREEN_OFF_KEY, PHONE_NAVIGATION_KEY];
+  let phoneMetadataUnconfirmed = false;
+  let phoneMetadataTail = Promise.resolve();
+  // Fixed session DATA only, never actor/clock/unlock authority. The existing
+  // owner serializes these ordinary lifecycle events with preservation. Read
+  // each event's rows under its admission so our preceding accepted event is
+  // not mistaken for a foreign baseline. Unknown strings are never replaced.
+  async function mutatePhoneMetadata(operation) {
+    const previous = phoneMetadataTail;let release;
+    phoneMetadataTail = new Promise(resolve => { release = resolve; });
+    try {
+      if (phoneMetadataUnconfirmed) return false;
+      const device = phoneDeviceId();
+      if (!isManagedKioskPhone(device)) return false;
+      const owner = scanWriterOwner(device), queue = owner ? null : window.MemphisScanSync;
+      const writer = owner ? owner.writer : queue?.mutateProtectedWork;
+      const checkpoint = owner ? null : queue?.requireLegacyBrowserMutation;
+      const storage = window.sessionStorage, local = window.localStorage;
+      const get = storage?.getItem, set = storage?.setItem, remove = storage?.removeItem;
+      if (typeof writer !== "function" || !owner && typeof checkpoint !== "function"
+        || typeof get !== "function" || typeof set !== "function" || typeof remove !== "function") throw scanWriterUnavailable();
+      const current = context => {
+        if (phoneMetadataUnconfirmed || window.sessionStorage !== storage || window.localStorage !== local
+          || storage.getItem !== get || storage.setItem !== set || storage.removeItem !== remove
+          || phoneDeviceId() !== device) throw scanWriterUnavailable();
+        requireScanWriterOwner(owner, context);
+        if (!owner) {
+          if (window.MemphisScanSync !== queue || queue.mutateProtectedWork !== writer
+            || queue.requireLegacyBrowserMutation !== checkpoint) throw scanWriterUnavailable();
+          if (context !== undefined) {
+            if (context?.deviceId !== device || typeof context.assertCurrent !== "function") throw scanWriterUnavailable();
+            checkpoint.call(queue);context.assertCurrent();
+          }
+        }
+      };
+      // Serialize settlement as well as effects. A subsequent legitimate
+      // lifecycle event must not overtake this event's terminal readback.
+      // Resource/principal capture still occurs BEFORE this asynchronous wait.
+      current();await previous;current();let entered = false, expected;
+      const result = await writer.call(owner ? owner.security : queue, context => {
+        if (entered) throw scanWriterUnavailable();entered = true;current(context);
+        expected = [];
+        for (let i = 0; i < PHONE_METADATA_KEYS.length; i++) expected[i] = get.call(storage, PHONE_METADATA_KEYS[i]);
+        current(context);
+        if (![null, "1"].includes(expected[0]) || ![null, "1"].includes(expected[2])
+          || expected[1] !== null && (typeof expected[1] !== "string" || !/^[1-9][0-9]{0,15}$/.test(expected[1])
+            || !Number.isSafeInteger(Number(expected[1])))) throw scanWriterUnavailable();
+        const same = () => {
+          current(context);
+          for (let i = 0; i < PHONE_METADATA_KEYS.length; i++)
+            if (get.call(storage, PHONE_METADATA_KEYS[i]) !== expected[i]) throw scanWriterUnavailable();
+          current(context);
+        };
+        const write = (index, value) => {
+          same();if (expected[index] === value) return;
+          if (value === null) remove.call(storage, PHONE_METADATA_KEYS[index]);else set.call(storage, PHONE_METADATA_KEYS[index], value);
+          expected[index] = value;same();
+        };
+        same();const value = operation(write, expected, same);same();return value;
+      }, { requireEnrollment: true, ...(owner ? { expectedGeneration: owner.generation } : {}) });
+      current();if (!entered || !expected) throw scanWriterUnavailable();
+      for (let i = 0; i < PHONE_METADATA_KEYS.length; i++)
+        if (get.call(storage, PHONE_METADATA_KEYS[i]) !== expected[i]) throw scanWriterUnavailable();
+      current();return result;
+    } catch {
+      // A refusal/ambiguous effect is not permission to replay, compensate,
+      // adopt changed metadata or navigate with a successor owner.
+      phoneMetadataUnconfirmed = true;return false;
+    } finally { release(); }
+  }
+
   function markPhoneUnlocked() {
     if (!isManagedKioskPhone()) return false;
-    try { sessionStorage.setItem(PHONE_UNLOCKED_KEY, "1"); } catch {}
+    // Preserve the synchronous UI DATA return; it was never a durable receipt.
+    void mutatePhoneMetadata(write => { write(0, "1");return true; });
     return true;
   }
 
@@ -338,35 +591,28 @@
 
   function markPhoneScreenOff() {
     if (!isManagedKioskPhone()) return false;
-    try {
-      sessionStorage.removeItem(PHONE_UNLOCKED_KEY);
-      sessionStorage.setItem(PHONE_SCREEN_OFF_KEY, String(Date.now()));
-    } catch {}
+    const originalTime = String(Date.now());
+    void mutatePhoneMetadata(write => { write(0, null);write(1, originalTime);return true; });
     return true;
   }
 
-  function handlePhoneWake(options = {}) {
+  async function handlePhoneWake(options = {}) {
     if (!isManagedKioskPhone()) return false;
-    try {
-      if (!options.force && sessionStorage.getItem(PHONE_NAVIGATION_KEY) === "1") {
-        sessionStorage.removeItem(PHONE_NAVIGATION_KEY);
-        sessionStorage.removeItem(PHONE_SCREEN_OFF_KEY);
+    const force = Boolean(options.force);
+    return mutatePhoneMetadata((write, original, same) => {
+      if (!force && original[2] === "1") {
+        write(2, null);write(1, null);
         return false;
       }
-    } catch {}
-    let screenWasOff = false;
-    try { screenWasOff = Boolean(sessionStorage.getItem(PHONE_SCREEN_OFF_KEY)); } catch {}
-    if (!options.force && !screenWasOff) return false;
-    const now = Date.now();
-    if (now - phoneWakeNavigationAt < 1200) return true;
-    phoneWakeNavigationAt = now;
-    try { sessionStorage.removeItem(PHONE_SCREEN_OFF_KEY); } catch {}
-    const target = buildPhoneWakeTarget();
-    if (target) {
-      try { sessionStorage.setItem(PHONE_NAVIGATION_KEY, "1"); } catch {}
-      window.location.replace(target.toString());
-    }
-    return true;
+      if (!force && !original[1]) return false;
+      const now = Date.now();
+      if (now - phoneWakeNavigationAt < 1200) return true;
+      const target = buildPhoneWakeTarget();same();write(1, null);
+      if (target) {
+        write(2, "1");same();window.location.replace(target.toString());
+      }
+      phoneWakeNavigationAt = now;return true;
+    });
   }
 
   function handlePhoneVisibilityChange() {
@@ -487,17 +733,6 @@
       console.error("Memphis UI configuration error: more than one canonical Hub control is present.");
     }
 
-    const current = new URL(window.location.href);
-    let fromAnnie = String(current.searchParams.get("origin") || "").trim().toLowerCase() === "annie";
-    try {
-      fromAnnie = fromAnnie || sessionStorage.getItem("mz_annie_origin_session") === "1";
-    } catch {}
-    document.querySelectorAll("[data-mz-annie-back]").forEach((control) => {
-      control.hidden = !fromAnnie;
-      if (fromAnnie && control instanceof HTMLAnchorElement) {
-        control.href = "https://memphis-zoo-mcp.onrender.com/moxie/";
-      }
-    });
   }
 
   function announce(message, options = {}) {
@@ -559,11 +794,13 @@
     markPhoneScreenOff,
     openScanSession,
     indexScanSession,
+    indexScanSessionConfirmed,
     phoneDeviceId,
     phoneUnlockedSinceWake,
     readyForDeviceAuthority: waitForDeviceAuthority,
     resolveOpenScanSession,
     retireCompletedScanView,
+    retireCompletedScanViewConfirmed,
     isUnstartedScanSession,
     rememberScanView,
     resolvedContext,

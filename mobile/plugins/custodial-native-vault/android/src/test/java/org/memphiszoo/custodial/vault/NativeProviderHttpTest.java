@@ -21,8 +21,14 @@ import static org.junit.Assert.*;
 public final class NativeProviderHttpTest {
     static final String DEVICE = "KIOSK_08", OP = "44000000-0000-4000-8000-000000000001", RID = "44000000-0000-4000-8000-000000000002";
     static final long NOW = 1800000000000L;
+    static NativeProviderClockExchange.Readings readings() { return () -> new NativeProviderClockExchange.Point(100, 7); }
+    static byte[] clockResponse(JSONObject data, String requestId) throws Exception {
+        return new JSONObject().put("ok", true).put("data", data).put("clock", new JSONObject()
+            .put("native_request_id", requestId).put("server_now", NativeProviderRegistrationReceiptTest.LATER)
+            .put("valid_until", "2026-09-24T12:15:01.654321Z")).toString().getBytes(StandardCharsets.UTF_8);
+    }
     interface Hook { void run() throws Exception; }
-    static final class Connection extends HttpsURLConnection {
+    static class Connection extends HttpsURLConnection {
         final Map<String, String> sentHeaders = new HashMap<>(); final ByteArrayOutputStream sent = new ByteArrayOutputStream();
         Map<String, List<String>> responseHeaders = Map.of("Content-Type", List.of("application/json; charset=utf-8"));
         byte[] response; int status = 200, disconnects; boolean timeout;
@@ -77,15 +83,15 @@ public final class NativeProviderHttpTest {
             provider.journal().observeActivePrincipal(principal); provider.journal().captureToken("synthetic:opaque/token+é");
             prepared = provider.journal().prepareRegistration(principal, NativeProviderJournalTest.app());
         }
-        byte[] response() throws Exception { return NativeProviderRegistrationReceiptTest.response(NativeProviderRegistrationReceiptTest.data(prepared, null, NativeProviderRegistrationReceiptTest.TIME)).body; }
+        byte[] response() throws Exception { return clockResponse(NativeProviderRegistrationReceiptTest.data(prepared, null, NativeProviderRegistrationReceiptTest.TIME), RID); }
         NativeProviderHttp http() throws Exception {
             byte[] body = response();
             return new NativeProviderHttp(url -> {
                 opened++; connection = new Connection(url, body); connection.onResponse = onResponse; connection.beforeOutput = beforeOutput; return connection;
-            }, () -> NOW, () -> RID);
+            }, () -> NOW, () -> RID, NativeProviderHttpTest.readings());
         }
         NativeProviderJournal.Prepared send(boolean status, NativeProviderHttp http) throws Exception {
-            return engine.registerNativeProvider(prepared, principalJournal, legacyJournal, provider.journal(), http, attempt, status);
+            return engine.registerNativeProvider(prepared, principalJournal, legacyJournal, provider.journal(), http, attempt, status).registration;
         }
     }
     @Test public void bothActualNativePrincipalShapesSignExactBytesAndConfirmOnlyOriginalOperation() throws Exception {
@@ -158,7 +164,7 @@ public final class NativeProviderHttpTest {
                     case "duplicate_json": f.connection.response = new String(good, StandardCharsets.UTF_8).replace("\"ok\":true", "\"ok\":false,\"ok\":true").getBytes(StandardCharsets.UTF_8); break;
                 }
                 return f.connection;
-            }, () -> NOW, () -> RID);
+            }, () -> NOW, () -> RID, NativeProviderHttpTest.readings());
             try { f.send(false, http); fail(fault); } catch (VaultFailure expected) { assertTrue(fault, expected.code.startsWith("custodial_provider_")); }
             assertEquals(1, f.opened); assertTrue(f.connection.disconnects > 0);
             NativeProviderJournal.Prepared pending = f.provider.journal().prepareRegistration(f.principal, NativeProviderJournalTest.app());
@@ -180,11 +186,85 @@ public final class NativeProviderHttpTest {
     static int sendEvents(Fixture f, NativeProviderJournal.EventBatch batch, NativeProviderHttp http) throws Exception {
         return f.engine.sendNativeProviderEvents(batch, f.principalJournal, f.legacyJournal, f.provider.journal(), http, f.attempt);
     }
+    static NativeProviderJournal.EventBatch lookup(Fixture f, NativeProviderJournal.EventBatch batch, NativeProviderHttp http) throws Exception {
+        return f.engine.lookupNativeProviderEventDecisions(batch, f.principalJournal, f.legacyJournal, f.provider.journal(), http, f.attempt);
+    }
+    static NativeProviderHttp decisionHttp(Fixture f, NativeProviderJournal.EventBatch batch, boolean accepted, String fault) {
+        return new NativeProviderHttp(url -> {
+            assertFalse(Thread.holdsLock(f.engine)); assertFalse(Thread.holdsLock(f.provider.storage.lock));
+            assertEquals(NativeProviderEventDecisions.PATH, url.getPath()); f.opened++;
+            Connection c = new Connection(url, new byte[0]); f.connection = c;
+            c.onResponse = () -> {
+                assertFalse(Thread.holdsLock(f.engine)); assertFalse(Thread.holdsLock(f.provider.storage.lock));
+                JSONObject request = ProviderWireJson.object(c.sent.toByteArray(), 65536);
+                org.json.JSONArray results = new org.json.JSONArray();
+                for (NativeProviderJournal.PendingEvent e : batch.events.values()) results.put(accepted ? NativeProviderEventDecisionsTest.accepted(e)
+                    : new JSONObject().put("event_id",e.id).put("decision","UNRESOLVED"));
+                JSONObject data = new JSONObject().put("schema","custodial.native-provider-event-decisions.v1")
+                    .put("native_request_id",c.sentHeaders.get("X-Memphis-Native-Request-Id"))
+                    .put("request_body_sha256",NativeProviderPrincipal.hash(new String(c.sent.toByteArray(),StandardCharsets.UTF_8)))
+                    .put("requester",request.getJSONObject("requester")).put("results",results);
+                if ("nonce".equals(fault)) data.put("native_request_id",OP);
+                if ("body".equals(fault)) data.put("request_body_sha256","0".repeat(64));
+                if ("denied".equals(fault)) c.status=403;
+                if ("timeout".equals(fault)) c.timeout=true;
+                c.response=new JSONObject().put("ok",true).put("data",data).toString().getBytes(StandardCharsets.UTF_8);
+                if (f.onResponse!=null) f.onResponse.run();
+            }; return c;
+        }, () -> NOW, () -> RID, readings());
+    }
+    @Test public void decisionLookupSignsFreshExactBodyAndSettlesOriginalAcrossBothNativeLineages() throws Exception {
+        for (boolean legacy : new boolean[]{false,true}) {
+            Fixture f=new Fixture(legacy); NativeProviderJournal.EventBatch batch=admittedEvent(f);
+            VaultSnapshot protectedBefore=f.persistence.current();
+            assertTrue(lookup(f,batch,decisionHttp(f,batch,true,null)).events.isEmpty());
+            Connection c=f.connection; JSONObject sent=ProviderWireJson.object(c.sent.toByteArray(),65536);
+            assertEquals(3,sent.length()); assertEquals(7,sent.getJSONObject("requester").length());
+            assertTrue(ProviderWireJson.same(batch.events.values().iterator().next().wire(),sent.getJSONArray("events").getJSONObject(0)));
+            char[] credential=f.cipher.decrypt(f.persistence.current().secret);
+            try { assertEquals(NativeAttestation.requestHeaders(new AuthorizedRequest(c.getURL().getPath(),"POST",Map.of(),c.sent.toByteArray()),DEVICE,credential,RID,NOW)
+                .get("X-Memphis-Native-Request-Attestation"),c.sentHeaders.get("X-Memphis-Native-Request-Attestation")); }
+            finally { Arrays.fill(credential,'\0'); }
+            assertSame(protectedBefore,f.persistence.current()); assertTrue(c.disconnects>0);
+            int opened=f.opened; assertTrue(lookup(f,f.provider.journal().pendingEvents(f.principal,16),decisionHttp(f,batch,true,null)).events.isEmpty());
+            assertEquals(opened,f.opened);
+        }
+    }
+    @Test public void decisionLostResponseDenialAndFreshContextMismatchPreserveOriginalBytes() throws Exception {
+        for(String fault:new String[]{"timeout","denied","nonce","body"}) {
+            Fixture f=new Fixture(false);NativeProviderJournal.EventBatch batch=admittedEvent(f);
+            Map<String,Object> before=new HashMap<>(f.provider.storage.memory.raw);VaultSnapshot protectedBefore=f.persistence.current();
+            NativeProviderEventDecisionsTest.rejected(()->lookup(f,batch,decisionHttp(f,batch,true,fault)));
+            assertEquals(before,f.provider.storage.memory.raw);assertSame(protectedBefore,f.persistence.current());assertTrue(f.connection.disconnects>0);
+            assertTrue(lookup(f,batch,decisionHttp(f,batch,true,null)).events.isEmpty());
+        }
+    }
+    @Test public void decisionResponseRechecksPrincipalEpochRequesterRevisionRemovalAndCancellation() throws Exception {
+        for(String edge:new String[]{"returned","rotation","principal","removal","cancel"}) {
+            Fixture f=new Fixture(false);NativeProviderJournal.EventBatch batch=admittedEvent(f);String id=batch.events.keySet().iterator().next();
+            f.onResponse=()->{
+                if(edge.equals("returned")){f.provider.journal().observeUnavailable();f.provider.journal().observeActivePrincipal(f.principal);}
+                else if(edge.equals("rotation")){f.provider.journal().captureToken("rotated");f.provider.journal().prepareRegistration(f.principal,NativeProviderJournalTest.app());}
+                else if(edge.equals("principal"))new NativePrincipalJournalTest().capture(f.principalJournal,f.engine.getState(),new NativePrincipalJournalTest().data()
+                    .put("credential_id",f.principal.json().get("credential_id")).put("assignment_epoch",f.principal.json().getLong("assignment_epoch")+1));
+                else if(edge.equals("removal"))f.engine.removeEnrollment(RID,DEVICE);else f.attempt.cancel();
+            };
+            try{lookup(f,batch,decisionHttp(f,batch,true,null));fail(edge);}catch(VaultFailure expected){assertTrue(expected.code.startsWith("custodial_"));}
+            assertEquals("PENDING",f.provider.read(ProviderEnvelopeCrypto.Domain.EVENT,id).getString("state"));assertTrue(f.connection.disconnects>0);
+        }
+    }
+    @Test public void decisionTransportRejectsInheritedMonitorsAndCanceledAttemptWithoutNetwork() throws Exception {
+        Fixture f=new Fixture(false);NativeProviderJournal.EventBatch batch=admittedEvent(f);int opened=f.opened;
+        synchronized(f.engine){ProviderRecordStoreTest.failure("custodial_provider_network_lock_held",()->lookup(f,batch,decisionHttp(f,batch,true,null)));}
+        synchronized(f.provider.storage.lock){ProviderRecordStoreTest.failure("custodial_provider_network_lock_held",()->lookup(f,batch,decisionHttp(f,batch,true,null)));}
+        f.attempt.cancel();ProviderRecordStoreTest.failure("custodial_provider_network_canceled",()->lookup(f,batch,decisionHttp(f,batch,true,null)));
+        assertEquals(opened,f.opened);assertEquals(1,f.provider.journal().pendingEvents(f.principal,16).events.size());
+    }
     @Test public void eventRouteUsesTypedNativeBatchAndExactRawBodyAttestationThenCommittedReceipt() throws Exception {
         for (boolean legacy : new boolean[]{false, true}) {
             Fixture f = new Fixture(legacy); NativeProviderJournal.EventBatch batch = admittedEvent(f);
             byte[] response = NativeProviderEventReceiptsTest.response(new org.json.JSONArray().put(NativeProviderEventReceiptsTest.receipt(batch.events.values().iterator().next()))).body;
-            NativeProviderHttp http = new NativeProviderHttp(url -> { f.opened++; f.connection = new Connection(url, response); return f.connection; }, () -> NOW, () -> RID);
+            NativeProviderHttp http = new NativeProviderHttp(url -> { f.opened++; f.connection = new Connection(url, response); return f.connection; }, () -> NOW, () -> RID, NativeProviderHttpTest.readings());
             assertEquals(1, sendEvents(f, batch, http)); assertEquals("/employee-notifications-api/native-provider/events", f.connection.getURL().getPath());
             assertArrayEquals(batch.body(), f.connection.sent.toByteArray()); assertEquals(0, f.provider.journal().pendingEvents(f.principal, 16).events.size());
             char[] credential = f.cipher.decrypt(f.persistence.current().secret);
@@ -203,7 +283,7 @@ public final class NativeProviderHttpTest {
                 f.connection = new Connection(url, response); f.connection.onResponse = () -> {
                     if (cancel) f.attempt.cancel(); else { f.provider.journal().observeUnavailable(); f.provider.journal().observeActivePrincipal(f.principal); }
                 }; return f.connection;
-            }, () -> NOW, () -> RID);
+            }, () -> NOW, () -> RID, NativeProviderHttpTest.readings());
             ProviderRecordStoreTest.failure(cancel ? "custodial_provider_network_canceled" : "custodial_provider_operation_stale", () -> sendEvents(f, batch, http));
             assertEquals(1, f.provider.journal().pendingEvents(f.principal, 16).events.size()); assertTrue(f.connection.disconnects > 0);
         }

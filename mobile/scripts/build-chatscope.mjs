@@ -1,4 +1,4 @@
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
@@ -12,10 +12,6 @@ const mobileRequire = createRequire(join(mobileRoot, 'package.json'));
 const mobileReactRoot = dirname(mobileRequire.resolve('react/package.json'));
 const mobileReactDomRoot = dirname(mobileRequire.resolve('react-dom/package.json'));
 
-await mkdir(dirname(outputJs), { recursive: true });
-await rm(outputJs, { force: true });
-await rm(outputCss, { force: true });
-
 const result = await build({
   entryPoints: [source],
   bundle: true,
@@ -24,6 +20,9 @@ const result = await build({
   platform: 'browser',
   target: ['es2020'],
   outfile: outputJs,
+  // Do not remove the working assets when compilation/dependency validation
+  // fails. Generate in memory and admit the complete normal graph first.
+  write: false,
   metafile: true,
   jsx: 'automatic',
   alias: {
@@ -54,5 +53,13 @@ const reactInputs = Object.keys(result.metafile.inputs)
 if (!reactInputs.length || reactInputs.some((path) => !path.includes(normalizedMobileRoot))) {
   throw new Error(`ChatScope must bundle only the mobile React 18 graph: ${reactInputs.join(', ')}`);
 }
+
+const expectedOutputs = new Set([outputJs, outputCss]);
+if (result.outputFiles.length !== expectedOutputs.size
+    || result.outputFiles.some((file) => !expectedOutputs.has(resolve(file.path)))) {
+  throw new Error('ChatScope must generate both fixed JS and CSS assets before replacement.');
+}
+await mkdir(dirname(outputJs), { recursive: true });
+for (const file of result.outputFiles) await writeFile(file.path, file.contents);
 
 console.log(`Built ${outputJs} and ${outputCss}`);

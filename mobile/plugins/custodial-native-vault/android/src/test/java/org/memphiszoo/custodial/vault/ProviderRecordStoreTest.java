@@ -12,6 +12,60 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class ProviderRecordStoreTest {
+    public static void main(String[] args)throws Exception{
+        if(args.length==1&&"--ascii-codec-owned-only".equals(args[0])){
+            var t=new ProviderRecordStoreTest();t.privateHexCodecKeepsExactAsciiGrammarAndAllBytes();
+            t.missingIndexOrMissingExtraMutatedRecordFailsWithoutWrite();
+            System.out.println("AFFECTED2 provider ASCII grammar/owning malformed-store cases PASS; synthetic storage/AES only");return;
+        }
+        if(args.length!=1||!"--retained-cancellation-source-only".equals(args[0]))throw new IllegalArgumentException("focused selector required");
+        var t=new ProviderRecordStoreTest();t.retainedPointerPinsWholeSourceWithoutInitialization();t.failedMemoryWriteCannotMintRetainedPointerAcrossAdapters();
+        System.out.println("NEW2 retained cancellation source witness cases PASS; synthetic storage/AES only, no OS or physical durability claim");
+    }
+    /** Private pure codec grammar only. No reflection-created owner or
+     * currentness/admission capability is used by this test. */
+    @Test public void privateHexCodecKeepsExactAsciiGrammarAndAllBytes()throws Exception{
+        var decode=ProviderRecordStore.class.getDeclaredMethod("unhex",String.class);decode.setAccessible(true);
+        byte[] all=new byte[256];StringBuilder wire=new StringBuilder(512);
+        for(int i=0;i<256;i++){all[i]=(byte)i;wire.append(Character.forDigit(i>>>4,16)).append(Character.forDigit(i&15,16));}
+        byte[] actual=(byte[])decode.invoke(null,wire.toString());
+        try{assertArrayEquals(all,actual);}finally{Arrays.fill(actual,(byte)0);Arrays.fill(all,(byte)0);}
+        for(String invalid:new String[]{"","0","000","AF","0F","fF"," g","ff ","+0","-0","0\n","\u0000f","\uff10f","\u0660f","\u00e9f","00112233445566zz"}){
+            try{decode.invoke(null,invalid);fail("Noncanonical hex accepted");}
+            catch(java.lang.reflect.InvocationTargetException failure){
+                assertTrue(failure.getCause() instanceof VaultFailure);
+                assertEquals("custodial_provider_envelope_invalid",((VaultFailure)failure.getCause()).code);
+            }
+        }
+        try{decode.invoke(null,(Object)null);fail("Private null behavior changed");}
+        catch(java.lang.reflect.InvocationTargetException failure){assertTrue(failure.getCause() instanceof NullPointerException);}
+    }
+    @Test public void retainedPointerPinsWholeSourceWithoutInitialization()throws Exception{
+        Fixture f=new Fixture();var writer=f.store();var record=key(EVENT,"original-cancel-intent");
+        writer.commit(0,values(record,"original retained intent"),Set.of());
+        var reader=f.store();int creations=f.keys.creations;var saved=reader.loadDurableRetained();
+        reader.requireDurableRetainedCurrent(saved);assertEquals(creations,f.keys.creations);
+        assertArrayEquals("original retained intent".toCharArray(),saved.read(record));
+        failure("custodial_provider_retained_source_changed",()->f.store().requireDurableRetainedCurrent(saved));
+        var original=new HashMap<>(f.memory.raw);f.memory.raw.put("foreign-cell","unresolved");
+        failure("custodial_provider_retained_source_changed",()->reader.requireDurableRetainedCurrent(saved));
+        f.memory.raw=new HashMap<>(original);writer.commit(1,values(record,"changed intent"),Set.of());
+        f.memory.raw=new HashMap<>(original); // synthetic byte ABA; owning write epoch must still reject it
+        failure("custodial_provider_retained_source_changed",()->reader.requireDurableRetainedCurrent(saved));
+    }
+    @Test public void failedMemoryWriteCannotMintRetainedPointerAcrossAdapters()throws Exception{
+        Fixture f=new Fixture();var writer=f.store();var record=key(EVENT,"original-cancel-intent");
+        writer.commit(0,values(record,"original retained intent"),Set.of());var reader=f.store();var saved=reader.loadDurableRetained();
+        f.memory.persistThenReject=true;
+        failure("custodial_provider_commit_failed_preserved",()->writer.commit(1,values(record,"unconfirmed candidate"),Set.of()));
+        int commits=f.memory.commits,creations=f.keys.creations;
+        failure("custodial_provider_retained_commit_unconfirmed",()->reader.requireDurableRetainedCurrent(saved));
+        failure("custodial_provider_retained_commit_unconfirmed",()->f.store().loadDurableRetained());
+        assertEquals(commits,f.memory.commits);assertEquals(creations,f.keys.creations);
+        f.memory.persistThenReject=false;writer.commit(2,values(record,"explicit normal durable successor"),Set.of());
+        var next=reader.loadDurableRetained();reader.requireDurableRetainedCurrent(next);
+        assertArrayEquals("explicit normal durable successor".toCharArray(),next.read(record));
+    }
     private static final ProviderEnvelopeCrypto.Domain TOKEN = ProviderEnvelopeCrypto.Domain.TOKEN;
     private static final ProviderEnvelopeCrypto.Domain INBOX = ProviderEnvelopeCrypto.Domain.INBOX;
     private static final ProviderEnvelopeCrypto.Domain EVENT = ProviderEnvelopeCrypto.Domain.EVENT;

@@ -10,33 +10,44 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
-import java.util.Arrays;
 
 /** Exact tagged NotificationManager surface; never owns a receipt or generic cancellation.
  * Components are private/exact; their manifest and runtime owners must exist before wiring. */
 final class AndroidProviderNotifications implements NativeProviderDisplayDriver.Surface {
     static final int ID = 0x4D5A5002;
-    static final String OPEN_ACTIVITY = "org.memphiszoo.custodial.vault.ProviderNotificationOpenActivity";
-    static final String ACTION_RECEIVER = "org.memphiszoo.custodial.vault.ProviderNotificationActionReceiver";
-    static final String ACTION_PREFIX = "org.memphiszoo.custodial.PROVIDER_";
+    static final String OPEN_ACTIVITY = NativeProviderActionIntent.OPEN_ACTIVITY;
+    static final String ACTION_RECEIVER = NativeProviderActionIntent.ACTION_RECEIVER;
+    static final String ACTION_PREFIX = NativeProviderActionIntent.ACTION_PREFIX;
     private final Context application;
     private final NotificationManager manager;
+    private final boolean nativeAudio;
     AndroidProviderNotifications(Context context) {
+        this(context,false);
+    }
+    AndroidProviderNotifications(Context context,boolean nativeAudio) {
+        this.nativeAudio=nativeAudio;
         application = context.getApplicationContext(); manager = (NotificationManager) application.getSystemService(Context.NOTIFICATION_SERVICE);
+    }
+    private String channel(NativeProviderPayload payload) {
+        return payload.get("channel_id")+(nativeAudio?".native-audio.v1":"");
     }
     @Override public boolean enabled(NativeProviderPayload payload) throws VaultFailure {
         if (manager == null) throw new VaultFailure("custodial_provider_notification_manager_unavailable");
-        String channel = payload.get("channel_id");
-        if (!Arrays.asList("employee-lunch-coverage", "employee-due-soon", "employee-overdue").contains(channel)) throw new VaultFailure("custodial_provider_channel_invalid");
+        String channel = channel(payload);
+        String title = NativeProviderNotificationPolicy.channelTitle(payload.get("channel_id"));
         if (Build.VERSION.SDK_INT >= 26) {
             // Creating an existing channel cannot reset the user's settings. Never delete/recreate
             // to bypass a disabled channel or change the established channels' sound settings.
             if (manager.getNotificationChannel(channel) == null) {
-                String title = "employee-lunch-coverage".equals(channel) ? "Lunch coverage" : "employee-overdue".equals(channel) ? "Overdue cleaning reminders" : "Cleaning reminders";
-                manager.createNotificationChannel(new NotificationChannel(channel, title, NotificationManager.IMPORTANCE_HIGH));
+                NotificationChannel fresh=new NotificationChannel(channel, title, NotificationManager.IMPORTANCE_HIGH);
+                // Separate exact native-audio channels; never reset/delete the
+                // legacy/user channels or let OS audio bypass the private lane.
+                if(nativeAudio){fresh.setSound(null,null);fresh.enableVibration(false);}
+                manager.createNotificationChannel(fresh);
             }
             NotificationChannel actual = manager.getNotificationChannel(channel);
             if (actual == null || actual.getImportance() == NotificationManager.IMPORTANCE_NONE) return false;
+            if(nativeAudio&&(actual.getSound()!=null||actual.shouldVibrate()))return false;
             if (Build.VERSION.SDK_INT >= 28 && actual.getGroup() != null) {
                 android.app.NotificationChannelGroup group = manager.getNotificationChannelGroup(actual.getGroup());
                 if (group != null && group.isBlocked()) return false;
@@ -54,19 +65,22 @@ final class AndroidProviderNotifications implements NativeProviderDisplayDriver.
                 || !intent.attemptId.equals(extras.getString("mz_provider_attempt"))
                 || !intent.presentation.payload.get("title").contentEquals(extras.getCharSequence(Notification.EXTRA_TITLE, ""))
                 || !intent.presentation.payload.get("body").contentEquals(extras.getCharSequence(Notification.EXTRA_TEXT, ""))
-                || (Build.VERSION.SDK_INT >= 26 && !intent.presentation.payload.get("channel_id").equals(notification.getChannelId())))
+                || (Build.VERSION.SDK_INT >= 26 && !channel(intent.presentation.payload).equals(notification.getChannelId())))
                 return NativeProviderDisplayDriver.Active.CONFLICT;
-            PendingIntent expectedOpen = pending(intent, "opened", false), expectedDelete = pending(intent, "dismissed", false), expectedAck = pending(intent, "acknowledged", false);
-            if (expectedOpen == null || expectedDelete == null || expectedAck == null || !expectedOpen.equals(notification.contentIntent)
+            PendingIntent expectedOpen = pending(intent, "opened", false), expectedDelete = pending(intent, "dismissed", false);
+            PendingIntent expectedAction = pending(intent, NativeProviderNotificationPolicy.action(intent.presentation.payload), false);
+            if (expectedOpen == null || expectedDelete == null || expectedAction == null || !expectedOpen.equals(notification.contentIntent)
                 || !expectedDelete.equals(notification.deleteIntent) || notification.actions == null || notification.actions.length != 1
-                || !expectedAck.equals(notification.actions[0].actionIntent)) return NativeProviderDisplayDriver.Active.CONFLICT;
+                || notification.actions[0].title == null
+                || !NativeProviderNotificationPolicy.actionLabel(intent.presentation.payload).contentEquals(notification.actions[0].title)
+                || !expectedAction.equals(notification.actions[0].actionIntent)) return NativeProviderDisplayDriver.Active.CONFLICT;
             return NativeProviderDisplayDriver.Active.MATCH;
         }
         return NativeProviderDisplayDriver.Active.ABSENT;
     }
     @Override public void show(NativeProviderJournal.OsDisplayIntent intent) throws Exception {
         if (!enabled(intent.presentation.payload)) throw new VaultFailure("custodial_provider_notifications_blocked");
-        Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(application, intent.presentation.payload.get("channel_id")) : new Notification.Builder(application);
+        Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(application, channel(intent.presentation.payload)) : new Notification.Builder(application);
         Bundle extras = new Bundle(); extras.putString("mz_provider_record", intent.presentation.payload.recordId);
         extras.putString("mz_provider_content", intent.presentation.payload.contentHash); extras.putString("mz_provider_attempt", intent.attemptId);
         builder.setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(intent.presentation.payload.get("title"))
@@ -74,7 +88,8 @@ final class AndroidProviderNotifications implements NativeProviderDisplayDriver.
             .setCategory(Notification.CATEGORY_REMINDER).setPriority(Notification.PRIORITY_HIGH).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setOnlyAlertOnce(true).setAutoCancel(false).addExtras(extras)
             .setContentIntent(pending(intent, "opened", true)).setDeleteIntent(pending(intent, "dismissed", true))
-            .addAction(new Notification.Action.Builder(null, "Acknowledge", pending(intent, "acknowledged", true)).build());
+            .addAction(new Notification.Action.Builder(null, NativeProviderNotificationPolicy.actionLabel(intent.presentation.payload),
+                pending(intent, NativeProviderNotificationPolicy.action(intent.presentation.payload), true)).build());
         manager.notify(intent.tag, ID, builder.build()); // NOT itself a displayed receipt.
     }
     private PendingIntent pending(NativeProviderJournal.OsDisplayIntent record, String action, boolean create) {

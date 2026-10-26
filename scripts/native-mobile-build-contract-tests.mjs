@@ -83,13 +83,117 @@ import {
 import { custodialAndroidToolchainPolicyForPlatform } from '../mobile/scripts/custodial-android-toolchain-policy.mjs';
 import { custodialNativeVaultSourceDigest } from '../mobile/scripts/custodial-native-vault-source.mjs';
 import { unzip as unzipApkEntry } from '../mobile/scripts/verify-custodial-native-boundary-apk.mjs';
-import './canonical-temporary-fixture-tests.mjs';
-import './custodial-dex-semantic-verifier-tests.mjs';
-import './custodial-runtime-source-verifier-tests.mjs';
-import './immutable-file-snapshot-tests.mjs';
-import {
-  custodialAndroidManifestSecurityProofFixture,
-} from './custodial-android-manifest-security-contract-tests.mjs';
+// Run only the shipping JS adapter member, before historical test imports or
+// source/APK/build assertions. Production helper imports above are definitions.
+if (process.argv.includes('--original-local-binding-adapter-only')) {
+  const { createNativeProtectedStorage, CUSTODIAL_NATIVE_CREDENTIAL_HANDLE } = await import('../mobile/src/custodial/native-security.js');
+  const keys = await import('../mobile/src/custodial/security-keys.js');
+  const operationId='12345678-1234-4234-8234-123456789abc',deviceId='KIOSK_02';
+  const seal='synthetic-original-installation-seal';
+  const installation={schema_version:1,device_id:deviceId,installation_seal:seal,enrolled_at:'2026-10-13T12:00:00.000Z',
+    enrollment_operation_id:operationId,migrated_from_credential_only_state:false};
+  const staged={state:'PENDING_SERVER_CONFIRMATION',pending_operation_id:operationId,installation};
+  const active={state:'ACTIVE',active_enrollment_operation_id:operationId,installation};
+  const input=JSON.stringify({...installation,credential:CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,credential_operation_id:operationId});
+  const journal=JSON.stringify({schema_version:1,operation_id:operationId,device_id:deviceId,flow:'enrollment',status:'pending_server',
+    created_at:'2026-10-13T11:59:00.000Z',updated_at:'2026-10-13T12:00:00.000Z',attempt_count:1});
+  const legacyInstallation={...installation,enrollment_operation_id:null,migrated_from_credential_only_state:true};
+  const legacyInput=JSON.stringify({...legacyInstallation,credential:CUSTODIAL_NATIVE_CREDENTIAL_HANDLE,credential_operation_id:null});
+  const legacyActive={state:'ACTIVE',installation:legacyInstallation};
+  const deferred=()=>{let resolve;const promise=new Promise(done=>{resolve=done;});return {promise,resolve};};
+  function storage() {
+    const rows=new Map([[keys.CUSTODIAL_ENROLLMENT_OPERATION_KEY,journal],[keys.CUSTODIAL_DEVICE_KEYS[0],deviceId],
+      [keys.CUSTODIAL_INSTALLATION_MARKER_KEY,seal],['mz_scan_queue:original-fixture','retained original fixture work bytes']]);
+    const effects=[];
+    return {effects,getItem:key=>rows.get(key)??null,setItem:(key,value)=>{effects.push({kind:'set',key});rows.set(key,String(value));},
+      removeItem:key=>{effects.push({kind:'remove',key});rows.delete(key);},replace:(key,raw)=>rows.set(key,raw),
+      snapshot:()=>[...rows]};
+  }
+  const results=[];
+  async function check(name,run) {
+    const facts={};
+    try {await run(facts);results.push({name,passed:true,...facts});}
+    catch(error){results.push({name,passed:false,...facts,error:error.message});}
+  }
+  async function replacementCase(facts,{stage,key,replacement,legacy=false}) {
+    const local=storage(),gate=deferred(),entered=deferred();let dispatches=0,stateReads=0;
+    const plugin={getState:()=>{stateReads++;return stage==='state'?gate.promise:Promise.resolve(staged);},
+      completeLocalBinding:args=>{assert.deepEqual(args,{operation_id:operationId});dispatches++;entered.resolve();return gate.promise;},
+      completeLegacyBinding:args=>{assert.deepEqual(args,{device_id:deviceId});dispatches++;entered.resolve();return gate.promise;}};
+    const pending=createNativeProtectedStorage(plugin,local).set(keys.CUSTODIAL_INSTALLATION_RECORD_KEY,legacy?legacyInput:input)
+      .then(value=>({value}),error=>({error}));
+    if(stage==='completion')await entered.promise;
+    local.replace(key,replacement);
+    gate.resolve(legacy?legacyActive:stage==='state'?staged:active);
+    const outcome=await pending;
+    Object.assign(facts,{stateReads,nativeDispatches:dispatches,returnedAuthoritativeInstallation:typeof outcome.value==='string',
+      errorCode:outcome.error?.code??null,replacementRetained:local.getItem(key)===replacement,adapterLocalEffects:local.effects.length});
+    assert.equal(outcome.error?.code,'custodial_native_original_local_state_changed');
+    assert.equal(dispatches,stage==='state'?0:1);
+    assert.equal(local.getItem(key),replacement);
+    assert.equal(local.getItem('mz_scan_queue:original-fixture'),'retained original fixture work bytes');
+    assert.deepEqual(local.effects,[]);
+  }
+  await check('new staged getState enrollment original replacement refuses dispatch',facts=>replacementCase(facts,
+    {stage:'state',key:keys.CUSTODIAL_ENROLLMENT_OPERATION_KEY,replacement:journal+' '}));
+  await check('new staged getState device identity replacement refuses dispatch',facts=>replacementCase(facts,
+    {stage:'state',key:keys.CUSTODIAL_DEVICE_KEYS[0],replacement:'KIOSK_03'}));
+  await check('new staged getState installation marker replacement refuses dispatch',facts=>replacementCase(facts,
+    {stage:'state',key:keys.CUSTODIAL_INSTALLATION_MARKER_KEY,replacement:'foreign-original-fixture-seal'}));
+  await check('new local completion corrupt replacement cannot return stale installation',facts=>replacementCase(facts,
+    {stage:'completion',key:keys.CUSTODIAL_ENROLLMENT_OPERATION_KEY,replacement:'{unknown original bytes'}));
+  await check('new local completion changed identity cannot return stale installation',facts=>replacementCase(facts,
+    {stage:'completion',key:keys.CUSTODIAL_DEVICE_KEYS[0],replacement:'KIOSK_03'}));
+  await check('new local completion newly appeared recovery row remains preserved',facts=>replacementCase(facts,
+    {stage:'completion',key:keys.CUSTODIAL_RECOVERY_RECORD_KEY,replacement:'{foreign recovery original'}));
+  await check('new legacy completion original marker replacement cannot return stale installation',facts=>replacementCase(facts,
+    {stage:'completion',key:keys.CUSTODIAL_INSTALLATION_MARKER_KEY,replacement:'foreign-legacy-fixture-seal',legacy:true}));
+  await check('new unchanged local original remains bound without local mutation',async facts=>{
+    const local=storage(),before=local.snapshot();let stateReads=0,dispatches=0;
+    const result=JSON.parse(await createNativeProtectedStorage({getState:async()=>{stateReads++;return staged;},
+      completeLocalBinding:async args=>{assert.deepEqual(args,{operation_id:operationId});dispatches++;return active;}},local)
+      .set(keys.CUSTODIAL_INSTALLATION_RECORD_KEY,input));
+    assert.equal(result.credential_operation_id,operationId);assert.equal(result.enrollment_operation_id,operationId);
+    assert.equal(result.installation_seal,seal);assert.equal(result.device_id,deviceId);
+    assert.equal(stateReads,1);assert.equal(dispatches,1);assert.deepEqual(local.snapshot(),before);assert.deepEqual(local.effects,[]);
+    Object.assign(facts,{stateReads,nativeDispatches:dispatches,adapterLocalEffects:0});
+  });
+  await check('new unchanged legacy path depends only on existing native completion predicate',async facts=>{
+    const local=storage(),before=local.snapshot();let dispatches=0;
+    const result=JSON.parse(await createNativeProtectedStorage({getState:()=>{throw new Error('Legacy path must not add a state/admission API');},
+      completeLegacyBinding:async args=>{assert.deepEqual(args,{device_id:deviceId});dispatches++;return legacyActive;}},local)
+      .set(keys.CUSTODIAL_INSTALLATION_RECORD_KEY,legacyInput));
+    assert.equal(result.migrated_from_credential_only_state,true);assert.equal(result.enrollment_operation_id,null);
+    assert.equal(dispatches,1);assert.deepEqual(local.snapshot(),before);assert.deepEqual(local.effects,[]);
+    Object.assign(facts,{nativeDispatches:dispatches,adapterLocalEffects:0,nativeLegacyPredicate:'synthetic allowed result'});
+  });
+  await check('new legacy native denial is never replaced by local JSON authority',async facts=>{
+    const local=storage(),before=local.snapshot();let dispatches=0;
+    const denied=Object.assign(new Error('Synthetic existing native legacy predicate refuses'),{code:'custodial_native_legacy_binding_mismatch'});
+    await assert.rejects(createNativeProtectedStorage({completeLegacyBinding:async()=>{dispatches++;throw denied;}},local)
+      .set(keys.CUSTODIAL_INSTALLATION_RECORD_KEY,legacyInput),error=>error===denied);
+    assert.equal(dispatches,1);assert.deepEqual(local.snapshot(),before);assert.deepEqual(local.effects,[]);
+    Object.assign(facts,{nativeDispatches:dispatches,adapterLocalEffects:0});
+  });
+  await check('new invalid installation and foreign staged binding remain refused',async facts=>{
+    const local=storage(),before=local.snapshot();let stateReads=0,dispatches=0;
+    const owner=createNativeProtectedStorage({getState:async()=>{stateReads++;return staged;},completeLocalBinding:async()=>{dispatches++;return active;}},local);
+    await assert.rejects(owner.set(keys.CUSTODIAL_INSTALLATION_RECORD_KEY,'{corrupt'),error=>error.code==='custodial_native_invalid_record');
+    await assert.rejects(owner.set(keys.CUSTODIAL_INSTALLATION_RECORD_KEY,JSON.stringify({...JSON.parse(input),device_id:'KIOSK_08'})),
+      error=>error.code==='custodial_native_binding_mismatch');
+    assert.equal(stateReads,1);assert.equal(dispatches,0);assert.deepEqual(local.snapshot(),before);assert.deepEqual(local.effects,[]);
+    Object.assign(facts,{stateReads,nativeDispatches:dispatches,adapterLocalEffects:0});
+  });
+  console.log(JSON.stringify({scope:'original local installation binding adapter only',actualModule:true,results,
+    limits:'Synthetic native callbacks and memory storage; no Engine/Android/TLS/key/commit/removal/browser proof.'},null,2));
+  process.exit(results.every(result=>result.passed)?0:1);
+}
+
+await import('./canonical-temporary-fixture-tests.mjs');
+await import('./custodial-dex-semantic-verifier-tests.mjs');
+await import('./custodial-runtime-source-verifier-tests.mjs');
+await import('./immutable-file-snapshot-tests.mjs');
+const {custodialAndroidManifestSecurityProofFixture} = await import('./custodial-android-manifest-security-contract-tests.mjs');
 
 function uleb128(value) {
   const bytes = [];
@@ -903,7 +1007,8 @@ assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be dis
 const custodialAndroid = codemagic.match(/^  custodial-android:\n(?:(?: {4,}.*|\s*)\n)*/m)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
 assert.match(custodialAndroid, /MZ_SHELL_START: '1'/, 'Custodial Android must build the required local role shell start path');
-assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '53'/, 'Custodial recovery source must pin the protected Build 53 package');
+assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '56'/, 'Custodial recovery source must pin the protected Build 56 package');
+assert.equal(CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE, Number(custodialAndroid.match(/PROJECT_BUILD_NUMBER: '(\d+)'/)[1]), 'artifact acceptance must require the same exact version as the cloud producer');
 assert.equal(
   [...codemagic.matchAll(/gradle_temp_root="\$\(cd "\$\{TMPDIR:-\/tmp\}" && pwd -P\)"/g)].length,
   3,
@@ -2014,7 +2119,7 @@ assert.throws(
     sourceRef: CUSTODIAL_FORWARD_RECOVERY_BRANCH,
     buildNumber: CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE - 1,
   }),
-  /recovery source must emit versionCode 53/,
+  /recovery source must emit versionCode 56/,
 );
 assert.throws(
   () => createCustodialAndroidReleaseAcceptance({

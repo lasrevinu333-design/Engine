@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com https://api.weather.gov; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#081422">
@@ -11,8 +11,6 @@
   <link rel="stylesheet" href="./manager-ux.css">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12">
   <link rel="stylesheet" href="./ops-hub.css">
-  <style>    .hourlyFacts{list-style:none;padding:0;margin:10px 0 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(114px,1fr);gap:8px;overflow-x:auto;max-width:100%;text-align:center}.hourlyFacts li{padding:10px 8px;border:1px solid rgba(255,255,255,.2);border-radius:12px;display:grid;gap:4px;font-size:.78rem;line-height:1.3}.hourlyFacts strong{font-size:1.05rem}.weatherWarnings{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px;text-align:left}.weatherWarnings li{padding:10px;border:1px solid rgba(255,210,90,.65);border-radius:12px;overflow-wrap:anywhere}.weatherWarnings [data-urgent="true"]{border-width:2px}.weatherWarnings p{white-space:pre-line;margin:6px 0;font-size:.9rem}.shiftFacts{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:8px;font-size:.9rem}.snapshotCard{min-width:0;overflow:hidden}
-</style>
 </head>
 <body data-memphis-context="manager">
   <main class="hubPage">
@@ -33,7 +31,7 @@
         <span class="snapshotLabel">Local time</span><strong id="clock">--:--</strong><small id="date">--</small>
       </article>
       <article class="snapshotCard uxCard">
-        <span class="snapshotLabel">Today’s weather</span><strong id="weather-value">--</strong><small id="weather-meta">Loading Memphis weather…</small><ul id="weather-hours" class="hourlyFacts" aria-label="Hourly weather"></ul><small id="hourly-weather-meta">Hourly weather unavailable.</small><ul id="weather-alerts" class="weatherWarnings" aria-label="Weather warnings"></ul><small id="weather-alerts-meta">Weather warnings unavailable.</small>
+        <span class="snapshotLabel">Today’s weather</span><strong id="weather-value">--</strong><small id="weather-meta">Loading Memphis weather…</small>
       </article>
       <article class="snapshotCard uxCard">
         <span class="snapshotLabel">Guest entries</span><strong id="attendance-value">--</strong><small id="attendance-meta">Loading gate count…</small>
@@ -44,19 +42,18 @@
       <div class="sectionHeading"><div><div class="uxEyebrow">Start here</div><h2>Today</h2><p>One tap to the work managers use most.</p></div></div>
       <div class="apps hubGrid coreGrid">
         <a id="dashboard-link" class="hubTile primary" href="./dashboard.html"><span class="tileIcon" aria-hidden="true">●</span><span><strong>Dashboard</strong><small>Live cleaning status, due-soon areas, overdue areas, and tickets</small></span></a>
+        <a id="dashboard-map-link" class="hubTile primary" href="./operations-dashboard.html"><span class="tileIcon dashboardMapIcon" aria-hidden="true"><img src="./memphis_avatar_ui.webp" alt=""><svg viewBox="0 0 32 28" focusable="false"><path d="m2 6 9-4 10 4 9-4v20l-9 4-10-4-9 4Z" fill="#eaf5ff" stroke="#0a1928" stroke-width="2" stroke-linejoin="round"/><path d="M11 3v19m10-16v19" fill="none" stroke="#347761" stroke-width="2"/><path d="m5 16 8-5 6 5 8-5" fill="none" stroke="#4a8650" stroke-width="2" stroke-dasharray="2 2"/><path d="M21 6a4 4 0 0 0-8 0c0 3 4 7 4 7s4-4 4-7Z" fill="#91d63a" stroke="#163929"/><circle cx="17" cy="6" r="1.4" fill="#163929"/></svg></span><span><strong>Dashboard Map</strong><small>Operations, tickets and live cleaning status</small></span></a>
         <a id="messages-link" class="hubTile primary" href="./messages.html"><span class="tileIcon" aria-hidden="true">◫</span><span><strong>Messenger</strong><small>Memphis AI, employees, and ordinary manager conversations</small></span></a>
         <a id="schedule-link" class="hubTile" href="./schedule-weekly.html"><span class="tileIcon" aria-hidden="true">▦</span><span><strong>Schedule</strong><small>Area ownership, absences, CoverAll, and coverage</small></span></a>
-        <a id="events-link" class="hubTile" href="./events.html"><span class="tileIcon" aria-hidden="true">◇</span><span><strong>Events</strong><small>Upcoming operational pressure and reminders</small></span></a>
-        <a id="insights-link" class="hubTile insightTile" href="./operational-insights.html"><span class="tileIcon" aria-hidden="true">↗</span><span><strong>Work Statistics</strong><small>Review cleaning times, services and recurring ticket patterns</small></span></a>
+        <a id="staffing-link" class="hubTile" href="./staffing-management.html?hub=manager"><span class="tileIcon" aria-hidden="true">♙</span><span><strong>Staffing positions</strong><small>Current roster, vacancy/fill, and protected separation readback</small></span></a>
+        <a id="insights-link" class="hubTile insightTile" href="./operational-insights.html"><span class="tileIcon" aria-hidden="true">↗</span><span><strong>Operational Insights</strong><small>Cleaning history, historical inspection results, and recurring ticket patterns</small></span></a>
       </div>
     </section>
 
     <section id="more" class="hubSection uxCard">
       <div class="sectionHeading"><div><div class="uxEyebrow">Operations tools</div><h2>Manage and respond</h2><p>Administrative and occasional work stays available without crowding the first screen.</p></div></div>
       <div class="hubGrid">
-        <a id="events-admin-link" class="hubTile" href="./events-admin.html"><span class="tileIcon" aria-hidden="true">＋</span><span><strong>Events Input</strong><small>Add, correct, or cancel event information</small></span></a>
         <a id="guest-issues-link" class="hubTile" href="./guest-issues.html" hidden><span class="tileIcon" aria-hidden="true">!</span><span><strong>Guest Issues</strong><small>Marketing review, dispatch, and closure after zoo approval</small></span></a>
-        <a id="moxie-link" class="hubTile" href="https://memphis-zoo-mcp.onrender.com/moxie/"><span class="tileIcon mediaIcon" aria-hidden="true"><img id="moxie-app-icon" src="./Moxie_Owl_Icon_ui.webp?v=release-2026.07.19.custodial-v3.12" alt=""><span data-fallback-for="moxie-app-icon">🦉</span></span><span><strong>Moxie</strong><small>Private assistant, notes, reminders, and contacts</small></span></a>
         <a id="feedback-link" class="hubTile" href="./system-feedback.html"><span class="tileIcon" aria-hidden="true">?</span><span><strong>Feedback</strong><small>Report a problem or improvement idea</small></span></a>
         <a id="notifications-link" class="hubTile" href="./notifications.html"><span class="tileIcon" aria-hidden="true">◉</span><span><strong>Notifications</strong><small>Messages, event reminders, and location alerts</small></span></a>
         <a id="phone-assignments-link" class="hubTile" href="./phone-assignments.html"><span class="tileIcon" aria-hidden="true">▣</span><span><strong>Phone Assignments</strong><small>Move kiosk phones to new or existing employees</small></span></a>
@@ -86,8 +83,8 @@
     <a href="#more"><span aria-hidden="true">•••</span><small>More</small></a>
   </nav>
 
-  <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./memphis-auth.js?v=owner-access-20261006"></script>
   <script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
-  <script src="./ops-hub.js"></script>
+  <script src="./ops-hub.js?v=owner-access-20261006"></script>
 </body>
 </html>

@@ -4,6 +4,10 @@ import { spawnSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import {
   accessSync,
+  closeSync,
+  fstatSync,
+  openSync,
+  readSync,
   chmodSync,
   constants,
   existsSync,
@@ -31,6 +35,13 @@ import {
   assertCustodialAcceptanceSchema,
 } from './verify-custodial-android-release.mjs';
 import {
+  assertReviewedForwardBuild,
+  loadReviewedForwardBuild,
+  parseForwardBuildArguments,
+  forwardBuildProvenance,
+  readReviewedForwardBuildSourceSelection,
+} from './configure-native-release.mjs';
+import {
   custodialAndroidToolchainPolicyForPlatform,
 } from './custodial-android-toolchain-policy.mjs';
 import { parseDeterministicJson } from './custodial-capacitor-runtime-policy.mjs';
@@ -44,6 +55,7 @@ import {
   custodialNetworkSecurityConfig,
 } from './custodial-android-manifest-security.mjs';
 import { verifyCustodialLinuxAdmissionHostTools } from './custodial-linux-admission-host-tools.mjs';
+import {readCustodialBuildScope,isCleaningScope,compiledScopeSource} from './custodial-new-producer-scope-policy.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
@@ -106,7 +118,7 @@ const admissionSchemaCompiler = new Ajv2020({ allErrors: true, strict: true });
 addFormats(admissionSchemaCompiler);
 const validateAdmissionSchema = admissionSchemaCompiler.compile(admissionSchema);
 
-export function assertCustodialCodemagicAdmissionSchema(value) {
+export function assertCustodialCodemagicAdmissionSchema(value, { forwardBuild = null } = {}) {
   if (!validateAdmissionSchema(value)) {
     const detail = (validateAdmissionSchema.errors || [])
       .map((error) => `${error.instancePath || '/'} ${error.message || 'is invalid'}`)
@@ -116,12 +128,18 @@ export function assertCustodialCodemagicAdmissionSchema(value) {
   if (value.provenance_bundle.name !== `Engine_${value.platform_index}_artifacts.zip`) {
     throw new Error('Custodial Codemagic admission bundle name and platform index differ');
   }
-  if (
-    value.app_id !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.app_id
-    || value.branch !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch
+  if (Object.hasOwn(value, 'forward_transition') || forwardBuild !== null) {
+    assertReviewedForwardBuild(forwardBuild, { buildNumber: value.version_code, sourceCommit: value.commit, sourceTree: value.artifact_source_tree, sourceRef: `refs/heads/${value.branch}` });
+    assertExactForwardProvenance(value.forward_transition, forwardBuild, 'Final admission');
+    if (value.artifact_source_tree !== forwardBuild.descriptor.source.tree || value.artifact_source_policy_sha256 !== forwardBuild.trusted_pins_sha256 || (forwardBuild.descriptor.artifact_sha256 !== null && value.apk.sha256 !== forwardBuild.descriptor.artifact_sha256)) throw new Error('Forward admission record differs from reviewed source/artifact policy');
+  } else if (
+    value.branch !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.branch
     || value.commit !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.commit
     || value.version_code !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code
     || value.artifact_source_policy_sha256 !== CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.sha256
+  ) throw new Error('Custodial Codemagic admission provenance differs from active recovery policy');
+  if (
+    value.app_id !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.app_id
     || value.admission_policy_sha256 !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.sha256
     || value.admission_schema_sha256 !== sha256(admissionSchemaBytes)
     || value.verifier_version !== CUSTODIAL_CODEMAGIC_ADMISSION_VERSION
@@ -135,17 +153,46 @@ function admissionVerifierSourceDigest() {
   const sources = [
     ['admit-custodial-codemagic-build.mjs', scriptPath],
     ['configure-android-backup.mjs', fileURLToPath(new URL('./configure-android-backup.mjs', import.meta.url))],
+    ['configure-native-release.mjs', fileURLToPath(new URL('./configure-native-release.mjs', import.meta.url))],
+    ['custodial-forward-transition-admission-adapter.mjs', fileURLToPath(new URL('./custodial-forward-transition-admission-adapter.mjs', import.meta.url))],
+    ['custodial-forward-transition-admission-adapter.schema.json', fileURLToPath(new URL('./custodial-forward-transition-admission-adapter.schema.json', import.meta.url))],
     ['custodial-android-manifest-security.mjs', fileURLToPath(new URL('./custodial-android-manifest-security.mjs', import.meta.url))],
     ['custodial-android-toolchain-policy.mjs', fileURLToPath(new URL('./custodial-android-toolchain-policy.mjs', import.meta.url))],
     ['custodial-capacitor-runtime-policy.mjs', fileURLToPath(new URL('./custodial-capacitor-runtime-policy.mjs', import.meta.url))],
+    ['custodial-new-producer-scope-policy.mjs', fileURLToPath(new URL('./custodial-new-producer-scope-policy.mjs', import.meta.url))],
+    ['custodial-initial-release-pages.mjs', fileURLToPath(new URL('./custodial-initial-release-pages.mjs', import.meta.url))],
+    ['verify-custodial-dex-semantics.mjs', fileURLToPath(new URL('./verify-custodial-dex-semantics.mjs', import.meta.url))],
+    ['custodial-callback-dex-continuity.mjs', fileURLToPath(new URL('./custodial-callback-dex-continuity.mjs', import.meta.url))],
+    ['custodial-callback-reference-admission.mjs', fileURLToPath(new URL('./custodial-callback-reference-admission.mjs', import.meta.url))],
+    ['produce-custodial-callback-reference.mjs', fileURLToPath(new URL('./produce-custodial-callback-reference.mjs', import.meta.url))],
+    ['provision-custodial-forward-build-inputs.mjs', fileURLToPath(new URL('./provision-custodial-forward-build-inputs.mjs', import.meta.url))],
+    ['custodial-callback-reference.json', fileURLToPath(new URL('../release-policies/custodial-callback-reference.json', import.meta.url))],
+    ['custodial-callback-reference-source.json', fileURLToPath(new URL('../release-policies/custodial-callback-reference-source.json', import.meta.url))],
+    ['custodial-callback-reference-workflow.json', fileURLToPath(new URL('../release-policies/custodial-callback-reference-workflow.json', import.meta.url))],
+    ['codemagic.yaml', join(repositoryRoot,'codemagic.yaml')],
     ['custodial-codemagic-admission.schema.json', admissionSchemaPath],
     ['custodial-codemagic.json', policyPath],
     ['custodial-codemagic-forward-recovery.json', forwardRecoveryPolicyPath],
     ['custodial-linux-admission-host-tools.json', hostToolPolicyPath],
     ['custodial-linux-admission-host-tools.mjs', fileURLToPath(new URL('./custodial-linux-admission-host-tools.mjs', import.meta.url))],
     ['run-custodial-codemagic-admission.mjs', bootstrapPath],
+    ['runtime-sanitation-policy.mjs', fileURLToPath(new URL('../../scripts/lib/runtime-sanitation-policy.mjs', import.meta.url))],
     ['verify-custodial-android-release.mjs', releaseVerifierPath],
-  ].sort(([left], [right]) => left.localeCompare(right));
+  ];
+  const referenceBoundaryBytes=cleaningSourceBytes(fileURLToPath(new URL('../release-policies/custodial-callback-reference-source.json',import.meta.url)));
+  if(sha256(referenceBoundaryBytes)!=='55e49c6d0003592daf05e405b5eaf4ce4921207dfdabc30bb686f89cc71f514a')throw new Error('Reference Source authority differs from the fixed guarded originals');
+  const referenceBoundary=parseDeterministicJson(referenceBoundaryBytes,'Frozen callback Source authority');
+  const frozenNames=new Set();
+  for(const row of referenceBoundary.source_files){
+    if(!['vault','local','firebase'].includes(row.family)||typeof row.name!=='string'||!/^([A-Za-z0-9_$]+\/)*[A-Za-z0-9_$]+\.java$/.test(row.name)||!SHA256.test(row.sha256)||!Number.isSafeInteger(row.bytes)||row.bytes<1)throw new Error('Frozen callback Source role shape differs');
+    const logical='mobile/callback-reference-source/'+row.family+'/'+row.name;
+    if(frozenNames.has(logical))throw new Error('Duplicate frozen callback Source');frozenNames.add(logical);
+    const path=join(repositoryRoot,logical),bytes=cleaningSourceBytes(path);
+    if(bytes.length!==row.bytes||sha256(bytes)!==row.sha256)throw new Error('Frozen callback Source bytes differ');
+    sources.push([logical,path]);
+  }
+  if(frozenNames.size!==202)throw new Error('Frozen callback Source census differs');
+  sources.sort(([left],[right])=>left.localeCompare(right));
   const digest = createHash('sha256');
   for (const [name, path] of sources) {
     const bytes = readFileSync(path);
@@ -447,9 +494,9 @@ function loadForwardRecoveryPolicy() {
     || !Number.isSafeInteger(policy.version_code)
     || policy.version_code < 1
     || Number(recoveryBranchMatch[1]) !== policy.version_code
-    || admissionSchema?.properties?.branch?.const !== policy.branch
-    || admissionSchema?.properties?.commit?.const !== policy.commit
-    || admissionSchema?.properties?.version_code?.const !== policy.version_code
+    || admissionSchema?.allOf?.[0]?.else?.properties?.branch?.const !== policy.branch
+    || admissionSchema?.allOf?.[0]?.else?.properties?.commit?.const !== policy.commit
+    || admissionSchema?.allOf?.[0]?.else?.properties?.version_code?.const !== policy.version_code
   ) throw new Error('Custodial Codemagic forward-recovery policy identity is malformed');
   return deepFreeze({ ...policy, sha256: sha256(bytes) });
 }
@@ -459,7 +506,14 @@ export const CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY = loadForwardRecoveryPo
 // Producing the next higher recovery package and admitting the last produced
 // package are two distinct phases. Keep both refs exact while the control
 // branch advances its post-build policy to the newly known commit and tree.
-export function normalizeCustodialAdmissionSourceRef(value) {
+export function normalizeCustodialAdmissionSourceRef(value, forwardBuild = null) {
+  if (forwardBuild !== null) {
+    const descriptor = assertReviewedForwardBuild(forwardBuild, { buildNumber: forwardBuild?.descriptor?.version_code });
+    if (value !== descriptor.source.ref && value !== descriptor.source.ref.slice('refs/heads/'.length)) {
+      throw new Error('Forward admission ref differs from the configure-owned reviewed source');
+    }
+    return descriptor.source.ref;
+  }
   const sourceRef = String(value || '').trim();
   if (sourceRef === 'main' || sourceRef === 'refs/heads/main') return 'refs/heads/main';
   if (
@@ -502,16 +556,54 @@ function inspectedArtifact(value, expected) {
   };
 }
 
+// Parser identity prevents a hand-written/copied sanitized metadata object
+// from substituting for an observed response. It is NOT authentication: the
+// normal command still obtains and compares both authenticated GET responses.
+const inspectedForwardBuildMetadata = new WeakSet();
+
+// Provider-documented workflow inputs are primitive references, not an owner
+// review or a substitute for the configure module's private reviewed brand.
+// Never retain arbitrary input values (which may contain unrelated secrets).
+export function inspectCodemagicForwardReviewInputs(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Codemagic build inputs must be an object');
+  }
+  const digestName = 'custodial_forward_review_pins_sha256';
+  const roleName = 'custodial_forward_review_role';
+  exactKeys(value,[digestName,roleName,'custodial_callback_reference_build_id'],'Current Custodial workflow inputs');
+  if(typeof value.custodial_callback_reference_build_id!=='string'||(value.custodial_callback_reference_build_id!==''&&!BUILD_ID.test(value.custodial_callback_reference_build_id)))throw new Error('Callback reference build input is malformed');
+  const hasDigest = Object.hasOwn(value, digestName);
+  const hasRole = Object.hasOwn(value, roleName);
+  if (!hasDigest && !hasRole) return null;
+  if (!hasDigest || !hasRole
+      || typeof value[digestName] !== 'string' || typeof value[roleName] !== 'string') {
+    throw new Error('Codemagic declared forward review inputs must be a pair of strings');
+  }
+  const digest = value[digestName];
+  const role = value[roleName];
+  if (Object.values(value).some(item => !['string', 'boolean', 'number'].includes(typeof item)
+      || (typeof item === 'number' && !Number.isFinite(item)))) {
+    throw new Error('Codemagic forward build inputs must contain only documented primitive values');
+  }
+  if (digest === '' && role === '') return null;
+  if (!SHA256.test(digest) || !['candidate', 'recovery'].includes(role)) {
+    throw new Error('Codemagic declared forward review digest or role is malformed');
+  }
+  return Object.freeze({ trusted_pins_sha256: digest, role });
+}
+
 export function inspectCodemagicV3BuildResponse(input, {
   expectedBuildId,
   expectedCommit,
   expectedBranch = CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.branch,
   expectedVersionCode = null,
   minimumVersionCode,
+  forwardBuild = null,
 } = {}) {
   const buildId = normalizedBuildId(expectedBuildId);
   const commit = normalizedCommit(expectedCommit);
-  const sourceRef = normalizeCustodialAdmissionSourceRef(expectedBranch);
+  const sourceRef = normalizeCustodialAdmissionSourceRef(expectedBranch, forwardBuild);
+  if (forwardBuild !== null) assertReviewedForwardBuild(forwardBuild, { buildNumber: expectedVersionCode, sourceCommit: commit, sourceRef });
   const branch = sourceRef.slice('refs/heads/'.length);
   const minimum = positiveInteger(minimumVersionCode, 'Minimum Custodial versionCode');
   const parsed = parseDeterministicJson(input, 'Codemagic v3 build response');
@@ -542,6 +634,13 @@ export function inspectCodemagicV3BuildResponse(input, {
     'tag',
     'workflow',
   ], 'Codemagic build');
+  const reviewInputs = inspectCodemagicForwardReviewInputs(data.build_inputs);
+  if (forwardBuild === null && reviewInputs !== null) {
+    throw new Error('Codemagic nonempty forward review inputs require the independently loaded reviewed context');
+  }
+  if (forwardBuild !== null && reviewInputs === null) {
+    throw new Error('Codemagic forward build is missing its declared review inputs');
+  }
   exactKeys(data.workflow, ['id', 'name', 'source'], 'Codemagic workflow');
   exactKeys(
     data.commit,
@@ -627,7 +726,13 @@ export function inspectCodemagicV3BuildResponse(input, {
     commit,
     finished_at: finishedAt,
     artifacts: Object.freeze([apk.sanitized, bundle.sanitized]),
+    ...(forwardBuild !== null ? { forward_review_inputs: reviewInputs } : {}),
+    callback_reference_build_id: data.build_inputs.custodial_callback_reference_build_id,
   });
+  if (forwardBuild !== null) {
+    inspectedForwardBuildMetadata.add(metadata);
+    assertCodemagicForwardReviewContext({ metadata, context: metadata.forward_review_inputs, forwardBuild });
+  }
   return Object.freeze({
     metadata,
     metadata_sha256: sha256(Buffer.from(JSON.stringify(metadata))),
@@ -798,6 +903,8 @@ function run(file, args, {
   environment: environmentOverrides = {},
   maxBuffer = 16 * 1024 * 1024,
   timeout = 180_000,
+  callbackReferenceToken = null,
+  callbackReferenceSourceRoot = null,
 } = {}) {
   const environment = {};
   for (const name of [
@@ -840,6 +947,12 @@ function run(file, args, {
     'MZ_SHELL_START',
     'PROJECT_BUILD_NUMBER',
   ]);
+  if(callbackReferenceToken!==null){
+    if(typeof callbackReferenceSourceRoot!=='string'||resolve(callbackReferenceSourceRoot)!==callbackReferenceSourceRoot||realpathSync(callbackReferenceSourceRoot)!==callbackReferenceSourceRoot||file!==process.execPath||args[0]!==join(callbackReferenceSourceRoot,'mobile/scripts/verify-custodial-android-release.mjs')||typeof callbackReferenceToken!=='string'||callbackReferenceToken.length<16||callbackReferenceToken.length>2048||/\s/.test(callbackReferenceToken))throw new Error('Reference token may reach only the exact independent artifact Source verifier');
+    const flag=args.indexOf('--callback-reference-build-id');
+    if(flag<0||args.indexOf('--callback-reference-build-id',flag+1)!==-1||!BUILD_ID.test(args[flag+1]??''))throw new Error('Reference token requires exactly one actual reference build identity');
+    environment.CODEMAGIC_API_TOKEN=callbackReferenceToken;
+  }else if(callbackReferenceSourceRoot!==null)throw new Error('Reference Source root requires its scoped token');
   for (const [name, value] of Object.entries(environmentOverrides)) {
     if (!allowedOverrides.has(name) || typeof value !== 'string' || !value) {
       throw new Error('Release evidence command environment override is malformed');
@@ -1088,7 +1201,62 @@ function parseRuntimeLedger(bytes, acceptance) {
   return ledger;
 }
 
-function assertBundleProvenanceRecords({ evidence, acceptance, metadata, commit, versionCode }) {
+// Positive cleaning scope is selected from the already authenticated exact
+// artifact Source checkout, never inferred from a producer receipt or flag.
+function cleaningSourceBytes(path) {
+  const before=lstatSync(path,{bigint:true});
+  if(!before.isFile()||before.isSymbolicLink()||realpathSync(path)!==path||before.size<1n||before.size>BigInt(ZIP_ENTRY_SIZE_LIMIT))throw new Error('Cleaning Source binding is not one bounded regular file');
+  const same=(a,b)=>['dev','ino','mode','uid','gid','nlink','size','mtimeNs','ctimeNs'].every(k=>a[k]===b[k]);
+  const fd=openSync(path,constants.O_RDONLY|constants.O_NOFOLLOW);
+  try{
+    if(!same(before,fstatSync(fd,{bigint:true})))throw new Error('Cleaning Source binding changed before open');
+    const bytes=Buffer.alloc(Number(before.size)+1);let n=0;
+    while(n<bytes.length){const got=readSync(fd,bytes,n,bytes.length-n,n);if(got===0)break;n+=got;}
+    if(n!==Number(before.size)||!same(before,fstatSync(fd,{bigint:true}))||!same(before,lstatSync(path,{bigint:true})))throw new Error('Cleaning Source binding changed during complete read');
+    return bytes.subarray(0,n);
+  }finally{closeSync(fd);}
+}
+function sameCleaningValue(a,b) {
+  const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;
+  return JSON.stringify(stable(a))===JSON.stringify(stable(b));
+}
+function cleaningAdmissionSource(artifactSourceRoot,acceptance) {
+  const root=resolve(artifactSourceRoot);if(root!==artifactSourceRoot||realpathSync(root)!==root)throw new Error('Cleaning artifact Source root must be canonical');
+  const mobile=join(root,'mobile'),ticket=readCustodialBuildScope(mobile);
+  const cleaning=isCleaningScope(ticket),present=Object.hasOwn(acceptance,'cleaning_first_scope');
+  if(cleaning!==present)throw new Error('Producer scope differs from exact artifact Source profile');
+  if(!cleaning)return null;
+  const a=acceptance.cleaning_first_scope;
+  if(a.profile!==ticket.profile||a.policy_sha256!==ticket.policy_sha256||a.module_sha256!==ticket.module_sha256||!SHA256.test(a.bridge_sha256))throw new Error('Cleaning producer scope differs from Source policy/module');
+  const loadBinding=family=>{const raw=cleaningSourceBytes(join(mobile,'plugins/custodial-native-vault/android/src/vendor',family,'SOURCE_BINDING.json'));return{value:parseDeterministicJson(raw,'Cleaning Source binding'),sha256:sha256(raw)};};
+  const local=loadBinding('local-notifications-8.2.1'),firebase=loadBinding('firebase-messaging-8.3.0');
+  if(local.value.schema!=='custodial.normal-local-notifications-writers-source.v1'||local.value.package!=='@capacitor/local-notifications'||local.value.version!=='8.2.1'||local.value.native_receipt_authority!==false||firebase.value.schema!=='custodial.firebase-new-producer-scope-source.v1'||firebase.value.package!=='@capacitor-firebase/messaging'||firebase.value.version!=='8.3.0')throw new Error('Cleaning vendor Source binding identity differs');
+  const hashes=(spec,pkg)=>{const value={};for(const[name,row]of Object.entries(spec.java_files)){if(!/^[A-Za-z][A-Za-z0-9]*\.java$/.test(name)||!SHA256.test(row.patched_sha256))throw new Error('Cleaning Source class grammar');value[name]=row.patched_sha256;}if(Object.hasOwn(value,'CustodialNewProducerScope.java'))throw new Error('Duplicate generated scope Source');value['CustodialNewProducerScope.java']=sha256(Buffer.from(compiledScopeSource(pkg,ticket)));return value;};
+  return{ticket,acceptance:a,localBinding:local.sha256,localHashes:hashes(local.value,'com.capacitorjs.plugins.localnotifications'),firebaseHashes:hashes(firebase.value,'io.capawesome.capacitorjs.plugins.firebase.messaging')};
+}
+function assertCleaningBundleRecords(scope,configuration,build,ledger) {
+  const s=configuration.custodial_new_producer_scope_source;
+  exactKeys(s,['profile','policy_sha256','firebase_source_sha256'],'Cleaning configured Source scope');
+  if(s.profile!==scope.ticket.profile||s.policy_sha256!==scope.ticket.policy_sha256||!sameCleaningValue(s.firebase_source_sha256,scope.firebaseHashes))throw new Error('Cleaning Firebase compiled Source counterpart differs');
+  const local=configuration.custodial_notification_writer_source;
+  exactKeys(local,['schema','version','generated_source_root','source_binding_sha256','class_files_sha256','native_receipt_authority'],'Cleaning configured local writer Source');
+  // This is reported producer-path metadata only, never a local read target.
+  if(local.schema!=='custodial.normal-local-notifications-writers-configured.v1'||local.version!=='8.2.1'||local.native_receipt_authority!==false||local.source_binding_sha256!==scope.localBinding||!sameCleaningValue(local.class_files_sha256,scope.localHashes)||typeof local.generated_source_root!=='string'||/[\0\r\n]/.test(local.generated_source_root)||!local.generated_source_root.startsWith('/')||resolve(local.generated_source_root)!==local.generated_source_root||!local.generated_source_root.endsWith('/mobile/android/.custodial-local-notifications-java'))throw new Error('Cleaning local writer compiled Source counterpart differs');
+  const wanted={schema:'custodial.compiled-new-producer-scope.v1',profile:scope.ticket.profile,policy_sha256:scope.ticket.policy_sha256,module_sha256:scope.ticket.module_sha256,bridge_sha256:scope.acceptance.bridge_sha256,new_admissions:false,existing_callbacks:'UNCHANGED_CONDITIONAL_GUARDS',install_admission:null};
+  if(!sameCleaningValue(build.cleaning_first_scope,wanted)||ledger.get('memphis-custodial-bridge.js')!==wanted.bridge_sha256)throw new Error('Cleaning build/runtime/producer Source scope differs');
+  for(const[field,schema,asset]of[['native_original_browser_bootstrap','custodial.native-original-browser-bootstrap-asset.v1','memphis-custodial-original-browser.js'],['native_recurring_application_bootstrap','custodial.native-recurring-application-asset.v1','memphis-custodial-recurring-application.js']]){
+    const value=build[field];exactKeys(value,['schema','asset','sha256'],'Cleaning retained bootstrap');
+    if(value.schema!==schema||value.asset!==asset||!SHA256.test(value.sha256)||ledger.get(asset)!==value.sha256)throw new Error('Cleaning retained bootstrap differs from complete runtime ledger');
+  }
+}
+
+function assertBundleProvenanceRecords({ evidence, acceptance, metadata, commit, versionCode, forwardBuild = null, artifactSourceRoot = repositoryRoot }) {
+  const cleaningScope=cleaningAdmissionSource(artifactSourceRoot,acceptance);
+  const referenceId=metadata.callback_reference_build_id;
+  if(cleaningScope){
+    const reported=acceptance.cleaning_first_scope?.callback_continuity?.source_reference_admission;
+    if(typeof referenceId!=='string'||!BUILD_ID.test(referenceId)||reported?.provider_build?.build_id!==referenceId)throw new Error('Producer callback reference differs from authoritative workflow input');
+  }else if(referenceId!=='')throw new Error('Full-system producer carries an unused callback reference');
   const tree = acceptance.source.tree;
   const configuration = evidenceJson(
     evidence,
@@ -1106,8 +1274,11 @@ function assertBundleProvenanceRecords({ evidence, acceptance, metadata, commit,
       'generated_capacitor_config_sha256', 'custodial_capacitor_plugin_count',
       'custodial_capacitor_plugin_graph_sha256', 'custodial_capacitor_config_policy_sha256',
       'custodial_capacitor_include_plugins_match_manifest',
+      ...(cleaningScope ? ['custodial_notification_writer_source','custodial_new_producer_scope_source'] : []),
+      ...(forwardBuild !== null ? ['forward_transition'] : []),
     ],
   );
+  if (forwardBuild !== null) assertExactForwardProvenance(configuration.forward_transition, forwardBuild, 'Android configuration');
   assertShaFields(configuration, [
     'signing_keystore_sha256', 'generated_build_gradle_sha256', 'version_overlay_sha256',
     'release_overlay_sha256', 'gradle_wrapper_properties_sha256', 'gradle_wrapper_jar_sha256',
@@ -1149,6 +1320,7 @@ function assertBundleProvenanceRecords({ evidence, acceptance, metadata, commit,
       'edition', 'release_id', 'source_commit', 'source_tree', 'source_commit_exact', 'build_id',
       'custodial_native_vault_source_sha256', 'native_build_number', 'messenger', 'node', 'npm',
       'dependency_install_policy', 'firebase_util_postinstall_sha256', 'codemagic_build_id',
+      ...(cleaningScope ? ['native_original_browser_bootstrap','native_recurring_application_bootstrap','cleaning_first_scope'] : []),
     ],
   );
   if (
@@ -1237,7 +1409,9 @@ function assertBundleProvenanceRecords({ evidence, acceptance, metadata, commit,
     || acceptance.android_manifest_security.extract_native_libs !== false
   ) throw new Error('Codemagic Custodial backup record differs from compiled security acceptance');
 
-  return parseRuntimeLedger(evidence.get('build/provenance/custodial-web.sha256'), acceptance);
+  const webLedger=parseRuntimeLedger(evidence.get('build/provenance/custodial-web.sha256'), acceptance);
+  if(cleaningScope)assertCleaningBundleRecords(cleaningScope,configuration,build,webLedger);
+  return webLedger;
 }
 
 export function verifyRuntimeLedgerDirectory(directory, ledger) {
@@ -1343,6 +1517,8 @@ export function verifyCodemagicProvenanceBundle({
   unzipPath,
   expectedUnzipSha256,
   commandEnvironment,
+  forwardBuild = null,
+  artifactSourceRoot = repositoryRoot,
 }) {
   const bundle = resolve(bundlePath);
   if (!existsSync(bundle) || !lstatSync(bundle).isFile() || lstatSync(bundle).isSymbolicLink()) {
@@ -1428,7 +1604,7 @@ export function verifyCodemagicProvenanceBundle({
   assertCustodialAcceptanceSchema(acceptance);
   const versionCode = positiveInteger(expectedVersionCode, 'Expected Custodial versionCode');
   const commit = normalizedCommit(expectedCommit);
-  const sourceRef = normalizeCustodialAdmissionSourceRef(expectedSourceRef);
+  const sourceRef = normalizeCustodialAdmissionSourceRef(expectedSourceRef, forwardBuild);
   const sourceBranch = sourceRef.slice('refs/heads/'.length);
   if (
     acceptance.artifact.file_name !== CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.apk_artifact_name
@@ -1445,6 +1621,15 @@ export function verifyCodemagicProvenanceBundle({
     || acceptance.tools.android_build_tools_platform !== 'macosx'
     || acceptance.verifier.toolchain_policy_sha256 !== custodialAndroidToolchainPolicyForPlatform('darwin').sha256
   ) throw new Error('Codemagic producer acceptance does not bind API and APK facts');
+  assertReviewedForwardAdmission({
+    acceptance,
+    forwardBuild,
+    metadata,
+    apkHash,
+    sourceCommit: commit,
+    sourceTree: acceptance.source.tree,
+    sourceRef,
+  });
   const sourceAttestation = evidenceJson(
     evidence,
     'build/provenance/custodial-source-attestation.json',
@@ -1468,6 +1653,8 @@ export function verifyCodemagicProvenanceBundle({
     metadata,
     commit,
     versionCode,
+    forwardBuild,
+    artifactSourceRoot,
   });
   return Object.freeze({
     acceptance,
@@ -1479,9 +1666,102 @@ export function verifyCodemagicProvenanceBundle({
   });
 }
 
+function assertExactForwardProvenance(transition, forwardBuild, label) {
+  const expectedTransition = forwardBuildProvenance(forwardBuild);
+  if (!transition || typeof transition !== 'object' || Array.isArray(transition)
+    || Object.keys(transition).sort().join(',') !== Object.keys(expectedTransition).sort().join(',')
+    || Object.entries(expectedTransition).some(([name, value]) => transition[name] !== value)) throw new Error(`${label} forward transition differs from configure-owned reviewed provenance`);
+}
+
+/** Documented API build_inputs corroborate the separately pinned owner context;
+ * it NEVER creates that private brand or replaces the owner-reviewed recipe.
+ * The mounted caller reads these bytes through fetchCodemagicV3BuildResponse.
+ * Only the observed digest/role reference is normalized into metadata. It is
+ * not a full provider review record. Missing metadata, acceptance JSON and
+ * agreeing arbitrary JSON cannot supply
+ * defaults or permit a post-legacy artifact. No schema/policy is advanced. */
+export function assertCodemagicForwardReviewContext({ metadata, context, forwardBuild }) {
+  assertReviewedForwardBuild(forwardBuild, {
+    buildNumber: metadata?.version_code,
+    sourceCommit: metadata?.commit,
+    sourceRef: metadata?.branch ? `refs/heads/${metadata.branch}` : undefined,
+  });
+  if (!metadata || !inspectedForwardBuildMetadata.has(metadata)
+      || !Object.hasOwn(metadata, 'forward_review_inputs')
+      || !context || metadata.forward_review_inputs !== context) {
+    throw new Error('Forward review input reference must come from the inspected normal Codemagic API metadata');
+  }
+  exactKeys(context, ['trusted_pins_sha256', 'role'], 'Codemagic forward review input reference');
+  if (typeof context.trusted_pins_sha256 !== 'string'
+      || typeof context.role !== 'string'
+      || context.trusted_pins_sha256 !== forwardBuild.trusted_pins_sha256
+      || context.role !== forwardBuild.role) {
+    throw new Error('Codemagic forward review inputs differ from independently pinned configure-owned review');
+  }
+}
+
+export function assertReviewedForwardAdmission({
+  acceptance,
+  forwardBuild = null,
+  metadata,
+  apkHash,
+  sourceCommit,
+  sourceTree,
+  sourceRef,
+}) {
+  const versionCode = acceptance?.application?.version_code;
+  if (!Number.isSafeInteger(versionCode) || versionCode < 1) throw new Error('Forward admission requires a positive safe versionCode');
+  const hasTransition = Object.hasOwn(acceptance, 'forward_transition');
+  // Absence preserves the normal legacy path, including its independently
+  // pinned recovery artifact. Version number alone is never review authority.
+  if (!hasTransition && forwardBuild === null) return null;
+  assertReviewedForwardBuild(forwardBuild, { buildNumber: versionCode, sourceCommit, sourceTree, sourceRef });
+  assertExactForwardProvenance(acceptance.forward_transition, forwardBuild, 'Producer');
+  const descriptor = forwardBuild.descriptor;
+  const pins = forwardBuild.pins;
+  // A reviewed prebuild recipe cannot know its future compiled hashes. Keep
+  // that original owner pin stable through configure/producer/consumer. Null
+  // means not yet compiled, never exemption from actual byte/signature/runtime
+  // verification: the owning bundle/normal verifier and matching consumer
+  // must supply those immutable facts before main can write final admission.
+  // If the owner additionally pinned a known artifact, it remains mandatory.
+  if (!SHA256.test(apkHash) || acceptance.artifact.apk_sha256 !== apkHash || (descriptor.artifact_sha256 !== null && descriptor.artifact_sha256 !== apkHash)) throw new Error('Forward reviewed artifact hash differs from the downloaded APK');
+  if (acceptance.source.commit !== descriptor.source.commit || acceptance.source.tree !== descriptor.source.tree || acceptance.source.ref !== descriptor.source.ref || acceptance.build.number !== descriptor.version_code) throw new Error('Forward producer source/build differs from configure-owned reviewed provenance');
+  if (descriptor.schema_sha256 !== acceptance.verifier.acceptance_schema_sha256 || descriptor.native_sha256 !== acceptance.embedded_provenance.custodial_native_vault_source_sha256 || !SHA256.test(acceptance.embedded_provenance.runtime_asset_manifest_sha256) || (descriptor.runtime_sha256 !== null && descriptor.runtime_sha256 !== acceptance.embedded_provenance.runtime_asset_manifest_sha256)) {
+    throw new Error('Forward reviewed compiled provenance differs from the producer acceptance');
+  }
+  if (acceptance.application.package_name !== pins.package_name || acceptance.signing.signer_sha256 !== pins.signer_certificate_sha256 || acceptance.signing.signer_public_key_sha256 !== pins.signer_public_key_sha256) {
+    throw new Error('Forward reviewed package or signer differs from the producer acceptance');
+  }
+  if (!metadata || metadata.build_id !== acceptance.build.run_id || metadata.version_code !== versionCode || metadata.commit !== descriptor.source.commit || metadata.branch !== descriptor.source.ref.slice('refs/heads/'.length) || metadata.workflow?.id !== acceptance.build.workflow) throw new Error('Forward reviewed context is not bound to the normal Codemagic build metadata');
+  assertCodemagicForwardReviewContext({ metadata, context: metadata.forward_review_inputs, forwardBuild });
+  return Object.freeze({ role: forwardBuild.role, target_id: forwardBuild.input.target_id, candidate_version_code: pins.candidate.version_code, recovery_version_code: pins.recovery.version_code });
+}
+
+// Acquisition-event hashes contain expiring provider URLs. Preserve both full
+// original records; omit ONLY these two typed event hashes from cross-run
+// equality. Every stable Source/graph/tool/dependency/artifact value stays exact.
+function cleaningScopeStableAcrossAcquisitions(value) {
+  const continuity=value?.callback_continuity;
+  const reference=continuity?.source_reference_admission;
+  if(!reference||typeof reference!=='object'||Array.isArray(reference)
+      ||typeof reference.metadata_before_sha256!=='string'||!SHA256.test(reference.metadata_before_sha256)
+      ||typeof reference.metadata_after_sha256!=='string'||!SHA256.test(reference.metadata_after_sha256))throw new Error('Actual callback reference acquisition event hashes are malformed');
+  const {metadata_before_sha256,metadata_after_sha256,...stableReference}=reference;
+  return {...value,callback_continuity:{...continuity,source_reference_admission:stableReference}};
+}
+
 export function assertProducerConsumerAcceptanceMatch(producer, consumer) {
   assertCustodialAcceptanceSchema(producer);
   assertCustodialAcceptanceSchema(consumer);
+  const producerCleaning=Object.hasOwn(producer,'cleaning_first_scope'),consumerCleaning=Object.hasOwn(consumer,'cleaning_first_scope');
+  if(producerCleaning!==consumerCleaning||(producerCleaning&&!sameCleaningValue(cleaningScopeStableAcrossAcquisitions(producer.cleaning_first_scope),cleaningScopeStableAcrossAcquisitions(consumer.cleaning_first_scope))))throw new Error('Codemagic producer and Linux consumer acceptance differ: cleaning_first_scope');
+  const producerForward = Object.hasOwn(producer, 'forward_transition');
+  const consumerForward = Object.hasOwn(consumer, 'forward_transition');
+  if (producerForward !== consumerForward || (producerForward && (
+    Object.keys(producer.forward_transition).sort().join(',') !== Object.keys(consumer.forward_transition).sort().join(',')
+    || Object.entries(producer.forward_transition).some(([name, value]) => consumer.forward_transition[name] !== value)
+  ))) throw new Error('Codemagic producer and Linux consumer acceptance differ: forward_transition');
   for (const field of [
     'artifact',
     'application',
@@ -1665,8 +1945,8 @@ function exactRemoteBranchCommit(gitPath, commandEnvironment, branch) {
   return normalizedCommit(match[1]);
 }
 
-function assertExactForwardRecoverySource(gitPath, commandEnvironment, artifactSourceRoot) {
-  const policy = CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY;
+function assertExactForwardRecoverySource(gitPath, commandEnvironment, artifactSourceRoot, reviewedSelection = null) {
+  const policy = reviewedSelection === null ? CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY : { ...reviewedSelection, branch: reviewedSelection.ref.slice('refs/heads/'.length), repository: CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository };
   const privateRoot = dirname(repositoryRoot);
   const expectedRoot = join(privateRoot, 'artifact-source');
   if (artifactSourceRoot !== expectedRoot || !existsSync(artifactSourceRoot)) {
@@ -1715,13 +1995,15 @@ function assertExactForwardRecoverySource(gitPath, commandEnvironment, artifactS
     || live !== policy.commit
     || status
   ) throw new Error('Custodial recovery source differs from its exact branch/commit/tree policy');
+  if (reviewedSelection !== null && gitOutputAt(gitPath, commandEnvironment, artifactSourceRoot, ['symbolic-ref', 'HEAD']) !== policy.ref) throw new Error('Reviewed forward artifact checkout must have the exact named source ref');
   return Object.freeze({ root: artifactSourceRoot, commit, tree, branch: policy.branch, ref: policy.ref });
 }
 
-function prepareExactForwardRecoverySource(verifiedHost, commandEnvironment) {
-  const policy = CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY;
+function prepareExactForwardRecoverySource(verifiedHost, commandEnvironment, reviewedSelection = null) {
+  const policy = reviewedSelection === null ? CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY : { ...reviewedSelection, branch: reviewedSelection.ref.slice('refs/heads/'.length), repository: CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository };
   const artifactSourceRoot = join(dirname(repositoryRoot), 'artifact-source');
   if (existsSync(artifactSourceRoot)) throw new Error('Custodial recovery source path already exists');
+  if (reviewedSelection !== null) run(verifiedHost.paths.git, ['check-ref-format', policy.ref], { baseEnvironment: commandEnvironment, cwd: '/' });
   run(verifiedHost.paths.git, [
     '-C', repositoryRoot,
     'fetch', '--no-tags', '--depth=1', 'origin',
@@ -1736,7 +2018,10 @@ function prepareExactForwardRecoverySource(verifiedHost, commandEnvironment) {
   }
   run(verifiedHost.paths.git, [
     '-C', repositoryRoot,
-    'worktree', 'add', '--detach', '--quiet', artifactSourceRoot, policy.commit,
+    'worktree', 'add',
+    ...(reviewedSelection === null ? ['--detach', '--quiet', artifactSourceRoot, policy.commit]
+      : policy.branch === 'main' ? ['--quiet', artifactSourceRoot, 'main']
+        : ['--quiet', '-b', policy.branch, artifactSourceRoot, policy.commit]),
   ], {
     baseEnvironment: commandEnvironment,
     cwd: '/',
@@ -1747,6 +2032,7 @@ function prepareExactForwardRecoverySource(verifiedHost, commandEnvironment) {
     verifiedHost.paths.git,
     commandEnvironment,
     artifactSourceRoot,
+    reviewedSelection,
   );
   run(verifiedHost.paths.node, [
     verifiedHost.paths.npm_cli,
@@ -1761,6 +2047,7 @@ function prepareExactForwardRecoverySource(verifiedHost, commandEnvironment) {
     verifiedHost.paths.git,
     commandEnvironment,
     artifactSourceRoot,
+    reviewedSelection,
   );
   return source;
 }
@@ -1841,15 +2128,19 @@ function createPrivateStagingDirectory(buildId) {
   return { finalDirectory, stagingDirectory };
 }
 
-function parseCli(args) {
-  if (args.length !== 2 || args[0] !== '--build-id') {
-    throw new Error('Usage: admit-custodial-codemagic-build.mjs --build-id <Codemagic build ID>');
+export function parseCli(args) {
+  if (args.length < 2 || args[0] !== '--build-id') {
+    throw new Error('Usage: admit-custodial-codemagic-build.mjs --build-id <Codemagic build ID> [forward flags]');
   }
-  return normalizedBuildId(args[1]);
+  return {
+    buildId: normalizedBuildId(args[1]),
+    forwardFlags: parseForwardBuildArguments(args.slice(2)),
+  };
 }
 
 async function main() {
-  const buildId = parseCli(process.argv.slice(2));
+  const { buildId, forwardFlags } = parseCli(process.argv.slice(2));
+  const forwardSelection = await readReviewedForwardBuildSourceSelection(forwardFlags);
   const verifiedHost = await verifyCustodialLinuxAdmissionHostTools();
   if (JSON.stringify(verifiedHost.proof) !== JSON.stringify(CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF)) {
     throw new Error('Custodial admission verified host proof differs from the reviewed policy');
@@ -1861,7 +2152,9 @@ async function main() {
     commandEnvironment,
     ['rev-parse', 'HEAD^{tree}'],
   ));
-  const artifactSource = prepareExactForwardRecoverySource(verifiedHost, commandEnvironment);
+  const artifactSource = prepareExactForwardRecoverySource(verifiedHost, commandEnvironment, forwardSelection);
+  const expectedVersionCode = forwardSelection?.version_code ?? CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code;
+  const forwardBuild = await loadReviewedForwardBuild(forwardFlags, { buildNumber: expectedVersionCode, repositoryDirectory: artifactSource.root });
   const sourceCommit = artifactSource.commit;
   const minimumVersionCode = CUSTODIAL_ANDROID_RELEASE_POLICY.minimum_next_version_code;
   const token = process.env.CODEMAGIC_API_TOKEN;
@@ -1870,9 +2163,16 @@ async function main() {
     expectedBuildId: buildId,
     expectedCommit: sourceCommit,
     expectedBranch: artifactSource.branch,
-    expectedVersionCode: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code,
+    expectedVersionCode,
     minimumVersionCode,
+    forwardBuild,
   });
+  const sourceScope=readCustodialBuildScope(join(artifactSource.root,'mobile'));
+  const cleaningSource=isCleaningScope(sourceScope);
+  const callbackReferenceBuildId=first.metadata.callback_reference_build_id;
+  if(cleaningSource){
+    if(forwardBuild===null||!BUILD_ID.test(callbackReferenceBuildId))throw new Error('Cleaning Source requires the authoritative separately finished callback reference build input');
+  }else if(callbackReferenceBuildId!=='')throw new Error('Full-system Source refuses an unused callback reference override');
   const versionCode = first.metadata.version_code;
   const apkMetadata = first.metadata.artifacts.find((artifact) => artifact.type === 'apk');
   const bundleMetadata = first.metadata.artifacts.find((artifact) => artifact.type === 'bundle');
@@ -1906,9 +2206,11 @@ async function main() {
     expectedCommit: sourceCommit,
     expectedSourceRef: artifactSource.ref,
     expectedVersionCode: versionCode,
+    artifactSourceRoot: artifactSource.root,
     unzipPath: verifiedHost.paths.unzip,
     expectedUnzipSha256: verifiedHost.proof.unzip.sha256,
     commandEnvironment,
+    forwardBuild,
   });
   assertExactPrivateFile(bundlePath, bundleBytes, 'Downloaded Codemagic provenance bundle');
   const artifactBuildDirectory = join(artifactSource.root, 'build');
@@ -1942,17 +2244,20 @@ async function main() {
     '--apk', apkPath,
     '--build-number', String(versionCode),
     '--source-commit', sourceCommit,
-    '--source-ref', artifactSource.branch,
+    '--source-ref', forwardBuild === null ? artifactSource.branch : artifactSource.ref,
     '--build-run', buildId,
     '--build-workflow', CUSTODIAL_CODEMAGIC_WORKFLOW,
     '--build-tools-directory', buildToolsDirectory,
     '--runtime-directory', runtimeDirectory,
     '--output', consumerAcceptancePath,
+    ...(cleaningSource ? ['--callback-reference-build-id',callbackReferenceBuildId] : []),
+    ...(forwardFlags === null ? [] : Object.entries(forwardFlags).flat()),
   ], {
     baseEnvironment: commandEnvironment,
     cwd: artifactSource.root,
     maxBuffer: 32 * 1024 * 1024,
     timeout: 10 * 60 * 1_000,
+    ...(cleaningSource ? {callbackReferenceToken:token,callbackReferenceSourceRoot:artifactSource.root} : {}),
   });
   const consumerBytes = readFileSync(consumerAcceptancePath);
   const consumerAcceptance = parseDeterministicJson(consumerBytes, 'Linux consumer acceptance');
@@ -1973,8 +2278,9 @@ async function main() {
     expectedBuildId: buildId,
     expectedCommit: sourceCommit,
     expectedBranch: artifactSource.branch,
-    expectedVersionCode: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code,
+    expectedVersionCode,
     minimumVersionCode,
+    forwardBuild,
   });
   if (JSON.stringify(first.metadata) !== JSON.stringify(second.metadata)) {
     throw new Error('Codemagic build metadata changed during artifact admission');
@@ -1986,9 +2292,12 @@ async function main() {
     verifiedHost.paths.git,
     commandEnvironment,
     artifactSource.root,
+    forwardSelection,
   ).commit !== sourceCommit) {
     throw new Error('Exact recovery source changed during Codemagic artifact admission');
   }
+  const finalForwardBuild = await loadReviewedForwardBuild(forwardFlags, { buildNumber: versionCode, repositoryDirectory: artifactSource.root });
+  if (forwardBuild !== null && JSON.stringify(forwardBuildProvenance(finalForwardBuild)) !== JSON.stringify(forwardBuildProvenance(forwardBuild))) throw new Error('Reviewed forward context changed during normal admission');
   const admission = {
     schema_id: 'urn:memphis-zoo:custodial-codemagic-admission:v1',
     schema_version: 1,
@@ -2006,7 +2315,8 @@ async function main() {
       commit: controlSourceCommit,
       tree: controlSourceTree,
     },
-    artifact_source_policy_sha256: CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.sha256,
+    artifact_source_policy_sha256: forwardBuild?.trusted_pins_sha256 ?? CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.sha256,
+    ...(forwardBuild === null ? {} : { artifact_source_tree: artifactSource.tree, forward_transition: forwardBuildProvenance(forwardBuild) }),
     platform_index: first.metadata.platform_index,
     finished_at: first.metadata.finished_at,
     version_code: versionCode,
@@ -2031,7 +2341,7 @@ async function main() {
     verifier_source_sha256: CUSTODIAL_CODEMAGIC_ADMISSION_SOURCE_SHA256,
     local_host: verifiedHost.proof,
   };
-  assertCustodialCodemagicAdmissionSchema(admission);
+  assertCustodialCodemagicAdmissionSchema(admission, { forwardBuild: finalForwardBuild });
   const admissionPath = join(admissionDirectory, 'custodial-codemagic-admission.json');
   writePrivateFile(
     admissionPath,
@@ -2040,7 +2350,7 @@ async function main() {
   assertCustodialCodemagicAdmissionSchema(parseDeterministicJson(
     readFileSync(admissionPath),
     'Written Custodial Codemagic admission evidence',
-  ));
+  ), { forwardBuild: finalForwardBuild });
   const finalFiles = [apkMetadata.name, bundleMetadata.name, basename(consumerAcceptancePath), basename(admissionPath)].sort();
   if (JSON.stringify(readdirSync(admissionDirectory).sort()) !== JSON.stringify(finalFiles)) {
     throw new Error('Custodial Codemagic final admission file graph differs from policy');

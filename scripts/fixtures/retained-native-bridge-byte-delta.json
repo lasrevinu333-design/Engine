@@ -1,0 +1,220 @@
+{
+  "schema": "custodial.retained-native-bridge-delta.v1",
+  "path": "mobile/src/custodial/bridge.js",
+  "prior_commit": "3db165ff4b08b7af4109d8787a0f6e96374f33c0",
+  "current_commit": "23dfef13fd2632419a3e1b944fccbff588a5a2ce",
+  "prior_sha256": "f19bef25304276cb3872b1340cd96f6188d119bb89f8171225896f8d23893175",
+  "current_sha256": "9fd4404231a2b45464cd6b21ae0cd9bda05e0b2a07c0853b3eac9e19920fb393",
+  "hunks": [
+    {
+      "old_start": 1867,
+      "old_count": 1,
+      "new_start": 1867,
+      "new_count": 1,
+      "before": [
+        "        ['events.html', 'employee-events.html'],"
+      ],
+      "after": [
+        "        ['employee-events.html', 'events.html'],"
+      ]
+    },
+    {
+      "old_start": 1874,
+      "old_count": 1,
+      "new_start": 1874,
+      "new_count": 1,
+      "before": [
+        "      const allowed = new Set(['employee-events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);"
+      ],
+      "after": [
+        "      const allowed = new Set(['events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);"
+      ]
+    },
+    {
+      "old_start": 2296,
+      "old_count": 0,
+      "new_start": 2297,
+      "new_count": 4,
+      "before": [],
+      "after": [
+        "  let activeGpsGeneration = 0;",
+        "  let activeGpsSuspended = false;",
+        "  let activeGpsInstalling = false;",
+        "  let activeGpsInstalled = false;"
+      ]
+    },
+    {
+      "old_start": 2298,
+      "old_count": 0,
+      "new_start": 2303,
+      "new_count": 1,
+      "before": [],
+      "after": [
+        "  const removeGpsListener = handle => { try { void Promise.resolve(handle?.remove?.()).catch(() => {}); } catch {} };"
+      ]
+    },
+    {
+      "old_start": 2303,
+      "old_count": 3,
+      "new_start": 2308,
+      "new_count": 1,
+      "before": [
+        "      storage: localStorage,",
+        "      deviceId,",
+        "      geolocation: navigator.geolocation,"
+      ],
+      "after": [
+        "      storage: localStorage, deviceId, geolocation: navigator.geolocation,"
+      ]
+    },
+    {
+      "old_start": 2313,
+      "old_count": 1,
+      "new_start": 2316,
+      "new_count": 1,
+      "before": [
+        "      onStatus: (detail) => window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail })),"
+      ],
+      "after": [
+        "      onStatus: detail => { if (!activeGpsSuspended) window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail })); },"
+      ]
+    },
+    {
+      "old_start": 2318,
+      "old_count": 0,
+      "new_start": 2322,
+      "new_count": 1,
+      "before": [],
+      "after": [
+        "    const generation = activeGpsGeneration;"
+      ]
+    },
+    {
+      "old_start": 2320,
+      "old_count": 3,
+      "new_start": 2324,
+      "new_count": 4,
+      "before": [
+        "    const lifecycle = ensureActiveGpsLifecycle();",
+        "    if (await window.MemphisScanSync?.ready !== true) return Object.freeze({ state: 'queue_unavailable' });",
+        "    return lifecycle.reconcile(reason);"
+      ],
+      "after": [
+        "    if (activeGpsSuspended || generation !== activeGpsGeneration) return Object.freeze({state:'disposed'});",
+        "    if (await window.MemphisScanSync?.ready !== true) return Object.freeze({state:'queue_unavailable'});",
+        "    if (activeGpsSuspended || generation !== activeGpsGeneration) return Object.freeze({state:'disposed'});",
+        "    return ensureActiveGpsLifecycle().reconcile(reason);"
+      ]
+    },
+    {
+      "old_start": 2325,
+      "old_count": 0,
+      "new_start": 2331,
+      "new_count": 4,
+      "before": [],
+      "after": [
+        "    if (activeGpsSuspended || activeGpsInstalling || activeGpsInstalled) return;",
+        "    activeGpsInstalling = true;",
+        "    const generation = ++activeGpsGeneration;",
+        "    const current = () => !activeGpsSuspended && generation === activeGpsGeneration;"
+      ]
+    },
+    {
+      "old_start": 2327,
+      "old_count": 0,
+      "new_start": 2337,
+      "new_count": 1,
+      "before": [],
+      "after": [
+        "      if (!current()) return;"
+      ]
+    },
+    {
+      "old_start": 2329,
+      "old_count": 0,
+      "new_start": 2340,
+      "new_count": 1,
+      "before": [],
+      "after": [
+        "      if (!current()) return;"
+      ]
+    },
+    {
+      "old_start": 2333,
+      "old_count": 3,
+      "new_start": 2344,
+      "new_count": 5,
+      "before": [
+        "      activeGpsResumeListener = await App.addListener('resume', () => { void reconcileActiveGps('app_resume'); });",
+        "      activeGpsNetworkListener = await Network.addListener('networkStatusChange', (status) => {",
+        "        if (status.connected) void reconcileActiveGps('network_reconnected');"
+      ],
+      "after": [
+        "      const resume = await App.addListener('resume', () => { if(current())void reconcileActiveGps('app_resume'); });",
+        "      if (!current()) { removeGpsListener(resume); return; }",
+        "      activeGpsResumeListener = resume;",
+        "      const network = await Network.addListener('networkStatusChange', status => {",
+        "        if(current() && status.connected) void reconcileActiveGps('network_reconnected');"
+      ]
+    },
+    {
+      "old_start": 2336,
+      "old_count": 0,
+      "new_start": 2350,
+      "new_count": 3,
+      "before": [],
+      "after": [
+        "      if (!current()) { removeGpsListener(network); return; }",
+        "      activeGpsNetworkListener = network;",
+        "      activeGpsInstalled = true;"
+      ]
+    },
+    {
+      "old_start": 2338,
+      "old_count": 2,
+      "new_start": 2354,
+      "new_count": 2,
+      "before": [
+        "      window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail: { state: 'gps_unavailable' } }));",
+        "    }"
+      ],
+      "after": [
+        "      if(current())window.dispatchEvent(new CustomEvent('memphis:active-gps-state', {detail:{state:'gps_unavailable'}}));",
+        "    } finally { if(generation === activeGpsGeneration) activeGpsInstalling = false; }"
+      ]
+    },
+    {
+      "old_start": 2343,
+      "old_count": 1,
+      "new_start": 2359,
+      "new_count": 3,
+      "before": [
+        "    activeGpsLifecycle?.dispose();"
+      ],
+      "after": [
+        "    activeGpsSuspended = true;activeGpsGeneration++;",
+        "    activeGpsInstalling = false;activeGpsInstalled = false;",
+        "    activeGpsLifecycle?.dispose();activeGpsLifecycle = null;"
+      ]
+    },
+    {
+      "old_start": 2346,
+      "old_count": 3,
+      "new_start": 2364,
+      "new_count": 6,
+      "before": [
+        "    void activeGpsResumeListener?.remove?.();",
+        "    void activeGpsNetworkListener?.remove?.();",
+        "  }, { once: true });"
+      ],
+      "after": [
+        "    removeGpsListener(activeGpsResumeListener);activeGpsResumeListener = null;",
+        "    removeGpsListener(activeGpsNetworkListener);activeGpsNetworkListener = null;",
+        "  });",
+        "  window.addEventListener('pageshow', event => {",
+        "    if(event.persisted && activeGpsSuspended) { activeGpsSuspended = false;void installActiveGpsLifecycle(); }",
+        "  });"
+      ]
+    }
+  ]
+}

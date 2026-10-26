@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notifications, notificationsHtml, moxie, feedback, phoneAssignments, phoneAssignmentsJs, managerHtml, custodialHtml] = await Promise.all([
+const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notifications, notificationsHtml, feedback, phoneAssignments, phoneAssignmentsJs, managerHtml, custodialHtml] = await Promise.all([
   readFile('events-admin.html', 'utf8'),
   readFile('messages.html', 'utf8'),
   readFile('chatscope-messenger.css', 'utf8'),
@@ -10,7 +10,6 @@ const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notificati
   readFile('mobile/src/shared/native-layout.js', 'utf8'),
   readFile('mobile/src/manager/notifications.js', 'utf8'),
   readFile('mobile/src/manager/notifications.html', 'utf8'),
-  readFile('mobile/src/manager/moxie.html', 'utf8'),
   readFile('system-feedback.html', 'utf8'),
   readFile('phone-assignments.html', 'utf8'),
   readFile('phone-assignments.js', 'utf8'),
@@ -46,8 +45,6 @@ assert.match(notifications, /state\.receive === 'granted' && registered/,
   'OS permission alone must not be presented as a registered manager push connection');
 assert.doesNotMatch(notifications, /attention\.last_error|delivery_attention\.last_error/,
   'manager UI must use plain delivery guidance instead of raw provider errors');
-assert.match(moxie, /New Chat/);
-assert.match(moxie, /Clear Chat/);
 assert.doesNotMatch(feedback, /context-pill|Resolving context/);
 assert.match(phoneAssignments, /Phone Assignments/);
 assert.match(phoneAssignments, /schedule-weekly\.html/);

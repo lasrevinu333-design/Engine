@@ -2,6 +2,7 @@ package org.memphiszoo.custodial.vault;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +24,9 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
     private static final String NATIVE_ORIGIN = "https://localhost";
     private static final String EDITION = "custodial";
     private static final int MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+    // Resource cancellation ceiling strictly below the protocol's 45 seconds.
+    // System.nanoTime here is NOT a qualified provider clock or ACK authority.
+    private static final long MAX_EXCHANGE_NANOS = 44_999_000_000L;
     private static final Set<String> SAFE_RESPONSE_HEADERS = VaultCollections.setOf(
         "cache-control",
         "content-language",
@@ -262,7 +266,21 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
             clock.nowMillis()
         ));
         HttpResult response = execute(request.path, request.method, nativeHeaders, request.body, credential, deviceId);
+        return authorizedResponse(request, response, credential);
+    }
+
+    static AuthorizedResponse authorizedResponse(AuthorizedRequest request, HttpResult response, char[] credential) throws VaultFailure {
+        if (request == null || response == null) throw new VaultFailure("custodial_native_invalid_response");
         Map<String, String> headers = safeResponseHeaders(response.headers);
+        boolean strictAuthorityRoute = "GET".equals(request.method)
+            && (NativeActivePrincipalStatus.PATH.equals(request.path) || NativeSeparationContext.PATH.equals(request.path));
+        if (strictAuthorityRoute && response.status >= 200 && response.status < 300) {
+            Object parsed = ProviderWireJson.parse(response.body, MAX_RESPONSE_BYTES);
+            if (SecretScrubber.containsSecret(parsed, credential)) {
+                throw new VaultFailure("custodial_native_secret_response_refused");
+            }
+            return new AuthorizedResponse(response.status, headers, response.body.clone());
+        }
         byte[] safeBody = scrubResponseBody(response.body, headers.getOrDefault("content-type", ""), credential);
         return new AuthorizedResponse(response.status, headers, safeBody);
     }
@@ -377,13 +395,24 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
         char[] credential,
         String deviceId
     ) throws VaultFailure {
+        return execute(path, method, suppliedHeaders, body, credential, deviceId, MAX_EXCHANGE_NANOS);
+    }
+
+    // Private finite-budget seam for owning connection tests; never caller input.
+    private static HttpResult execute(String path, String method, Map<String, String> suppliedHeaders,
+        byte[] body, char[] credential, String deviceId, long budgetNanos) throws VaultFailure {
+        final long started = System.nanoTime();
         HttpURLConnection connection = null;
+        ExchangeLifetime lifetime = null;
+        byte[] received = null;
+        HttpResult result;
         String credentialHeader = credential == null ? null : new String(credential);
         try {
             connection = (HttpURLConnection) new URL(API_BASE + path).openConnection();
+            lifetime = new ExchangeLifetime(connection, started, budgetNanos);
             connection.setInstanceFollowRedirects(false);
-            connection.setConnectTimeout(15_000);
-            connection.setReadTimeout(35_000);
+            connection.setConnectTimeout(lifetime.timeoutMillis(15_000));
+            connection.setReadTimeout(lifetime.timeoutMillis(35_000));
             connection.setUseCaches(false);
             connection.setRequestMethod(method);
             for (Map.Entry<String, String> entry : suppliedHeaders.entrySet()) {
@@ -398,42 +427,128 @@ final class HttpsEnrollmentTransport implements EnrollmentTransport {
                 connection.setRequestProperty("X-Device-Credential", credentialHeader);
                 connection.setRequestProperty("X-Memphis-Device-Credential", credentialHeader);
             }
+            lifetime.check();
             if (body.length > 0) {
                 connection.setDoOutput(true);
-                connection.getOutputStream().write(body);
-                connection.getOutputStream().close();
+                // Keep IO in the original caller. Never return a timed-out
+                // future while a writer still owns its request/credential.
+                try (OutputStream output = connection.getOutputStream()) {
+                    lifetime.check();
+                    output.write(body);
+                    lifetime.check();
+                }
             }
+            lifetime.check();
+            connection.setReadTimeout(lifetime.timeoutMillis(35_000));
             int status = connection.getResponseCode();
+            lifetime.check();
             InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
-            byte[] responseBody = readBounded(stream, MAX_RESPONSE_BYTES);
-            return new HttpResult(status, connection.getHeaderFields(), responseBody);
+            received = readBounded(stream, MAX_RESPONSE_BYTES, connection, lifetime);
+            lifetime.check();
+            Map<String, List<String>> headers = connection.getHeaderFields();
+            lifetime.check();
+            result = new HttpResult(status, headers, received);
         } catch (VaultFailure error) {
+            if (received != null) Arrays.fill(received, (byte) 0);
             throw error;
         } catch (Exception error) {
+            if (received != null) Arrays.fill(received, (byte) 0);
             throw new VaultFailure("custodial_native_network_unavailable", error);
         } finally {
             credentialHeader = null;
-            if (connection != null) connection.disconnect();
+            // Cancel a not-yet-fired watchdog, or join an already executing
+            // disconnect. No caller/restore/key lease is released early even
+            // if the platform cannot settle its disconnect/IO promptly.
+            if (lifetime != null) lifetime.finish();
+            else if (connection != null) connection.disconnect();
+        }
+        try {
+            lifetime.check(); // Cleanup/interrupt/late EOF cannot mint late 2xx.
+            return result;
+        } catch (VaultFailure error) {
+            Arrays.fill(result.body, (byte) 0);
+            throw error;
         }
     }
 
-    private static byte[] readBounded(InputStream stream, int maximum) throws VaultFailure {
+    private static byte[] readBounded(InputStream stream, int maximum,
+        HttpURLConnection connection, ExchangeLifetime lifetime) throws VaultFailure {
+        lifetime.check();
         if (stream == null) return new byte[0];
+        byte[] buffer = new byte[16_384];
         try (InputStream input = stream; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[16_384];
             int total = 0;
             int count;
-            while ((count = input.read(buffer)) != -1) {
+            while (true) {
+                lifetime.check();
+                connection.setReadTimeout(lifetime.timeoutMillis(35_000));
+                count = input.read(buffer);
+                lifetime.check();
+                if (count == -1) break;
                 total += count;
                 if (total > maximum) throw new VaultFailure("custodial_native_response_too_large");
                 output.write(buffer, 0, count);
             }
-            Arrays.fill(buffer, (byte) 0);
             return output.toByteArray();
         } catch (VaultFailure error) {
             throw error;
         } catch (Exception error) {
             throw new VaultFailure("custodial_native_network_unavailable", error);
+        } finally {
+            Arrays.fill(buffer, (byte) 0);
+        }
+    }
+
+    /** One original connection only. Disconnect is a best-effort platform
+     * signal, not proof that blocked write/read/close has settled. The IO stays
+     * synchronous, and finish waits for this watchdog before the caller exits. */
+    private static final class ExchangeLifetime {
+        private final HttpURLConnection connection;
+        private final long started, budget;
+        private final Thread watchdog;
+        private boolean finished, expired;
+        ExchangeLifetime(HttpURLConnection connection, long started, long budget) {
+            if (connection == null || budget <= 0 || budget > MAX_EXCHANGE_NANOS)
+                throw new IllegalArgumentException("native_http_lifetime_required");
+            this.connection = connection; this.started = started; this.budget = budget;
+            watchdog = new Thread(this::watch, "custodial-native-http-lifetime");
+            watchdog.start();
+        }
+        private long remaining() { return budget - (System.nanoTime() - started); }
+        synchronized void check() throws VaultFailure {
+            if (expired || remaining() <= 0 || Thread.currentThread().isInterrupted())
+                throw new VaultFailure("custodial_native_network_unavailable");
+        }
+        synchronized int timeoutMillis(int maximum) throws VaultFailure {
+            check();
+            long nanos = remaining();
+            if (nanos <= 0) throw new VaultFailure("custodial_native_network_unavailable");
+            return (int) Math.min(maximum, (nanos + 999_999L) / 1_000_000L);
+        }
+        private void watch() {
+            synchronized (this) {
+                while (!finished) {
+                    long nanos = remaining();
+                    if (nanos <= 0) { expired = true; break; }
+                    try { wait(nanos / 1_000_000L, (int) (nanos % 1_000_000L)); }
+                    catch (InterruptedException interrupted) { expired = true; break; }
+                }
+                if (finished) return;
+            }
+            try { connection.disconnect(); } catch (Exception ignored) {
+                // Expiry stays UNKNOWN even if the platform cancellation failed.
+            }
+        }
+        void finish() throws VaultFailure {
+            synchronized (this) { finished = true; notifyAll(); }
+            boolean interrupted = false;
+            for (;;) {
+                try { watchdog.join(); break; }
+                catch (InterruptedException pending) { interrupted = true; }
+            }
+            if (interrupted) Thread.currentThread().interrupt();
+            try { connection.disconnect(); }
+            catch (Exception failure) { throw new VaultFailure("custodial_native_network_unavailable", failure); }
         }
     }
 

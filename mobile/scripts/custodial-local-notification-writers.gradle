@@ -1,0 +1,30 @@
+// Normal Custodial application configuration only. The existing release
+// configurator stages and hashes this ONE exact original vendor class family.
+// No classpath shadow, second plugin/receiver registry or native receipt grant.
+def vendor = rootProject.findProject(':capacitor-local-notifications')
+def vault = rootProject.findProject(':memphis-zoo-custodial-native-vault')
+if (vendor == null || vault == null) {
+    throw new GradleException('Exact normal LocalNotifications and Custodial native projects are required')
+}
+def ownedSource = rootProject.file('.custodial-local-notifications-java')
+if (!ownedSource.isDirectory()) {
+    throw new GradleException('Configure the exact reviewed normal notification writer sources before Gradle')
+}
+vendor.plugins.withId('com.android.library') {
+    // Replace the original Java source root; never compile duplicate classes.
+    vendor.android.sourceSets.main.java.setSrcDirs([ownedSource])
+    vendor.dependencies.add('implementation', vault)
+}
+
+// Exact Source-staged Firebase replacement and package-local immutable scope.
+def messaging = rootProject.findProject(':capacitor-firebase-messaging')
+if (messaging == null) throw new GradleException('Exact Firebase messaging project required')
+def messagingSource = rootProject.file('.custodial-firebase-messaging-java')
+def nativeScopeSource = rootProject.file('.custodial-new-producer-scope-java')
+if (!messagingSource.isDirectory() || !nativeScopeSource.isDirectory()) throw new GradleException('Configure exact Source scope before Gradle')
+messaging.plugins.withId('com.android.library') {
+    messaging.android.sourceSets.main.java.setSrcDirs([messagingSource])
+}
+vault.plugins.withId('com.android.library') {
+    vault.android.sourceSets.main.java.srcDir(nativeScopeSource)
+}

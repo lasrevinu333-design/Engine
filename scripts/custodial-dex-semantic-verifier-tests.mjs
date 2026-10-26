@@ -216,6 +216,32 @@ function dexSemanticFixture({
   return dex;
 }
 
+if (process.argv.includes('--reviewed-removal-admission')) {
+  // This method is independently named here so the fixture cannot inherit an
+  // omission from the verifier's reviewed declaration list.
+  const compiledMethods = [
+    ...CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.filter((method) => method !== 'checkRemovalAdmission'),
+    'checkRemovalAdmission',
+  ];
+  const inspectMethods = (methods) => inspectCustodialNativeVaultDexSemantics([{
+    name: 'classes.dex',
+    bytes: dexSemanticFixture({ pluginMethods: methods }),
+  }]);
+  const proof = inspectMethods(compiledMethods);
+  assert.equal(compiledMethods.length, 37);
+  assert.deepEqual(proof.plugin_method_names, [...compiledMethods].sort());
+  assert.throws(
+    () => inspectMethods(compiledMethods.filter((method) => method !== 'checkRemovalAdmission')),
+    /WebView API differs from policy.*missing: checkRemovalAdmission/,
+  );
+  assert.throws(
+    () => inspectMethods([...compiledMethods, 'readCredential']),
+    /WebView API differs from policy.*unexpected: readCredential/,
+  );
+  console.log('Reviewed removal admission DEX method cases passed.');
+  process.exit(0);
+}
+
 const oldDescriptor = 'Lcom/aparajita/capacitor/securestorage/SecureStorage;';
 const validDex = dexSemanticFixture();
 const validProof = inspectCustodialNativeVaultDexSemantics(

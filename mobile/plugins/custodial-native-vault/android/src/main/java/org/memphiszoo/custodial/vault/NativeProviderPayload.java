@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Arrays;
@@ -21,20 +22,30 @@ import org.json.JSONObject;
  * activation/retirement and authenticated native time before any effect. */
 final class NativeProviderPayload {
     static final String SCHEMA = "custodial.native-provider-payload.v1";
+    static final String LOCATION_SCHEMA = "custodial.native-location-payload.v2";
+    static final String EVENT_SCHEMA = "custodial.native-event-payload.v1";
+    static final String MESSAGE_SCHEMA = "custodial.native-message-payload.v1";
+    static final String SCHEDULE_SCHEMA = "custodial.native-schedule-payload.v1";
     static final int MAX_BYTES = 3500;
     private static final String[] COMMON = {"schema", "generation_id", "principal_digest", "token_digest", "receipt_job_id",
         "receipt_credential_id", "receipt_employee_id", "receipt_device_id", "receipt_assignment_epoch", "notification_key",
         "reservation_at", "valid_until", "content_sha256", "kind", "notification_type", "title", "body", "channel_id", "route", "service_date"};
     private static final String[] LUNCH = {"event", "loan_id", "scheduled_time", "scheduled_at", "coverer_slot_id", "projection_id", "document_identity"};
+    private static final String[] EVENT = {"event_id", "instance_id", "event_revision", "notification_kind", "source_revision", "recipient_device_uuid"};
+    private static final String[] MESSAGE = {"message_id", "thread_id", "recipient_user_id", "source_revision"};
+    private static final String[] SCHEDULE = {"boundary_local", "source_reservation_id", "source_operation_id", "source_window_sha256", "server_source_sha256",
+        "source_revision", "projection_id", "publication_id", "version_id", "assignment_occurrence_id", "source_valid_from", "source_valid_until"};
     private static final String[] LOCATION = {"reminder_contract", "cleaned_at", "cycle_base_at", "cycle_base_evidence", "due_soon_at", "overdue_at",
-        "status_code", "location_id", "location_code", "location_name", "form_type", "group_code", "group_name"};
+        "status_code", "location_id", "location_code", "location_name", "form_type", "group_code", "group_name",
+        "projection_id", "publication_id", "version_id", "occurrence_id", "authority_source", "authority_source_id", "authority_source_digest",
+        "coverage_end_at", "operational_end_at"};
     private final Map<String, String> data;
     final String generationId, principalDigest, tokenDigest, jobId, notificationKey, contentHash, recordId;
     final Instant reservedAt, validUntil;
 
     private NativeProviderPayload(Map<String, ?> supplied) throws VaultFailure {
         try {
-            if (supplied == null || supplied.size() > 40) throw invalid();
+            if (supplied == null || supplied.size() > 42) throw invalid();
             TreeMap<String, String> copy = new TreeMap<>();
             for (Map.Entry<String, ?> entry : supplied.entrySet()) {
                 if (entry.getKey() == null || !(entry.getValue() instanceof String)) throw invalid();
@@ -42,9 +53,12 @@ final class NativeProviderPayload {
                 copy.put(entry.getKey(), (String) entry.getValue());
             }
             boolean lunch = "employee_lunch_coverage".equals(copy.get("kind"));
-            if (!lunch && !"employee_location_status".equals(copy.get("kind"))) throw invalid();
-            Set<String> fields = new HashSet<>(Arrays.asList(COMMON)); fields.addAll(Arrays.asList(lunch ? LUNCH : LOCATION));
-            if (!copy.keySet().equals(fields) || !SCHEMA.equals(copy.get("schema"))) throw invalid();
+            boolean event = "employee_event".equals(copy.get("kind")), message = "employee_message".equals(copy.get("kind"));
+            boolean schedule = "employee_schedule_ownership".equals(copy.get("kind"));
+            if (!lunch && !event && !message && !schedule && !"employee_location_status".equals(copy.get("kind"))) throw invalid();
+            Set<String> fields = new HashSet<>(Arrays.asList(COMMON));
+            fields.addAll(Arrays.asList(lunch ? LUNCH : event ? EVENT : message ? MESSAGE : schedule ? SCHEDULE : LOCATION));
+            if (!copy.keySet().equals(fields) || !(lunch ? SCHEMA : event ? EVENT_SCHEMA : message ? MESSAGE_SCHEMA : schedule ? SCHEDULE_SCHEMA : LOCATION_SCHEMA).equals(copy.get("schema"))) throw invalid();
             for (String field : fields) if (!field.equals("group_code") && !field.equals("group_name") && copy.get(field).isEmpty()) throw invalid();
             if (canonical(copy, false).getBytes(StandardCharsets.UTF_8).length > MAX_BYTES) throw invalid();
             data = Collections.unmodifiableMap(copy);
@@ -60,9 +74,9 @@ final class NativeProviderPayload {
             if (!reservedAt.isBefore(validUntil)) throw invalid();
             String day = get("service_date");
             if (!day.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}") || !LocalDate.parse(day).toString().equals(day)) throw invalid();
-            if (lunch) validateLunch(); else validateLocation();
+            if (lunch) validateLunch(); else if (event) validateEvent(); else if (message) validateMessage(); else if (schedule) validateSchedule(); else validateLocation();
             // Stable logical identity; changed content at the same identity is a conflict, not a new record.
-            recordId = NativeProviderPrincipal.hash(generationId + "\n" + jobId + "\n" + notificationKey);
+            recordId = NativeProviderPrincipal.hash(generationId + "\n" + (schedule ? get("source_reservation_id") : jobId) + "\n" + notificationKey);
         } catch (VaultFailure error) { throw error; }
         catch (Exception error) { throw new VaultFailure("custodial_provider_payload_invalid", error); }
     }
@@ -72,7 +86,10 @@ final class NativeProviderPayload {
         if (data == null) return false;
         Object kind = data.get("kind"), schema = data.get("schema");
         return "employee_lunch_coverage".equals(kind) || "employee_location_status".equals(kind)
-            || (schema instanceof String && ((String) schema).startsWith("custodial.native-provider-"));
+            || "employee_event".equals(kind) || "employee_message".equals(kind) || "employee_schedule_ownership".equals(kind)
+            || (schema instanceof String && (((String) schema).startsWith("custodial.native-provider-")
+                || ((String) schema).startsWith("custodial.native-location-") || ((String) schema).startsWith("custodial.native-event-")
+                || ((String) schema).startsWith("custodial.native-message-") || ((String) schema).startsWith("custodial.native-schedule-")));
     }
     static NativeProviderPayload fromFcm(String sdkSender, String configuredProjectNumber, boolean hasNotification,
         Map<String, ?> data) throws VaultFailure {
@@ -114,12 +131,41 @@ final class NativeProviderPayload {
         if (reservedAt.isBefore(scheduled) || ("start".equals(get("event")) && validUntil.isAfter(scheduled.plusSeconds(3600)))) throw invalid();
         // SQL must additionally prove the exact active publication/loan/recipient and coverage end.
     }
+    /** These closed envelopes are conditional protocol support. The producer
+     * must separately prove reservation/current source and the supplied finite
+     * cutoff. Neither this parser nor an FCM arrival selects that policy, grants
+     * a clock profile, or authorizes a new effect. Legacy traffic is not upgraded. */
+    private void validateEvent() throws VaultFailure {
+        if (!"event".equals(get("notification_type")) || !"employee-events".equals(get("channel_id"))) throw invalid();
+        for (String field : new String[]{"event_id", "instance_id", "recipient_device_uuid"}) uuid(get(field));
+        positiveInteger(get("event_revision")); digest(get("source_revision"));
+        if (!Arrays.asList("three_days_before", "two_days_before", "shift_plus_15").contains(get("notification_kind"))
+            || !("events.html?hub=employee&event_id=" + get("event_id")).equals(get("route"))
+            || !("event:" + get("event_id") + ":" + get("event_revision") + ":" + get("service_date") + ":"
+                + get("receipt_employee_id") + ":" + get("recipient_device_uuid") + ":" + get("receipt_assignment_epoch")
+                + ":" + get("notification_kind")).equals(notificationKey)) throw invalid();
+        // SQL binds the database UUID to the current KIOSK/principal/generation.
+        // The client cannot infer that mapping from either spelling of the ID.
+    }
+    private void validateMessage() throws VaultFailure {
+        if (!"message".equals(get("notification_type")) || !"employee-messages".equals(get("channel_id"))) throw invalid();
+        for (String field : new String[]{"message_id", "thread_id", "recipient_user_id"}) uuid(get(field));
+        digest(get("source_revision"));
+        if (!("messages.html?hub=employee&thread_id=" + get("thread_id")).equals(get("route"))
+            || !("message:" + get("message_id")).equals(notificationKey)) throw invalid();
+    }
     private void validateLocation() throws VaultFailure {
         String status = get("status_code"), form = get("form_type");
         if (!"location_status".equals(get("notification_type")) || !"verified-visit-reminders.v2".equals(get("reminder_contract"))
             || !Arrays.asList("due_soon", "overdue").contains(status) || !Arrays.asList("restroom", "exhibit").contains(form)
             || !("overdue".equals(status) ? "employee-overdue" : "employee-due-soon").equals(get("channel_id"))) throw invalid();
         uuid(get("location_id")); String code = get("location_code");
+        for (String field : new String[]{"projection_id", "publication_id", "version_id", "occurrence_id", "authority_source_id"}) uuid(get(field));
+        digest(get("authority_source_digest"));
+        if (!Arrays.asList("static_weekly_projection", "static_weekly_lunch_coverage").contains(get("authority_source"))) throw invalid();
+        // Exact signed bindings, NOT an offline assertion that the publication
+        // remains current. The admission/inventory owner must prove that gate.
+        if (validUntil.isAfter(timestamp(get("coverage_end_at"))) || validUntil.isAfter(timestamp(get("operational_end_at")))) throw invalid();
         if (!code.matches("[A-Z0-9._:-]{1,100}") || !("employee-schedule.html?hub=employee&highlight=" + code).equals(get("route"))) throw invalid();
         strictText(get("location_name"), 180, false); strictText(get("group_code"), 100, false); strictText(get("group_name"), 180, false);
         Instant cleaned = timestamp(get("cleaned_at")), base = timestamp(get("cycle_base_at")), due = timestamp(get("due_soon_at")), overdue = timestamp(get("overdue_at"));
@@ -137,7 +183,29 @@ final class NativeProviderPayload {
             if (validUntil.isAfter(overdue.plusSeconds(Math.multiplyExact(repeat + 1, 300)))) throw invalid();
         }
         String cycle = DateTimeFormatter.ofPattern("uuuuMMddHHmmssSSSSSS").withZone(ZoneOffset.UTC).format(base);
-        if (!notificationKey.equals("location-visit:" + get("service_date") + ":" + get("location_id") + ":" + status + ":" + cycle + ":" + repeat)) throw invalid();
+        if (!notificationKey.equals("location-visit:" + get("service_date") + ":" + get("location_id") + ":" + status + ":" + cycle + ":" + repeat
+            + ":projection:" + get("projection_id"))) throw invalid();
+    }
+
+    /** Conditional SCHEDULE wire only. Current source, original receipt and
+     * native clock/audio policy remain the server/journal/effect owners' job. */
+    private void validateSchedule() throws VaultFailure {
+        if (!"schedule_ownership".equals(get("notification_type")) || !"employee-schedule-ownership".equals(get("channel_id"))
+            || !"employee-schedule.html?hub=employee".equals(get("route")) || !"09:45".equals(get("boundary_local"))
+            || !get("receipt_device_id").matches("KIOSK_(?:0[2-9]|10)")
+            || !("schedule-ownership:" + get("service_date") + ":" + get("receipt_employee_id") + ":09:45").equals(notificationKey)) throw invalid();
+        for (String field : new String[]{"source_reservation_id", "source_operation_id", "projection_id", "publication_id", "version_id", "assignment_occurrence_id"}) uuid(get(field));
+        digest(get("source_window_sha256")); digest(get("server_source_sha256")); positiveInteger(get("source_revision"));
+        Instant from = timestamp(get("source_valid_from")), until = timestamp(get("source_valid_until"));
+        for (Instant value : new Instant[]{from, until, reservedAt, validUntil}) if (value.atZone(ZoneOffset.UTC).getYear() < 1) throw invalid();
+        java.time.ZonedDateTime local = from.atZone(ZoneId.of("America/Chicago"));
+        if (!local.toLocalDate().toString().equals(get("service_date")) || local.getHour() != 9 || local.getMinute() != 45
+            || local.getSecond() != 0 || local.getNano() != 0 || !from.isBefore(until)
+            || reservedAt.isBefore(from) || validUntil.isAfter(until)) throw invalid();
+        for (String field : data.keySet()) {
+            strictText(get(field), field.equals("title") ? 180 : field.equals("notification_key") ? 240 : 1000, false);
+            if (get(field).getBytes(StandardCharsets.UTF_8).length > (field.equals("title") ? 180 : field.equals("notification_key") ? 240 : 1000)) throw invalid();
+        }
     }
 
     /** Flat sorted-key JSON using RFC8259/JSON.stringify string escaping (not JSONObject's slash escaping). */

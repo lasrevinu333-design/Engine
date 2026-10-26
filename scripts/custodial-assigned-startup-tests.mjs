@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import {assertOwnerContextClosed} from './scan-owner-vm-context.mjs';
+import { installHourlyForecastKeyboard } from '../mobile/src/custodial/hourly-forecast-keyboard.js';
 const source=readFileSync(new URL('../mobile/src/custodial/app.js',import.meta.url),'utf8');
+const { classifyReadiness, createReadinessObservation, readinessPresentation } = await import(`data:text/javascript;base64,${Buffer.from(readFileSync(new URL('../mobile/src/custodial/readiness.js',import.meta.url),'utf8')).toString('base64')}`);
 const html=readFileSync(new URL('../mobile/src/custodial/index.html',import.meta.url),'utf8');
 const results=[];
 async function check(name,fn){try{await fn();results.push({name,passed:true});}catch(error){results.push({name,passed:false,error:error.message});}}
 function fixture({enrolled=false,reject=false,delay=false,cached=null}={}){
   let releaseResponse;const responseReady=delay?new Promise(resolve=>{releaseResponse=resolve;}):Promise.resolve();
-  let status={native:true,initialized:true,ready:true,available:true,state:enrolled?'enrolled':'unenrolled',deviceId:enrolled?'KIOSK_08':''};
+  let status={native:true,initialized:true,ready:true,available:true,quarantined:false,generation:1,state:enrolled?'enrolled':'unenrolled',deviceId:enrolled?'KIOSK_08':''};
   let subscriber;const elements=new Map(),calls=[],memory=new Map();
   let principal='original',name='Fixture Assigned Custodian',failNetwork=false;
   const element=id=>{if(!elements.has(id))elements.set(id,{hidden:id!=='boot',textContent:'',value:'',className:'',disabled:false,addEventListener(){},insertAdjacentHTML(){}});return elements.get(id);};
@@ -19,15 +22,22 @@ function fixture({enrolled=false,reject=false,delay=false,cached=null}={}){
       profileMatchesPrincipal:value=>status.state==='enrolled'&&value?.authenticated===true&&value?.canonical_device_id==='KIOSK_08'&&value?.fixture_principal===principal,
       requestJson:async path=>{calls.push(path);const value={authenticated:true,canonical_device_id:'KIOSK_08',employee_name:name,employee_role:'CUSTODIAL_EMPLOYEE',fixture_principal:principal};await responseReady;if(reject)throw Object.assign(new Error('Not authorized'),{status:403});if(failNetwork)throw Error('offline');return value;}},
     setInterval:()=>1,clearInterval(){},setTimeout:()=>2,clearTimeout(){}};
-  const context={window,document:{getElementById:element},navigator:{onLine:false},console,
+  const context={window,document:{getElementById:element},navigator:{onLine:false},console,classifyReadiness,createReadinessObservation,readinessPresentation,installHourlyForecastKeyboard,
     sessionStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)},
-    installHomeFacts:()=>({stop(){},update(){}}),App:{addListener:async()=>{}},Network:{addListener:async()=>{}},StatusBar:{hide:async()=>{}},Promise,Date,Error};
+    installHomeFacts:()=>({stop(){},update(){},authenticatedProfileRestored(){return true;}}),App:{addListener:async()=>{}},Network:{addListener:async()=>{}},StatusBar:{hide:async()=>{}},Promise,Date,Error};
   vm.createContext(context);
   const executable=source.replace(/^import .*;\s*$/gm,'').replace('void (async () => {','globalThis.__startup = (async () => {');
-  vm.runInContext(executable+'\nglobalThis.__restore=restore;',context);
+  const closed=executable+'\nglobalThis.__restore=restore;';
+  assertOwnerContextClosed(closed,context,'complete Custodial Home owner');
+  vm.runInContext(closed,context);
   return {context,elements,calls,ready:()=>context.__startup,releaseResponse:()=>releaseResponse?.(),setUnassigned:()=>{status={...status,state:'unenrolled',deviceId:''};subscriber({...status});},setAssigned:()=>{status={...status,state:'enrolled',deviceId:'KIOSK_08'};subscriber({...status});},
     replacePrincipal:({offline=false}={})=>{principal='replacement';name='Replacement Custodian';failNetwork=offline;subscriber({...status});}};
 }
+await check('owner closure names missing and newly introduced free dependencies before execution',()=>{
+  assert.throws(()=>assertOwnerContextClosed('readinessPresentation({});',{}),/readinessPresentation/);
+  assert.doesNotThrow(()=>assertOwnerContextClosed('readinessPresentation({});',{readinessPresentation}));
+  assert.throws(()=>assertOwnerContextClosed('function owner(){return introducedOwnerDependency;} owner();',{}),/introducedOwnerDependency/);
+});
 await check('employee startup has no phone selector, code field, or login form',()=>{
   assert.doesNotMatch(html,/<(?:form|input|select)\b/i);
   assert.doesNotMatch(html,/Phone number|Manager code|eight.digit|one-time-code|Set Up Phone/i);

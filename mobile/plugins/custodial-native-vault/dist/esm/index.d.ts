@@ -53,6 +53,30 @@ export interface CustodialNativeEnvelope {
 }
 
 export interface CustodialNativeVaultPlugin {
+  providerMirrorAttach(): Promise<{schema:'custodial.provider-mirror-attachment.v1'; attachment_id:string;
+    runtime_incarnation:string; revision:string; state:'ATTACHED'|'SUSPENDED'; audio_ready:boolean}>;
+  providerMirrorStopped(options:{attachment_id:string}): Promise<{stopped:true}>;
+  providerClaimNext(options:{attachment_id:string}): Promise<{claim:null|{claim_id:string;payload:Record<string,string>;
+    play_audio:boolean;navigation_pending:boolean;historical:boolean}}>;
+  providerClaimState(options:{attachment_id:string;claim_id:string}): Promise<{current:boolean;freshness:'CURRENT'|'HISTORICAL_EXPIRED'|'FRESHNESS_UNAVAILABLE'|'RETIRED';retire_visual:boolean;stop_audio:boolean;navigation_pending:boolean}>;
+  providerApplyAction(options:{attachment_id:string;claim_id:string;action:'displayed'|'opened'|'acknowledged'|'dismissed'|'audio_started'|'audio_completed'|'audio_stopped'|'navigation_completed'}): Promise<{applied:true}>;
+  providerRetireClaim(options:{attachment_id:string;claim_id:string}): Promise<{retired:true}>;
+  providerMirrorDetach(options:{attachment_id:string}): Promise<{detached:true}>;
+  addListener(eventName:'providerPresentationAvailable',listener:(hint:{runtime_incarnation:string;revision:string})=>void): Promise<{remove():Promise<void>}>;
+  getCustodialReadinessObservation(options: { device_id: string; expected_principal_identity: string }): Promise<{
+    schema: 'custodial.phone-readiness-observation.v1';
+    canonical_device_id: string | null; principal_identity: string | null; snapshot_id: string | null;
+    observed_boot_count: number | null; observed_elapsed_realtime_ms: number | null;
+    pending_occurrences: boolean | null; unfinished_occurrence: boolean | null; rollback_fence_active: boolean | null;
+    observation: 'CONFIRMED' | 'NEEDS_INTERNET' | 'NEEDS_MANAGER' | 'DO_NOT_USE' | 'UNKNOWN';
+    reason: 'observation_unavailable' | 'request_invalid' | 'native_enrollment_unavailable' | 'principal_changed'
+      | 'protected_work_recovery_required' | 'observation_changed' | 'principal_or_protected_state_changed' | 'scan_journal_recovery_required'
+      | 'rollback_fence_active' | 'anchor_missing' | 'snapshot_binding_unverified' | 'snapshot_principal_changed' | 'clock_observation_changed'
+      | 'original_finish_pending' | 'original_receipt_pending' | 'native_scan_pending' | 'current_native_snapshot_observed' | 'anchor_expired'
+      | 'clock_continuity_changed' | 'clock_unavailable' | 'protected_state_unavailable';
+    native_clock_continuity: 'CONFIRMED' | 'UNVERIFIED' | 'EXPIRED';
+    protected_work_admission: 'CLEAR' | 'PENDING' | 'RECOVERY_REQUIRED' | 'UNKNOWN'; read_only: true;
+  }>;
   getState(): Promise<CustodialVaultState>;
   reportRecoveryDiagnostic(options: { reason: string; outcome: string; detail: string }): Promise<{ reported: true }>;
   attestScanIntent(options: { url: string }): Promise<{

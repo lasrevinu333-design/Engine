@@ -1,0 +1,2746 @@
+{
+  "scope": "one actual staffing private preview/confirmation/persisted revision/current handout join; fixture only",
+  "operationId": "7438f5f8-3971-4575-8fa2-48eae7dd72bb",
+  "confirmationKey": "98000000-0000-4000-8000-000000000084",
+  "inputCapture": {
+    "operationId": "7438f5f8-3971-4575-8fa2-48eae7dd72bb",
+    "semanticDigest": "49abe276604a3e55d4b83316dca4877ece91c513d07cc515a61f1095085d8aad",
+    "publicationId": "70000000-0000-4000-8000-000000000001",
+    "versionId": "60000000-0000-4000-8000-000000000001",
+    "expectedRevision": 6,
+    "inputSha256": "6e8e5c5b74e64ba13e9c30c1ddb720f2817b7329da968f8cdae48efca3062b98",
+    "input": {
+      "serviceDate": "2026-10-12",
+      "timezone": "America/Chicago",
+      "slots": [
+        {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "label": "Synthetic employee 1",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000001",
+              "displayName": "Synthetic employee 1",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "label": "Synthetic employee 2",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000002",
+              "displayName": "Synthetic employee 2",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000003",
+          "label": "Synthetic employee 3",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000003",
+              "displayName": "Synthetic employee 3",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000004",
+          "label": "Synthetic employee 4",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000004",
+              "displayName": "Synthetic employee 4",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000005",
+          "label": "Synthetic employee 5",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000005",
+              "displayName": "Synthetic employee 5",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000006",
+          "label": "Synthetic employee 6",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000006",
+              "displayName": "Synthetic employee 6",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000007",
+          "label": "Synthetic employee 7",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000007",
+              "displayName": "Synthetic employee 7",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000008",
+          "label": "Synthetic employee 8",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000008",
+              "displayName": "Synthetic employee 8",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000009",
+          "label": "Synthetic employee 9",
+          "incumbencies": [
+            {
+              "personId": "10000000-0000-4000-8000-000000000009",
+              "displayName": "Synthetic employee 9",
+              "effectiveEnd": null,
+              "effectiveStart": "2020-01-01"
+            }
+          ]
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000001",
+          "kind": "CONTRACTOR_CAPACITY",
+          "label": "CoverAll01",
+          "capacityId": "30000000-0000-4000-8000-000000000001",
+          "incumbencies": [],
+          "contractorCapacity": true,
+          "contractorAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000002",
+          "kind": "CONTRACTOR_CAPACITY",
+          "label": "CoverAll02",
+          "capacityId": "30000000-0000-4000-8000-000000000002",
+          "incumbencies": [],
+          "contractorCapacity": true,
+          "contractorAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000003",
+          "kind": "CONTRACTOR_CAPACITY",
+          "label": "CoverAll03",
+          "capacityId": "30000000-0000-4000-8000-000000000003",
+          "incumbencies": [],
+          "contractorCapacity": true,
+          "contractorAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000004",
+          "kind": "CONTRACTOR_CAPACITY",
+          "label": "CoverAll04",
+          "capacityId": "30000000-0000-4000-8000-000000000004",
+          "incumbencies": [],
+          "contractorCapacity": true,
+          "contractorAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000005",
+          "kind": "CONTRACTOR_CAPACITY",
+          "label": "CoverAll05",
+          "capacityId": "30000000-0000-4000-8000-000000000005",
+          "incumbencies": [],
+          "contractorCapacity": true,
+          "contractorAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000006",
+          "kind": "CONTRACTOR_CAPACITY",
+          "label": "CoverAll06",
+          "capacityId": "30000000-0000-4000-8000-000000000006",
+          "incumbencies": [],
+          "contractorCapacity": true,
+          "contractorAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000007",
+          "kind": "CONTRACTOR_CAPACITY",
+          "label": "CoverAll07",
+          "capacityId": "30000000-0000-4000-8000-000000000007",
+          "incumbencies": [],
+          "contractorCapacity": true,
+          "contractorAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000008",
+          "kind": "CONTRACTOR_CAPACITY",
+          "label": "CoverAll08",
+          "capacityId": "30000000-0000-4000-8000-000000000008",
+          "incumbencies": [],
+          "contractorCapacity": true,
+          "contractorAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      ],
+      "proximity": [
+        {
+          "to": "50000000-0000-4000-8000-000000000002",
+          "from": "50000000-0000-4000-8000-000000000001",
+          "minutes": 1,
+          "verified": true,
+          "provenance": "synthetic explicit route metric"
+        },
+        {
+          "to": "50000000-0000-4000-8000-000000000001",
+          "from": "50000000-0000-4000-8000-000000000002",
+          "minutes": 1,
+          "verified": true,
+          "provenance": "synthetic explicit route metric"
+        }
+      ],
+      "exceptions": [
+        {
+          "id": "ecb2bce4-e95c-47a8-836d-19da0b526c9e",
+          "type": "cover_all",
+          "reason": "Explicit synthetic fixture manager choice before absence; no automatic CoverAll",
+          "status": "accepted",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "payload": {
+            "availability": {
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "slotId": "30000000-0000-4000-8000-000000000001",
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            }
+          },
+          "sequence": 4,
+          "serviceDate": "2026-10-12",
+          "baseVersionId": "60000000-0000-4000-8000-000000000001",
+          "payloadDigest": "87ea48a9ea3d655604d6bf29637ff5a65adcdf7ac6d5eae931026f07be2c4384",
+          "publicationId": "70000000-0000-4000-8000-000000000001",
+          "idempotencyKey": "day-change-c997e180f9ce247136cdb2926e497ee383c9c2570814d0fbbe8bb5677ee8c042",
+          "expectedRevision": 3
+        },
+        {
+          "id": "b9c04905-4aa0-4490-aefc-e0facfebc2d1",
+          "type": "lunch",
+          "reason": "Manager recorded actual CoverAll lunch",
+          "status": "accepted",
+          "window": {
+            "end": "12:00",
+            "start": "11:00"
+          },
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "payload": {
+            "slotId": "30000000-0000-4000-8000-000000000001"
+          },
+          "sequence": 5,
+          "serviceDate": "2026-10-12",
+          "baseVersionId": "60000000-0000-4000-8000-000000000001",
+          "payloadDigest": "094ec119a8eedc4a33cc3a858f3b484ab5fb50d9d2d2b9c48f62c5d4e78f6066",
+          "publicationId": "70000000-0000-4000-8000-000000000001",
+          "idempotencyKey": "day-change-1c1fe77f14021df72435540b58e79f20125d7ee7607129377ea9f3a4b3b3a82b",
+          "expectedRevision": 4
+        },
+        {
+          "id": "7438f5f8-3971-4575-8fa2-48eae7dd72bb:2026-10-12",
+          "type": "daily_absence",
+          "serviceDate": "2026-10-12",
+          "staffingAbsenceId": "7438f5f8-3971-4575-8fa2-48eae7dd72bb",
+          "staffingAbsenceKind": "daily_absence",
+          "actorId": "00000000-0000-4000-8000-000000000001",
+          "reason": "Approved staffing unavailability",
+          "idempotencyKey": "staffing:7438f5f8-3971-4575-8fa2-48eae7dd72bb:2026-10-12",
+          "expectedRevision": 6,
+          "status": "accepted",
+          "payload": {
+            "slotId": "20000000-0000-4000-8000-000000000001"
+          },
+          "baseVersionId": "60000000-0000-4000-8000-000000000001",
+          "publicationId": "70000000-0000-4000-8000-000000000001",
+          "sequence": 7
+        }
+      ],
+      "versions": [
+        {
+          "id": "60000000-0000-4000-8000-000000000001",
+          "status": "published",
+          "objective": {
+            "requireVerifiedProximity": true
+          },
+          "assignments": [
+            {
+              "window": {
+                "end": "07:10",
+                "start": "07:00"
+              },
+              "workId": "CAPACITY_AREA_1-0",
+              "priority": 2,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000001",
+              "ownerSlotId": "20000000-0000-4000-8000-000000000001",
+              "serviceMode": "scan_tracked",
+              "restrictions": [],
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000001",
+                  "locationNameSnapshot": "Synthetic area 1"
+                }
+              ],
+              "priorityProvenance": "explicit synthetic priority",
+              "locationCodeSnapshot": "CAPACITY_AREA_1",
+              "locationNameSnapshot": "Synthetic area 1",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort"
+            },
+            {
+              "window": {
+                "end": "07:25",
+                "start": "07:15"
+              },
+              "workId": "CAPACITY_AREA_1-1",
+              "priority": 2,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000001",
+              "ownerSlotId": "20000000-0000-4000-8000-000000000001",
+              "serviceMode": "scan_tracked",
+              "restrictions": [],
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000001",
+                  "locationNameSnapshot": "Synthetic area 1"
+                }
+              ],
+              "priorityProvenance": "explicit synthetic priority",
+              "locationCodeSnapshot": "CAPACITY_AREA_1",
+              "locationNameSnapshot": "Synthetic area 1",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort"
+            },
+            {
+              "window": {
+                "end": "07:40",
+                "start": "07:30"
+              },
+              "workId": "CAPACITY_AREA_1-2",
+              "priority": 2,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000001",
+              "ownerSlotId": "20000000-0000-4000-8000-000000000001",
+              "serviceMode": "scan_tracked",
+              "restrictions": [],
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000001",
+                  "locationNameSnapshot": "Synthetic area 1"
+                }
+              ],
+              "priorityProvenance": "explicit synthetic priority",
+              "locationCodeSnapshot": "CAPACITY_AREA_1",
+              "locationNameSnapshot": "Synthetic area 1",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort"
+            },
+            {
+              "window": {
+                "end": "07:55",
+                "start": "07:45"
+              },
+              "workId": "CAPACITY_AREA_2-0",
+              "priority": 2,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000002",
+              "ownerSlotId": "20000000-0000-4000-8000-000000000001",
+              "serviceMode": "scan_tracked",
+              "restrictions": [],
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000002",
+                  "locationNameSnapshot": "Synthetic area 2"
+                }
+              ],
+              "priorityProvenance": "explicit synthetic priority",
+              "locationCodeSnapshot": "CAPACITY_AREA_2",
+              "locationNameSnapshot": "Synthetic area 2",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort"
+            },
+            {
+              "window": {
+                "end": "08:10",
+                "start": "08:00"
+              },
+              "workId": "CAPACITY_AREA_2-1",
+              "priority": 2,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000002",
+              "ownerSlotId": "20000000-0000-4000-8000-000000000001",
+              "serviceMode": "scan_tracked",
+              "restrictions": [],
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000002",
+                  "locationNameSnapshot": "Synthetic area 2"
+                }
+              ],
+              "priorityProvenance": "explicit synthetic priority",
+              "locationCodeSnapshot": "CAPACITY_AREA_2",
+              "locationNameSnapshot": "Synthetic area 2",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort"
+            },
+            {
+              "window": {
+                "end": "08:25",
+                "start": "08:15"
+              },
+              "workId": "CAPACITY_AREA_2-2",
+              "priority": 2,
+              "dayOfWeek": 1,
+              "locationId": "50000000-0000-4000-8000-000000000002",
+              "ownerSlotId": "20000000-0000-4000-8000-000000000001",
+              "serviceMode": "scan_tracked",
+              "restrictions": [],
+              "includedLocations": [
+                {
+                  "locationId": "50000000-0000-4000-8000-000000000002",
+                  "locationNameSnapshot": "Synthetic area 2"
+                }
+              ],
+              "priorityProvenance": "explicit synthetic priority",
+              "locationCodeSnapshot": "CAPACITY_AREA_2",
+              "locationNameSnapshot": "Synthetic area 2",
+              "serviceEffortMinutes": 5,
+              "restrictionProvenance": "explicit synthetic work restriction",
+              "requiredQualifications": [
+                "general"
+              ],
+              "qualificationProvenance": "explicit synthetic work eligibility",
+              "serviceEffortProvenance": "explicit synthetic effort"
+            }
+          ],
+          "effectiveEnd": null,
+          "publicationId": "70000000-0000-4000-8000-000000000001",
+          "vacantSlotIds": [],
+          "effectiveStart": "2026-10-12",
+          "slotAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000001",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "general"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            },
+            {
+              "lunch": {
+                "end": "13:00",
+                "start": "12:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000002",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "specialty_no_fixture_work"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000002"
+            },
+            {
+              "lunch": {
+                "end": "14:00",
+                "start": "13:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000003",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "specialty_no_fixture_work"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            },
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000004",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "specialty_no_fixture_work"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000002"
+            },
+            {
+              "lunch": {
+                "end": "13:00",
+                "start": "12:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000005",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "specialty_no_fixture_work"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            },
+            {
+              "lunch": {
+                "end": "14:00",
+                "start": "13:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000006",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "specialty_no_fixture_work"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000002"
+            },
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000007",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "specialty_no_fixture_work"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            },
+            {
+              "lunch": {
+                "end": "13:00",
+                "start": "12:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000008",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "specialty_no_fixture_work"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000002"
+            },
+            {
+              "lunch": {
+                "end": "14:00",
+                "start": "13:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000009",
+              "status": "working",
+              "dayOfWeek": 1,
+              "restrictions": [],
+              "qualifications": [
+                "specialty_no_fixture_work"
+              ],
+              "restrictionProvenance": "explicit synthetic restriction fact",
+              "acceptedRouteProvenance": "explicit synthetic staging",
+              "maxServiceEffortMinutes": 300,
+              "qualificationProvenance": "explicit synthetic eligibility",
+              "maxServiceEffortProvenance": "explicit synthetic effort",
+              "productiveCapacityProvenance": "explicit synthetic shift",
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001"
+            },
+            {
+              "slotId": "30000000-0000-4000-8000-000000000001",
+              "status": "unavailable",
+              "dayOfWeek": 1
+            },
+            {
+              "slotId": "30000000-0000-4000-8000-000000000002",
+              "status": "unavailable",
+              "dayOfWeek": 1
+            },
+            {
+              "slotId": "30000000-0000-4000-8000-000000000003",
+              "status": "unavailable",
+              "dayOfWeek": 1
+            },
+            {
+              "slotId": "30000000-0000-4000-8000-000000000004",
+              "status": "unavailable",
+              "dayOfWeek": 1
+            },
+            {
+              "slotId": "30000000-0000-4000-8000-000000000005",
+              "status": "unavailable",
+              "dayOfWeek": 1
+            },
+            {
+              "slotId": "30000000-0000-4000-8000-000000000006",
+              "status": "unavailable",
+              "dayOfWeek": 1
+            },
+            {
+              "slotId": "30000000-0000-4000-8000-000000000007",
+              "status": "unavailable",
+              "dayOfWeek": 1
+            },
+            {
+              "slotId": "30000000-0000-4000-8000-000000000008",
+              "status": "unavailable",
+              "dayOfWeek": 1
+            }
+          ],
+          "namedAbsentSlotIds": [],
+          "vacancyCapableSlotIds": []
+        }
+      ]
+    }
+  },
+  "prepared": {
+    "state": "PREPARED",
+    "preview": {
+      "weeks": [
+        {
+          "metrics": {
+            "daily": [
+              {
+                "loads": [],
+                "dayOfWeek": 0,
+                "normalizedInequity": 0,
+                "exactNormalizedInequity": null
+              },
+              {
+                "loads": [
+                  {
+                    "slotId": "20000000-0000-4000-8000-000000000002",
+                    "routeNodeCount": 1,
+                    "waitingMinutes": 0,
+                    "routeSpanMinutes": 0,
+                    "totalDutyMinutes": 0,
+                    "travelDutyMinutes": 0,
+                    "serviceDutyMinutes": 0,
+                    "dutyCapacityMinutes": 540,
+                    "serviceEffortMinutes": 0,
+                    "fixedRouteDutyMinutes": 0,
+                    "normalizedServiceLoad": 0,
+                    "transitWaitingMinutes": 0,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 0,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 0,
+                    "fixedWindowWaitingMinutes": 0,
+                    "productiveCapacityMinutes": 540,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  },
+                  {
+                    "slotId": "20000000-0000-4000-8000-000000000003",
+                    "routeNodeCount": 1,
+                    "waitingMinutes": 0,
+                    "routeSpanMinutes": 0,
+                    "totalDutyMinutes": 0,
+                    "travelDutyMinutes": 0,
+                    "serviceDutyMinutes": 0,
+                    "dutyCapacityMinutes": 540,
+                    "serviceEffortMinutes": 0,
+                    "fixedRouteDutyMinutes": 0,
+                    "normalizedServiceLoad": 0,
+                    "transitWaitingMinutes": 0,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 0,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 0,
+                    "fixedWindowWaitingMinutes": 0,
+                    "productiveCapacityMinutes": 540,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  },
+                  {
+                    "slotId": "20000000-0000-4000-8000-000000000004",
+                    "routeNodeCount": 1,
+                    "waitingMinutes": 0,
+                    "routeSpanMinutes": 0,
+                    "totalDutyMinutes": 0,
+                    "travelDutyMinutes": 0,
+                    "serviceDutyMinutes": 0,
+                    "dutyCapacityMinutes": 540,
+                    "serviceEffortMinutes": 0,
+                    "fixedRouteDutyMinutes": 0,
+                    "normalizedServiceLoad": 0,
+                    "transitWaitingMinutes": 0,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 0,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 0,
+                    "fixedWindowWaitingMinutes": 0,
+                    "productiveCapacityMinutes": 540,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  },
+                  {
+                    "slotId": "20000000-0000-4000-8000-000000000005",
+                    "routeNodeCount": 1,
+                    "waitingMinutes": 0,
+                    "routeSpanMinutes": 0,
+                    "totalDutyMinutes": 0,
+                    "travelDutyMinutes": 0,
+                    "serviceDutyMinutes": 0,
+                    "dutyCapacityMinutes": 540,
+                    "serviceEffortMinutes": 0,
+                    "fixedRouteDutyMinutes": 0,
+                    "normalizedServiceLoad": 0,
+                    "transitWaitingMinutes": 0,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 0,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 0,
+                    "fixedWindowWaitingMinutes": 0,
+                    "productiveCapacityMinutes": 540,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  },
+                  {
+                    "slotId": "20000000-0000-4000-8000-000000000006",
+                    "routeNodeCount": 1,
+                    "waitingMinutes": 0,
+                    "routeSpanMinutes": 0,
+                    "totalDutyMinutes": 0,
+                    "travelDutyMinutes": 0,
+                    "serviceDutyMinutes": 0,
+                    "dutyCapacityMinutes": 540,
+                    "serviceEffortMinutes": 0,
+                    "fixedRouteDutyMinutes": 0,
+                    "normalizedServiceLoad": 0,
+                    "transitWaitingMinutes": 0,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 0,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 0,
+                    "fixedWindowWaitingMinutes": 0,
+                    "productiveCapacityMinutes": 540,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  },
+                  {
+                    "slotId": "20000000-0000-4000-8000-000000000007",
+                    "routeNodeCount": 1,
+                    "waitingMinutes": 0,
+                    "routeSpanMinutes": 0,
+                    "totalDutyMinutes": 0,
+                    "travelDutyMinutes": 0,
+                    "serviceDutyMinutes": 0,
+                    "dutyCapacityMinutes": 540,
+                    "serviceEffortMinutes": 0,
+                    "fixedRouteDutyMinutes": 0,
+                    "normalizedServiceLoad": 0,
+                    "transitWaitingMinutes": 0,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 0,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 0,
+                    "fixedWindowWaitingMinutes": 0,
+                    "productiveCapacityMinutes": 540,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  },
+                  {
+                    "slotId": "20000000-0000-4000-8000-000000000008",
+                    "routeNodeCount": 1,
+                    "waitingMinutes": 0,
+                    "routeSpanMinutes": 0,
+                    "totalDutyMinutes": 0,
+                    "travelDutyMinutes": 0,
+                    "serviceDutyMinutes": 0,
+                    "dutyCapacityMinutes": 540,
+                    "serviceEffortMinutes": 0,
+                    "fixedRouteDutyMinutes": 0,
+                    "normalizedServiceLoad": 0,
+                    "transitWaitingMinutes": 0,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 0,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 0,
+                    "fixedWindowWaitingMinutes": 0,
+                    "productiveCapacityMinutes": 540,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  },
+                  {
+                    "slotId": "20000000-0000-4000-8000-000000000009",
+                    "routeNodeCount": 1,
+                    "waitingMinutes": 0,
+                    "routeSpanMinutes": 0,
+                    "totalDutyMinutes": 0,
+                    "travelDutyMinutes": 0,
+                    "serviceDutyMinutes": 0,
+                    "dutyCapacityMinutes": 540,
+                    "serviceEffortMinutes": 0,
+                    "fixedRouteDutyMinutes": 0,
+                    "normalizedServiceLoad": 0,
+                    "transitWaitingMinutes": 0,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 0,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 0,
+                    "fixedWindowWaitingMinutes": 0,
+                    "productiveCapacityMinutes": 540,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  },
+                  {
+                    "slotId": "30000000-0000-4000-8000-000000000001",
+                    "routeNodeCount": 7,
+                    "waitingMinutes": 54,
+                    "routeSpanMinutes": 85,
+                    "totalDutyMinutes": 85,
+                    "travelDutyMinutes": 1,
+                    "serviceDutyMinutes": 60,
+                    "dutyCapacityMinutes": 420,
+                    "serviceEffortMinutes": 30,
+                    "fixedRouteDutyMinutes": 85,
+                    "normalizedServiceLoad": 0.07142857142857142,
+                    "transitWaitingMinutes": 24,
+                    "flexibleWorkloadPoints": 0,
+                    "fixedRouteTravelMinutes": 1,
+                    "maxServiceEffortMinutes": 300,
+                    "fixedServiceEffortMinutes": 30,
+                    "fixedWindowWaitingMinutes": 30,
+                    "productiveCapacityMinutes": 420,
+                    "acceptedRouteTravelMinutes": 0,
+                    "flexibleCoverageTravelMinutes": 0,
+                    "protectedBreakUnavailableMinutes": 0
+                  }
+                ],
+                "dayOfWeek": 1,
+                "normalizedInequity": 0.07142857142857142,
+                "exactNormalizedInequity": 270
+              },
+              {
+                "loads": [],
+                "dayOfWeek": 2,
+                "normalizedInequity": 0,
+                "exactNormalizedInequity": null
+              },
+              {
+                "loads": [],
+                "dayOfWeek": 3,
+                "normalizedInequity": 0,
+                "exactNormalizedInequity": null
+              },
+              {
+                "loads": [],
+                "dayOfWeek": 4,
+                "normalizedInequity": 0,
+                "exactNormalizedInequity": null
+              },
+              {
+                "loads": [],
+                "dayOfWeek": 5,
+                "normalizedInequity": 0,
+                "exactNormalizedInequity": null
+              },
+              {
+                "loads": [],
+                "dayOfWeek": 6,
+                "normalizedInequity": 0,
+                "exactNormalizedInequity": null
+              }
+            ],
+            "weekly": {
+              "resource": "provenanced workload units / verified productive minutes; a relative equity index, not literal time utilization",
+              "disruption": 6,
+              "normalizedLoads": {
+                "20000000-0000-4000-8000-000000000002": 0,
+                "20000000-0000-4000-8000-000000000003": 0,
+                "20000000-0000-4000-8000-000000000004": 0,
+                "20000000-0000-4000-8000-000000000005": 0,
+                "20000000-0000-4000-8000-000000000006": 0,
+                "20000000-0000-4000-8000-000000000007": 0,
+                "20000000-0000-4000-8000-000000000008": 0,
+                "20000000-0000-4000-8000-000000000009": 0,
+                "30000000-0000-4000-8000-000000000001": 0.07142857142857142
+              },
+              "normalizedInequity": 0.07142857142857142,
+              "uncoveredByPriority": {},
+              "provenancedWorkloadUnits": {
+                "20000000-0000-4000-8000-000000000002": 0,
+                "20000000-0000-4000-8000-000000000003": 0,
+                "20000000-0000-4000-8000-000000000004": 0,
+                "20000000-0000-4000-8000-000000000005": 0,
+                "20000000-0000-4000-8000-000000000006": 0,
+                "20000000-0000-4000-8000-000000000007": 0,
+                "20000000-0000-4000-8000-000000000008": 0,
+                "20000000-0000-4000-8000-000000000009": 0,
+                "30000000-0000-4000-8000-000000000001": 30
+              },
+              "productiveCapacityMinutes": {
+                "20000000-0000-4000-8000-000000000002": 540,
+                "20000000-0000-4000-8000-000000000003": 540,
+                "20000000-0000-4000-8000-000000000004": 540,
+                "20000000-0000-4000-8000-000000000005": 540,
+                "20000000-0000-4000-8000-000000000006": 540,
+                "20000000-0000-4000-8000-000000000007": 540,
+                "20000000-0000-4000-8000-000000000008": 540,
+                "20000000-0000-4000-8000-000000000009": 540,
+                "30000000-0000-4000-8000-000000000001": 420
+              },
+              "incrementalDirectedRouteCost": 1
+            },
+            "dutySemantics": {
+              "travel": "fixed-route directed arcs are clock duty; flexible anchor-to-area values are deterministic proximity scores only",
+              "service": "fixed appointments consume their full windows; flexible recurring ownership workload points are an equity resource, not clock duty",
+              "waiting": "fixed-window non-effort commitment plus non-protected inter-stop slack; flexible ownership windows add no artificial waiting",
+              "workload": "the legacy serviceEffortMinutes wire field is fixed-work minutes or dimensionless flexible-ownership workload points according to schedulingMode",
+              "protected": "lunch and unavailable intervals; excluded from productive capacity and total duty",
+              "totalDuty": "fixed route span minus protected time; flexible workload points and proximity scores are excluded from clock duty"
+            }
+          },
+          "objective": {
+            "mode": "exact_staged_monotonic_leximax_joint_seven_day",
+            "tiers": [
+              "required_uncovered_priority_2",
+              "daily_service_effort_utilization_rank_1",
+              "daily_service_effort_utilization_rank_2",
+              "daily_service_effort_utilization_rank_3",
+              "daily_service_effort_utilization_rank_4",
+              "daily_service_effort_utilization_rank_5",
+              "daily_service_effort_utilization_rank_6",
+              "daily_service_effort_utilization_rank_7",
+              "daily_service_effort_utilization_rank_8",
+              "daily_service_effort_utilization_rank_9",
+              "daily_stable_id_rank_tie",
+              "weekly_service_effort_utilization_rank_1",
+              "weekly_service_effort_utilization_rank_2",
+              "weekly_service_effort_utilization_rank_3",
+              "weekly_service_effort_utilization_rank_4",
+              "weekly_service_effort_utilization_rank_5",
+              "weekly_service_effort_utilization_rank_6",
+              "weekly_service_effort_utilization_rank_7",
+              "weekly_service_effort_utilization_rank_8",
+              "weekly_service_effort_utilization_rank_9",
+              "weekly_stable_id_rank_tie",
+              "incremental_directed_route_cost",
+              "accepted_baseline_disruption",
+              "identity_id_19_0031_003a_0043_0041_0050_0041_0043_0049_0054_0059_005f_0041_0052_0045_0041_005f_0031_002d_0030",
+              "identity_id_19_0031_003a_0043_0041_0050_0041_0043_0049_0054_0059_005f_0041_0052_0045_0041_005f_0031_002d_0031",
+              "identity_id_19_0031_003a_0043_0041_0050_0041_0043_0049_0054_0059_005f_0041_0052_0045_0041_005f_0031_002d_0032",
+              "identity_id_19_0031_003a_0043_0041_0050_0041_0043_0049_0054_0059_005f_0041_0052_0045_0041_005f_0032_002d_0030",
+              "identity_id_19_0031_003a_0043_0041_0050_0041_0043_0049_0054_0059_005f_0041_0052_0045_0041_005f_0032_002d_0031",
+              "identity_id_19_0031_003a_0043_0041_0050_0041_0043_0049_0054_0059_005f_0041_0052_0045_0041_005f_0032_002d_0032"
+            ],
+            "rankingOrder": [
+              "required coverage",
+              "explicit best-effort coverage",
+              "daily workload utilization ranks worst-first",
+              "daily stable-ID tie",
+              "weekly workload utilization ranks worst-first",
+              "weekly stable-ID tie",
+              "directed travel proximity",
+              "baseline disruption",
+              "stable-ID identity over mutable choices"
+            ],
+            "policyVersion": "monotonic-leximax-v1",
+            "directedTravelDuty": true,
+            "equityIntegerScale": "exact-lossless-common-denominator",
+            "integerServiceEffort": true,
+            "weeklyEquityResource": "total provenanced workload / total verified productive minutes across every working day of the slot",
+            "acceptedRouteInsertions": true,
+            "flexibleCoverageTravelRole": "advisory_proximity_objective_not_clock_duty",
+            "serviceEffortWireSemantics": "fixed work uses provenanced minutes; flexible_coverage_ownership uses dimensionless production workload points",
+            "exactEquityCommonDenominator": 3780
+          },
+          "versionId": "60000000-0000-4000-8000-000000000001",
+          "week_start": "2026-10-12",
+          "assignments": [
+            {
+              "status": "assigned",
+              "work_id": "CAPACITY_AREA_1-0",
+              "owner_kind": "CONTRACTOR_CAPACITY",
+              "capacity_id": "30000000-0000-4000-8000-000000000001",
+              "day_of_week": 1,
+              "explanation": {},
+              "reason_code": null,
+              "owner_digest": "c48978741ca87de7a3836eb4880f108ed9ec8d9c88d8fdefebb1abef8d643566",
+              "plan_work_id": "1:CAPACITY_AREA_1-0",
+              "service_date": "2026-10-12",
+              "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "work_snapshot": {
+                "window": {
+                  "end": "07:10",
+                  "start": "07:00"
+                },
+                "workId": "CAPACITY_AREA_1-0",
+                "priority": 2,
+                "required": true,
+                "dayOfWeek": 1,
+                "locationId": "50000000-0000-4000-8000-000000000001",
+                "manualLock": false,
+                "overlayWork": false,
+                "serviceMode": "scan_tracked",
+                "originSlotId": "20000000-0000-4000-8000-000000000001",
+                "restrictions": [],
+                "coveragePolicy": null,
+                "manualLockSlotId": null,
+                "includedLocations": [
+                  {
+                    "locationId": "50000000-0000-4000-8000-000000000001",
+                    "locationNameSnapshot": "Synthetic area 1"
+                  }
+                ],
+                "restrictedSlotIds": [],
+                "bestEffortCoverage": false,
+                "priorityProvenance": "explicit synthetic priority",
+                "coveragePolicyOrder": null,
+                "locationCodeSnapshot": "CAPACITY_AREA_1",
+                "locationNameSnapshot": "Synthetic area 1",
+                "serviceEffortMinutes": 5,
+                "restrictionProvenance": "explicit synthetic work restriction",
+                "requiredQualifications": [
+                  "general"
+                ],
+                "qualificationProvenance": "explicit synthetic work eligibility",
+                "serviceEffortProvenance": "explicit synthetic effort",
+                "coveragePolicyProvenance": null
+              },
+              "owner_person_id": null,
+              "baseline_owner_name": "Synthetic employee 1",
+              "original_actor_name": "Synthetic employee 1",
+              "exact_owner_identity": "7ba7ef3c39972ba203f95b0a40f1976a3c45e1b125225e795ad8a268eb3f7692",
+              "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+              "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+              "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+              "optimized_owner_person_id": null
+            },
+            {
+              "status": "assigned",
+              "work_id": "CAPACITY_AREA_1-1",
+              "owner_kind": "CONTRACTOR_CAPACITY",
+              "capacity_id": "30000000-0000-4000-8000-000000000001",
+              "day_of_week": 1,
+              "explanation": {},
+              "reason_code": null,
+              "owner_digest": "42483886e189f1e0baa450ad03ce8d9ac7c8f7a8b014b83905221910dc7c3b16",
+              "plan_work_id": "1:CAPACITY_AREA_1-1",
+              "service_date": "2026-10-12",
+              "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "work_snapshot": {
+                "window": {
+                  "end": "07:25",
+                  "start": "07:15"
+                },
+                "workId": "CAPACITY_AREA_1-1",
+                "priority": 2,
+                "required": true,
+                "dayOfWeek": 1,
+                "locationId": "50000000-0000-4000-8000-000000000001",
+                "manualLock": false,
+                "overlayWork": false,
+                "serviceMode": "scan_tracked",
+                "originSlotId": "20000000-0000-4000-8000-000000000001",
+                "restrictions": [],
+                "coveragePolicy": null,
+                "manualLockSlotId": null,
+                "includedLocations": [
+                  {
+                    "locationId": "50000000-0000-4000-8000-000000000001",
+                    "locationNameSnapshot": "Synthetic area 1"
+                  }
+                ],
+                "restrictedSlotIds": [],
+                "bestEffortCoverage": false,
+                "priorityProvenance": "explicit synthetic priority",
+                "coveragePolicyOrder": null,
+                "locationCodeSnapshot": "CAPACITY_AREA_1",
+                "locationNameSnapshot": "Synthetic area 1",
+                "serviceEffortMinutes": 5,
+                "restrictionProvenance": "explicit synthetic work restriction",
+                "requiredQualifications": [
+                  "general"
+                ],
+                "qualificationProvenance": "explicit synthetic work eligibility",
+                "serviceEffortProvenance": "explicit synthetic effort",
+                "coveragePolicyProvenance": null
+              },
+              "owner_person_id": null,
+              "baseline_owner_name": "Synthetic employee 1",
+              "original_actor_name": "Synthetic employee 1",
+              "exact_owner_identity": "fc211652504075fc729ae75e960685d11d414bdcd4b43bbb74e95eb4a69c8f07",
+              "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+              "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+              "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+              "optimized_owner_person_id": null
+            },
+            {
+              "status": "assigned",
+              "work_id": "CAPACITY_AREA_1-2",
+              "owner_kind": "CONTRACTOR_CAPACITY",
+              "capacity_id": "30000000-0000-4000-8000-000000000001",
+              "day_of_week": 1,
+              "explanation": {},
+              "reason_code": null,
+              "owner_digest": "273d7eed22c999afd25923021e412413cf51cb391ca6da7ca4be74968243c569",
+              "plan_work_id": "1:CAPACITY_AREA_1-2",
+              "service_date": "2026-10-12",
+              "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "work_snapshot": {
+                "window": {
+                  "end": "07:40",
+                  "start": "07:30"
+                },
+                "workId": "CAPACITY_AREA_1-2",
+                "priority": 2,
+                "required": true,
+                "dayOfWeek": 1,
+                "locationId": "50000000-0000-4000-8000-000000000001",
+                "manualLock": false,
+                "overlayWork": false,
+                "serviceMode": "scan_tracked",
+                "originSlotId": "20000000-0000-4000-8000-000000000001",
+                "restrictions": [],
+                "coveragePolicy": null,
+                "manualLockSlotId": null,
+                "includedLocations": [
+                  {
+                    "locationId": "50000000-0000-4000-8000-000000000001",
+                    "locationNameSnapshot": "Synthetic area 1"
+                  }
+                ],
+                "restrictedSlotIds": [],
+                "bestEffortCoverage": false,
+                "priorityProvenance": "explicit synthetic priority",
+                "coveragePolicyOrder": null,
+                "locationCodeSnapshot": "CAPACITY_AREA_1",
+                "locationNameSnapshot": "Synthetic area 1",
+                "serviceEffortMinutes": 5,
+                "restrictionProvenance": "explicit synthetic work restriction",
+                "requiredQualifications": [
+                  "general"
+                ],
+                "qualificationProvenance": "explicit synthetic work eligibility",
+                "serviceEffortProvenance": "explicit synthetic effort",
+                "coveragePolicyProvenance": null
+              },
+              "owner_person_id": null,
+              "baseline_owner_name": "Synthetic employee 1",
+              "original_actor_name": "Synthetic employee 1",
+              "exact_owner_identity": "355ba4499ed59b067990e2dccfd0ec1fc64711de89ff20e9641314c5b9172765",
+              "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+              "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+              "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+              "optimized_owner_person_id": null
+            },
+            {
+              "status": "assigned",
+              "work_id": "CAPACITY_AREA_2-0",
+              "owner_kind": "CONTRACTOR_CAPACITY",
+              "capacity_id": "30000000-0000-4000-8000-000000000001",
+              "day_of_week": 1,
+              "explanation": {},
+              "reason_code": null,
+              "owner_digest": "280558e418af5331844f3f0372a3526d2a849355ab68f3b6962d4b042ecbeb74",
+              "plan_work_id": "1:CAPACITY_AREA_2-0",
+              "service_date": "2026-10-12",
+              "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "work_snapshot": {
+                "window": {
+                  "end": "07:55",
+                  "start": "07:45"
+                },
+                "workId": "CAPACITY_AREA_2-0",
+                "priority": 2,
+                "required": true,
+                "dayOfWeek": 1,
+                "locationId": "50000000-0000-4000-8000-000000000002",
+                "manualLock": false,
+                "overlayWork": false,
+                "serviceMode": "scan_tracked",
+                "originSlotId": "20000000-0000-4000-8000-000000000001",
+                "restrictions": [],
+                "coveragePolicy": null,
+                "manualLockSlotId": null,
+                "includedLocations": [
+                  {
+                    "locationId": "50000000-0000-4000-8000-000000000002",
+                    "locationNameSnapshot": "Synthetic area 2"
+                  }
+                ],
+                "restrictedSlotIds": [],
+                "bestEffortCoverage": false,
+                "priorityProvenance": "explicit synthetic priority",
+                "coveragePolicyOrder": null,
+                "locationCodeSnapshot": "CAPACITY_AREA_2",
+                "locationNameSnapshot": "Synthetic area 2",
+                "serviceEffortMinutes": 5,
+                "restrictionProvenance": "explicit synthetic work restriction",
+                "requiredQualifications": [
+                  "general"
+                ],
+                "qualificationProvenance": "explicit synthetic work eligibility",
+                "serviceEffortProvenance": "explicit synthetic effort",
+                "coveragePolicyProvenance": null
+              },
+              "owner_person_id": null,
+              "baseline_owner_name": "Synthetic employee 1",
+              "original_actor_name": "Synthetic employee 1",
+              "exact_owner_identity": "719e93984256db2a63093b054e8384cf1a9dc4c1e68823c509ee5f3fa4e00de0",
+              "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+              "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+              "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+              "optimized_owner_person_id": null
+            },
+            {
+              "status": "assigned",
+              "work_id": "CAPACITY_AREA_2-1",
+              "owner_kind": "CONTRACTOR_CAPACITY",
+              "capacity_id": "30000000-0000-4000-8000-000000000001",
+              "day_of_week": 1,
+              "explanation": {},
+              "reason_code": null,
+              "owner_digest": "71068deb329c381bd569a06b82efdf051f4499084eb937cef70f0f5ec5d99c4c",
+              "plan_work_id": "1:CAPACITY_AREA_2-1",
+              "service_date": "2026-10-12",
+              "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "work_snapshot": {
+                "window": {
+                  "end": "08:10",
+                  "start": "08:00"
+                },
+                "workId": "CAPACITY_AREA_2-1",
+                "priority": 2,
+                "required": true,
+                "dayOfWeek": 1,
+                "locationId": "50000000-0000-4000-8000-000000000002",
+                "manualLock": false,
+                "overlayWork": false,
+                "serviceMode": "scan_tracked",
+                "originSlotId": "20000000-0000-4000-8000-000000000001",
+                "restrictions": [],
+                "coveragePolicy": null,
+                "manualLockSlotId": null,
+                "includedLocations": [
+                  {
+                    "locationId": "50000000-0000-4000-8000-000000000002",
+                    "locationNameSnapshot": "Synthetic area 2"
+                  }
+                ],
+                "restrictedSlotIds": [],
+                "bestEffortCoverage": false,
+                "priorityProvenance": "explicit synthetic priority",
+                "coveragePolicyOrder": null,
+                "locationCodeSnapshot": "CAPACITY_AREA_2",
+                "locationNameSnapshot": "Synthetic area 2",
+                "serviceEffortMinutes": 5,
+                "restrictionProvenance": "explicit synthetic work restriction",
+                "requiredQualifications": [
+                  "general"
+                ],
+                "qualificationProvenance": "explicit synthetic work eligibility",
+                "serviceEffortProvenance": "explicit synthetic effort",
+                "coveragePolicyProvenance": null
+              },
+              "owner_person_id": null,
+              "baseline_owner_name": "Synthetic employee 1",
+              "original_actor_name": "Synthetic employee 1",
+              "exact_owner_identity": "62bd8c82dcc6ae1137f73527a80e5ac10545e8ed8f7b11d3f39d3d1ed313f14d",
+              "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+              "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+              "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+              "optimized_owner_person_id": null
+            },
+            {
+              "status": "assigned",
+              "work_id": "CAPACITY_AREA_2-2",
+              "owner_kind": "CONTRACTOR_CAPACITY",
+              "capacity_id": "30000000-0000-4000-8000-000000000001",
+              "day_of_week": 1,
+              "explanation": {},
+              "reason_code": null,
+              "owner_digest": "0a988ea2f8f6a9b475f58b1e8c1b9cb9da2af419f8c30b966f9eb2ed04a2a357",
+              "plan_work_id": "1:CAPACITY_AREA_2-2",
+              "service_date": "2026-10-12",
+              "owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "work_snapshot": {
+                "window": {
+                  "end": "08:25",
+                  "start": "08:15"
+                },
+                "workId": "CAPACITY_AREA_2-2",
+                "priority": 2,
+                "required": true,
+                "dayOfWeek": 1,
+                "locationId": "50000000-0000-4000-8000-000000000002",
+                "manualLock": false,
+                "overlayWork": false,
+                "serviceMode": "scan_tracked",
+                "originSlotId": "20000000-0000-4000-8000-000000000001",
+                "restrictions": [],
+                "coveragePolicy": null,
+                "manualLockSlotId": null,
+                "includedLocations": [
+                  {
+                    "locationId": "50000000-0000-4000-8000-000000000002",
+                    "locationNameSnapshot": "Synthetic area 2"
+                  }
+                ],
+                "restrictedSlotIds": [],
+                "bestEffortCoverage": false,
+                "priorityProvenance": "explicit synthetic priority",
+                "coveragePolicyOrder": null,
+                "locationCodeSnapshot": "CAPACITY_AREA_2",
+                "locationNameSnapshot": "Synthetic area 2",
+                "serviceEffortMinutes": 5,
+                "restrictionProvenance": "explicit synthetic work restriction",
+                "requiredQualifications": [
+                  "general"
+                ],
+                "qualificationProvenance": "explicit synthetic work eligibility",
+                "serviceEffortProvenance": "explicit synthetic effort",
+                "coveragePolicyProvenance": null
+              },
+              "owner_person_id": null,
+              "baseline_owner_name": "Synthetic employee 1",
+              "original_actor_name": "Synthetic employee 1",
+              "exact_owner_identity": "e286846127999c14d227e67d7c850e4ebc2dccde241472aeb79f98a00276c44c",
+              "baseline_owner_slot_id": "20000000-0000-4000-8000-000000000001",
+              "optimized_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "baseline_owner_person_id": "10000000-0000-4000-8000-000000000001",
+              "original_actor_person_id": "10000000-0000-4000-8000-000000000001",
+              "optimized_owner_person_id": null
+            }
+          ],
+          "lunch_loans": [
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "815c0f0b1f02c5e69ee9dd186b6451403d585c62ba3c250806e6ba05cf7d16f2",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "13:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "12:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "20000000-0000-4000-8000-000000000002",
+              "normal_owner_person_id": "10000000-0000-4000-8000-000000000002",
+              "total_distance_minutes": 0
+            },
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "47cfd3d1a5eea420e01bafbe6240216dfbba39210b4573f4de2ecca5ecf80115",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "14:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "13:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "20000000-0000-4000-8000-000000000003",
+              "normal_owner_person_id": "10000000-0000-4000-8000-000000000003",
+              "total_distance_minutes": 0
+            },
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "dc69872d7a49dee5e6fc038c06491f8809ea6d10f53f99ed734c116cac578a8e",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "12:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "11:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "20000000-0000-4000-8000-000000000004",
+              "normal_owner_person_id": "10000000-0000-4000-8000-000000000004",
+              "total_distance_minutes": 0
+            },
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "6f911db1a5658f549500a59e11d305498f417bf306b31e3c553fe744fe111b89",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "13:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "12:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "20000000-0000-4000-8000-000000000005",
+              "normal_owner_person_id": "10000000-0000-4000-8000-000000000005",
+              "total_distance_minutes": 0
+            },
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "e89e02f043ea8daac2b332a1b9135ca5a9b9de503d600e35829a428211f92182",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "14:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "13:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "20000000-0000-4000-8000-000000000006",
+              "normal_owner_person_id": "10000000-0000-4000-8000-000000000006",
+              "total_distance_minutes": 0
+            },
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "7476de61a3ef5abacf8eefa51d383d72896d29ba324c558f5d585bee8ca0940f",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "12:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "11:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "20000000-0000-4000-8000-000000000007",
+              "normal_owner_person_id": "10000000-0000-4000-8000-000000000007",
+              "total_distance_minutes": 0
+            },
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "8d8ee7a689ddc07f44db328ed7e228325beba0f17a2b703c5c67351316f24b26",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "13:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "12:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "20000000-0000-4000-8000-000000000008",
+              "normal_owner_person_id": "10000000-0000-4000-8000-000000000008",
+              "total_distance_minutes": 0
+            },
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "65ee157ee2ffabf6d1456a3704b93ad24c7ca7fa7f4560e7dd2069fd1ee2081d",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "14:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "13:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "20000000-0000-4000-8000-000000000009",
+              "normal_owner_person_id": "10000000-0000-4000-8000-000000000009",
+              "total_distance_minutes": 0
+            },
+            {
+              "reason": null,
+              "status": "NO_AREAS",
+              "loan_id": "266a4d7909a22a7944d38d776029b273c99761fcb0eed0606356f7b82df9bb9c",
+              "fallback": null,
+              "day_of_week": 1,
+              "coverage_end": "12:00",
+              "service_date": "2026-10-12",
+              "coverage_start": "11:00",
+              "helper_slot_ids": [],
+              "normal_owner_slot_id": "30000000-0000-4000-8000-000000000001",
+              "normal_owner_person_id": null,
+              "total_distance_minutes": 0,
+              "normal_owner_capacity_id": "30000000-0000-4000-8000-000000000001"
+            }
+          ],
+          "replayDigest": "67332d40ac67de6588cb999f53ca5aeb19fe8b2c4225bcd857727d25a2345cc1",
+          "sourceDigest": "217cca4afa21d61f80e9f98676c91b70a5927713c9eae1e96c0cb1cd35ad14b5",
+          "publicationId": "70000000-0000-4000-8000-000000000001",
+          "compilerVersion": "static-weekly-highs-mip-v9-dated-shift-end",
+          "geographyDigest": "f5c215df3d6e8a547111d1b0cabc305a778a19be135b08ee5ca905ae5b05ed9c",
+          "sourceDigestBasis": "envelope.authority.inputDigest",
+          "geographyDigestBasis": "envelope.authority.compilerInput.proximity",
+          "lunch_responsibilities": [],
+          "projectionAvailability": [
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000001",
+              "status": "absent",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 1",
+              "maxLoadPoints": null,
+              "blockedWindows": [
+                {
+                  "end": "23:59",
+                  "start": "00:00"
+                }
+              ],
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000001",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000001",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 1",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "13:00",
+                "start": "12:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000002",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 2",
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000002",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000002",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 2",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000002",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "14:00",
+                "start": "13:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000003",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 3",
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000003",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000003",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 3",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000004",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 4",
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000004",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000004",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 4",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000002",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "13:00",
+                "start": "12:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000005",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 5",
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000005",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000005",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 5",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "14:00",
+                "start": "13:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000006",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 6",
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000006",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000006",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 6",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000002",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000007",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 7",
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000007",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000007",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 7",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "13:00",
+                "start": "12:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000008",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 8",
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000008",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000008",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 8",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000002",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "14:00",
+                "start": "13:00"
+              },
+              "shift": {
+                "end": "17:00",
+                "start": "07:00"
+              },
+              "slotId": "20000000-0000-4000-8000-000000000009",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": null,
+              "capacityId": null,
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": "Synthetic employee 9",
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "20000000-0000-4000-8000-000000000009",
+              "incumbentPersonId": "10000000-0000-4000-8000-000000000009",
+              "productiveWindows": null,
+              "incumbentSlotLabel": "Synthetic employee 9",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": {
+                "end": "12:00",
+                "start": "11:00"
+              },
+              "shift": {
+                "end": "15:00",
+                "start": "07:00"
+              },
+              "slotId": "30000000-0000-4000-8000-000000000001",
+              "status": "working",
+              "dayOfWeek": 1,
+              "ownerKind": "CONTRACTOR_CAPACITY",
+              "capacityId": "30000000-0000-4000-8000-000000000001",
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": null,
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "30000000-0000-4000-8000-000000000001",
+              "incumbentPersonId": null,
+              "productiveWindows": null,
+              "incumbentSlotLabel": "CoverAll01",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": 300,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "acceptedRouteProvenanceDigest": "a3c705587832c55b936a2d0c9add784fee12a6e563839d34385e5c3d6c7d61db",
+              "productiveCapacityProvenanceDigest": "db5a270d8d9829443baed8519809f82130edc415c5f938972e23c633eefd5466"
+            },
+            {
+              "lunch": null,
+              "shift": null,
+              "slotId": "30000000-0000-4000-8000-000000000002",
+              "status": "unavailable",
+              "dayOfWeek": 1,
+              "ownerKind": "CONTRACTOR_CAPACITY",
+              "capacityId": "30000000-0000-4000-8000-000000000002",
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": null,
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "30000000-0000-4000-8000-000000000002",
+              "incumbentPersonId": null,
+              "productiveWindows": null,
+              "incumbentSlotLabel": "CoverAll02",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": null,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": null,
+              "acceptedRouteProvenanceDigest": null,
+              "productiveCapacityProvenanceDigest": null
+            },
+            {
+              "lunch": null,
+              "shift": null,
+              "slotId": "30000000-0000-4000-8000-000000000003",
+              "status": "unavailable",
+              "dayOfWeek": 1,
+              "ownerKind": "CONTRACTOR_CAPACITY",
+              "capacityId": "30000000-0000-4000-8000-000000000003",
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": null,
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "30000000-0000-4000-8000-000000000003",
+              "incumbentPersonId": null,
+              "productiveWindows": null,
+              "incumbentSlotLabel": "CoverAll03",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": null,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": null,
+              "acceptedRouteProvenanceDigest": null,
+              "productiveCapacityProvenanceDigest": null
+            },
+            {
+              "lunch": null,
+              "shift": null,
+              "slotId": "30000000-0000-4000-8000-000000000004",
+              "status": "unavailable",
+              "dayOfWeek": 1,
+              "ownerKind": "CONTRACTOR_CAPACITY",
+              "capacityId": "30000000-0000-4000-8000-000000000004",
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": null,
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "30000000-0000-4000-8000-000000000004",
+              "incumbentPersonId": null,
+              "productiveWindows": null,
+              "incumbentSlotLabel": "CoverAll04",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": null,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": null,
+              "acceptedRouteProvenanceDigest": null,
+              "productiveCapacityProvenanceDigest": null
+            },
+            {
+              "lunch": null,
+              "shift": null,
+              "slotId": "30000000-0000-4000-8000-000000000005",
+              "status": "unavailable",
+              "dayOfWeek": 1,
+              "ownerKind": "CONTRACTOR_CAPACITY",
+              "capacityId": "30000000-0000-4000-8000-000000000005",
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": null,
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "30000000-0000-4000-8000-000000000005",
+              "incumbentPersonId": null,
+              "productiveWindows": null,
+              "incumbentSlotLabel": "CoverAll05",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": null,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": null,
+              "acceptedRouteProvenanceDigest": null,
+              "productiveCapacityProvenanceDigest": null
+            },
+            {
+              "lunch": null,
+              "shift": null,
+              "slotId": "30000000-0000-4000-8000-000000000006",
+              "status": "unavailable",
+              "dayOfWeek": 1,
+              "ownerKind": "CONTRACTOR_CAPACITY",
+              "capacityId": "30000000-0000-4000-8000-000000000006",
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": null,
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "30000000-0000-4000-8000-000000000006",
+              "incumbentPersonId": null,
+              "productiveWindows": null,
+              "incumbentSlotLabel": "CoverAll06",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": null,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": null,
+              "acceptedRouteProvenanceDigest": null,
+              "productiveCapacityProvenanceDigest": null
+            },
+            {
+              "lunch": null,
+              "shift": null,
+              "slotId": "30000000-0000-4000-8000-000000000007",
+              "status": "unavailable",
+              "dayOfWeek": 1,
+              "ownerKind": "CONTRACTOR_CAPACITY",
+              "capacityId": "30000000-0000-4000-8000-000000000007",
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": null,
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "30000000-0000-4000-8000-000000000007",
+              "incumbentPersonId": null,
+              "productiveWindows": null,
+              "incumbentSlotLabel": "CoverAll07",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": null,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": null,
+              "acceptedRouteProvenanceDigest": null,
+              "productiveCapacityProvenanceDigest": null
+            },
+            {
+              "lunch": null,
+              "shift": null,
+              "slotId": "30000000-0000-4000-8000-000000000008",
+              "status": "unavailable",
+              "dayOfWeek": 1,
+              "ownerKind": "CONTRACTOR_CAPACITY",
+              "capacityId": "30000000-0000-4000-8000-000000000008",
+              "serviceDate": "2026-10-12",
+              "acceptedRoute": null,
+              "incumbentName": null,
+              "maxLoadPoints": null,
+              "blockedWindows": null,
+              "maxDutyMinutes": null,
+              "incumbentSlotId": "30000000-0000-4000-8000-000000000008",
+              "incumbentPersonId": null,
+              "productiveWindows": null,
+              "incumbentSlotLabel": "CoverAll08",
+              "acceptedRouteDigest": null,
+              "routeAnchorLocationId": null,
+              "maxServiceEffortMinutes": null,
+              "capacityProvenanceDigest": null,
+              "productiveCapacityMinutes": null,
+              "acceptedRouteStartLocationId": null,
+              "acceptedRouteAnchorLocationId": null,
+              "acceptedRouteProvenanceDigest": null,
+              "productiveCapacityProvenanceDigest": null
+            }
+          ],
+          "projectionAvailabilityBasis": "envelope.authority.projectionAvailability",
+          "database_projection_identity": "c5522e252dcc54b095186086acc0506033c944f449c4fb23b125c0be742f6090",
+          "projectionAvailabilityDigest": "1b03c0fc42080c5e59ea2674236109f88b3f8c8111811fd189f9371d2722cced"
+        }
+      ],
+      "schema": "memphis-zoo.staffing-command-preview.v1"
+    },
+    "created_at": "2026-10-12T00:24:56.087557+00:00",
+    "accepted_at": null,
+    "prepared_at": "2026-10-12T00:24:59.91935+00:00",
+    "input_digest": "4c664717c7539df88491e249a57d4e7fb97db9eba3d9eaa95cfdea5ef72e0843",
+    "operation_id": "7438f5f8-3971-4575-8fa2-48eae7dd72bb",
+    "semantic_body": {
+      "endDate": "2026-10-12",
+      "startDate": "2026-10-12",
+      "employeeId": "10000000-0000-4000-8000-000000000001",
+      "absenceKind": "daily_absence",
+      "commandKind": "absence",
+      "targetAbsenceId": null
+    },
+    "preview_digest": "62ebae2052d5cefde6ac33a0bed5b117c18a38bf9ddcd1c0e9887ec48d37a3f7",
+    "candidate_bytes": 706043,
+    "semantic_digest": "49abe276604a3e55d4b83316dca4877ece91c513d07cc515a61f1095085d8aad",
+    "accepted_receipt": null,
+    "accepted_revision": null,
+    "candidate_summary": {
+      "weeks": 1,
+      "lunches": 1,
+      "projections": 1,
+      "scheduleRefreshes": 1
+    },
+    "expected_revision": 6,
+    "publication_vector": {
+      "weeks": [
+        {
+          "versionId": "60000000-0000-4000-8000-000000000001",
+          "weekStart": "2026-10-12",
+          "publicationId": "70000000-0000-4000-8000-000000000001",
+          "authorityRevision": 6
+        }
+      ],
+      "expectedRevision": 6
+    },
+    "candidate_row_count": 3,
+    "candidate_set_digest": "2fd341d9c8b64bc21e9ed117311d3e8e38117b6c430a6e7782d104a2a7d2a208",
+    "current_service_date": "2026-10-11",
+    "prepared_by_manager_id": "00000000-0000-4000-8000-000000000001"
+  },
+  "accepted": {
+    "event": "ACCEPTED",
+    "replayed": false,
+    "manager_id": "00000000-0000-4000-8000-000000000001",
+    "projections": {
+      "2026-10-12": {
+        "reused": false,
+        "projection_id": "0b000adf-8e95-450b-9154-7208b0af05e8",
+        "publication_id": "70000000-0000-4000-8000-000000000001",
+        "projection_identity": "c5522e252dcc54b095186086acc0506033c944f449c4fb23b125c0be742f6090",
+        "lunch_document_identity": "9f2a5f9ef7ce9831bdff6881c5f924e96a74e786e7121ea416ec89479d875384"
+      }
+    },
+    "recorded_at": "2026-10-12T00:25:00.171993+00:00",
+    "operation_id": "7438f5f8-3971-4575-8fa2-48eae7dd72bb",
+    "preview_digest": "62ebae2052d5cefde6ac33a0bed5b117c18a38bf9ddcd1c0e9887ec48d37a3f7",
+    "semantic_digest": "49abe276604a3e55d4b83316dca4877ece91c513d07cc515a61f1095085d8aad",
+    "authority_revision": 7,
+    "device_intent_count": 0,
+    "candidate_set_digest": "2fd341d9c8b64bc21e9ed117311d3e8e38117b6c430a6e7782d104a2a7d2a208",
+    "missing_device_targets": [
+      {
+        "status": "NO_CURRENT_DEVICE",
+        "employee_id": "10000000-0000-4000-8000-000000000001",
+        "service_date": "2026-10-12"
+      }
+    ],
+    "original_preparer_manager_id": "00000000-0000-4000-8000-000000000001"
+  },
+  "persisted": {
+    "authorityRows": 1,
+    "receiptRows": 1,
+    "pairedRows": 1
+  },
+  "document": {
+    "schema": "custodial.coverall-accepted-print.v1",
+    "serviceDate": "2026-10-12",
+    "authorityRevision": 7,
+    "publicationId": "70000000-0000-4000-8000-000000000001",
+    "projectionId": "0b000adf-8e95-450b-9154-7208b0af05e8",
+    "replayDigest": "67332d40ac67de6588cb999f53ca5aeb19fe8b2c4225bcd857727d25a2345cc1",
+    "lunchDocumentIdentity": "9f2a5f9ef7ce9831bdff6881c5f924e96a74e786e7121ea416ec89479d875384",
+    "show0945": false,
+    "contractors": [
+      {
+        "slotId": "30000000-0000-4000-8000-000000000001",
+        "name": "CoverAll01",
+        "shift": {
+          "start": "07:00",
+          "end": "15:00"
+        },
+        "lunch": {
+          "start": "11:00",
+          "end": "12:00"
+        },
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "07:10",
+            "areas": [
+              {
+                "areaId": "50000000-0000-4000-8000-000000000001",
+                "area": "Synthetic area 1",
+                "locations": [
+                  {
+                    "id": "50000000-0000-4000-8000-000000000001",
+                    "name": "Synthetic area 1"
+                  }
+                ],
+                "purpose": "area_owner"
+              }
+            ],
+            "advisoryOrder": {
+              "status": "ADVISORY_VERIFIED_PROXIMITY",
+              "mandatory": false,
+              "algorithm": "directed_nearest_next.v1",
+              "anchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "anchorProvenance": "explicit synthetic staging",
+              "sourceGraphDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "orderedAreaIds": [
+                "50000000-0000-4000-8000-000000000001"
+              ],
+              "usedEdges": [
+                {
+                  "from": "50000000-0000-4000-8000-000000000001",
+                  "to": "50000000-0000-4000-8000-000000000001",
+                  "minutes": 0,
+                  "provenance": "same_location"
+                }
+              ]
+            }
+          },
+          {
+            "start": "07:10",
+            "end": "07:15",
+            "areas": [],
+            "advisoryOrder": {
+              "status": "NO_ASSIGNED_AREAS",
+              "mandatory": false
+            }
+          },
+          {
+            "start": "07:15",
+            "end": "07:25",
+            "areas": [
+              {
+                "areaId": "50000000-0000-4000-8000-000000000001",
+                "area": "Synthetic area 1",
+                "locations": [
+                  {
+                    "id": "50000000-0000-4000-8000-000000000001",
+                    "name": "Synthetic area 1"
+                  }
+                ],
+                "purpose": "area_owner"
+              }
+            ],
+            "advisoryOrder": {
+              "status": "ADVISORY_VERIFIED_PROXIMITY",
+              "mandatory": false,
+              "algorithm": "directed_nearest_next.v1",
+              "anchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "anchorProvenance": "explicit synthetic staging",
+              "sourceGraphDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "orderedAreaIds": [
+                "50000000-0000-4000-8000-000000000001"
+              ],
+              "usedEdges": [
+                {
+                  "from": "50000000-0000-4000-8000-000000000001",
+                  "to": "50000000-0000-4000-8000-000000000001",
+                  "minutes": 0,
+                  "provenance": "same_location"
+                }
+              ]
+            }
+          },
+          {
+            "start": "07:25",
+            "end": "07:30",
+            "areas": [],
+            "advisoryOrder": {
+              "status": "NO_ASSIGNED_AREAS",
+              "mandatory": false
+            }
+          },
+          {
+            "start": "07:30",
+            "end": "07:40",
+            "areas": [
+              {
+                "areaId": "50000000-0000-4000-8000-000000000001",
+                "area": "Synthetic area 1",
+                "locations": [
+                  {
+                    "id": "50000000-0000-4000-8000-000000000001",
+                    "name": "Synthetic area 1"
+                  }
+                ],
+                "purpose": "area_owner"
+              }
+            ],
+            "advisoryOrder": {
+              "status": "ADVISORY_VERIFIED_PROXIMITY",
+              "mandatory": false,
+              "algorithm": "directed_nearest_next.v1",
+              "anchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "anchorProvenance": "explicit synthetic staging",
+              "sourceGraphDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "orderedAreaIds": [
+                "50000000-0000-4000-8000-000000000001"
+              ],
+              "usedEdges": [
+                {
+                  "from": "50000000-0000-4000-8000-000000000001",
+                  "to": "50000000-0000-4000-8000-000000000001",
+                  "minutes": 0,
+                  "provenance": "same_location"
+                }
+              ]
+            }
+          },
+          {
+            "start": "07:40",
+            "end": "07:45",
+            "areas": [],
+            "advisoryOrder": {
+              "status": "NO_ASSIGNED_AREAS",
+              "mandatory": false
+            }
+          },
+          {
+            "start": "07:45",
+            "end": "07:55",
+            "areas": [
+              {
+                "areaId": "50000000-0000-4000-8000-000000000002",
+                "area": "Synthetic area 2",
+                "locations": [
+                  {
+                    "id": "50000000-0000-4000-8000-000000000002",
+                    "name": "Synthetic area 2"
+                  }
+                ],
+                "purpose": "area_owner"
+              }
+            ],
+            "advisoryOrder": {
+              "status": "ADVISORY_VERIFIED_PROXIMITY",
+              "mandatory": false,
+              "algorithm": "directed_nearest_next.v1",
+              "anchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "anchorProvenance": "explicit synthetic staging",
+              "sourceGraphDigest": "58ff3a6b80fa1e3b71c1f488b4c4bfc8db8ff3e13cfef6d2d953b49bfc2f1e27",
+              "orderedAreaIds": [
+                "50000000-0000-4000-8000-000000000002"
+              ],
+              "usedEdges": [
+                {
+                  "from": "50000000-0000-4000-8000-000000000001",
+                  "to": "50000000-0000-4000-8000-000000000002",
+                  "minutes": 1,
+                  "provenance": "synthetic explicit route metric"
+                }
+              ]
+            }
+          },
+          {
+            "start": "07:55",
+            "end": "08:00",
+            "areas": [],
+            "advisoryOrder": {
+              "status": "NO_ASSIGNED_AREAS",
+              "mandatory": false
+            }
+          },
+          {
+            "start": "08:00",
+            "end": "08:10",
+            "areas": [
+              {
+                "areaId": "50000000-0000-4000-8000-000000000002",
+                "area": "Synthetic area 2",
+                "locations": [
+                  {
+                    "id": "50000000-0000-4000-8000-000000000002",
+                    "name": "Synthetic area 2"
+                  }
+                ],
+                "purpose": "area_owner"
+              }
+            ],
+            "advisoryOrder": {
+              "status": "ADVISORY_VERIFIED_PROXIMITY",
+              "mandatory": false,
+              "algorithm": "directed_nearest_next.v1",
+              "anchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "anchorProvenance": "explicit synthetic staging",
+              "sourceGraphDigest": "58ff3a6b80fa1e3b71c1f488b4c4bfc8db8ff3e13cfef6d2d953b49bfc2f1e27",
+              "orderedAreaIds": [
+                "50000000-0000-4000-8000-000000000002"
+              ],
+              "usedEdges": [
+                {
+                  "from": "50000000-0000-4000-8000-000000000001",
+                  "to": "50000000-0000-4000-8000-000000000002",
+                  "minutes": 1,
+                  "provenance": "synthetic explicit route metric"
+                }
+              ]
+            }
+          },
+          {
+            "start": "08:10",
+            "end": "08:15",
+            "areas": [],
+            "advisoryOrder": {
+              "status": "NO_ASSIGNED_AREAS",
+              "mandatory": false
+            }
+          },
+          {
+            "start": "08:15",
+            "end": "08:25",
+            "areas": [
+              {
+                "areaId": "50000000-0000-4000-8000-000000000002",
+                "area": "Synthetic area 2",
+                "locations": [
+                  {
+                    "id": "50000000-0000-4000-8000-000000000002",
+                    "name": "Synthetic area 2"
+                  }
+                ],
+                "purpose": "area_owner"
+              }
+            ],
+            "advisoryOrder": {
+              "status": "ADVISORY_VERIFIED_PROXIMITY",
+              "mandatory": false,
+              "algorithm": "directed_nearest_next.v1",
+              "anchorLocationId": "50000000-0000-4000-8000-000000000001",
+              "anchorProvenance": "explicit synthetic staging",
+              "sourceGraphDigest": "58ff3a6b80fa1e3b71c1f488b4c4bfc8db8ff3e13cfef6d2d953b49bfc2f1e27",
+              "orderedAreaIds": [
+                "50000000-0000-4000-8000-000000000002"
+              ],
+              "usedEdges": [
+                {
+                  "from": "50000000-0000-4000-8000-000000000001",
+                  "to": "50000000-0000-4000-8000-000000000002",
+                  "minutes": 1,
+                  "provenance": "synthetic explicit route metric"
+                }
+              ]
+            }
+          },
+          {
+            "start": "08:25",
+            "end": "15:00",
+            "areas": [],
+            "advisoryOrder": {
+              "status": "NO_ASSIGNED_AREAS",
+              "mandatory": false
+            }
+          }
+        ],
+        "shiftEndHandoffs": []
+      }
+    ],
+    "contractorCompletionRecorder": "ERIC_OPERLE_PERSONAL_VERIFICATION",
+    "guidanceVersion": "custodial.coverall-guidance.v1",
+    "managerContact": {
+      "name": "Eric Operle",
+      "role": "Issuing custodial manager",
+      "method": "IN_PERSON",
+      "authority": "AUTHENTICATED_NAMED_MANAGER",
+      "managerId": "00000000-0000-4000-8000-000000000001"
+    },
+    "documentDigest": "a777952719bc3cfaa82fb8b1ed7cdb26bc2d8073bdfbba5c24ad523cd50dec28"
+  },
+  "files": [
+    {
+      "language": "en",
+      "filename": "CoverAll_2026-10-12_r7_en.pdf",
+      "sha256": "58d0f290243734ea0c29f53dec3910d2d297b592d034625c9f965e21fbef8225"
+    },
+    {
+      "language": "es",
+      "filename": "CoverAll_2026-10-12_r7_es.pdf",
+      "sha256": "7d7ccb78972c3b9d47b2f86896acb3cde915d6b5b22a531059af97e4b6e45dd9"
+    },
+    {
+      "language": "en-es",
+      "filename": "CoverAll_2026-10-12_r7_en-es.pdf",
+      "sha256": "9f5c2973b6bacaaec63e1eb822381d1462705b8e17303c7d8aef0c5516de2bcc"
+    }
+  ],
+  "confirmationCalls": 1,
+  "phoneDeliveryProven": false,
+  "realManagerBrowserProven": false,
+  "production": false
+}

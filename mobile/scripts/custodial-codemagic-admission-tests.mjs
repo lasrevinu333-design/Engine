@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import nodeTest from 'node:test';
 import {
   CUSTODIAL_CODEMAGIC_ADMISSION_POLICY,
   CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY,
@@ -13,13 +13,22 @@ import {
   downloadCodemagicArtifact,
   fetchCodemagicV3BuildResponse,
   inspectCodemagicV3BuildResponse,
+  inspectCodemagicForwardReviewInputs,
   inspectCodemagicProvenanceZip,
   normalizeCustodialAdmissionSourceRef,
   verifyCodemagicProvenanceBundle,
+  assertReviewedForwardAdmission,
+  assertCodemagicForwardReviewContext,
+  parseCli,
   verifyRuntimeLedgerDirectory,
 } from './admit-custodial-codemagic-build.mjs';
+import { parseForwardBuildArguments, readReviewedForwardBuildSourceSelection, loadReviewedForwardBuild, assertReviewedForwardBuild, forwardBuildProvenance } from './configure-native-release.mjs';
+import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   CUSTODIAL_ANDROID_RELEASE_POLICY,
+  CUSTODIAL_PACKAGE_NAME,
   CUSTODIAL_FORWARD_RECOVERY_BRANCH,
   CUSTODIAL_FORWARD_RECOVERY_REF,
   assertCustodialAcceptanceSchema,
@@ -37,6 +46,7 @@ import {
 } from './custodial-android-manifest-security.mjs';
 import { createHash } from 'node:crypto';
 import {
+  cpSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -49,6 +59,11 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { deflateRawSync } from 'node:zlib';
 import { createCanonicalTemporaryFixture } from '../../scripts/canonical-temporary-fixture.mjs';
+
+// Focused direct modes leave existing test definitions/fixtures in their
+// original module scope, but do not schedule unchanged callback groups.
+const focusedForwardMode = process.argv.includes('--forward-command-only') || process.argv.includes('--forward-source-selection-only') || process.argv.includes('--forward-schema-fixture-only') || process.argv.includes('--forward-phase-only') || process.argv.includes('--forward-branded-only') || process.argv.includes('--forward-api-review-only') || process.argv.includes('--forward-provider-inputs-only') || process.argv.includes('--forward-provider-branded-only');
+const test = focusedForwardMode ? () => {} : nodeTest;
 
 const BUILD_ID = '1234567890abcdef12345678';
 const COMMIT = '0123456789abcdef0123456789abcdef01234567';
@@ -64,6 +79,345 @@ const STORAGE_OBJECT_ID = '11111111-2222-3333-4444-555555555555';
 const STORAGE_BUILD_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const STORAGE_GOOGLE_ACCESS_ID = 'fixture-builder%40fixture.iam.gserviceaccount.com';
 const STORAGE_SIGNATURE = `${'A'.repeat(340)}%2Bw%3D%3D`;
+
+if (process.argv.includes('--forward-provider-inputs-only')) {
+  // NEW documented wire grammar and parser/binder refusals only. No source
+  // fixture, subprocess, Git, live API, authenticated receipt or review brand.
+  const digestName = 'custodial_forward_review_pins_sha256';
+  const roleName = 'custodial_forward_review_role';
+  const pair = { [digestName]: HASH, [roleName]: 'candidate' };
+  for (const role of ['candidate', 'recovery']) {
+    const reference = inspectCodemagicForwardReviewInputs({ ...pair, [roleName]: role,
+      unrelated_string: SENSITIVE_CONFIG, unrelated_boolean: false, unrelated_number: 12.5 });
+    assert.deepEqual(reference, { trusted_pins_sha256: HASH, role });
+    assert.equal(Object.isFrozen(reference), true);
+    assert.equal(Object.keys(reference).length, 2);
+    assert(!JSON.stringify(reference).includes(SENSITIVE_CONFIG));
+  }
+  assert.equal(inspectCodemagicForwardReviewInputs({}), null);
+  assert.equal(inspectCodemagicForwardReviewInputs({ [digestName]: '', [roleName]: '' }), null);
+  const malformed = [null, [], 'wrong', { [digestName]: HASH }, { [roleName]: 'candidate' },
+    { ...pair, [digestName]: null }, { ...pair, [digestName]: 123 },
+    { ...pair, [roleName]: null }, { ...pair, [roleName]: 1 },
+    { ...pair, [roleName]: true }, { ...pair, [roleName]: 'unknown' },
+    { ...pair, [roleName]: 'candidate ' }, { ...pair, [roleName]: '' },
+    { ...pair, [digestName]: '' }, { ...pair, [digestName]: HASH.toUpperCase() },
+    { ...pair, [digestName]: 'a'.repeat(63) }, { ...pair, unverified: { accepted: true } },
+    { ...pair, unverified: null }, { ...pair, unverified: Infinity },
+    { [digestName]: '', [roleName]: '', unverified: { accepted: true } }];
+  for (const input of malformed) assert.throws(() => inspectCodemagicForwardReviewInputs(input), /Codemagic.*inputs|Codemagic.*digest/);
+  const options = { expectedBuildId: BUILD_ID, expectedCommit: COMMIT, expectedBranch: 'main', minimumVersionCode: 1 };
+  for (const inputs of [{}, { [digestName]: '', [roleName]: '' }]) {
+    const payload = validBuildResponse(); payload.data.build_inputs = inputs;
+    const observed = inspectCodemagicV3BuildResponse(JSON.stringify(payload), options);
+    assert.equal(Object.hasOwn(observed.metadata, 'forward_review_inputs'), false);
+    assert.equal(Object.hasOwn(observed.metadata, 'forward_review_context'), false);
+  }
+  for (const inputs of [pair, { [digestName]: HASH }, { ...pair, [roleName]: null },
+    { ...pair, [digestName]: '' }, { ...pair, [roleName]: 'WRONG' }]) {
+    const payload = validBuildResponse(); payload.data.build_inputs = inputs;
+    assert.throws(() => inspectCodemagicV3BuildResponse(JSON.stringify(payload), options), /Codemagic.*inputs|Codemagic.*digest/);
+  }
+  const fakeProvider = validBuildResponse(); fakeProvider.data.forward_review_context = { accepted: true };
+  assert.throws(() => inspectCodemagicV3BuildResponse(JSON.stringify(fakeProvider), options), /Codemagic build.*field|Codemagic build.*key/);
+  const duplicate = validBuildResponse(); duplicate.data.build_inputs = {};
+  const duplicateBytes = JSON.stringify(duplicate).replace('"build_inputs":{}', '"build_inputs":{"custodial_forward_review_role":"","custodial_forward_review_role":"candidate"}');
+  assert.throws(() => inspectCodemagicV3BuildResponse(duplicateBytes, options), /duplicate|repeats/i);
+  const payload = validBuildResponse(); payload.data.build_inputs = pair;
+  const forged = { trusted_pins_sha256: HASH, role: 'candidate', descriptor: { version_code: VERSION_CODE } };
+  assert.throws(() => inspectCodemagicV3BuildResponse(JSON.stringify(payload), { ...options, forwardBuild: forged }), /not loaded/);
+  const metadata = { version_code: VERSION_CODE, commit: COMMIT, branch: 'main', forward_review_inputs: inspectCodemagicForwardReviewInputs(pair) };
+  assert.throws(() => assertCodemagicForwardReviewContext({ metadata, context: metadata.forward_review_inputs, forwardBuild: forged }), /not loaded/);
+  assert.throws(() => assertReviewedForwardAdmission({ acceptance: { application: { version_code: VERSION_CODE },
+    forward_transition: { accepted: true }, forward_review_inputs: pair }, forwardBuild: null, metadata }), /not loaded/);
+  process.stdout.write('NEW_PROVIDER_INPUTS_SOURCE_ONLY: primitive digest/role grammar, bounded reference/no unrelated values, legacy absent/both-empty, partial/null/number/unknown/no-context refusals, fake provider field and unbranded/acceptance-only rejection passed. No Git/Bash/API/artifact/private-brand positive executed.\n');
+} else if (process.argv.includes('--forward-source-selection-only') || process.argv.includes('--forward-phase-only') || process.argv.includes('--forward-branded-only') || process.argv.includes('--forward-api-review-only') || process.argv.includes('--forward-provider-branded-only')) {
+  const phaseOnly = process.argv.includes('--forward-phase-only');
+  const brandedOnly = process.argv.includes('--forward-branded-only');
+  const apiReviewOnly = process.argv.includes('--forward-api-review-only') || process.argv.includes('--forward-provider-branded-only');
+  const directory = mkdtempSync(join(tmpdir(), 'custodial-forward-source-test-'));
+  try {
+    const pinsPath = join(directory, 'reviewed-pins.json'); const inputPath = join(directory, 'source-input.json');
+    const flagsFor = (hash) => parseForwardBuildArguments(['--forward-source-input', inputPath, '--forward-trusted-pins', pinsPath, '--forward-trusted-pins-sha256', hash, '--forward-role', 'candidate']);
+    const pinHash = () => createHash('sha256').update(readFileSync(pinsPath)).digest('hex');
+    const write = (path, value) => writeFileSync(path, JSON.stringify(value));
+    if (!phaseOnly && !brandedOnly && !apiReviewOnly) {
+    write(inputPath, { schema_version: 1, kind: 'custodial.forward-source-admission-input.v1', source_only: true, activation: false, adapter_input: {} });
+    write(pinsPath, { schema_version: 1, kind: 'WRONG-SYNTHETIC-NEGATIVE', external_trusted_pins: {}, evidence_files: {} });
+    await assert.rejects(() => readReviewedForwardBuildSourceSelection(flagsFor(HASH)), /independent reviewed pin/);
+    await assert.rejects(() => readReviewedForwardBuildSourceSelection(flagsFor(pinHash())), /reviewed G30 build pins envelope/);
+    writeFileSync(pinsPath, '{"schema_version":1,"schema_version":2}');
+    await assert.rejects(() => readReviewedForwardBuildSourceSelection(flagsFor(pinHash())), /duplicate|repeats/i);
+    rmSync(pinsPath);
+    symlinkSync(inputPath, pinsPath);
+    await assert.rejects(() => readReviewedForwardBuildSourceSelection(flagsFor(HASH)), /non-symlink/);
+    rmSync(pinsPath);
+    }
+    let source = { ref: 'refs/heads/main', commit: COMMIT, tree: SOURCE_TREE };
+    let repositoryDirectory, fixtureSchemaHash, fixtureNativeHash;
+    if (brandedOnly || apiReviewOnly) {
+      // Observe the real owning Git/byte loader on disposable source copies.
+      // Synthetic review/target/version declarations do not select a release.
+      repositoryDirectory = join(directory, 'synthetic-source');
+      const schemaPath = join(repositoryDirectory, 'mobile/scripts/custodial-android-release-acceptance.schema.json');
+      mkdirSync(join(repositoryDirectory, 'mobile/scripts'), { recursive: true });
+      const schemaBytes = readFileSync(new URL('./custodial-android-release-acceptance.schema.json', import.meta.url));
+      writeFileSync(schemaPath, schemaBytes);
+      const plugin = fileURLToPath(new URL('../plugins/custodial-native-vault', import.meta.url));
+      custodialNativeVaultSourceDigest(plugin); // refuse unclassified/symlink inputs
+      const copy = join(repositoryDirectory, 'mobile/plugins/custodial-native-vault');
+      cpSync(plugin, copy, { recursive: true, filter: (path) => path !== join(plugin, 'android/.gradle') && path !== join(plugin, 'android/build') });
+      fixtureSchemaHash = createHash('sha256').update(schemaBytes).digest('hex');
+      fixtureNativeHash = custodialNativeVaultSourceDigest(copy);
+      const git = (args) => execFileSync('git', ['-C', repositoryDirectory, ...args], { encoding: 'utf8', timeout: 10000, maxBuffer: 1024 * 1024 }).trim();
+      git(['init', '-q', '-b', 'main']);
+      git(['add', '.']);
+      git(['-c', 'user.name=Synthetic Source Fixture', '-c', 'user.email=synthetic-source@example.invalid', 'commit', '-qm', 'Disposable source qualification only']);
+      source = { ref: git(['symbolic-ref', 'HEAD']), commit: git(['rev-parse', 'HEAD']), tree: git(['rev-parse', 'HEAD^{tree}']) };
+    }
+    const descriptor = (version_code, ref) => ({ version_code, package_name: CUSTODIAL_PACKAGE_NAME, signer_certificate_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_signer_sha256, signer_public_key_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_signer_public_key_sha256, source: { ...source, ref }, artifact_sha256: HASH, schema_sha256: HASH, native_sha256: HASH, runtime_sha256: HASH });
+    const evidenceFiles = {}; const evidenceRefs = {};
+    for (const name of ['baseline_receipt_sha256', 'candidate_source_receipt_sha256', 'recovery_source_receipt_sha256', 'enrollment', 'protected_pending', 'history', 'crypto']) {
+      const path = join(directory, `${name}.json`); write(path, { SYNTHETIC_SOURCE_TEST_ONLY: name });
+      evidenceFiles[name] = path;
+      evidenceRefs[name] = createHash('sha256').update(readFileSync(path)).digest('hex');
+    }
+    const retained = { schema_version: 1, source_pair: { frontend_commit: source.commit, frontend_tree: source.tree, backend_commit: COMMIT, backend_tree: SOURCE_TREE }, reset_or_downgrade_forbidden: true };
+    for (const name of ['enrollment', 'protected_pending', 'history', 'crypto']) retained[name] = { status: 'compatible', schema: 'SYNTHETIC_UNQUALIFIED_SOURCE_TEST', provenance_sha256: evidenceRefs[name], source };
+    const planPath = join(directory, 'plan.json'); write(planPath, retained);
+    evidenceFiles.retained_data_plan_sha256 = planPath;
+    const pins = { schema_version: 1, policy_generation: 'SYNTHETIC_NOT_OWNER_REVIEW', target_id: 'SYNTHETIC-NONOPERATIONAL', package_name: CUSTODIAL_PACKAGE_NAME, signer_certificate_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_signer_sha256, signer_public_key_sha256: CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_signer_public_key_sha256, installed_target: descriptor(56, 'refs/heads/installed-fixture'), candidate: descriptor(57, 'refs/heads/main'), recovery: descriptor(58, 'refs/heads/recovery-fixture'), retained_store_compatibility: retained, evidence_refs: { baseline_receipt_sha256: evidenceRefs.baseline_receipt_sha256, candidate_source_receipt_sha256: evidenceRefs.candidate_source_receipt_sha256, recovery_source_receipt_sha256: evidenceRefs.recovery_source_receipt_sha256, retained_data_plan_sha256: createHash('sha256').update(readFileSync(planPath)).digest('hex') }, legacy_policy: { highest_fleet_version_code: 29, minimum_next_version_code: 30, maximum_candidate_version_code_for_staged_recovery: 31 } };
+    const input = { schema_version: 1, policy_generation: pins.policy_generation, purpose: 'build_preparation', fleet_promotion: false, scope: 'one_explicit_target_only', target_id: pins.target_id, installed_target: pins.installed_target, candidate: pins.candidate, recovery: pins.recovery, retained_store_compatibility: retained, evidence_refs: pins.evidence_refs };
+    const save = () => { write(pinsPath, { schema_version: 1, kind: 'custodial.forward-build-reviewed-pins.v1', external_trusted_pins: pins, evidence_files: evidenceFiles }); write(inputPath, { schema_version: 1, kind: 'custodial.forward-source-admission-input.v1', source_only: true, activation: false, adapter_input: input }); };
+    if (brandedOnly || apiReviewOnly) {
+      pins.candidate.schema_sha256 = fixtureSchemaHash;
+      pins.candidate.native_sha256 = fixtureNativeHash;
+      pins.candidate.artifact_sha256 = null;
+      pins.candidate.runtime_sha256 = null;
+      save();
+      const flags = flagsFor(pinHash());
+      const context = await loadReviewedForwardBuild(flags, { buildNumber: 57, repositoryDirectory });
+      if (apiReviewOnly) {
+        const review = {
+          custodial_forward_review_pins_sha256: context.trusted_pins_sha256,
+          custodial_forward_review_role: context.role,
+        };
+        const payload = validBuildResponse();
+        payload.data.commit.hash = source.commit;
+        payload.data.commit.url = `https://github.com/${CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.repository}/commit/${source.commit}`;
+        payload.data.artifacts[0].version_code = '57';
+        payload.data.build_inputs = review;
+        const options = { expectedBuildId: BUILD_ID, expectedCommit: source.commit, expectedBranch: 'main',
+          expectedVersionCode: 57, minimumVersionCode: 30, forwardBuild: context };
+        let calls = 0;
+        const bytes = await fetchCodemagicV3BuildResponse(BUILD_ID, API_TOKEN, async (url, request) => {
+          calls++; assert.equal(url, `${CUSTODIAL_CODEMAGIC_ADMISSION_POLICY.api_origin}/api/v3/builds/${BUILD_ID}`);
+          assert.equal(request.method, 'GET'); assert.equal(request.headers['x-auth-token'], API_TOKEN);
+          assert.equal(request.redirect, 'error'); assert.equal(request.credentials, 'omit');
+          return { status: 200, headers: { get: key => key === 'content-type' ? 'application/json' : null },
+            arrayBuffer: async () => Buffer.from(JSON.stringify(payload)) };
+        });
+        const parsed = inspectCodemagicV3BuildResponse(bytes, options);
+        assert.equal(calls, 1);
+        assert.deepEqual(parsed.metadata.forward_review_inputs, { trusted_pins_sha256: context.trusted_pins_sha256, role: context.role });
+        assert.equal(Object.isFrozen(parsed.metadata.forward_review_inputs), true);
+        assert.equal(Object.hasOwn(parsed.metadata, 'forward_review_context'), false);
+        assertCodemagicForwardReviewContext({ metadata: parsed.metadata, context: parsed.metadata.forward_review_inputs, forwardBuild: context });
+        assert(!JSON.stringify(parsed.metadata).includes(API_TOKEN)); assert(!JSON.stringify(parsed.metadata).includes(SENSITIVE_CONFIG));
+        for (const mutate of [
+          p => { p.data.build_inputs = {}; }, p => { p.data.build_inputs = null; },
+          p => { p.data.build_inputs.custodial_forward_review_pins_sha256 = HASH; },
+          p => { p.data.build_inputs.custodial_forward_review_role = 'recovery'; },
+          p => { p.data.build_inputs.custodial_forward_review_role = 1; },
+          p => { delete p.data.build_inputs.custodial_forward_review_role; },
+          p => { p.data.forward_review_context = { accepted: true }; },
+        ]) {
+          const bad = structuredClone(payload); mutate(bad);
+          assert.throws(() => inspectCodemagicV3BuildResponse(JSON.stringify(bad), options), /Codemagic build.*field|Codemagic build.*key|Codemagic.*inputs|differs from independently pinned/);
+        }
+        assert.throws(() => assertCodemagicForwardReviewContext({ metadata: parsed.metadata,
+          context: structuredClone(parsed.metadata.forward_review_inputs), forwardBuild: context }), /must come from/);
+        assert.throws(() => assertCodemagicForwardReviewContext({ metadata: { ...parsed.metadata },
+          context: parsed.metadata.forward_review_inputs, forwardBuild: context }), /must come from/);
+        const changed = structuredClone(payload); changed.data.build_inputs.custodial_forward_review_role = 'recovery';
+        assert.throws(() => inspectCodemagicV3BuildResponse(JSON.stringify(changed), options), /Codemagic forward review inputs differ from independently pinned configure-owned review/);
+        assert.throws(() => inspectCodemagicV3BuildResponse(bytes, { ...options, forwardBuild: structuredClone(context) }), /not loaded/);
+        assert.throws(() => inspectCodemagicV3BuildResponse(bytes, { ...options, forwardBuild: null }), /Codemagic.*inputs/);
+        const acceptance = { application: { version_code: 57, package_name: context.pins.package_name },
+          artifact: { apk_sha256: HASH }, forward_transition: forwardBuildProvenance(context),
+          source: { ...source }, build: { number: 57, run_id: BUILD_ID, workflow: 'custodial-android' },
+          verifier: { acceptance_schema_sha256: context.descriptor.schema_sha256 },
+          embedded_provenance: { custodial_native_vault_source_sha256: context.descriptor.native_sha256,
+            runtime_asset_manifest_sha256: HASH },
+          signing: { signer_sha256: context.pins.signer_certificate_sha256, signer_public_key_sha256: context.pins.signer_public_key_sha256 } };
+        assert.equal(assertReviewedForwardAdmission({ acceptance, forwardBuild: context, metadata: parsed.metadata,
+          apkHash: HASH, sourceCommit: source.commit, sourceTree: source.tree, sourceRef: source.ref }).target_id, context.input.target_id);
+        const absent = { ...parsed.metadata }; delete absent.forward_review_inputs;
+        assert.throws(() => assertReviewedForwardAdmission({ acceptance: { ...acceptance, forward_review_context: review },
+          forwardBuild: context, metadata: absent, apkHash: HASH, sourceCommit: source.commit,
+          sourceTree: source.tree, sourceRef: source.ref }), /must come from/);
+        const legacy = validBuildResponse();
+        assert.equal(Object.hasOwn(inspectCodemagicV3BuildResponse(JSON.stringify(legacy), {
+          expectedBuildId: BUILD_ID, expectedCommit: COMMIT, expectedBranch: 'main', minimumVersionCode: 1,
+        }).metadata, 'forward_review_context'), false);
+        assert.equal(assertReviewedForwardAdmission({ acceptance: { application: { version_code: 31 } } }), null);
+        process.stdout.write('NEW_PROVIDER_BRANDED_SOURCE_ONLY: documented returned digest/role bound through normal mock fetch/closed parser to actual configure-owned private brand; missing/typed/partial/digest/role mismatch, fake top-level field, copied reference/unbranded/acceptance-only refused. Synthetic source/recipe only, no actual provider job/artifact/install authority.\n');
+      } else {
+      assert.equal(assertReviewedForwardBuild(context, { buildNumber: 57, sourceCommit: source.commit, sourceTree: source.tree, sourceRef: source.ref }), context.descriptor);
+      assert.equal(Object.isFrozen(context.pins.retained_store_compatibility), true);
+      assert.equal(normalizeCustodialAdmissionSourceRef('main', context), source.ref);
+      const provenance = forwardBuildProvenance(context);
+      for (const name of ['fleet_promotion', 'installation_admitted', 'physical_verified']) assert.equal(provenance[name], false);
+      assert.throws(() => assertReviewedForwardBuild(structuredClone(context), { buildNumber: 57 }), /not loaded from independently pinned reviewed bytes/);
+      assert.throws(() => assertReviewedForwardBuild(context, { buildNumber: 58 }), /differ from the reviewed role/);
+      const selector = await readReviewedForwardBuildSourceSelection(flags);
+      assert.throws(() => assertReviewedForwardBuild(selector, { buildNumber: 57 }), /not loaded from independently pinned reviewed bytes/);
+      const badVersion = { ...flags, '--forward-role': 'recovery' };
+      await assert.rejects(() => loadReviewedForwardBuild(badVersion, { buildNumber: 57, repositoryDirectory }), /build number differs/);
+      const schemaPath = join(repositoryDirectory, 'mobile/scripts/custodial-android-release-acceptance.schema.json');
+      const bytes = readFileSync(schemaPath); writeFileSync(schemaPath, Buffer.concat([bytes, Buffer.from('\n')]));
+      await assert.rejects(() => loadReviewedForwardBuild(flags, { buildNumber: 57, repositoryDirectory }), /exact clean reviewed source/);
+      writeFileSync(schemaPath, bytes);
+      pins.candidate.native_sha256 = HASH; save();
+      await assert.rejects(() => loadReviewedForwardBuild(flagsFor(pinHash()), { buildNumber: 57, repositoryDirectory }), /schema or native source differs/);
+      pins.candidate.native_sha256 = fixtureNativeHash; save();
+      const rebound = await loadReviewedForwardBuild(flagsFor(pinHash()), { buildNumber: 57, repositoryDirectory });
+      assert.equal(rebound.descriptor.artifact_sha256, null);
+      assert.throws(() => assertReviewedForwardAdmission({ acceptance: { application: { version_code: 57 }, forward_transition: forwardBuildProvenance(rebound), artifact: { apk_sha256: null } }, forwardBuild: rebound, apkHash: null, sourceCommit: source.commit, sourceTree: source.tree, sourceRef: source.ref }), /downloaded APK/);
+      process.stdout.write('SOURCE_ONLY: actual Git/clean-source/schema/native-byte brand and normal admission context passed; copied contexts, wrong role/build, dirty source, mismatched native bytes and missing compiled artifact refused. Synthetic review is NOT owner approval, selected release, artifact/install/physical qualification.\n');
+      }
+    } else if (phaseOnly) {
+      // These are synthetic declarations, not owner approval or compiled
+      // proof. Observe the actual input reader without minting a Git brand.
+      for (const role of ['candidate', 'recovery']) { pins[role].artifact_sha256 = null; pins[role].runtime_sha256 = null; }
+      save(); const recipeHash = pinHash();
+      for (const role of ['candidate', 'recovery']) {
+        const flags = { ...flagsFor(recipeHash), '--forward-role': role };
+        const recipe = await readReviewedForwardBuildSourceSelection(flags);
+        assert.equal(recipe.artifact_sha256, null); assert.equal(recipe.runtime_sha256, null);
+        assert.equal(recipe.version_code, pins[role].version_code);
+        assert.equal(recipe.ref, pins[role].source.ref);
+        assert.equal(pinHash(), recipeHash);
+        assert.throws(() => assertReviewedForwardAdmission({ acceptance: { application: { version_code: recipe.version_code }, forward_transition: {} }, forwardBuild: recipe }), /not loaded from independently pinned reviewed bytes/);
+      }
+      // Null is the explicit pending fact, not an empty/invalid digest waiver.
+      pins.candidate.artifact_sha256 = ''; save();
+      await assert.rejects(() => readReviewedForwardBuildSourceSelection(flagsFor(pinHash())), /artifact_sha256_invalid/);
+      pins.candidate.artifact_sha256 = null; pins.recovery.runtime_sha256 = 'UNQUALIFIED'; save();
+      await assert.rejects(() => readReviewedForwardBuildSourceSelection(flagsFor(pinHash())), /runtime_sha256_invalid/);
+      // Bounded source composition assertions only; not execution of Git,
+      // toolchain, ZIP/signature/build/install or final artifact admission.
+      const normal = readFileSync(new URL('./admit-custodial-codemagic-build.mjs', import.meta.url), 'utf8');
+      assert.doesNotMatch(normal, /Normal forward artifact admission requires reviewed compiled APK\/runtime hashes/);
+      assert.match(normal, /descriptor\.artifact_sha256 !== null && descriptor\.artifact_sha256 !== apkHash/);
+      assert.match(normal, /descriptor\.runtime_sha256 !== null && descriptor\.runtime_sha256 !== acceptance\.embedded_provenance\.runtime_asset_manifest_sha256/);
+      assert.match(normal, /acceptance\.artifact\.apk_sha256 !== apkHash/);
+      assert.match(normal, /forwardBuild === null \? artifactSource\.branch : artifactSource\.ref/);
+      const command = normal.slice(normal.indexOf('async function main()'));
+      for (const check of ['verifyCodemagicProvenanceBundle', 'verifyRuntimeLedgerDirectory', 'assertProducerConsumerAcceptanceMatch', 'assertExactPrivateFile', 'assertCustodialCodemagicAdmissionSchema']) assert.match(command, new RegExp(check));
+      assert.match(command, /Object\.entries\(forwardFlags\)\.flat\(\)/);
+      assert.match(command, /forwardBuildProvenance\(finalForwardBuild\)/);
+      assert.match(command, /expectedVersionCode = forwardSelection\?\.version_code \?\? CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY\.version_code/);
+      process.stdout.write('SYNTHETIC_SOURCE_ONLY: pending candidate/recovery hash recipe selection, invalid pending hashes, unbranded-admission rejection and owning command phase composition assertions passed; actual Git/compiled artifact proof remains main-owned.\n');
+    } else {
+    save();
+    const selection = await readReviewedForwardBuildSourceSelection(flagsFor(pinHash()));
+    assert.deepEqual(Object.keys(selection).sort(), ['artifact_sha256', 'commit', 'ref', 'runtime_sha256', 'tree', 'version_code']);
+    assert.equal(selection.version_code, 57); assert.equal(Object.isFrozen(selection), true);
+    assert.throws(() => assertReviewedForwardBuild(selection, { buildNumber: 57 }), /not loaded from independently pinned reviewed bytes/);
+    assert.throws(() => normalizeCustodialAdmissionSourceRef('main', selection), /not loaded from independently pinned reviewed bytes/);
+    for (const mutation of [() => { input.fleet_promotion = 'false'; }, () => { input.fleet_promotion = false; pins.candidate.version_code = 56; }, () => { pins.candidate.version_code = 57; pins.recovery.version_code = 57; }]) { mutation(); save(); await assert.rejects(() => readReviewedForwardBuildSourceSelection(flagsFor(pinHash())), /contract rejected/); }
+    pins.recovery.version_code = 58; save();
+    writeFileSync(evidenceFiles.enrollment, 'SYNTHETIC_NEGATIVE_MUTATED_BYTES');
+    await assert.rejects(() => readReviewedForwardBuildSourceSelection(flagsFor(pinHash())), /independent reviewed pin/);
+    process.stdout.write('SYNTHETIC_SOURCE_ONLY: independently pinned input reader, duplicate/symlink/hash/order/effect negatives and unbranded selection barrier passed; no Git observation, owner review or artifact acceptance.\n');
+    }
+  } finally { rmSync(directory, { recursive: true, force: false }); }
+} else if (process.argv.includes('--forward-command-only')) {
+  const legacy = validAdmission();
+  assert.equal(assertCustodialCodemagicAdmissionSchema(legacy), true);
+  const forward = structuredClone(legacy);
+  forward.branch = 'main'; forward.commit = COMMIT; forward.version_code = 57;
+  forward.artifact_source_tree = SOURCE_TREE;
+  forward.artifact_source_policy_sha256 = HASH;
+  forward.forward_transition = { target_id: 'SYNTHETIC-NONOPERATIONAL', policy_generation: 'synthetic-source-test', trusted_pins_sha256: HASH, role: 'candidate', installed_version_code: 56, candidate_version_code: 57, recovery_version_code: 58, source_ref: 'refs/heads/main', fleet_promotion: false, installation_admitted: false, physical_verified: false };
+  assert.throws(() => assertCustodialCodemagicAdmissionSchema(forward), /not loaded from independently pinned reviewed bytes/);
+  assert.throws(() => assertCustodialCodemagicAdmissionSchema(forward, { forwardBuild: { descriptor: {} } }), /not loaded from independently pinned reviewed bytes/);
+  for (const field of ['fleet_promotion', 'installation_admitted', 'physical_verified']) {
+    const variant = structuredClone(forward); variant.forward_transition[field] = true;
+    assert.throws(() => assertCustodialCodemagicAdmissionSchema(variant), /schema rejected/);
+  }
+  const dropped = structuredClone(forward); delete dropped.artifact_source_tree;
+  assert.throws(() => assertCustodialCodemagicAdmissionSchema(dropped), /schema rejected/);
+  const noContext = structuredClone(forward); delete noContext.forward_transition;
+  assert.throws(() => assertCustodialCodemagicAdmissionSchema(noContext), /schema rejected/);
+  const unknown = structuredClone(forward); unknown.forward_transition.external_review = true;
+  assert.throws(() => assertCustodialCodemagicAdmissionSchema(unknown), /schema rejected/);
+  assert.throws(() => assertCustodialCodemagicAdmissionSchema({}), /schema rejected/);
+  assert.equal(await readReviewedForwardBuildSourceSelection(null), null);
+  const flags = parseForwardBuildArguments(['--forward-source-input', '/definitely-not-a-review/source.json', '--forward-trusted-pins', '/definitely-not-a-review/pins.json', '--forward-trusted-pins-sha256', HASH, '--forward-role', 'candidate']);
+  await assert.rejects(() => readReviewedForwardBuildSourceSelection(flags), /ENOENT|regular|file|canonical/);
+  assert.throws(() => assertReviewedForwardBuild({ commit: COMMIT, tree: SOURCE_TREE, ref: 'refs/heads/main', version_code: 57 }, { buildNumber: 57 }), /not loaded from independently pinned reviewed bytes/);
+  process.stdout.write('SYNTHETIC_SOURCE_ONLY: normal final admission legacy record, forged context, closed forward schema and missing reviewed-file route checks passed; no compiled artifact qualification.\n');
+}
+test('G30 trust repair: agreeing raw metadata cannot brand any forward acceptance version', () => {
+  for (const versionCode of [30, 31, 32, 56, 57, 58]) {
+    const forged = Object.freeze({ descriptor: { version_code: versionCode }, trusted_pins_sha256: HASH, role: 'candidate' });
+    for (const forwardBuild of [null, forged, structuredClone(forged)]) {
+      assert.throws(() => assertReviewedForwardAdmission({
+        acceptance: { application: { version_code: versionCode }, forward_transition: { accepted: true } },
+        forwardBuild,
+        metadata: { forward_review_context: forwardBuild },
+      }), /not loaded from independently pinned reviewed bytes/);
+    }
+  }
+});
+
+test('G30 trust repair: malformed versions and explicit null transition cannot evade the brand', () => {
+  for (const versionCode of [undefined, null, '57', NaN, 0, -1, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => assertReviewedForwardAdmission({ acceptance: { application: { version_code: versionCode } } }), /positive safe versionCode/);
+  }
+  assert.throws(() => assertReviewedForwardAdmission({ acceptance: { application: { version_code: 31 }, forward_transition: null } }), /not loaded from independently pinned reviewed bytes/);
+});
+
+test('G30 trust repair: explicit context is checked even without transition or on an approved ref', () => {
+  const forged = { descriptor: { version_code: 31, source: { ref: 'refs/heads/main' } } };
+  assert.throws(() => assertReviewedForwardAdmission({ acceptance: { application: { version_code: 31 } }, forwardBuild: forged }), /not loaded from independently pinned reviewed bytes/);
+  for (const ref of ['main', CUSTODIAL_FORWARD_RECOVERY_REF, 'refs/heads/reviewed-recovery-fixture']) {
+    assert.throws(() => normalizeCustodialAdmissionSourceRef(ref, forged), /not loaded from independently pinned reviewed bytes/);
+  }
+});
+
+test('G30 trust repair: API JSON has no optional external review authority field', () => {
+  const response = validBuildResponse();
+  response.data.forward_review_context = { accepted: true, trusted_pins_sha256: HASH };
+  assert.throws(() => inspect(response), /Codemagic build.*field|Codemagic build.*key/);
+});
+
+test('G30 trust repair: absent context preserves legacy recovery', () => {
+  for (const versionCode of [29, 30, 31, 32, CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.version_code]) {
+    // Only this added review guard's no-op is tested, not artifact acceptance.
+    assert.equal(assertReviewedForwardAdmission({ acceptance: { application: { version_code: versionCode } } }), null);
+  }
+});
+
+test('forward producer admission rejects forged JSON and requires the configure-owned branded context', () => {
+  const acceptance = {
+    application: { version_code: 57, package_name: 'org.memphiszoo.custodial' },
+    embedded_provenance: { custodial_native_vault_source_sha256: HASH, runtime_asset_manifest_sha256: HASH },
+    verifier: { acceptance_schema_sha256: HASH },
+    signing: { signer_sha256: HASH, signer_public_key_sha256: HASH },
+    build: { run_id: BUILD_ID },
+    source: { commit: COMMIT, tree: SOURCE_TREE, ref: 'refs/heads/main' },
+  };
+  assert.throws(
+    () => assertReviewedForwardAdmission({ acceptance, forwardBuild: { descriptor: {}, pins: {}, input: {}, role: 'candidate' }, metadata: { build_id: BUILD_ID }, apkHash: HASH, sourceCommit: COMMIT, sourceTree: SOURCE_TREE, sourceRef: 'refs/heads/main' }),
+    /not loaded from independently pinned reviewed bytes/,
+  );
+  assert.throws(() => parseCli(['--build-id', BUILD_ID, '--forward-role', 'candidate']), /requires source input/);
+  assert.equal(parseCli(['--build-id', BUILD_ID]).forwardFlags, null);
+  assert.equal(typeof parseForwardBuildArguments, 'function');
+});
 
 test('admits only protected main or the exact Build 29 recovery source ref', () => {
   assert.equal(normalizeCustodialSourceRef('main'), 'refs/heads/main');
@@ -221,7 +575,7 @@ const acceptanceSchema = JSON.parse(readFileSync(new URL(
 )));
 
 test('keeps the pinned recovery ref admissible by the producer acceptance schema', () => {
-  const allowedRefs = acceptanceSchema.properties.source.properties.ref.enum;
+  const allowedRefs = acceptanceSchema.$defs.legacySourceRef.enum;
   assert.ok(
     allowedRefs.includes(CUSTODIAL_CODEMAGIC_FORWARD_RECOVERY_POLICY.ref),
     'the control-plane recovery pin must remain in the producer acceptance ref allowlist',
@@ -251,6 +605,13 @@ function schemaFixture(node) {
     return schemaFixture(referenced);
   }
   if (Array.isArray(node.allOf)) {
+    if (node.properties && node.required && node.allOf.some((part) => part.if?.required?.includes('forward_transition'))) {
+      const fixture = schemaFixture({ ...node, allOf: undefined });
+      // Existing legacy fixture must use the no-context branch, not generate
+      // optional forward metadata or discard the rest of the root schema.
+      fixture.source.ref = schemaFixture(node.allOf[0].else.properties.source.properties.ref);
+      return fixture;
+    }
     return node.allOf.reduce((value, part) => mergeFixture(value, schemaFixture(part)), {});
   }
   if (Object.hasOwn(node, 'const')) return clone(node.const);
@@ -1510,3 +1871,23 @@ test('artifact redirects and downloads fail closed without leaking response secr
   assert.match(redirectLimit, /exceeded redirect policy/);
   assert.equal(redirectCount, 5);
 });
+
+if (process.argv.includes('--forward-schema-fixture-only')) {
+  const producer = realisticProducerBundleFixture(Buffer.from('SYNTHETIC-NOT-SIGNED-APK')).acceptance;
+  assert.equal(assertCustodialAcceptanceSchema(producer), true);
+  producer.application.version_code = 57;
+  producer.build.number = 57;
+  producer.embedded_provenance.native_build_number = 57;
+  producer.source.ref = 'refs/heads/main';
+  producer.forward_transition = { target_id: 'SYNTHETIC-NONOPERATIONAL', policy_generation: 'synthetic-source-comparison', trusted_pins_sha256: HASH, role: 'candidate', installed_version_code: 56, candidate_version_code: 57, recovery_version_code: 58, source_ref: 'refs/heads/main', fleet_promotion: false, installation_admitted: false, physical_verified: false };
+  const consumer = structuredClone(producer);
+  const linux = custodialAndroidToolchainPolicyForPlatform('linux');
+  consumer.tools = platformToolEvidence(linux, '/synthetic-linux-tools');
+  consumer.verifier.toolchain_policy_sha256 = linux.sha256;
+  assert.equal(assertProducerConsumerAcceptanceMatch(producer, consumer), true);
+  consumer.forward_transition.policy_generation = 'SYNTHETIC_FOREIGN_GENERATION';
+  assert.throws(() => assertProducerConsumerAcceptanceMatch(producer, consumer), /differ: forward_transition/);
+  delete consumer.forward_transition;
+  assert.throws(() => assertProducerConsumerAcceptanceMatch(producer, consumer), /differ: forward_transition/);
+  process.stdout.write('SYNTHETIC_SOURCE_ONLY: affected existing acceptance fixture and producer/consumer forward-provenance comparison passed; not signed APK verification or admission.\n');
+}

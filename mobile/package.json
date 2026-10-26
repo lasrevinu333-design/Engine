@@ -32,31 +32,32 @@
     "test:android-plugin:custodial": "android/gradlew -p plugins/custodial-native-vault/android --no-daemon testDebugUnitTest assembleDebugAndroidTest pixel2Api35DebugAndroidTest",
     "test:android-generated:custodial": "android/gradlew -p android --no-daemon :app:assembleDebugAndroidTest :app:pixel2Api35DebugAndroidTest",
     "test": "npm run test:contracts && npm run test:shell",
-    "test:contracts": "node scripts/mobile-contract-tests.mjs && node scripts/web-install-contract-tests.mjs && node scripts/custodial-storage-firewall-tests.mjs && node scripts/custodial-storage-firewall-browser-tests.mjs && node scripts/custodial-native-reconciliation-tests.mjs && node scripts/custodial-generated-app-test-contracts.mjs && node scripts/custodial-capacitor-runtime-policy-contracts.mjs && node scripts/custodial-android-toolchain-policy-tests.mjs && node scripts/custodial-runtime-cwd-determinism-tests.mjs && node scripts/custodial-codemagic-admission-tests.mjs && node scripts/custodial-codemagic-admission-bootstrap-tests.mjs",
+    "test:contracts": "node scripts/mobile-contract-tests.mjs && node scripts/web-install-contract-tests.mjs && node scripts/custodial-storage-firewall-tests.mjs && node scripts/custodial-storage-firewall-browser-tests.mjs && node scripts/custodial-native-reconciliation-tests.mjs && node scripts/custodial-generated-app-test-contracts.mjs && node scripts/custodial-capacitor-runtime-policy-contracts.mjs && node scripts/custodial-android-toolchain-policy-tests.mjs && node scripts/custodial-runtime-cwd-determinism-tests.mjs && node scripts/custodial-codemagic-admission-tests.mjs && node scripts/custodial-codemagic-admission-bootstrap-tests.mjs && npm run test:message-receipts && npm run test:provider-audio-release",
     "test:admission-host:custodial": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node scripts/custodial-linux-admission-host-tools-tests.mjs && /home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node scripts/custodial-codemagic-admission-bootstrap-tests.mjs",
     "admit:codemagic:custodial": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node scripts/run-custodial-codemagic-admission.mjs",
     "verify:custodial-native-boundary": "node scripts/verify-custodial-native-boundary-apk.mjs",
     "test:shell": "npm run typecheck:shell && vitest run && node ../scripts/batch-0b-shell-contract-tests.mjs",
-    "typecheck:shell": "tsc --project tsconfig.shell.json --noEmit"
+    "typecheck:shell": "tsc --project tsconfig.shell.json --noEmit",
+    "test:message-receipts": "node ../scripts/message-send-receipt-tests.mjs",
+    "test:provider-audio-release": "node ../scripts/provider-audio-release-policy-tests.mjs"
   },
   "dependencies": {
     "@memphis-zoo/custodial-native-vault": "file:plugins/custodial-native-vault",
     "@capacitor-firebase/messaging": "8.3.0",
-    "@capacitor/android": "8.4.2",
+    "@capacitor/android": "8.4.3",
     "@capacitor/app": "8.1.1",
-    "@capacitor/core": "8.4.2",
-    "@capacitor/ios": "8.4.2",
+    "@capacitor/core": "8.4.3",
+    "@capacitor/ios": "8.4.3",
     "@capacitor/local-notifications": "8.2.1",
     "@capacitor/network": "8.0.1",
     "@capacitor/status-bar": "8.0.3",
     "@chatscope/chat-ui-kit-react": "2.1.1",
     "@chatscope/chat-ui-kit-styles": "1.4.0",
-    "firebase": "12.16.0",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.4.2",
+    "@capacitor/cli": "8.4.3",
     "esbuild": "0.25.12",
     "typescript": "5.9.3"
   }

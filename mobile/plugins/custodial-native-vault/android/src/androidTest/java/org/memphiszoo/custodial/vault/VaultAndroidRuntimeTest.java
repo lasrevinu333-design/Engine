@@ -453,11 +453,13 @@ public final class VaultAndroidRuntimeTest {
             }
             assertEquals("READY", readiness);
             Map<String, Object> scanEntry = plugin.createScanEntry(
-                "https://example.test/?code=TETM", "native-nfc"
+                "https://example.test/?code=TETM", "native-nfc", java.util.UUID.randomUUID().toString(), true,
+                "ntag21x.v1:04010203040506" // synthetic observation, not physical NFC proof
             );
             String scanEntryId = String.valueOf(scanEntry.get("entry_id"));
             String finishScanEntryId = String.valueOf(plugin.createScanEntry(
-                "https://example.test/?code=TETM", "native-nfc"
+                "https://example.test/?code=TETM", "native-nfc", java.util.UUID.randomUUID().toString(), true,
+                "ntag21x.v1:04010203040506" // synthetic observation, not physical NFC proof
             ).get("entry_id"));
             assertTrue(String.valueOf(scanEntry.get("created_at")).matches(
                 "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"

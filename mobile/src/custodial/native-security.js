@@ -1,6 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { CustodialNativeVault } from '@memphis-zoo/custodial-native-vault';
 import { protectedPrincipal } from './protected-principal.js';
+import { validateNativeReadinessObservation } from './native-readiness-observation.js';
+import { createNativeProviderMirrorBridge } from './provider-mirror-bridge.js';
 import {
   CUSTODIAL_CREDENTIAL_KEY,
   CUSTODIAL_DEVICE_KEYS,
@@ -30,6 +32,11 @@ function platformName() {
 
 export function isCustodialNativeVaultPlatform() {
   return Capacitor.isNativePlatform?.() === true && platformName() === 'android';
+}
+
+export function getNativeProviderMirrorBridge() {
+  if(!isCustodialNativeVaultPlatform())throw securityError('custodial_native_vault_required');
+  return createNativeProviderMirrorBridge(CustodialNativeVault);
 }
 
 function isLocalBrowserTestRuntime() {
@@ -146,15 +153,18 @@ function rawStorageAdapter(storage) {
 }
 
 function readJson(storage, key) {
+  const raw = storage.getItem(key);
+  if (raw == null) return null;
   try {
-    const value = JSON.parse(storage.getItem(key));
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
-  } catch { return null; }
+    const value = JSON.parse(raw);
+    if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+  } catch { /* Retain unknown original bytes; absence is a different state. */ }
+  throw securityError('custodial_native_invalid_record');
 }
 
 function removalCompletionRecord(storage) {
   const raw = storage.getItem(CUSTODIAL_REMOVAL_COMPLETION_KEY);
-  if (raw == null || String(raw).trim() === '') return null;
+  if (raw == null) return null;
   const value = readJson(storage, CUSTODIAL_REMOVAL_COMPLETION_KEY);
   const allowed = new Set(['schema_version', 'operation_id', 'device_id', 'status', 'completed_at']);
   const timestamp = Date.parse(String(value?.completed_at || ''));
@@ -168,11 +178,7 @@ function removalCompletionRecord(storage) {
     || !Number.isFinite(timestamp)
   ) === false;
   if (!valid) {
-    // This local acknowledgement is never authority. Malformed content cannot
-    // suppress an exact native replay; discard it so finalized native proof can
-    // reconstruct the terminal journal.
-    storage.removeItem(CUSTODIAL_REMOVAL_COMPLETION_KEY);
-    return null;
+    throw securityError('custodial_native_removal_completion_mismatch');
   }
   return {
     ...value,
@@ -403,6 +409,38 @@ function createBrowserTestProtectedStorage(storage) {
 
 export function createNativeProtectedStorage(plugin, webStorage) {
   const local = rawStorageAdapter(webStorage);
+  function originalLocalState() {
+    // These compatibility rows are captured before native callbacks yield.
+    // Their bytes are a local preservation bound, never native authorization.
+    const keys = [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_CREDENTIAL_KEY,
+      CUSTODIAL_INSTALLATION_MARKER_KEY, CUSTODIAL_RESTORE_QUARANTINE_KEY,
+      CUSTODIAL_RECOVERY_RECORD_KEY, CUSTODIAL_ENROLLMENT_OPERATION_KEY,
+      CUSTODIAL_REMOVAL_OPERATION_KEY, CUSTODIAL_REMOVAL_COMPLETION_KEY];
+    const expected = new Map(keys.map(key => [key, local.getItem(key)]));
+    const assertCurrent = () => {
+      for (const [key, raw] of expected) if (local.getItem(key) !== raw) {
+        throw securityError('custodial_native_original_local_state_changed');
+      }
+    };
+    return Object.freeze({
+      assertCurrent,
+      getItem(key) { assertCurrent(); return expected.get(key); },
+      setItem(key, value) {
+        assertCurrent();
+        if (!expected.has(key)) throw securityError('custodial_native_invalid_slot');
+        local.setItem(key, value);
+        expected.set(key, String(value));
+        assertCurrent();
+      },
+      removeItem(key) {
+        assertCurrent();
+        if (!expected.has(key)) throw securityError('custodial_native_invalid_slot');
+        local.removeItem(key);
+        expected.set(key, null);
+        assertCurrent();
+      },
+    });
+  }
   async function state() {
     const result = await plugin.getState();
     if (!result || typeof result !== 'object' || result.blocked === true) {
@@ -413,7 +451,17 @@ export function createNativeProtectedStorage(plugin, webStorage) {
   return Object.freeze({
     nativeVault: true,
     async reconcileLocalState() {
+      const local = originalLocalState();
       const current = await state();
+      local.assertCurrent();
+      const originalEnrollment = readJson(local, CUSTODIAL_ENROLLMENT_OPERATION_KEY);
+      if (originalEnrollment && (originalEnrollment.schema_version !== 1
+        || !normalizedOperationId(originalEnrollment.operation_id)
+        || !canonicalDeviceId(originalEnrollment.device_id)
+        || !['enrollment', 'recovery'].includes(originalEnrollment.flow)
+        || !['pending_server', 'local_committed_pending_server_confirmation'].includes(originalEnrollment.status))) {
+        throw securityError('custodial_native_operation_reconciliation_mismatch');
+      }
       const phase = String(current.state || '').toUpperCase();
       const removalView = current.removal && typeof current.removal === 'object' ? current.removal : {};
       const removalOperationId = normalizedOperationId(
@@ -615,6 +663,9 @@ export function createNativeProtectedStorage(plugin, webStorage) {
         }
         const supersededEnrollment = removalSupersededEnrollmentJournal(local);
         if (supersededEnrollment) {
+          if (canonicalDeviceId(originalEnrollment?.device_id) !== removalDeviceId) {
+            throw securityError('custodial_native_removal_reconciliation_mismatch');
+          }
           // Native removal is authoritative and has already revoked (or is
           // atomically revoking) this device credential. An enrollment journal
           // left by a direct WebView confirm can no longer be confirmed and
@@ -695,21 +746,29 @@ export function createNativeProtectedStorage(plugin, webStorage) {
     async set(key, value) {
       if (key === CUSTODIAL_INSTALLATION_RECORD_KEY) {
         const binding = parsedInstallationRecord(value);
+        const local = originalLocalState();
         let committed;
         if (binding.migrated_from_credential_only_state && !binding.operation_id) {
+          local.assertCurrent();
           committed = await plugin.completeLegacyBinding({ device_id: binding.device_id });
+          local.assertCurrent();
         } else {
           const staged = await state();
+          local.assertCurrent();
           authoritativeInstallation(staged, {
             operationId: binding.operation_id,
             deviceId: binding.device_id,
           });
+          local.assertCurrent();
           committed = await plugin.completeLocalBinding({ operation_id: binding.operation_id });
+          local.assertCurrent();
         }
-        return JSON.stringify(authoritativeInstallation(committed, {
+        const record = JSON.stringify(authoritativeInstallation(committed, {
           operationId: binding.operation_id,
           deviceId: binding.device_id,
         }));
+        local.assertCurrent();
+        return record;
       }
       const current = await state();
       if (key === CUSTODIAL_CREDENTIAL_KEY) {
@@ -750,7 +809,14 @@ export function createNativeProtectedStorage(plugin, webStorage) {
       if (!requestedOperation || (deviceId && !requestedDevice)) {
         throw securityError('custodial_native_removal_identity_missing');
       }
+      const local = originalLocalState();
+      const originalRemoval = terminalRemovalJournal(local);
+      if (!originalRemoval || originalRemoval.operation_id !== requestedOperation
+        || (requestedDevice && originalRemoval.device_id !== requestedDevice)) {
+        throw securityError('custodial_native_removal_reconciliation_mismatch');
+      }
       const before = await state();
+      local.assertCurrent();
       const beforeView = before.removal && typeof before.removal === 'object' ? before.removal : {};
       const nativeOperation = normalizedOperationId(
         beforeView.operation_id || before.removal_operation_id,
@@ -758,11 +824,13 @@ export function createNativeProtectedStorage(plugin, webStorage) {
       const nativeDevice = canonicalDeviceId(beforeView.device_id || before.removal_device_id);
       if (
         nativeOperation !== requestedOperation
+        || nativeDevice !== originalRemoval.device_id
         || (requestedDevice && nativeDevice !== requestedDevice)
         || before.removal_remote_complete !== true
       ) throw securityError('custodial_native_removal_not_complete');
 
       const finalized = await plugin.finalizeRemoval({ operation_id: requestedOperation });
+      local.assertCurrent();
       const finalizedView = finalized?.removal && typeof finalized.removal === 'object'
         ? finalized.removal
         : {};
@@ -1032,6 +1100,20 @@ export async function getNativeCustodialOfflineAuthorityState(deviceId) {
   return CustodialNativeVault.getOfflineAuthorityState({ device_id: canonicalDeviceId(deviceId) });
 }
 
+// Observation only. Caller must retain its security-generation token and recheck
+// current principal before rendering an asynchronous result. No authority setter.
+export async function getNativeCustodialReadinessObservation(deviceId, expectedPrincipalIdentity) {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.getCustodialReadinessObservation !== 'function') {
+    throw securityError('custodial_readiness_capability_missing');
+  }
+  const device = canonicalDeviceId(deviceId);
+  const value = await CustodialNativeVault.getCustodialReadinessObservation({
+    device_id: device, expected_principal_identity: expectedPrincipalIdentity,
+  });
+  return validateNativeReadinessObservation(value, device, expectedPrincipalIdentity);
+}
+
 export async function beginNativeCustodialRollbackFence(deviceId) {
   if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
   if (typeof CustodialNativeVault.beginRollbackFence !== 'function') {
@@ -1076,6 +1158,16 @@ export async function consumeNativeCustodialScanEntry(entryId, clientSessionId, 
     action: String(action || ''),
     device_id: canonicalDeviceId(deviceId),
   });
+}
+
+export async function nativeCustodialRemovalPreflight() {
+  if (!isCustodialNativeVaultPlatform()) throw securityError('custodial_native_vault_required');
+  if (typeof CustodialNativeVault.checkRemovalAdmission !== 'function') {
+    throw securityError('custodial_native_removal_inventory_admission_required');
+  }
+  // No caller-selected evidence, persisted intent or transferable capability.
+  // Older installed plugins lacking the check remain protected, not admitted.
+  await CustodialNativeVault.checkRemovalAdmission();
 }
 
 export async function nativeCustodialRemoveEnrollment({ operationId, deviceId }) {

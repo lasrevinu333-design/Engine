@@ -21,10 +21,12 @@ final class NativeProviderHttp {
     private final Connections connections;
     private final VaultClock clock;
     private final HttpsEnrollmentTransport.RequestIdGenerator requestIds;
-    NativeProviderHttp() { this(url -> (HttpsURLConnection) url.openConnection(), System::currentTimeMillis, () -> UUID.randomUUID().toString()); }
+    private final NativeProviderClockExchange.Readings readings;
+    NativeProviderHttp(NativeProviderClockExchange.Readings readings) { this(url -> (HttpsURLConnection) url.openConnection(), System::currentTimeMillis, () -> UUID.randomUUID().toString(), readings); }
     /** Package-private synthetic network seam; never a plugin API or alternative production origin. */
-    NativeProviderHttp(Connections connections, VaultClock clock, HttpsEnrollmentTransport.RequestIdGenerator requestIds) {
-        this.connections = connections; this.clock = clock; this.requestIds = requestIds;
+    NativeProviderHttp(Connections connections, VaultClock clock, HttpsEnrollmentTransport.RequestIdGenerator requestIds, NativeProviderClockExchange.Readings readings) {
+        if (connections == null || clock == null || requestIds == null || readings == null) throw new IllegalArgumentException("provider_transport_dependencies_required");
+        this.connections = connections; this.clock = clock; this.requestIds = requestIds; this.readings = readings;
     }
 
     static final class Attempt {
@@ -51,7 +53,7 @@ final class NativeProviderHttp {
             if (connection != null) connection.disconnect();
         }
     }
-    AuthorizedResponse registration(NativeProviderJournal.Registration operation, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {
+    NativeProviderClockExchange registration(NativeProviderJournal.Registration operation, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {
         if (operation == null || attempt == null) throw new VaultFailure("custodial_provider_request_invalid");
         return execute(operation.request(), deviceId, credential, attempt);
     }
@@ -60,10 +62,10 @@ final class NativeProviderHttp {
         byte[] body = batch.body();
         try {
             return execute(new AuthorizedRequest("/employee-notifications-api/native-provider/events", "POST",
-                java.util.Collections.singletonMap("Content-Type", "application/json; charset=utf-8"), body), deviceId, credential, attempt);
+                java.util.Collections.singletonMap("Content-Type", "application/json; charset=utf-8"), body), deviceId, credential, attempt).response;
         } finally { Arrays.fill(body, (byte) 0); }
     }
-    AuthorizedResponse inventory(NativeProviderInventory.Request request, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {
+    NativeProviderClockExchange inventory(NativeProviderInventory.Request request, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {
         if (request == null || attempt == null) throw new VaultFailure("custodial_provider_request_invalid");
         byte[] body = request.body();
         try {
@@ -71,18 +73,40 @@ final class NativeProviderHttp {
                 java.util.Collections.singletonMap("Content-Type", "application/json; charset=utf-8"), body), deviceId, credential, attempt);
         } finally { Arrays.fill(body, (byte) 0); }
     }
-    private AuthorizedResponse execute(AuthorizedRequest request, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {
+    NativeProviderEventDecisions.Exchange eventDecisions(NativeProviderEventDecisions.Query query, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {
+        if (query == null || attempt == null) throw new VaultFailure("custodial_provider_request_invalid");
+        WireExchange wire = executeWire(query.request(), deviceId, credential, attempt);
+        return new NativeProviderEventDecisions.Exchange(wire.response, wire.requestId, wire.path, wire.bodySha256);
+    }
+    private static final class WireExchange {
+        final AuthorizedResponse response; final String requestId, path, bodySha256;
+        final NativeProviderClockExchange.Point before, after;
+        WireExchange(AuthorizedResponse response, String requestId, String path, String bodySha256, NativeProviderClockExchange.Point before, NativeProviderClockExchange.Point after) {
+            this.response=response;this.requestId=requestId;this.path=path;this.bodySha256=bodySha256;this.before=before;this.after=after;
+        }
+    }
+    private NativeProviderClockExchange execute(AuthorizedRequest request, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {
+        WireExchange wire = executeWire(request, deviceId, credential, attempt);
+        return new NativeProviderClockExchange(wire.response, wire.requestId, wire.path, wire.bodySha256, wire.before, wire.after);
+    }
+    private WireExchange executeWire(AuthorizedRequest request, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {
         HttpsURLConnection connection = null; byte[] received = null;
         try {
             attempt.check();
             if (!"POST".equals(request.method) || !(request.path.equals("/employee-notifications-api/native-provider/register")
                 || request.path.equals("/employee-notifications-api/native-provider/status")
                 || request.path.equals("/employee-notifications-api/native-provider/events")
+                || request.path.equals(NativeProviderEventDecisions.PATH)
                 || request.path.equals("/employee-notifications-api/native-provider/inventory")) || request.body.length > 65536)
                 throw new VaultFailure("custodial_provider_request_invalid");
             Map<String, String> headers = new LinkedHashMap<>(request.headers);
-            headers.putAll(NativeAttestation.requestHeaders(request, deviceId, credential, requestIds.next(), clock.nowMillis()));
+            String requestId = requestIds.next();
+            headers.putAll(NativeAttestation.requestHeaders(request, deviceId, credential, requestId, clock.nowMillis()));
+            StringBuilder digest = new StringBuilder();
+            for (byte b : java.security.MessageDigest.getInstance("SHA-256").digest(request.body)) digest.append(String.format(Locale.ROOT, "%02x", b & 255));
+            String bodySha256 = digest.toString();
             attempt.beforeNetwork(request.path);
+            NativeProviderClockExchange.Point before = readings.read();
             connection = connections.open(new URL(ORIGIN + request.path)); attempt.attach(connection);
             connection.setInstanceFollowRedirects(false); connection.setConnectTimeout(attempt.timeout(5000)); connection.setReadTimeout(attempt.timeout(10000));
             connection.setUseCaches(false); connection.setRequestMethod("POST"); connection.setDoOutput(true);
@@ -106,7 +130,8 @@ final class NativeProviderHttp {
             }
             InputStream raw = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
             received = read(raw, attempt); attempt.check();
-            return new AuthorizedResponse(status, responseHeaders, received);
+            NativeProviderClockExchange.Point after = readings.read();
+            return new WireExchange(new AuthorizedResponse(status, responseHeaders, received), requestId, request.path, bodySha256, before, after);
         } catch (VaultFailure error) { throw error; }
         catch (Exception error) { attempt.check(); throw new VaultFailure("custodial_provider_network_unavailable", error); }
         finally {

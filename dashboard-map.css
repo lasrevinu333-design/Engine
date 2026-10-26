@@ -1,0 +1,47 @@
+/* Inherit the published Hub's palette, typography, cards and buttons. */
+.mapWebPage{margin:0}
+.mapPage{box-sizing:border-box;display:flex;flex-direction:column;width:100%;max-width:1800px;height:100vh;height:100dvh;margin:0 auto;padding:14px;gap:8px}
+.mapPage .mapHeader{display:flex;flex:none;justify-content:space-between;align-items:center;padding:10px 14px;gap:12px}
+.mapHeader .hubBrand{min-width:0}
+.mapHeader .hubBrand>img{width:44px;height:44px}
+.mapHeader h1{font-size:clamp(1.1rem,2.1vw,1.7rem);line-height:1.15;margin:0}
+.mapNav{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.mapNav a{white-space:nowrap;text-decoration:none}
+.mapNotice{flex:none;margin:0 4px;color:var(--ux-muted);font-size:.88rem;line-height:1.4}
+.mapPage .mzMapStage{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;flex:1;min-height:180px;margin:0;padding:10px 12px;gap:6px;background:var(--ux-panel);border-color:var(--ux-line);color:var(--ux-text)}
+.mapPage .mzMapStage[hidden]{display:none}
+.mapTools{display:flex;gap:10px;align-items:center;min-width:0}
+.mapTools label{font-size:.85rem;font-weight:800}
+.mapTools select{box-sizing:border-box;min-width:0;width:min(370px,100%);min-height:44px;padding:8px 30px 8px 10px;border:1px solid var(--ux-line);border-radius:12px;background:#0b1d2d;color:var(--ux-text);font:inherit;font-size:.85rem}
+.mapTools select:focus-visible,.mapAttention summary:focus-visible{outline:3px solid var(--ux-blue);outline-offset:2px}
+.mapSourceNote{margin-left:auto;color:var(--ux-muted);font-size:.78rem}
+.mapPage .mzMapViewport{box-sizing:border-box;display:grid;place-items:center;height:100%;min-height:0;max-height:none;overflow:hidden;border:0;border-radius:12px;background:transparent}
+.mapPage .mzMapSurface{flex:none}
+.mapPage .mzMapSelection{min-height:1.4em;margin:0;font-size:.86rem;line-height:1.4;overflow-wrap:anywhere}
+.mapAttention{font-size:.85rem;color:var(--ux-muted)}
+.mapAttention summary{width:fit-content;min-height:24px;cursor:pointer}
+.mapAttention summary>span{display:inline-block;min-width:1.5em;text-align:center;color:var(--ux-text)}
+.mapAttention .mzMapAlertList{max-height:25vh;overflow:auto;margin:6px 0 0}
+.mapAttention .mzMapAlertList:empty::after{content:"No currently expanded location alerts."}
+.mapScreenReader{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.mapPage .mzMapCallout{min-width:min(142px,var(--map-label-width));max-width:var(--map-label-width);font:500 .75rem/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;overflow-wrap:anywhere}
+.mapPage .mzMapPin[data-label-side=left] .mzMapCallout{left:auto;right:calc(100% + 5px)}
+.mapPage .mzMapPin[data-label-above=true] .mzMapCallout{top:auto;bottom:0}
+@media(max-height:500px) and (orientation:landscape){
+  .mapPage{padding:6px max(8px,env(safe-area-inset-right)) 6px max(8px,env(safe-area-inset-left));gap:4px}
+  .mapPage .mapHeader{padding:4px 10px;border-radius:18px}
+  .mapHeader .hubBrand>img{width:32px;height:32px}
+  .mapNav .uxButton{min-height:40px;padding:6px 12px}
+  .mapPage .mzMapStage{padding:4px 8px;gap:3px;min-height:160px}
+  .mapNotice{font-size:.75rem}
+  .mapTools select{min-height:36px;padding-top:4px;padding-bottom:4px}
+  .mapPage .mzMapSelection,.mapAttention{font-size:.75rem}
+}
+@media(max-width:600px) and (orientation:portrait){
+  .mapPage{padding:8px;min-height:420px}
+  .mapPage .mapHeader{flex-wrap:wrap;padding:8px 10px}
+  .mapNav{width:100%;justify-content:flex-start}
+  .mapSourceNote{display:none}
+  .mapPage .mzMapStage{padding:6px 8px}
+  .mapHeader .hubBrand>img{width:34px;height:34px}
+}

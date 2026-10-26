@@ -30,7 +30,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: 'b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548',
   };
 
   const state = {
@@ -56,6 +56,170 @@
   function custodialSecurity() {
     const security = window.MemphisCustodialSecurity;
     return security && typeof security === 'object' ? security : null;
+  }
+
+  // Bootstrap markers can only withdraw the legacy path, never admit work.
+  // Once observed in this worker, removing a marker cannot reopen that path.
+  let nativeQueueSecurityRequired = false;
+  // The compatibility web queue shares the same origin's protected DATA.
+  // Absence of native enrollment is not permission to write through a browser
+  // preservation hold. Keep one private owner; failed acquisition is not reset.
+  let legacyBrowserAdmissionPromise = null;
+  let legacyBrowserAdmission = null;
+  let legacyBrowserSource = null;
+  function legacyBrowserMutationOwner() {
+    if (!legacyBrowserAdmissionPromise) {
+      try {
+        // Capture original mutation resources synchronously, BEFORE import.
+        // Inventory/cipher ports are not prerequisites for a local mutation.
+        const area = window.localStorage, navigatorObject = window.navigator;
+        const locks = navigatorObject?.locks, request = locks?.request;
+        if (typeof request !== 'function') {
+          throw Object.assign(queueSecurityUnavailable(), { reason: 'browser_shared_lock_unavailable' });
+        }
+        const prototype = Object.getPrototypeOf(area), methods = {}, optional = {};
+        for (const name of ['getItem', 'setItem']) {
+          const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+          // A firewall's replaced/sealed methods are not raw storage loans.
+          if (!descriptor || descriptor.writable !== true || descriptor.configurable !== true
+            || typeof descriptor.value !== 'function' || area[name] !== descriptor.value) throw queueSecurityUnavailable();
+          methods[name] = descriptor.value;
+        }
+        for (const name of ['sessionStorage', 'indexedDB', 'crypto']) {
+          // Optional inventory ports confer no mutation authority.
+          // Pin a readable port if present; never use an unavailable one or
+          // require inventory support just to mutate original local storage.
+          try { const value = window[name]; if (value !== undefined) optional[name] = value; }
+          catch (_) { /* Not borrowed by this mutation-only owner. */ }
+        }
+        let withdrawn = false, requestedMutation = null, activeMutation = null;
+        const current = () => {
+          try {
+            if (withdrawn || queueMutationSecurity() !== null || window.localStorage !== area
+              || Object.getPrototypeOf(area) !== prototype || window.navigator !== navigatorObject
+              || navigatorObject.locks !== locks || locks.request !== request) throw queueSecurityUnavailable();
+            for (const name of Object.keys(methods)) {
+              const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+              if (area[name] !== methods[name] || descriptor?.value !== methods[name]
+                || descriptor.writable !== true || descriptor.configurable !== true) throw queueSecurityUnavailable();
+            }
+            for (const name of Object.keys(optional)) {
+              if (window[name] !== optional[name]) throw queueSecurityUnavailable();
+            }
+          } catch (error) { withdrawn = true; throw error; }
+        };
+        const requireActive = () => {
+          current();
+          if (!activeMutation) throw queueSecurityUnavailable();
+          activeMutation.current();
+        };
+        const storage = Object.freeze({
+          getItem(key) {
+            requireActive(); const raw = methods.getItem.call(area, key); requireActive();
+            if (raw !== null && typeof raw !== 'string') { withdrawn = true; throw queueSecurityUnavailable(); }
+            return raw;
+          },
+          setItem(key, value) {
+            requireActive(); methods.setItem.call(area, key, value); requireActive();
+          },
+        });
+        const fixedLocks = Object.freeze({
+          request(name, options, operation) {
+            // The admission invokes request synchronously. Borrow ONLY that
+            // private invocation through this exact queued lock callback.
+            const original = requestedMutation;
+            current();
+            if (!original) throw queueSecurityUnavailable();
+            original.current();
+            return request.call(locks, name, options, async lock => {
+              original.current();
+              if (activeMutation) throw queueSecurityUnavailable();
+              activeMutation = original;
+              try { return await operation(lock); }
+              finally { activeMutation = null; }
+            });
+          },
+        });
+        legacyBrowserSource = Object.freeze({
+          current,
+          requireMutation() {
+            requireActive(); legacyBrowserAdmission.requireMutation(); requireActive();
+          },
+          async mutate(owner, deviceId, operation) {
+            let closed = false, refused = false;
+            const original = Object.freeze({
+              current() {
+                try {
+                  current();
+                  if (closed || refused || state.deviceId !== deviceId) throw queueSecurityUnavailable();
+                } catch (error) { refused = true; throw error; }
+              },
+            });
+            const context = Object.freeze({
+              deviceId, generation: null, state: 'legacy',
+              assertCurrent() {
+                original.current();
+                if (activeMutation !== original) throw queueSecurityUnavailable();
+                try { owner.requireMutation(); original.current(); }
+                catch (error) { refused = true; throw error; }
+              },
+            });
+            original.current();
+            let pending;
+            try {
+              requestedMutation = original;
+              pending = owner.mutate(async () => {
+                context.assertCurrent();
+                const result = await operation(context);
+                context.assertCurrent();
+                return result;
+              });
+            } finally { requestedMutation = null; }
+            try { const result = await pending; original.current(); return result; }
+            finally { closed = true; }
+          },
+        });
+        current();
+        legacyBrowserAdmissionPromise = import('./mobile/src/custodial/protected-browser-admission.js')
+          .then(({ createProtectedBrowserAdmission }) => {
+            current();
+            legacyBrowserAdmission = createProtectedBrowserAdmission({ storage, locks: fixedLocks });
+            current();
+            return legacyBrowserAdmission;
+          });
+      } catch (error) {
+        // Never retry acquisition against a successor resource set.
+        legacyBrowserAdmissionPromise = Promise.reject(error);
+      }
+    }
+    return legacyBrowserAdmissionPromise;
+  }
+  // Cooperative synchronous checkpoint for existing page metadata writers.
+  // Only the SAME private active callback can borrow its mutation checkpoint.
+  function requireLegacyBrowserMutation() {
+    if (!legacyBrowserSource || !legacyBrowserAdmission) throw queueSecurityUnavailable();
+    legacyBrowserSource.requireMutation();
+  }
+  function queueMutationSecurity() {
+    const security = custodialSecurity();
+    try {
+      if (window.MemphisMobile?.edition === 'custodial'
+        || window.MemphisMobileBuildIdentity?.edition === 'custodial'
+        || (typeof window.Capacitor?.isNativePlatform === 'function' && window.Capacitor.isNativePlatform() === true)
+        || security?.native === true) nativeQueueSecurityRequired = true;
+    } catch (_) {
+      nativeQueueSecurityRequired = true;
+      throw queueSecurityUnavailable();
+    }
+    if ((nativeQueueSecurityRequired && (security?.native !== true
+      || typeof security.waitForStableState !== 'function' || typeof security.getStatus !== 'function'))
+      || (security && typeof security.mutateProtectedWork !== 'function')) throw queueSecurityUnavailable();
+    return security;
+  }
+
+  function queueSecurityUnavailable() {
+    return Object.assign(new Error('Protected scan queue admission is unavailable; original work is retained.'),
+      { code: 'custodial_security_state_unavailable' });
   }
 
   function securityErrorIsPause(error) {
@@ -85,9 +249,17 @@
   }
 
   async function mutateProtectedQueue(operation, options = { requireEnrollment: true }) {
-    const security = custodialSecurity();
-    if (!security) return operation({ deviceId: state.deviceId, generation: null, state: 'legacy' });
-    return security.mutateProtectedWork(operation, options);
+    const security = queueMutationSecurity();
+    if (!security) {
+      const deviceId = state.deviceId;
+      const owner = await legacyBrowserMutationOwner();
+      return legacyBrowserSource.mutate(owner, deviceId, operation);
+    }
+    return security.mutateProtectedWork((context) => {
+      if (queueMutationSecurity() !== security) throw queueSecurityUnavailable();
+      queueOpeningCheckpoint(context);
+      return operation(context);
+    }, options);
   }
 
   function dispatchSecurityPause(pause) {
@@ -164,17 +336,58 @@
     return true;
   }
 
-  function openCompletionDraftDb() {
+  function openCompletionDraftDb(context, { readonly = false } = {}) {
+    queueOpeningCheckpoint(context);
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(CONFIG.COMPLETION_DRAFT_DB_NAME, 1);
-      request.onupgradeneeded = () => {
-        if (!request.result.objectStoreNames.contains(CONFIG.COMPLETION_DRAFT_STORE_NAME)) {
-          request.result.createObjectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME, { keyPath: 'session_uuid' });
+      // Reads must never create or upgrade the draft database. An open without
+      // a version lets us inspect only an already-existing schema.
+      const request = readonly
+        ? indexedDB.open(CONFIG.COMPLETION_DRAFT_DB_NAME)
+        : indexedDB.open(CONFIG.COMPLETION_DRAFT_DB_NAME, 1);
+      let missing = false;
+      let failure = null;
+      request.onupgradeneeded = (event) => {
+        try {
+          queueOpeningCheckpoint(context);
+          if (readonly) {
+            missing = event.oldVersion === 0;
+            failure = missing ? null : storageFailure('completion draft', new Error('unknown database schema'));
+            request.transaction.abort();
+            return;
+          }
+          if (event.oldVersion === 0) {
+            request.result.createObjectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME, { keyPath: 'session_uuid' });
+          } else {
+            failure = storageFailure('completion draft', new Error('unknown database schema'));
+            request.transaction.abort();
+          }
+        } catch (error) {
+          failure = error;
+          try { request.transaction.abort(); } catch (_) { /* terminal request handler reports the original failure */ }
         }
       };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(storageFailure('completion draft', request.error));
-      request.onblocked = () => reject(storageFailure('completion draft', new Error('database upgrade is blocked')));
+      request.onsuccess = () => {
+        try {
+          queueOpeningCheckpoint(context);
+          const db = request.result;
+          if (db.version !== 1 || !db.objectStoreNames.contains(CONFIG.COMPLETION_DRAFT_STORE_NAME)) {
+            db.close();
+            throw storageFailure('completion draft', new Error('unknown database schema'));
+          }
+          resolve(queueOpeningConnection(db));
+        } catch (error) {
+          request.result.close();
+          reject(error);
+        }
+      };
+      request.onerror = () => {
+        try { queueOpeningCheckpoint(context); } catch (error) { reject(error); return; }
+        if (missing) resolve(null);
+        else reject(failure || storageFailure('completion draft', request.error));
+      };
+      // IndexedDB open requests cannot be cancelled. Keep their owner/admission
+      // until a terminal success/error, even if another connection blocks them.
+      request.onblocked = () => {};
     });
   }
 
@@ -213,6 +426,9 @@
 
   async function verifyCompletionDraftRecord(record, expected = {}) {
     if (!record || typeof record !== 'object' || Array.isArray(record)) return null;
+    if (record.schema_version !== CONFIG.COMPLETION_DRAFT_SCHEMA_VERSION) {
+      throw storageFailure('completion draft', new Error('unknown record schema'));
+    }
     const identity = completionDraftIdentity(record);
     const required = completionDraftIdentity({ ...record, ...expected });
     for (const key of ['schema_version', 'contract_version', 'session_uuid', 'client_completion_id', 'device_id', 'employee_id', 'location_code']) {
@@ -229,71 +445,500 @@
 
   async function saveCompletionDraft(input) {
     if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
-    return mutateProtectedQueue(async () => {
-      const record = await completionDraftRecord(input);
-      const db = await openCompletionDraftDb();
+
+    const security = queueMutationSecurity(), mobile = window.MemphisMobile;
+    const reader = security?.getStatus, writer = security?.mutateProtectedWork, principalReader = mobile?.principalIdentity;
+    const initial = security?.native === true ? security.getStatus() : null;
+    const original = initial ? Object.freeze({ generation: initial.generation, deviceId: initial.deviceId,
+      principal: canonicalJson(initial.principal), identity: mobile?.principalIdentity?.(), employeeId: initial.principal?.employee_id }) : null;
+    const originalIndexedDB = window.indexedDB, originalOpen = originalIndexedDB?.open;
+    const requireOriginal = (context) => {
+      const liveSecurity = queueMutationSecurity();
+      if (liveSecurity !== security || security?.getStatus !== reader || security?.mutateProtectedWork !== writer
+        || window.MemphisMobile !== mobile || window.indexedDB !== originalIndexedDB || originalIndexedDB?.open !== originalOpen)
+        throw queueSecurityUnavailable();
+      if (original) {
+        const live = reader.call(security);
+        if (mobile?.principalIdentity !== principalReader || live?.ready !== true || live.available !== true
+          || live.quarantined !== false || live.state !== 'enrolled' || !Number.isSafeInteger(original.generation)
+          || original.generation < 1 || live.generation !== original.generation || live.deviceId !== original.deviceId
+          || !live.principal || live.principal.device_id !== original.deviceId
+          || !['custodial-protected-principal.v1', 'custodial-protected-principal.v2'].includes(live.principal.schema_version)
+          || !isUuid(live.principal.employee_id) || !isUuid(live.principal.credential_id)
+          || !Number.isSafeInteger(live.principal.assignment_epoch) || live.principal.assignment_epoch < 1
+          || canonicalJson(live.principal) !== original.principal || typeof original.identity !== 'string' || !original.identity
+          || principalReader.call(mobile) !== original.identity) throw queueSecurityUnavailable();
+        if (context !== undefined && (context?.generation !== original.generation || context?.deviceId !== original.deviceId))
+          throw queueSecurityUnavailable();
+      } else if (liveSecurity?.native === true) throw queueSecurityUnavailable();
+      if (context !== undefined) queueOpeningCheckpoint(context);
+    };
+    const options = { requireEnrollment: true, ...(original ? { expectedGeneration: original.generation } : {}) };
+    requireOriginal();
+
+    // Snapshot own plain data before hashing or FIFO admission; never call input getters.
+    const copy = (value, depth = 0) => {
+      if (depth > 64) throw storageFailure('completion draft', new Error('draft is too deep'));
+      if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (!value || typeof value !== 'object')
+        throw storageFailure('completion draft', new Error('draft must be exact plain data'));
+      const prototype = Object.getPrototypeOf(value);
+      if (!Array.isArray(value) && prototype !== null && (Object.getPrototypeOf(prototype) !== null
+        || Object.getOwnPropertyDescriptor(prototype, 'constructor')?.value?.name !== 'Object'))
+        throw storageFailure('completion draft', new Error('draft must be exact plain data'));
+      const descriptors = Object.getOwnPropertyDescriptors(value), result = Array.isArray(value) ? [] : Object.create(null);
+      for (const key of Reflect.ownKeys(descriptors)) {
+        if (Array.isArray(value) && key === 'length') continue;
+        const descriptor = descriptors[key];
+        if (typeof key !== 'string' || !Object.hasOwn(descriptor, 'value') || !descriptor.enumerable
+          || ['__proto__', 'prototype', 'constructor'].includes(key))
+          throw storageFailure('completion draft', new Error('draft accessors or unsafe fields are unavailable'));
+        result[key] = copy(descriptor.value, depth + 1);
+      }
+      if (Array.isArray(value) && (result.length !== value.length || Object.keys(result).length !== value.length))
+        throw storageFailure('completion draft', new Error('sparse draft arrays are unavailable'));
+      return result;
+    };
+    const snapshot = copy(input);
+    const identity = completionDraftIdentity(snapshot), id = identity.session_uuid;
+    if (original && (identity.device_id !== original.deviceId || identity.employee_id !== original.employeeId))
+      throw storageFailure('completion draft', new Error('draft does not belong to the original native principal'));
+    const record = await completionDraftRecord(snapshot);
+    requireOriginal();
+
+    // Own direct transaction terminal dispatch, not an earlier bubbled request/error.
+    const readOrWrite = (db, context, write, captured, replacement) => new Promise((resolve, reject) => {
+      let tx = null, failure = null, result = null;
+      const refuse = (error) => {
+        failure = failure || error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); } catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Completion draft settlement is uncertain.', { cause: failure }),
+          { code: failure.code || 'custodial_storage_unavailable' });
+        }
+      };
+      const settle = (aborted) => {
+        let error = failure || (aborted ? storageFailure('completion draft', tx.error || new Error('transaction aborted')) : null);
+        try { requireOriginal(context); } catch (withdrawn) { error = error || withdrawn; }
+        if (error) reject(error); else resolve(result);
+      };
       try {
-        await new Promise((resolve, reject) => {
-          const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readwrite');
-          transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).put(record);
-          transaction.oncomplete = resolve;
-          transaction.onerror = () => reject(storageFailure('completion draft', transaction.error));
-          transaction.onabort = () => reject(storageFailure('completion draft', transaction.error || new Error('write aborted')));
-        });
-        const verified = await loadCompletionDraft(record);
-        if (!verified || verified.integrity_sha256 !== record.integrity_sha256) throw storageFailure('completion draft', new Error('write verification failed'));
+        requireOriginal(context);
+        tx = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, write ? 'readwrite' : 'readonly');
+        tx.oncomplete = event => { if (event.target === tx) window.setTimeout(() => settle(false), 0); };
+        tx.onabort = event => { if (event.target === tx) window.setTimeout(() => settle(true), 0); };
+        tx.onerror = event => {
+          failure = failure || storageFailure('completion draft', event.target?.error || tx.error);
+          try { requireOriginal(context); } catch (error) { failure = failure || error; }
+        };
+        requireOriginal(context);
+        const store = tx.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME);
+        const lookup = store.get(id);
+        lookup.onerror = () => refuse(storageFailure('completion draft', lookup.error || tx.error));
+        lookup.onsuccess = () => {
+          try {
+            requireOriginal(context);
+            if (failure) throw failure;
+            result = lookup.result == null ? null : lookup.result;
+            if (result !== null && !queueOpeningRowsMatch([result], [JSON.parse(canonicalJson(result))]))
+              throw storageFailure('completion draft', new Error('unknown original draft representation'));
+            if (write) {
+              if (!queueOpeningRowsMatch(result === null ? [] : [result], captured === null ? [] : [captured]))
+                throw storageFailure('completion draft', new Error('original draft changed before mutation'));
+              requireOriginal(context);
+              const request = replacement ? store.put(replacement) : result === null ? null : store.delete(id);
+              if (request) request.onerror = () => refuse(storageFailure('completion draft', request.error || tx.error));
+              requireOriginal(context);
+            }
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+    });
+    const validateRecord = async (raw, expected) => {
+      if (raw === null) return null;
+      const keys = ['schema_version', 'contract_version', 'session_uuid', 'client_completion_id', 'device_id',
+        'employee_id', 'location_code', 'draft', 'integrity_sha256', 'saved_at'];
+      if (Object.keys(raw).sort().join('|') !== keys.sort().join('|')
+        || typeof raw.integrity_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(raw.integrity_sha256)
+        || typeof raw.saved_at !== 'string' || !Number.isFinite(Date.parse(raw.saved_at)))
+        throw storageFailure('completion draft', new Error('unknown original draft'));
+      const identity = completionDraftIdentity(raw);
+      if (Object.keys(identity).some(key => raw[key] !== identity[key])
+        || original && (identity.device_id !== original.deviceId || identity.employee_id !== original.employeeId))
+        throw storageFailure('completion draft', new Error('foreign original draft'));
+      const verified = await verifyCompletionDraftRecord(raw, expected || identity);
+      requireOriginal();
+      return verified;
+    };
+
+    const result = await mutateProtectedQueue(async context => {
+      requireOriginal(context);
+      const db = await openCompletionDraftDb(context);
+      try {
+        requireOriginal(context);
+        const raw = await readOrWrite(db, context, false);
+        requireOriginal(context);
+        const captured = raw === null ? null : JSON.parse(canonicalJson(raw));
+        await validateRecord(raw, identity);
+        requireOriginal(context);
+        await readOrWrite(db, context, true, captured, record);
+        requireOriginal(context);
+        const readback = await readOrWrite(db, context, false);
+        requireOriginal(context);
+        if (!readback || !queueOpeningRowsMatch([record], [readback]))
+          throw storageFailure('completion draft', new Error('write verification failed'));
+        const verified = await validateRecord(readback, identity);
+        requireOriginal(context);
         return verified;
       } finally { db.close(); }
-    });
+    }, options);
+    requireOriginal(); // The callback context is closed here; use only original readers.
+    return result;
   }
 
-  async function loadCompletionDraft(expected) {
+  async function readCompletionDraftWithinOwnedContext(expected, context) {
     if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
-    const identity = completionDraftIdentity(expected);
-    const db = await openCompletionDraftDb();
+    // Capture the actual runtime observation BEFORE any FIFO/open/hash await.
+    // This comparison is only a refusal fence; admission still owns authority.
+    const security = queueMutationSecurity();
+    const methods = security ? [security.getStatus, security.mutateProtectedWork, security.waitForStableState] : [];
+    const observe = () => {
+      if (queueMutationSecurity() !== security || (security
+        && (security.getStatus !== methods[0] || security.mutateProtectedWork !== methods[1]
+          || security.waitForStableState !== methods[2]))) throw queueSecurityUnavailable();
+      const status = typeof methods[0] === 'function' ? methods[0].call(security) : null;
+      if (security?.native === true && (status?.ready !== true || status.available !== true
+        || status.quarantined !== false || status.state !== 'enrolled'
+        || !Number.isSafeInteger(status.generation) || status.generation <= 0)) throw queueSecurityUnavailable();
+      return status;
+    };
+    const original = observe();
+    const owner = status => status ? JSON.stringify([status.ready, status.available, status.quarantined,
+      status.state, status.deviceId, status.generation, status.principal]) : null;
+    const originalOwner = owner(original);
+    const checkpoint = context => {
+      if (owner(observe()) !== originalOwner) {
+        throw Object.assign(new Error('The original completion draft reader changed; original data is retained.'),
+          { code: 'custodial_security_generation_changed' });
+      }
+      if (context) {
+        queueOpeningCheckpoint(context);
+        if (original && (context.generation !== original.generation || context.deviceId !== original.deviceId)) throw queueSecurityUnavailable();
+      }
+    };
+    const identity = Object.freeze(completionDraftIdentity(expected));
+    checkpoint(context);
+    const db = await openCompletionDraftDb(context, { readonly: true });
     try {
+      // An absent database resolves from an aborted open request. Keep its
+      // original owner through that terminal dispatch as well as read TXs.
+      await new Promise(resolve => window.setTimeout(resolve, 0));
+      checkpoint(context);
+      if (!db) return null;
       const record = await new Promise((resolve, reject) => {
+        checkpoint(context);
         const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readonly');
+        checkpoint(context);
         const request = transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).get(identity.session_uuid);
-        request.onsuccess = () => resolve(request.result || null);
-        request.onerror = () => reject(storageFailure('completion draft', request.error));
+        let result;
+        let observed = false;
+        let failure = null;
+        request.onsuccess = () => {
+          try { checkpoint(context); result = request.result; observed = true; } catch (error) { failure = error; }
+        };
+        request.onerror = () => { failure = storageFailure('completion draft', request.error); };
+        // Error bubbles are not terminal. Retain the actual owner until the
+        // transaction terminal dispatch (including later listeners) has ended.
+        transaction.onerror = () => { failure ||= storageFailure('completion draft', transaction.error); };
+        const settle = (event, aborted) => {
+          if (event.target !== transaction) return;
+          window.setTimeout(() => {
+            try {
+              checkpoint(context);
+              if (failure) throw failure;
+              if (aborted || !observed) throw storageFailure('completion draft', transaction.error || new Error('read did not complete'));
+              resolve(result == null ? null : result);
+            } catch (error) { reject(error); }
+          }, 0);
+        };
+        transaction.oncomplete = event => settle(event, false);
+        transaction.onabort = event => settle(event, true);
       });
-      return record ? verifyCompletionDraftRecord(record, identity) : null;
-    } finally { db.close(); }
+      checkpoint(context);
+      if (record == null) return null; // Only an owned successful absence is empty.
+      const verified = await verifyCompletionDraftRecord(record, identity);
+      checkpoint(context);
+      if (!verified) throw storageFailure('completion draft', new Error('invalid stored draft'));
+      return verified;
+    } finally { db?.close(); }
+  }
+
+  function loadCompletionDraft(expected) {
+    if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
+    // Capture the actual runtime observation BEFORE any FIFO/open/hash await.
+    // This comparison is only a refusal fence; admission still owns authority.
+    const security = queueMutationSecurity();
+    const methods = security ? [security.getStatus, security.mutateProtectedWork, security.waitForStableState] : [];
+    const observe = () => {
+      if (queueMutationSecurity() !== security || (security
+        && (security.getStatus !== methods[0] || security.mutateProtectedWork !== methods[1]
+          || security.waitForStableState !== methods[2]))) throw queueSecurityUnavailable();
+      const status = typeof methods[0] === 'function' ? methods[0].call(security) : null;
+      if (security?.native === true && (status?.ready !== true || status.available !== true
+        || status.quarantined !== false || status.state !== 'enrolled'
+        || !Number.isSafeInteger(status.generation) || status.generation <= 0)) throw queueSecurityUnavailable();
+      return status;
+    };
+    const original = observe();
+    const owner = status => status ? JSON.stringify([status.ready, status.available, status.quarantined,
+      status.state, status.deviceId, status.generation, status.principal]) : null;
+    const originalOwner = owner(original);
+    const checkpoint = context => {
+      if (owner(observe()) !== originalOwner) {
+        throw Object.assign(new Error('The original completion draft reader changed; original data is retained.'),
+          { code: 'custodial_security_generation_changed' });
+      }
+      if (context) {
+        queueOpeningCheckpoint(context);
+        if (original && (context.generation !== original.generation || context.deviceId !== original.deviceId)) throw queueSecurityUnavailable();
+      }
+    };
+    const identity = Object.freeze(completionDraftIdentity(expected));
+    checkpoint();
+    // Never accept an owner/context from an API caller. Keep the original
+    // identity/runtime while the existing private admission waits in its FIFO.
+    return mutateProtectedQueue(async context => {
+      checkpoint(context);
+      const result = await readCompletionDraftWithinOwnedContext(identity, context);
+      checkpoint(context);
+      return result;
+    }, { requireEnrollment: true, expectedGeneration: original?.generation ?? null }).then(result => {
+      // The admission has closed here. Compare observations only; NEVER call
+      // the now-closed private context from this public settlement path.
+      checkpoint();
+      return result;
+    });
   }
 
   async function completionDraftExists(sessionUuid) {
     const id = safeText(sessionUuid).toLowerCase();
     if (!isUuid(id)) throw storageFailure('completion draft', new Error('session identifier is required'));
     if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
-    const db = await openCompletionDraftDb();
-    try {
-      return await new Promise((resolve, reject) => {
-        const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readonly');
-        const request = transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).getKey(id);
-        request.onsuccess = () => resolve(request.result != null);
-        request.onerror = () => reject(storageFailure('completion draft', request.error));
-      });
-    } finally { db.close(); }
+    // Capture the actual runtime observation BEFORE any FIFO/open/hash await.
+    // This comparison is only a refusal fence; admission still owns authority.
+    const security = queueMutationSecurity();
+    const methods = security ? [security.getStatus, security.mutateProtectedWork, security.waitForStableState] : [];
+    const observe = () => {
+      if (queueMutationSecurity() !== security || (security
+        && (security.getStatus !== methods[0] || security.mutateProtectedWork !== methods[1]
+          || security.waitForStableState !== methods[2]))) throw queueSecurityUnavailable();
+      const status = typeof methods[0] === 'function' ? methods[0].call(security) : null;
+      if (security?.native === true && (status?.ready !== true || status.available !== true
+        || status.quarantined !== false || status.state !== 'enrolled'
+        || !Number.isSafeInteger(status.generation) || status.generation <= 0)) throw queueSecurityUnavailable();
+      return status;
+    };
+    const original = observe();
+    const owner = status => status ? JSON.stringify([status.ready, status.available, status.quarantined,
+      status.state, status.deviceId, status.generation, status.principal]) : null;
+    const originalOwner = owner(original);
+    const checkpoint = context => {
+      if (owner(observe()) !== originalOwner) {
+        throw Object.assign(new Error('The original completion draft reader changed; original data is retained.'),
+          { code: 'custodial_security_generation_changed' });
+      }
+      if (context) {
+        queueOpeningCheckpoint(context);
+        if (original && (context.generation !== original.generation || context.deviceId !== original.deviceId)) throw queueSecurityUnavailable();
+      }
+    };
+    checkpoint();
+    const result = await mutateProtectedQueue(async context => {
+      checkpoint(context);
+      const db = await openCompletionDraftDb(context, { readonly: true });
+      try {
+        await new Promise(resolve => window.setTimeout(resolve, 0));
+        checkpoint(context);
+        if (!db) return false;
+        const exists = await new Promise((resolve, reject) => {
+          checkpoint(context);
+          const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readonly');
+          checkpoint(context);
+          const request = transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).getKey(id);
+          let found = false;
+          let observed = false;
+          let failure = null;
+          request.onsuccess = () => {
+            try { checkpoint(context); found = request.result != null; observed = true; } catch (error) { failure = error; }
+          };
+          request.onerror = () => { failure = storageFailure('completion draft', request.error); };
+          transaction.onerror = () => { failure ||= storageFailure('completion draft', transaction.error); };
+          const settle = (event, aborted) => {
+            if (event.target !== transaction) return;
+            window.setTimeout(() => {
+              try {
+                checkpoint(context);
+                if (failure) throw failure;
+                if (aborted || !observed) throw storageFailure('completion draft', transaction.error || new Error('read did not complete'));
+                resolve(found);
+              } catch (error) { reject(error); }
+            }, 0);
+          };
+          transaction.oncomplete = event => settle(event, false);
+          transaction.onabort = event => settle(event, true);
+        });
+        checkpoint(context);
+        return exists;
+      } finally { db?.close(); }
+    }, { requireEnrollment: true, expectedGeneration: original?.generation ?? null });
+    checkpoint(); // Observation-only after admission; no closed context invocation.
+    return result;
   }
 
-  async function deleteCompletionDraft(sessionUuid) {
-    const id = safeText(sessionUuid).toLowerCase();
+  async function deleteCompletionDraft(sessionUuid, expectedGeneration = null) {
+    const id = typeof sessionUuid === 'string' ? safeText(sessionUuid).toLowerCase() : '';
     if (!isUuid(id)) throw storageFailure('completion draft', new Error('session identifier is required'));
     if (!window.indexedDB) throw storageFailure('completion draft', new Error('IndexedDB is unavailable'));
-    return mutateProtectedQueue(async () => {
-      const db = await openCompletionDraftDb();
+
+    const security = queueMutationSecurity(), mobile = window.MemphisMobile;
+    const reader = security?.getStatus, writer = security?.mutateProtectedWork, principalReader = mobile?.principalIdentity;
+    const initial = security?.native === true ? security.getStatus() : null;
+    const original = initial ? Object.freeze({ generation: initial.generation, deviceId: initial.deviceId,
+      principal: canonicalJson(initial.principal), identity: mobile?.principalIdentity?.(), employeeId: initial.principal?.employee_id }) : null;
+    const originalIndexedDB = window.indexedDB, originalOpen = originalIndexedDB?.open;
+    const requireOriginal = (context) => {
+      const liveSecurity = queueMutationSecurity();
+      if (liveSecurity !== security || security?.getStatus !== reader || security?.mutateProtectedWork !== writer
+        || window.MemphisMobile !== mobile || window.indexedDB !== originalIndexedDB || originalIndexedDB?.open !== originalOpen)
+        throw queueSecurityUnavailable();
+      if (original) {
+        const live = reader.call(security);
+        if (mobile?.principalIdentity !== principalReader || live?.ready !== true || live.available !== true
+          || live.quarantined !== false || live.state !== 'enrolled' || !Number.isSafeInteger(original.generation)
+          || original.generation < 1 || live.generation !== original.generation || live.deviceId !== original.deviceId
+          || !live.principal || live.principal.device_id !== original.deviceId
+          || !['custodial-protected-principal.v1', 'custodial-protected-principal.v2'].includes(live.principal.schema_version)
+          || !isUuid(live.principal.employee_id) || !isUuid(live.principal.credential_id)
+          || !Number.isSafeInteger(live.principal.assignment_epoch) || live.principal.assignment_epoch < 1
+          || canonicalJson(live.principal) !== original.principal || typeof original.identity !== 'string' || !original.identity
+          || principalReader.call(mobile) !== original.identity) throw queueSecurityUnavailable();
+        if (context !== undefined && (context?.generation !== original.generation || context?.deviceId !== original.deviceId))
+          throw queueSecurityUnavailable();
+      } else if (liveSecurity?.native === true) throw queueSecurityUnavailable();
+      if (context !== undefined) queueOpeningCheckpoint(context);
+    };
+    const options = { requireEnrollment: true, ...(original ? { expectedGeneration: original.generation } : {}) };
+    requireOriginal();
+
+    if (original && expectedGeneration !== null && expectedGeneration !== original.generation)
+      throw queueSecurityUnavailable();
+    if (!original && expectedGeneration !== null) options.expectedGeneration = expectedGeneration;
+
+    // Own direct transaction terminal dispatch, not an earlier bubbled request/error.
+    const readOrWrite = (db, context, write, captured, replacement) => new Promise((resolve, reject) => {
+      let tx = null, failure = null, result = null;
+      const refuse = (error) => {
+        failure = failure || error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); } catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Completion draft settlement is uncertain.', { cause: failure }),
+          { code: failure.code || 'custodial_storage_unavailable' });
+        }
+      };
+      const settle = (aborted) => {
+        let error = failure || (aborted ? storageFailure('completion draft', tx.error || new Error('transaction aborted')) : null);
+        try { requireOriginal(context); } catch (withdrawn) { error = error || withdrawn; }
+        if (error) reject(error); else resolve(result);
+      };
       try {
-        await new Promise((resolve, reject) => {
-          const transaction = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, 'readwrite');
-          transaction.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME).delete(id);
-          transaction.oncomplete = resolve;
-          transaction.onerror = () => reject(storageFailure('completion draft', transaction.error));
-          transaction.onabort = () => reject(storageFailure('completion draft', transaction.error || new Error('delete aborted')));
-        });
-      } finally { db.close(); }
-      return true;
+        requireOriginal(context);
+        tx = db.transaction(CONFIG.COMPLETION_DRAFT_STORE_NAME, write ? 'readwrite' : 'readonly');
+        tx.oncomplete = event => { if (event.target === tx) window.setTimeout(() => settle(false), 0); };
+        tx.onabort = event => { if (event.target === tx) window.setTimeout(() => settle(true), 0); };
+        tx.onerror = event => {
+          failure = failure || storageFailure('completion draft', event.target?.error || tx.error);
+          try { requireOriginal(context); } catch (error) { failure = failure || error; }
+        };
+        requireOriginal(context);
+        const store = tx.objectStore(CONFIG.COMPLETION_DRAFT_STORE_NAME);
+        const lookup = store.get(id);
+        lookup.onerror = () => refuse(storageFailure('completion draft', lookup.error || tx.error));
+        lookup.onsuccess = () => {
+          try {
+            requireOriginal(context);
+            if (failure) throw failure;
+            result = lookup.result == null ? null : lookup.result;
+            if (result !== null && !queueOpeningRowsMatch([result], [JSON.parse(canonicalJson(result))]))
+              throw storageFailure('completion draft', new Error('unknown original draft representation'));
+            if (write) {
+              if (!queueOpeningRowsMatch(result === null ? [] : [result], captured === null ? [] : [captured]))
+                throw storageFailure('completion draft', new Error('original draft changed before mutation'));
+              requireOriginal(context);
+              const request = replacement ? store.put(replacement) : result === null ? null : store.delete(id);
+              if (request) request.onerror = () => refuse(storageFailure('completion draft', request.error || tx.error));
+              requireOriginal(context);
+            }
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
     });
+    const validateRecord = async (raw, expected) => {
+      if (raw === null) return null;
+      const keys = ['schema_version', 'contract_version', 'session_uuid', 'client_completion_id', 'device_id',
+        'employee_id', 'location_code', 'draft', 'integrity_sha256', 'saved_at'];
+      if (Object.keys(raw).sort().join('|') !== keys.sort().join('|')
+        || typeof raw.integrity_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(raw.integrity_sha256)
+        || typeof raw.saved_at !== 'string' || !Number.isFinite(Date.parse(raw.saved_at)))
+        throw storageFailure('completion draft', new Error('unknown original draft'));
+      const identity = completionDraftIdentity(raw);
+      if (Object.keys(identity).some(key => raw[key] !== identity[key])
+        || original && (identity.device_id !== original.deviceId || identity.employee_id !== original.employeeId))
+        throw storageFailure('completion draft', new Error('foreign original draft'));
+      const verified = await verifyCompletionDraftRecord(raw, expected || identity);
+      requireOriginal();
+      return verified;
+    };
+
+    // First observe/verify the original under its own admission. A later FIFO
+    // callback must compare the exact raw row again, never delete a successor.
+    const captured = await mutateProtectedQueue(async context => {
+      requireOriginal(context);
+      const db = await openCompletionDraftDb(context, { readonly: true });
+      if (!db) { requireOriginal(context); return null; }
+      try {
+        requireOriginal(context);
+        const raw = await readOrWrite(db, context, false);
+        requireOriginal(context);
+        const exact = raw === null ? null : JSON.parse(canonicalJson(raw));
+        await validateRecord(raw);
+        requireOriginal(context);
+        return exact;
+      } finally { db.close(); }
+    }, options);
+    requireOriginal();
+    const result = await mutateProtectedQueue(async context => {
+      requireOriginal(context);
+      const db = await openCompletionDraftDb(context, { readonly: true });
+      if (!db) {
+        requireOriginal(context);
+        if (captured !== null) throw storageFailure('completion draft', new Error('original draft database disappeared'));
+        return true;
+      }
+      try {
+        requireOriginal(context);
+        await readOrWrite(db, context, true, captured, null);
+        requireOriginal(context);
+        const remaining = await readOrWrite(db, context, false);
+        requireOriginal(context);
+        if (remaining !== null) throw storageFailure('completion draft', new Error('draft absence is unverified'));
+        return true;
+      } finally { db.close(); }
+    }, options);
+    requireOriginal();
+    return result;
   }
   async function verifyWorkerBackendCompatibility() {
     try {
@@ -470,6 +1115,48 @@
     };
   }
 
+  function sameClaimedQueueRow(current, item) {
+    if (!current || current.lease_token !== item.lease_token || current.lease_owner !== state.workerId) return false;
+    const identity = (row) => {
+      const value = normalizeRecord(row);
+      return canonicalizeSemanticValue({ type: value.type, operation_id: value.operation_id,
+        logical_key: value.logical_key, logical_identity: value.logical_identity,
+        semantic_fingerprint: value.semantic_fingerprint, completion_client_id: value.completion_client_id,
+        replay_binding: value.replay_binding, payload: value.payload });
+    };
+    return JSON.stringify(identity(current)) === JSON.stringify(identity(item));
+  }
+
+  function originalCompletionSession(item, local = exactSessionForPayload(item.payload || {})) {
+    if (!local) return null;
+    const payload = item.payload || {}, saved = item.replay_binding || {};
+    const pairs = [
+      [payload.p_client_session_id || saved.client_session_id || payload.p_session_uuid, local.client_session_id || local.session_uuid],
+      [item.type === 'commit_workflow' ? payload.p_client_completion_id || saved.client_completion_id : '', local.client_completion_id],
+      [saved.employee_id || payload.p_snapshot_employee_id, local.offline_authority_employee_id],
+      [saved.snapshot_id || payload.p_snapshot_id, local.offline_authority_snapshot_id],
+      [saved.occurrence_id, local.offline_occurrence_id || local.occurrence_id || local.offline_actor_context?.occurrence_id],
+      [saved.context_id, local.context_id || local.offline_actor_context_id || local.offline_actor_context?.context_id],
+      [payload.p_device_id, local.device_id],
+      [payload.p_location_code, local.location_code],
+      [payload.p_client_started_at, local.started_at],
+    ];
+    const epoch = saved.assignment_epoch ?? payload.p_snapshot_assignment_epoch;
+    if (Number.isSafeInteger(epoch) && epoch > 0) pairs.push([String(epoch), String(local.offline_authority_assignment_epoch)]);
+    // Once present, the original completion proof/time is immutable. Missing
+    // initial proof can still be filled by the existing native attestation path.
+    for (const [payloadKey, localKey] of [['p_client_ended_at','ended_at'],
+      ['p_native_finish_scan_entry_id','native_finish_scan_entry_id'],
+      ['p_native_completion_attestation_version','native_completion_attestation_version'],
+      ['p_native_completion_attestation','native_completion_attestation']]) {
+      if (safeText(payload[payloadKey]) && safeText(local[localKey])) pairs.push([payload[payloadKey],local[localKey]]);
+    }
+    if (pairs.some(([expected, actual]) => safeText(expected) && safeText(expected) !== safeText(actual))) {
+      throw processResultFailure('Saved local completion changed from the original queued identity or frozen proof.');
+    }
+    return local;
+  }
+
   function recoveryPhaseFor(action = {}) {
     switch (safeText(action.type)) {
       case 'start_session': return 1;
@@ -638,21 +1325,62 @@
     };
   }
 
-  function deleteDatabase(name) {
+  function queueOpeningCheckpoint(context) {
+    const security = queueMutationSecurity();
+    if (typeof context?.assertCurrent === 'function') return context.assertCurrent();
+    if (security || nativeQueueSecurityRequired) {
+      throw Object.assign(new Error('The owned queue-opening checkpoint is unavailable.'), { code: 'custodial_protected_checkpoint_unavailable' });
+    }
+    // Retain the pre-existing standalone legacy path; this is not a protected
+    // principal or native-admission claim. Protected runtime must supply owner.
+  }
+
+  function queueOpeningConnection(db) {
+    db.onversionchange = () => {
+      db.close();
+      if (state.db === db) state.db = null;
+    };
+    return db;
+  }
+
+  function queueOpeningRowsMatch(left, right) {
+    const same = (a, b, depth = 0) => {
+      if (Object.is(a, b)) return true;
+      if (depth > 64 || !a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+      const arrays = Array.isArray(a);
+      if (arrays !== Array.isArray(b) || (arrays && a.length !== b.length)) return false;
+      // Unknown structured-clone types remain held, not collapsed to JSON {}.
+      if (!arrays && (Object.prototype.toString.call(a) !== '[object Object]' || Object.prototype.toString.call(b) !== '[object Object]')) return false;
+      const keys = Object.keys(a), other = Object.keys(b);
+      return keys.length === other.length && keys.every(key => Object.hasOwn(b, key) && same(a[key], b[key], depth + 1));
+    };
+    return same([...left].sort((a, b) => a.id - b.id), [...right].sort((a, b) => a.id - b.id));
+  }
+
+  function deleteDatabase(name, context) {
+    queueOpeningCheckpoint(context);
     return new Promise((resolve, reject) => {
       const request = indexedDB.deleteDatabase(name);
-      request.onsuccess = () => resolve(true);
+      request.onsuccess = () => { try { queueOpeningCheckpoint(context); resolve(true); } catch (error) { reject(error); } };
       request.onerror = () => reject(request.error || new Error(`Could not delete ${name}.`));
-      request.onblocked = () => reject(new Error(`${name} is blocked by another stale browser tab.`));
+      // IDB requests cannot be cancelled. Keep admission until terminal event;
+      // rejecting onblocked would let this deletion complete outside its owner.
+      request.onblocked = () => {};
     });
   }
 
   function openExistingDatabase(name) {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(name);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || new Error(`Could not open ${name}.`));
-      request.onblocked = () => reject(new Error(`${name} is blocked by another stale browser tab.`));
+      let missing = false;
+      // Existence reads must not create an empty DB, including the backup.
+      request.onupgradeneeded = (event) => {
+        missing = event.oldVersion === 0;
+        try { request.transaction.abort(); } catch (error) { missing = false; reject(error); }
+      };
+      request.onsuccess = () => resolve(queueOpeningConnection(request.result));
+      request.onerror = () => missing ? resolve(null) : reject(request.error || new Error(`Could not open ${name}.`));
+      request.onblocked = () => {};
     });
   }
 
@@ -674,120 +1402,169 @@
     return JSON.stringify(canonicalizeSemanticValue([...rows].sort((left, right) => Number(left?.id || 0) - Number(right?.id || 0))));
   }
 
-  function createQueueDatabase(name, version, rows = []) {
+  function createQueueDatabase(name, version, rows = [], context) {
+    queueOpeningCheckpoint(context);
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(name, version);
+      let upgraded = false;
+      let failure = null;
       request.onupgradeneeded = () => {
-        const db = request.result;
-        const store = db.objectStoreNames.contains(CONFIG.STORE_NAME)
-          ? request.transaction.objectStore(CONFIG.STORE_NAME)
-          : db.createObjectStore(CONFIG.STORE_NAME, { keyPath: 'id', autoIncrement: true });
-        if (!store.indexNames.contains('logical_key')) store.createIndex('logical_key', 'logical_key', { unique: false });
-        if (!store.indexNames.contains('state')) store.createIndex('state', 'state', { unique: false });
-        if (!store.indexNames.contains('next_attempt_at')) store.createIndex('next_attempt_at', 'next_attempt_at', { unique: false });
+        try {
+          queueOpeningCheckpoint(context); upgraded = true;
+          const db = request.result;
+          const store = db.objectStoreNames.contains(CONFIG.STORE_NAME)
+            ? request.transaction.objectStore(CONFIG.STORE_NAME)
+            : db.createObjectStore(CONFIG.STORE_NAME, { keyPath: 'id', autoIncrement: true });
+          if (!store.indexNames.contains('logical_key')) store.createIndex('logical_key', 'logical_key', { unique: false });
+          if (!store.indexNames.contains('state')) store.createIndex('state', 'state', { unique: false });
+          if (!store.indexNames.contains('next_attempt_at')) store.createIndex('next_attempt_at', 'next_attempt_at', { unique: false });
+          // Schema and restored rows commit together; never expose empty v4
+          // between creation and a second, separately committed restore.
+          for (const row of rows) { queueOpeningCheckpoint(context); store.put(row); }
+        } catch (error) { failure = error; request.transaction.abort(); }
       };
       request.onsuccess = () => {
         const db = request.result;
-        if (!rows.length) { resolve(db); return; }
-        const transaction = db.transaction(CONFIG.STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(CONFIG.STORE_NAME);
-        for (const row of rows) store.put(row);
-        transaction.oncomplete = () => resolve(db);
-        transaction.onerror = () => { db.close(); reject(transaction.error || new Error('Scan queue restore failed.')); };
-        transaction.onabort = () => { db.close(); reject(transaction.error || new Error('Scan queue restore was aborted.')); };
+        try {
+          queueOpeningCheckpoint(context);
+          if (rows.length && !upgraded) throw storageFailure('queue restore', new Error('Existing primary must be compared before restore.'));
+          resolve(queueOpeningConnection(db));
+        } catch (error) { db.close(); reject(error); }
       };
-      request.onerror = () => reject(request.error || new Error(`Could not create ${name}.`));
-      request.onblocked = () => reject(new Error(`${name} is blocked by another stale browser tab.`));
+      request.onerror = () => reject(failure || request.error || new Error(`Could not create ${name}.`));
+      request.onblocked = () => {};
     });
   }
 
-  async function readDowngradeBackup() {
+  async function readDowngradeBackup(context) {
     const db = await openExistingDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+    if (!db) { if (context) queueOpeningCheckpoint(context); return null; }
     try {
-      if (!db.objectStoreNames.contains('metadata') || !db.objectStoreNames.contains(CONFIG.STORE_NAME)) return null;
-      return await new Promise((resolve, reject) => {
+      if (context) queueOpeningCheckpoint(context);
+      if (db.version !== 1 || db.objectStoreNames.length !== 2 || !db.objectStoreNames.contains('metadata') || !db.objectStoreNames.contains(CONFIG.STORE_NAME))
+        throw storageFailure('queue downgrade backup', new Error('Unknown backup schema is retained.'));
+      const result = await new Promise((resolve, reject) => {
         const transaction = db.transaction(['metadata', CONFIG.STORE_NAME], 'readonly');
-        const metadata = transaction.objectStore('metadata').get('capture');
+        const metadata = transaction.objectStore('metadata').getAll();
         const rows = transaction.objectStore(CONFIG.STORE_NAME).getAll();
-        transaction.oncomplete = () => resolve(metadata.result && {
-          ...metadata.result,
-          rows: Array.isArray(rows.result) ? rows.result : [],
-        });
+        transaction.oncomplete = () => resolve({ metadata: metadata.result, rows: rows.result });
         transaction.onerror = () => reject(transaction.error || new Error('Rollback backup read failed.'));
         transaction.onabort = () => reject(transaction.error || new Error('Rollback backup read was aborted.'));
       });
+      if (context) queueOpeningCheckpoint(context);
+      const metadata = Array.isArray(result.metadata) && result.metadata.length === 1 ? result.metadata[0] : null;
+      const fields = ['key', 'source_version', 'canonical_rows', 'canonical_fenced_rows'];
+      const seen = new Set();
+      if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata) || Object.keys(metadata).length !== fields.length || !fields.every(key => Object.hasOwn(metadata, key))
+        || metadata.key !== 'capture' || !Number.isSafeInteger(metadata.source_version) || metadata.source_version <= CONFIG.DB_VERSION || metadata.source_version > CONFIG.MAX_KNOWN_DB_VERSION
+        || !Array.isArray(result.rows) || !result.rows.every(row => row && typeof row === 'object' && !Array.isArray(row)
+          && Number.isSafeInteger(row.id) && row.id >= 1 && !seen.has(row.id) && seen.add(row.id))
+        || typeof metadata.canonical_rows !== 'string' || canonicalRows(result.rows) !== metadata.canonical_rows
+        || typeof metadata.canonical_fenced_rows !== 'string' || canonicalRows(fencedDowngradeRows(result.rows)) !== metadata.canonical_fenced_rows)
+        throw storageFailure('queue downgrade backup', new Error('Unconfirmed backup originals are retained.'));
+      return { ...metadata, rows: result.rows };
     } finally { db.close(); }
   }
 
-  async function writeDowngradeBackup(rows, sourceVersion) {
-    await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
+  async function writeDowngradeBackup(rows, sourceVersion, context) {
+    if (await readDowngradeBackup(context)) throw storageFailure('queue downgrade backup', new Error('An existing original backup must be reconciled first.'));
+    queueOpeningCheckpoint(context);
     const expected = canonicalRows(rows);
     const expectedFenced = canonicalRows(fencedDowngradeRows(rows));
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open(CONFIG.ROLLBACK_BACKUP_DB_NAME, 1);
+      let created = false;
+      let failure = null;
       request.onupgradeneeded = () => {
-        request.result.createObjectStore('metadata', { keyPath: 'key' });
-        request.result.createObjectStore(CONFIG.STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        try {
+          queueOpeningCheckpoint(context); created = true;
+          const metadata = request.result.createObjectStore('metadata', { keyPath: 'key' });
+          const originals = request.result.createObjectStore(CONFIG.STORE_NAME, { keyPath: 'id', autoIncrement: true });
+          metadata.put({ key: 'capture', source_version: sourceVersion, canonical_rows: expected, canonical_fenced_rows: expectedFenced });
+          for (const row of rows) { queueOpeningCheckpoint(context); originals.put(row); }
+        } catch (error) { failure = error; request.transaction.abort(); }
       };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || new Error('Rollback backup could not be created.'));
+      request.onsuccess = () => {
+        try { queueOpeningCheckpoint(context); if (!created) throw storageFailure('queue downgrade backup', new Error('A newly appeared backup is retained.')); resolve(queueOpeningConnection(request.result)); }
+        catch (error) { request.result.close(); reject(error); }
+      };
+      request.onerror = () => reject(failure || request.error || new Error('Rollback backup could not be created.'));
+      request.onblocked = () => {};
     });
-    try {
-      await new Promise((resolve, reject) => {
-        const transaction = db.transaction(['metadata', CONFIG.STORE_NAME], 'readwrite');
-        transaction.objectStore('metadata').put({
-          key: 'capture', source_version: sourceVersion, canonical_rows: expected,
-          canonical_fenced_rows: expectedFenced,
-        });
-        for (const row of rows) transaction.objectStore(CONFIG.STORE_NAME).put(row);
-        transaction.oncomplete = resolve;
-        transaction.onerror = () => reject(transaction.error || new Error('Rollback backup write failed.'));
-        transaction.onabort = () => reject(transaction.error || new Error('Rollback backup write was aborted.'));
-      });
-    } finally { db.close(); }
-    const verified = await readDowngradeBackup();
+    db.close();
+    const verified = await readDowngradeBackup(context);
     if (!verified || verified.source_version !== sourceVersion || verified.canonical_rows !== expected
       || verified.canonical_fenced_rows !== expectedFenced || canonicalRows(verified.rows) !== expected) {
       throw storageFailure('queue downgrade backup', new Error('backup verification failed'));
     }
     downgradeTransition('backup-verified');
+    queueOpeningCheckpoint(context);
     return verified;
   }
 
-  async function restoreRollbackCompatibleQueue(backup) {
+  async function restoreRollbackCompatibleQueue(backup, context) {
+    const retained = await readDowngradeBackup(context);
+    if (!retained || retained.source_version !== backup.source_version || retained.canonical_rows !== backup.canonical_rows
+      || retained.canonical_fenced_rows !== backup.canonical_fenced_rows || !queueOpeningRowsMatch(retained.rows, backup.rows)) throw storageFailure('queue downgrade restore', new Error('Original backup changed; retained without restore.'));
     const fencedRows = fencedDowngradeRows(backup.rows);
-    const expectedFenced = backup.canonical_fenced_rows || canonicalRows(fencedRows);
+    const expectedFenced = backup.canonical_fenced_rows;
     const existing = await openExistingDatabase(CONFIG.DB_NAME);
+    let restored = null;
     try {
-      if (existing.version > CONFIG.MAX_KNOWN_DB_VERSION) throw new Error(`Unknown scan queue database version ${existing.version}.`);
-      const rows = await readRawRows(existing);
-      if (existing.version === CONFIG.DB_VERSION && canonicalRows(rows) === expectedFenced) {
-        downgradeTransition('fenced-v4-verified');
-        await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
-        downgradeTransition('backup-deleted');
-        return;
+      queueOpeningCheckpoint(context);
+      if (existing) {
+        if (existing.version > CONFIG.MAX_KNOWN_DB_VERSION || existing.objectStoreNames.length !== 1 || !existing.objectStoreNames.contains(CONFIG.STORE_NAME))
+          throw storageFailure('queue downgrade restore', new Error('Unknown primary originals are retained.'));
+        const rows = await readRawRows(existing); queueOpeningCheckpoint(context);
+        if (existing.version === CONFIG.DB_VERSION) {
+          const expected = new Map(fencedRows.map(row => [row.id, row]));
+          if (!rows.every(row => expected.has(row.id) && queueOpeningRowsMatch([row], [expected.get(row.id)])))
+            throw storageFailure('queue downgrade restore', new Error('Changed primary originals are retained.'));
+          if (canonicalRows(rows) !== expectedFenced) {
+            await new Promise((resolve, reject) => {
+              queueOpeningCheckpoint(context);
+              const transaction = existing.transaction(CONFIG.STORE_NAME, 'readwrite'), store = transaction.objectStore(CONFIG.STORE_NAME), current = store.getAll();
+              let failure = null;
+              current.onsuccess = () => { try {
+                queueOpeningCheckpoint(context);
+                if (!Array.isArray(current.result) || !queueOpeningRowsMatch(current.result, rows)) throw storageFailure('queue downgrade restore', new Error('Primary changed during restore.'));
+                const present = new Set(rows.map(row => row.id));
+                for (const row of fencedRows) if (!present.has(row.id)) { queueOpeningCheckpoint(context); store.put(row); }
+              } catch (error) { failure = error; transaction.abort(); } };
+              transaction.oncomplete = () => { try { if (failure) throw failure; queueOpeningCheckpoint(context); resolve(); } catch (error) { reject(error); } };
+              transaction.onerror = () => { failure = failure || transaction.error || storageFailure('queue downgrade restore', new Error('Restore transaction was unconfirmed.')); };
+              transaction.onabort = () => reject(failure || transaction.error || storageFailure('queue downgrade restore', new Error('Restore transaction was unconfirmed.')));
+            });
+          }
+          restored = existing;
+        } else if (existing.version !== backup.source_version || !queueOpeningRowsMatch(rows, backup.rows)) {
+          throw storageFailure('queue downgrade restore', new Error('Changed primary originals are retained.'));
+        } else {
+          existing.close();
+          await deleteDatabase(CONFIG.DB_NAME, context); downgradeTransition('primary-deleted'); queueOpeningCheckpoint(context);
+        }
       }
-    } finally { existing.close(); }
-    await deleteDatabase(CONFIG.DB_NAME);
-    downgradeTransition('primary-deleted');
-    const restored = await createQueueDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION, fencedRows);
-    downgradeTransition('fenced-v4-written');
-    const restoredRows = await readRawRows(restored);
-    restored.close();
-    if (canonicalRows(restoredRows) !== expectedFenced) throw storageFailure('queue downgrade restore', new Error('fenced restore verification failed'));
-    downgradeTransition('fenced-v4-verified');
-    await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
-    downgradeTransition('backup-deleted');
+      if (!restored) restored = await createQueueDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION, fencedRows, context);
+      downgradeTransition('fenced-v4-written'); queueOpeningCheckpoint(context);
+      const restoredRows = await readRawRows(restored); queueOpeningCheckpoint(context);
+      if (canonicalRows(restoredRows) !== expectedFenced || !queueOpeningRowsMatch(restoredRows, fencedRows)) throw storageFailure('queue downgrade restore', new Error('fenced restore verification failed'));
+      downgradeTransition('fenced-v4-verified'); queueOpeningCheckpoint(context);
+      await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME, context); downgradeTransition('backup-deleted');
+    } finally { existing?.close(); restored?.close(); }
   }
 
-  async function postOpenContentMigration(db) {
+  async function postOpenContentMigration(db, context) {
+    queueOpeningCheckpoint(context);
     const migrationAt = now();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(CONFIG.STORE_NAME, 'readwrite');
       const cursor = transaction.objectStore(CONFIG.STORE_NAME).openCursor();
+      let failure = null;
       cursor.onsuccess = () => {
         const current = cursor.result;
         if (!current) return;
+        try {
+        queueOpeningCheckpoint(context);
         const declaredVersion = Number(current.value?.schema_version || 0);
         const sourceVersion = declaredVersion >= 1 && declaredVersion <= 4
           ? declaredVersion
@@ -809,37 +1586,53 @@
         }
         current.update(storageRecord(migrated));
         current.continue();
+        } catch (error) { failure = error; transaction.abort(); }
       };
-      cursor.onerror = () => reject(cursor.error || new Error('Scan queue content migration failed.'));
-      transaction.oncomplete = () => resolve(db);
-      transaction.onerror = () => reject(transaction.error || new Error('Scan queue content migration failed.'));
-      transaction.onabort = () => reject(transaction.error || new Error('Scan queue content migration was aborted.'));
+      cursor.onerror = () => { failure = cursor.error || new Error('Scan queue content migration failed.'); };
+      transaction.oncomplete = event => {
+        if (event.target !== transaction) return;
+        // Keep the original admission through every direct terminal listener,
+        // including the callback-cleanup microtask checkpoint between them.
+        window.setTimeout(() => {
+          try { if (failure) throw failure; queueOpeningCheckpoint(context); resolve(db); } catch (error) { reject(error); }
+        }, 0);
+      };
+      transaction.onerror = () => { failure = failure || transaction.error || new Error('Scan queue content migration failed.'); };
+      transaction.onabort = event => {
+        if (event.target !== transaction) return;
+        window.setTimeout(() => reject(failure || transaction.error || new Error('Scan queue content migration was aborted.')), 0);
+      };
     });
   }
 
-  async function openDb() {
-    const backup = await readDowngradeBackup();
-    if (backup) await restoreRollbackCompatibleQueue(backup);
-    else await deleteDatabase(CONFIG.ROLLBACK_BACKUP_DB_NAME);
-
+  async function openDb(context) {
+    queueOpeningCheckpoint(context);
+    const backup = await readDowngradeBackup(context);
+    if (backup) await restoreRollbackCompatibleQueue(backup, context);
     let db = await openExistingDatabase(CONFIG.DB_NAME);
-    if (db.version > CONFIG.MAX_KNOWN_DB_VERSION) {
+    try {
+    queueOpeningCheckpoint(context);
+    if (db && db.version > CONFIG.MAX_KNOWN_DB_VERSION) {
       const version = db.version;
       db.close();
       throw new Error(`Unknown scan queue database version ${version}; preserved without mutation.`);
     }
-    if (db.version > CONFIG.DB_VERSION) {
+    if (db && db.version > CONFIG.DB_VERSION) {
+      if (db.objectStoreNames.length !== 1 || !db.objectStoreNames.contains(CONFIG.STORE_NAME)) throw storageFailure('queue downgrade backup', new Error('Unknown primary schema is retained.'));
       const sourceVersion = db.version;
       const rows = await readRawRows(db);
+      queueOpeningCheckpoint(context);
       db.close();
-      const captured = await writeDowngradeBackup(rows, sourceVersion);
-      await restoreRollbackCompatibleQueue(captured);
+      const captured = await writeDowngradeBackup(rows, sourceVersion, context);
+      await restoreRollbackCompatibleQueue(captured, context);
       db = await openExistingDatabase(CONFIG.DB_NAME);
-    } else if (db.version < CONFIG.DB_VERSION || !db.objectStoreNames.contains(CONFIG.STORE_NAME)) {
-      db.close();
-      db = await createQueueDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+      queueOpeningCheckpoint(context);
+    } else if (!db || db.version < CONFIG.DB_VERSION || !db.objectStoreNames.contains(CONFIG.STORE_NAME)) {
+      db?.close();
+      db = await createQueueDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION, [], context);
     }
-    return postOpenContentMigration(db);
+    return await postOpenContentMigration(db, context);
+    } catch (error) { db?.close(); throw error; }
   }
 
   function listActions() {
@@ -895,48 +1688,93 @@
   }
 
   async function retirePreservedInterruptedStart(sessionId, preserve) {
-    await ensureWorkerReady();
-    const exactSessionId = safeText(sessionId).toLowerCase();
-    if (!state.db || !isUuid(exactSessionId) || typeof preserve !== 'function') {
+    const exactSessionId = typeof sessionId === 'string' ? safeText(sessionId).toLowerCase() : '';
+    if (!isUuid(exactSessionId) || typeof preserve !== 'function') {
       throw interruptedStartRetirementError(
         'custodial_interrupted_start_retirement_invalid',
         'Exact interrupted-start retirement evidence is required.',
       );
     }
-    return withQueueLock(async (lockContext) => {
-      // The queue worker owns every claimed action only while it owns this
-      // same exclusive queue lock. Once recovery acquires the Web Lock, a
-      // processing lease left by the prior WebView/worker is orphaned and can
-      // be returned to its durable pending state before exact preservation.
-      // The localStorage fallback cannot prove that boundary, so it retains
-      // the lease until its normal timeout instead of guessing.
+    // Pin the invocation before worker, queue-lock, archive or native FIFO waits.
+    // The first asynchronous queue read supplies the rows; their exact canonical
+    // originals are then fixed before the preservation callback is invoked.
+    const originalSecurity = queueMutationSecurity(), originalMobile = window.MemphisMobile;
+    const originalReader = originalSecurity?.getStatus, originalWriter = originalSecurity?.mutateProtectedWork;
+    const originalPrincipalReader = originalMobile?.principalIdentity;
+    const status = originalSecurity?.native === true ? originalSecurity.getStatus() : null;
+    const original = status ? Object.freeze({ generation: status.generation, deviceId: status.deviceId,
+      principal: canonicalJson(status.principal), identity: originalMobile?.principalIdentity?.() }) : null;
+    let originalDb = state.db, originalTransaction = originalDb?.transaction;
+    const requireOriginal = (context) => {
+      const security = queueMutationSecurity();
+      if (security !== originalSecurity || security?.getStatus !== originalReader
+        || security?.mutateProtectedWork !== originalWriter || window.MemphisMobile !== originalMobile
+        || originalDb && (state.db !== originalDb || originalDb.transaction !== originalTransaction))
+        throw queueSecurityUnavailable();
+      if (original) {
+        if (originalMobile?.principalIdentity !== originalPrincipalReader) throw queueSecurityUnavailable();
+        const live = security.getStatus();
+        if (live?.ready !== true || live.available !== true || live.quarantined !== false || live.state !== 'enrolled'
+          || !Number.isSafeInteger(original.generation) || original.generation < 1 || live.generation !== original.generation
+          || live.deviceId !== original.deviceId || !live.principal || live.principal.device_id !== original.deviceId
+          || !['custodial-protected-principal.v1', 'custodial-protected-principal.v2'].includes(live.principal.schema_version)
+          || !isUuid(live.principal.employee_id) || !isUuid(live.principal.credential_id)
+          || !Number.isSafeInteger(live.principal.assignment_epoch) || live.principal.assignment_epoch < 1
+          || canonicalJson(live.principal) !== original.principal || typeof original.identity !== 'string' || !original.identity
+          || originalMobile.principalIdentity() !== original.identity) throw queueSecurityUnavailable();
+        if (context !== undefined && (context?.generation !== original.generation || context?.deviceId !== original.deviceId))
+          throw queueSecurityUnavailable();
+      } else if (security?.native === true) throw queueSecurityUnavailable();
+      if (context !== undefined) queueOpeningCheckpoint(context);
+    };
+    const originalOptions = { requireEnrollment: true, ...(original ? { expectedGeneration: original.generation } : {}) };
+    requireOriginal();
+    await ensureWorkerReady();
+    requireOriginal();
+    if (!state.db) {
+      throw interruptedStartRetirementError('custodial_interrupted_start_retirement_invalid', 'The original queue is unavailable.');
+    }
+    if (!originalDb) { originalDb = state.db; originalTransaction = originalDb.transaction; }
+    requireOriginal();
+    const result = await withQueueLock(async (lockContext) => {
+      requireOriginal();
+      // Only the existing queue lock decides whether a prior processing lease
+      // is orphaned; no replacement operation or new epoch is allocated here.
       await recoverOrphanedClaims(lockContext.recoverClaimsImmediately === true);
+      requireOriginal();
       const pause = await securityPause();
+      requireOriginal();
       if (pause) {
-        throw interruptedStartRetirementError(
-          'custodial_interrupted_start_security_paused',
-          'Protected phone recovery is active.',
-        );
+        throw interruptedStartRetirementError('custodial_interrupted_start_security_paused', 'Protected phone recovery is active.');
       }
-      const initialRows = await listActions();
-      const initialMatches = initialRows.filter((item) => actionReferencesSession(item, exactSessionId));
+      const initialRows = await readRawRows(originalDb);
+      requireOriginal();
+      const initialRawMatches = initialRows.filter((item) => actionReferencesSession(item, exactSessionId));
+      const initialMatches = initialRawMatches.map(normalizeRecord);
       if (initialMatches.length > 1) {
-        throw interruptedStartRetirementError(
-          'custodial_interrupted_start_queue_ambiguous',
-          'More than one saved operation references the interrupted cleaning.',
-        );
+        throw interruptedStartRetirementError('custodial_interrupted_start_queue_ambiguous',
+          'More than one saved operation references the interrupted cleaning.');
       }
       if (initialMatches.length === 1) {
         const mismatch = retirableInterruptedStartMismatch(initialMatches[0], exactSessionId);
-        if (mismatch) {
-          throw interruptedStartRetirementError(
-            mismatch,
-            'The saved operation is not one quiescent Start Cleaning action.',
-          );
-        }
+        if (mismatch) throw interruptedStartRetirementError(mismatch, 'The saved operation is not one quiescent Start Cleaning action.');
       }
-
+      if (initialRawMatches.some((item) => Number(item.schema_version) !== CONFIG.SCHEMA_VERSION
+        || !['start_session', 'forward-replay-fenced:start_session'].includes(safeText(item.type)))) {
+        throw interruptedStartRetirementError('custodial_interrupted_start_queue_changed', 'Unknown saved-work representation is retained.');
+      }
       const expectedRows = canonicalRows(initialMatches);
+      // The canonical archive must represent the original values losslessly.
+      // Unknown structured-clone values are held, not collapsed to JSON {}.
+      const originalRows = JSON.parse(expectedRows);
+      const originalRawRows = JSON.parse(canonicalRows(initialRawMatches));
+      const requireRows = () => {
+        if (canonicalRows(initialMatches) !== expectedRows || !queueOpeningRowsMatch(initialMatches, originalRows)
+          || !queueOpeningRowsMatch(initialRawMatches, originalRawRows))
+          throw interruptedStartRetirementError(
+          'custodial_interrupted_start_queue_changed', 'The preserved original action body changed.');
+      };
+      requireRows();
       const preservationEvidence = Object.freeze({
         contract_version: 'custodial-interrupted-start-preservation.v1',
         session_uuid: exactSessionId,
@@ -946,91 +1784,169 @@
         Object.freeze(initialMatches.map((item) => Object.freeze({ ...item }))),
         preservationEvidence,
       );
+      requireOriginal(); requireRows();
       if (preserved?.preserved !== true || preserved?.canonical_actions !== expectedRows) {
-        throw interruptedStartRetirementError(
-          'custodial_interrupted_start_archive_unverified',
-          'The interrupted Start Cleaning action was not durably preserved.',
-        );
+        throw interruptedStartRetirementError('custodial_interrupted_start_archive_unverified',
+          'The interrupted Start Cleaning action was not durably preserved.');
       }
-
       const testHook = window.__MZ_SCAN_SYNC_INTERRUPTED_START_TEST_HOOK__;
       if (typeof testHook === 'function') testHook('archive-preserved');
+      requireOriginal(); requireRows();
 
-      return mutateProtectedQueue(async () => {
-        if (initialMatches.length === 0) {
-          const currentMatches = (await listActions()).filter((item) => actionReferencesSession(item, exactSessionId));
-          if (currentMatches.length !== 0) {
-            throw interruptedStartRetirementError(
-              'custodial_interrupted_start_queue_changed',
-              'A saved operation appeared before interrupted-start retirement completed.',
-            );
-          }
-          return Object.freeze({
-            contract_version: 'custodial-interrupted-start-retirement.v1',
-            session_uuid: exactSessionId,
-            preserved_action_count: 0,
-            retired_action_count: 0,
-            already_absent: true,
-          });
-        }
-
+      const retired = await mutateProtectedQueue(async (context) => {
+        requireOriginal(context); requireRows();
         await new Promise((resolve, reject) => {
-          const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-          const store = tx.objectStore(CONFIG.STORE_NAME);
-          const lookup = store.getAll();
-          let refusal = null;
-          lookup.onsuccess = () => {
-            const currentMatches = (Array.isArray(lookup.result) ? lookup.result : [])
-              .map(normalizeRecord)
-              .filter((item) => actionReferencesSession(item, exactSessionId));
-            if (currentMatches.length !== 1
-              || !exactRetirableInterruptedStart(currentMatches[0], exactSessionId)
-              || canonicalRows(currentMatches) !== expectedRows) {
-              refusal = interruptedStartRetirementError(
-                'custodial_interrupted_start_queue_changed',
-                'The saved Start Cleaning action changed before retirement.',
-              );
-              tx.abort();
-              return;
+          let tx = null, failure = null;
+          const refuse = (error) => {
+            if (failure) return;
+            failure = error;
+            if (!tx) { reject(failure); return; }
+            try { tx.abort(); }
+            catch (abortError) {
+              failure = Object.assign(new AggregateError([failure, abortError],
+                'Interrupted-start queue settlement is uncertain.', { cause: failure }),
+              { code: failure.code || 'custodial_storage_unavailable' });
             }
-            store.delete(currentMatches[0].id);
+            // Do not release native/queue admission on request error or even
+            // a failed abort: staged effects remain unknown until a direct
+            // transaction onabort/oncomplete event has fully dispatched.
           };
-          lookup.onerror = () => reject(lookup.error || new Error('Interrupted-start queue verification failed.'));
-          tx.oncomplete = resolve;
-          tx.onerror = () => reject(refusal || tx.error || new Error('Interrupted-start queue retirement failed.'));
-          tx.onabort = () => reject(refusal || tx.error || new Error('Interrupted-start queue retirement was aborted.'));
+          const settle = (aborted) => {
+            let error = failure || (aborted ? tx.error || new Error('Interrupted-start queue retirement was aborted.') : null);
+            try { requireOriginal(context); requireRows(); } catch (withdrawn) { error = error || withdrawn; }
+            if (error) reject(error); else resolve();
+          };
+          try {
+            requireOriginal(context);
+            tx = originalDb.transaction(CONFIG.STORE_NAME, 'readwrite');
+            tx.oncomplete = (event) => {
+              if (event.target !== tx) return;
+              window.setTimeout(() => settle(false), 0);
+            };
+            tx.onabort = (event) => {
+              if (event.target !== tx) return;
+              window.setTimeout(() => settle(true), 0);
+            };
+            tx.onerror = (event) => {
+              failure = failure || event.target?.error || tx.error || new Error('Interrupted-start queue retirement failed.');
+              try { requireOriginal(context); } catch (error) { failure = failure || error; }
+            };
+            const store = tx.objectStore(CONFIG.STORE_NAME);
+            requireOriginal(context);
+            const lookup = store.getAll();
+            lookup.onerror = () => refuse(lookup.error || tx.error || new Error('Interrupted-start queue verification failed.'));
+            lookup.onsuccess = () => {
+              try {
+                requireOriginal(context); requireRows();
+                if (!Array.isArray(lookup.result)) throw interruptedStartRetirementError(
+                  'custodial_interrupted_start_queue_changed', 'The original queue read is unavailable.');
+                const rawMatches = lookup.result.filter((item) => actionReferencesSession(item, exactSessionId));
+                if (!queueOpeningRowsMatch(rawMatches, originalRawRows))
+                  throw interruptedStartRetirementError('custodial_interrupted_start_queue_changed',
+                    'Unknown or mixed saved work is retained.');
+                const currentMatches = rawMatches.map(normalizeRecord);
+                if (currentMatches.length !== initialMatches.length
+                  || currentMatches.length === 1 && !exactRetirableInterruptedStart(currentMatches[0], exactSessionId)
+                  || canonicalRows(currentMatches) !== expectedRows || !queueOpeningRowsMatch(currentMatches, originalRows)) {
+                  throw interruptedStartRetirementError('custodial_interrupted_start_queue_changed',
+                    'The saved Start Cleaning action changed before retirement.');
+                }
+                if (currentMatches.length === 1) {
+                  requireOriginal(context);
+                  const deletion = store.delete(currentMatches[0].id);
+                  deletion.onerror = () => refuse(deletion.error || tx.error || new Error('Interrupted-start queue deletion failed.'));
+                  requireOriginal(context);
+                }
+              } catch (error) { refuse(error); }
+            };
+          } catch (error) { refuse(error); }
         });
-
-        const remaining = (await listActions()).filter((item) => actionReferencesSession(item, exactSessionId));
-        if (remaining.length !== 0) {
-          throw interruptedStartRetirementError(
-            'custodial_interrupted_start_queue_retirement_unverified',
-            'The interrupted Start Cleaning action remains in the saved-work queue.',
-          );
-        }
+        requireOriginal(context); requireRows();
+        const remaining = (await readRawRows(originalDb)).filter((item) => actionReferencesSession(item, exactSessionId));
+        requireOriginal(context); requireRows();
+        if (remaining.length !== 0) throw interruptedStartRetirementError(
+          'custodial_interrupted_start_queue_retirement_unverified',
+          'The interrupted Start Cleaning action remains in the saved-work queue.');
         return Object.freeze({
           contract_version: 'custodial-interrupted-start-retirement.v1',
           session_uuid: exactSessionId,
-          preserved_action_count: 1,
-          retired_action_count: 1,
-          already_absent: false,
+          preserved_action_count: initialMatches.length,
+          retired_action_count: initialMatches.length,
+          already_absent: initialMatches.length === 0,
         });
-      });
+      }, originalOptions);
+      // Callback context is closed after mutateProtectedQueue settles.
+      requireOriginal(); requireRows();
+      return retired;
     });
+    requireOriginal();
+    return result;
   }
 
-  async function enqueueUnlocked(action) {
+  async function enqueueUnlocked(action, expectedGeneration = null) {
     // Caller/imported actions cannot manufacture a server acknowledgement.
     const {server_completion_receipt: ignoredReceipt, ...suppliedAction} = action;
     void ignoredReceipt;
     const record = normalizeRecord({ ...suppliedAction, replay_binding: replayBindingFor(suppliedAction) });
-    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
-        const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-        const store = tx.objectStore(CONFIG.STORE_NAME);
-        const lookup = store.getAll();
+    return mutateProtectedQueue((context) => new Promise((resolve, reject) => {
+        let tx = null;
         let result = null;
         let conflict = null;
+        let failure = null;
+        const refuse = error => {
+          if (failure) return;
+          failure = error;
+          if (!tx) { reject(failure); return; }
+          try { tx.abort(); }
+          catch (abortError) {
+            failure = Object.assign(new AggregateError([failure, abortError],
+              'Queue transaction settlement is uncertain.'), { code: 'custodial_storage_unavailable' });
+          }
+          // Keep this admission until onabort/oncomplete. A failed abort can
+          // still commit staged rows; rejection is never a rollback claim.
+        };
+        try {
+        queueOpeningCheckpoint(context);
+        tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+        tx.oncomplete = event => {
+          if (event.target !== tx) return;
+          // Settle outside terminal-event dispatch so the original owner
+          // spans every listener of this direct transaction event.
+          window.setTimeout(() => {
+          try {
+            if (failure) throw failure;
+            queueOpeningCheckpoint(context);
+            if (conflict) {
+              dispatchStatus({ status: 'quarantined', logical_key: record.logical_key, reason: conflict.code });
+              reject(conflict);
+              return;
+            }
+            state.channel?.postMessage({ type: 'queued', logical_key: record.logical_key });
+            dispatchStatus({ status: 'queued', logical_key: record.logical_key });
+            resolve(result);
+            if (navigator.onLine) scheduleSync();
+          } catch (error) { reject(error); }
+          }, 0);
+        };
+        tx.onerror = event => { failure = failure || event.target.error || tx.error || new Error('Queue transaction failed.'); };
+        tx.onabort = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            const abortError = tx.error;
+            if (failure && abortError && failure !== abortError) {
+              reject(Object.assign(new AggregateError([failure, abortError],
+                'Queue transaction aborted after refusal.', { cause: failure }), {
+                code: failure.code || 'custodial_storage_unavailable',
+              }));
+            } else reject(failure || abortError || new Error('Queue transaction aborted.'));
+          }, 0);
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        queueOpeningCheckpoint(context);
+        const lookup = store.getAll();
         lookup.onsuccess = () => {
+          try {
+          queueOpeningCheckpoint(context);
           const existingRows = (lookup.result || []).map(normalizeRecord);
           const exact = existingRows.find((item) => item.logical_key === record.logical_key
             && safeText(item.semantic_fingerprint) === safeText(record.semantic_fingerprint));
@@ -1059,6 +1975,7 @@
               if (safeToReplace) {
                 const prior = related[0];
                 result = prior.id;
+                queueOpeningCheckpoint(context);
                 store.put(storageRecord({
                   ...record,
                   id: prior.id,
@@ -1069,7 +1986,9 @@
                 return;
               }
               const reason = 'semantic_completion_mismatch_requires_explicit_resolution';
-              for (const prior of related) store.put(storageRecord({
+              for (const prior of related) {
+                queueOpeningCheckpoint(context);
+                store.put(storageRecord({
                 ...prior,
                 dead_letter: true,
                 state: 'quarantined',
@@ -1085,6 +2004,8 @@
                   incoming_semantic_fingerprint: record.semantic_fingerprint || null,
                 },
               }));
+              }
+              queueOpeningCheckpoint(context);
               const add = store.add(storageRecord({
                 ...record,
                 dead_letter: true,
@@ -1093,201 +2014,559 @@
                 last_attempt_at: now(),
                 next_attempt_at: Number.MAX_SAFE_INTEGER,
               }));
-              add.onsuccess = () => { result = add.result; };
+              add.onsuccess = () => { try { queueOpeningCheckpoint(context); result = add.result; } catch (error) { refuse(error); } };
               conflict = Object.assign(new Error('Changed completion evidence conflicts with an attempted operation; both versions were preserved.'), {
                 code: 'semantic_completion_conflict', completion_client_id: record.completion_client_id,
               });
               return;
             }
           }
+          queueOpeningCheckpoint(context);
           const add = store.add(storageRecord(record));
-          add.onsuccess = () => { result = add.result; };
+          add.onsuccess = () => { try { queueOpeningCheckpoint(context); result = add.result; } catch (error) { refuse(error); } };
+          } catch (error) { refuse(error); }
         };
-        tx.oncomplete = () => {
-          if (conflict) {
-            dispatchStatus({ status: 'quarantined', logical_key: record.logical_key, reason: conflict.code });
-            reject(conflict);
-            return;
-          }
-          state.channel?.postMessage({ type: 'queued', logical_key: record.logical_key });
-          dispatchStatus({ status: 'queued', logical_key: record.logical_key });
-          resolve(result);
-          if (navigator.onLine) scheduleSync();
-        };
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error || new Error('Queue transaction aborted.'));
-      }));
+        lookup.onerror = () => refuse(lookup.error || tx.error || new Error('Queue lookup failed.'));
+        } catch (error) { refuse(error); }
+      }), { requireEnrollment: true, ...(expectedGeneration == null ? {} : { expectedGeneration }) });
   }
 
   function claimNextAction() {
     if (!state.db) return Promise.resolve(null);
-    return mutateProtectedQueue((securityContext) => new Promise((resolve, reject) => {
-      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-      const store = tx.objectStore(CONFIG.STORE_NAME);
-      const request = store.getAll();
+    const security = queueMutationSecurity();
+    const expectedGeneration = security?.getStatus?.()?.generation ?? null;
+    if (security && (!Number.isSafeInteger(expectedGeneration) || expectedGeneration < 0)) {
+      return Promise.reject(queueSecurityUnavailable());
+    }
+    return mutateProtectedQueue((context) => new Promise((resolve, reject) => {
       let claimed = null;
-      request.onsuccess = () => {
-        const item = nextClaimableAction(request.result || []);
-        if (!item) return;
-        claimed = {
-          ...item,
-          state: 'processing',
-          lease_owner: state.workerId,
-          lease_token: crypto.randomUUID(),
-          lease_until: now() + CONFIG.LEASE_MS,
-        };
-        store.put(storageRecord(claimed));
-        claimed = {
-          ...claimed,
-          claimed_from: {
-            state: item.state,
-            lease_owner: item.lease_owner,
-            lease_token: item.lease_token,
-            lease_until: item.lease_until,
-          },
-          security_generation: securityContext?.generation ?? null,
-        };
+      let tx = null, failure = null;
+      const refuse = error => {
+        if (failure) return;
+        failure = error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); }
+        catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Queue transaction settlement is uncertain.'), { code: 'custodial_storage_unavailable' });
+        }
+        // Only a direct terminal event settles ownership, even if abort throws.
       };
-      tx.oncomplete = () => resolve(claimed);
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error || new Error('Queue claim aborted.'));
-    }));
+      try {
+        queueOpeningCheckpoint(context);
+        tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+        tx.onerror = event => { failure = failure || event.target.error || tx.error || new Error('Queue claim failed.'); };
+        tx.onabort = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            const abortError = tx.error;
+            if (failure && abortError && failure !== abortError) {
+              reject(Object.assign(new AggregateError([failure, abortError],
+                'Queue claim aborted after refusal.', { cause: failure }), {
+                code: failure.code || 'custodial_storage_unavailable',
+              }));
+            } else reject(failure || abortError || new Error('Queue claim aborted.'));
+          }, 0);
+        };
+        tx.oncomplete = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            try {
+              if (failure) throw failure;
+              queueOpeningCheckpoint(context);
+              resolve(claimed);
+            } catch (error) { reject(error); }
+          }, 0);
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        queueOpeningCheckpoint(context);
+        const request = store.getAll();
+        request.onerror = () => refuse(request.error || tx.error || new Error('Queue claim lookup failed.'));
+        request.onsuccess = () => {
+          try {
+            queueOpeningCheckpoint(context);
+            const item = nextClaimableAction(request.result || []);
+            if (!item) return;
+            queueOpeningCheckpoint(context);
+            claimed = {
+              ...item,
+              state: 'processing',
+              lease_owner: state.workerId,
+              lease_token: crypto.randomUUID(),
+              lease_until: now() + CONFIG.LEASE_MS,
+            };
+            const stored = storageRecord(claimed);
+            queueOpeningCheckpoint(context);
+            store.put(stored);
+            claimed = {
+              ...claimed,
+              claimed_from: {
+                state: item.state,
+                lease_owner: item.lease_owner,
+                lease_token: item.lease_token,
+                lease_until: item.lease_until,
+              },
+              security_generation: context?.generation ?? null,
+            };
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+    }), { requireEnrollment: true, expectedGeneration });
   }
 
   function releaseClaimWithoutAttempt(item) {
     if (!state.db || !item?.id) return Promise.resolve(false);
-    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
-      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-      const store = tx.objectStore(CONFIG.STORE_NAME);
-      const request = store.get(item.id);
+    // Freeze the original claim's bounds before FIFO/IDB callbacks can run.
+    const original = {
+      id: item.id, lease_token: item.lease_token, generation: item.security_generation ?? null,
+      previous: {
+        state: item.claimed_from?.state || 'pending',
+        lease_owner: item.claimed_from?.lease_owner || null,
+        lease_token: item.claimed_from?.lease_token || null,
+        lease_until: Number(item.claimed_from?.lease_until || 0),
+      },
+    };
+    const security = queueMutationSecurity();
+    if (security && (!Number.isSafeInteger(original.generation) || original.generation < 0)) {
+      return Promise.reject(queueSecurityUnavailable());
+    }
+    return mutateProtectedQueue((context) => new Promise((resolve, reject) => {
       let changed = false;
-      request.onsuccess = () => {
-        const current = request.result;
-        if (!current || current.lease_token !== item.lease_token || current.lease_owner !== state.workerId) return;
-        const previous = item.claimed_from || {};
-        changed = true;
-        store.put(storageRecord({
-          ...current,
-          state: previous.state || 'pending',
-          lease_owner: previous.lease_owner || null,
-          lease_token: previous.lease_token || null,
-          lease_until: Number(previous.lease_until || 0),
-        }));
+      let tx = null, failure = null;
+      const refuse = error => {
+        if (failure) return;
+        failure = error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); }
+        catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Queue transaction settlement is uncertain.'), { code: 'custodial_storage_unavailable' });
+        }
+        // Only a direct terminal event settles ownership, even if abort throws.
       };
-      tx.oncomplete = () => resolve(changed);
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error || new Error('Queue claim release aborted.'));
-    }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
+      try {
+        queueOpeningCheckpoint(context);
+        tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+        tx.onerror = event => { failure = failure || event.target.error || tx.error || new Error('Queue claim release failed.'); };
+        tx.onabort = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            const abortError = tx.error;
+            if (failure && abortError && failure !== abortError) {
+              reject(Object.assign(new AggregateError([failure, abortError],
+                'Queue claim release aborted after refusal.', { cause: failure }), {
+                code: failure.code || 'custodial_storage_unavailable',
+              }));
+            } else reject(failure || abortError || new Error('Queue claim release aborted.'));
+          }, 0);
+        };
+        tx.oncomplete = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            try {
+              if (failure) throw failure;
+              queueOpeningCheckpoint(context);
+              resolve(changed);
+            } catch (error) { reject(error); }
+          }, 0);
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        queueOpeningCheckpoint(context);
+        const request = store.get(original.id);
+        request.onerror = () => refuse(request.error || tx.error || new Error('Queue claim release lookup failed.'));
+        request.onsuccess = () => {
+          try {
+            queueOpeningCheckpoint(context);
+            const current = request.result;
+            if (!current || current.lease_token !== original.lease_token || current.lease_owner !== state.workerId) return;
+            const stored = storageRecord({
+              ...current,
+              state: original.previous.state,
+              lease_owner: original.previous.lease_owner,
+              lease_token: original.previous.lease_token,
+              lease_until: original.previous.lease_until,
+            });
+            queueOpeningCheckpoint(context);
+            store.put(stored);
+            changed = true;
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+    }), { requireEnrollment: true, expectedGeneration: original.generation });
   }
 
   function recoverOrphanedClaims(recoverImmediately = false) {
     if (!state.db) return Promise.resolve(0);
-    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
-      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-      const store = tx.objectStore(CONFIG.STORE_NAME);
-      const request = store.getAll();
+    const security = queueMutationSecurity();
+    const expectedGeneration = security?.getStatus?.()?.generation ?? null;
+    if (security && (!Number.isSafeInteger(expectedGeneration) || expectedGeneration < 0)) {
+      return Promise.reject(queueSecurityUnavailable());
+    }
+    return mutateProtectedQueue((context) => new Promise((resolve, reject) => {
       let recovered = 0;
-      request.onsuccess = () => {
-        for (const raw of request.result || []) {
-          const item = normalizeRecord(raw);
-          if (item.state !== 'processing' || !item.lease_owner
-            || (!recoverImmediately && Number(item.lease_until || 0) > now())) continue;
-          recovered += 1;
-          store.put(storageRecord({
-            ...item,
-            state: Number(item.retry_count || 0) > 0 ? 'retrying' : 'pending',
-            lease_owner: null,
-            lease_token: null,
-            lease_until: 0,
-          }));
+      let tx = null, failure = null;
+      const refuse = error => {
+        if (failure) return;
+        failure = error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); }
+        catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Queue transaction settlement is uncertain.'), { code: 'custodial_storage_unavailable' });
         }
+        // Only a direct terminal event settles ownership, even if abort throws.
       };
-      tx.oncomplete = () => resolve(recovered);
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error || new Error('Queue orphan recovery was aborted.'));
-    }));
+      try {
+        queueOpeningCheckpoint(context);
+        tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+        tx.onerror = event => { failure = failure || event.target.error || tx.error || new Error('Queue orphan recovery failed.'); };
+        tx.onabort = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            const abortError = tx.error;
+            if (failure && abortError && failure !== abortError) {
+              reject(Object.assign(new AggregateError([failure, abortError],
+                'Queue orphan recovery aborted after refusal.', { cause: failure }), {
+                code: failure.code || 'custodial_storage_unavailable',
+              }));
+            } else reject(failure || abortError || new Error('Queue orphan recovery aborted.'));
+          }, 0);
+        };
+        tx.oncomplete = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            try {
+              if (failure) throw failure;
+              queueOpeningCheckpoint(context);
+              resolve(recovered);
+            } catch (error) { reject(error); }
+          }, 0);
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        queueOpeningCheckpoint(context);
+        const request = store.getAll();
+        request.onerror = () => refuse(request.error || tx.error || new Error('Queue orphan recovery lookup failed.'));
+        request.onsuccess = () => {
+          try {
+            queueOpeningCheckpoint(context);
+            for (const raw of request.result || []) {
+              queueOpeningCheckpoint(context);
+              const item = normalizeRecord(raw);
+              if (item.state !== 'processing' || !item.lease_owner
+                || (!recoverImmediately && Number(item.lease_until || 0) > now())) continue;
+              const stored = storageRecord({
+                ...item,
+                state: Number(item.retry_count || 0) > 0 ? 'retrying' : 'pending',
+                lease_owner: null,
+                lease_token: null,
+                lease_until: 0,
+              });
+              queueOpeningCheckpoint(context);
+              store.put(stored);
+              recovered += 1;
+            }
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+    }), { requireEnrollment: true, expectedGeneration });
   }
 
   function persistClaimPayload(item, payload) {
     if (!state.db || !item?.id || !payload || typeof payload !== 'object') return Promise.resolve(false);
-    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
-      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-      const store = tx.objectStore(CONFIG.STORE_NAME);
-      const request = store.get(item.id);
+    const original = structuredClone(item);
+    const originalBytes = canonicalJson(original);
+    const security = queueMutationSecurity();
+    if (security && (!Number.isSafeInteger(original.security_generation) || original.security_generation < 0)) {
+      return Promise.reject(queueSecurityUnavailable());
+    }
+    const requireOriginal = context => {
+      queueOpeningCheckpoint(context);
+      if (canonicalJson(item) !== originalBytes) {
+        throw storageFailure('completion ownership', new Error('original queue claim changed'));
+      }
+    };
+    const capturedPayload = structuredClone(payload);
+    return mutateProtectedQueue(context => new Promise((resolve, reject) => {
       let changed = false;
-      request.onsuccess = () => {
-        const current = request.result;
-        if (!current || current.lease_token !== item.lease_token || current.lease_owner !== state.workerId) return;
-        changed = true;
-        store.put(storageRecord({ ...current, payload: { ...payload } }));
+      let tx = null, failure = null;
+      const refuse = error => {
+        if (failure) return;
+        failure = error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); }
+        catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Queue proof persistence abort was unconfirmed.', { cause: failure }), {
+            code: failure.code || 'custodial_storage_unavailable',
+          });
+        }
+        // Wait for direct abort/complete even if abort is unconfirmed.
       };
-      tx.oncomplete = () => resolve(changed);
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error || new Error('Queue proof persistence was aborted.'));
-    }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
+      try {
+        requireOriginal(context);
+        tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+        tx.onerror = event => { failure = failure || event.target.error || tx.error || new Error('Queue proof persistence failed.'); };
+        tx.onabort = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            const abortError = tx.error;
+            if (failure && abortError && failure !== abortError) {
+              reject(Object.assign(new AggregateError([failure, abortError],
+                'Queue proof persistence aborted after refusal.', { cause: failure }), {
+                code: failure.code || 'custodial_storage_unavailable',
+              }));
+            } else reject(failure || abortError || new Error('Queue proof persistence aborted.'));
+          }, 0);
+        };
+        tx.oncomplete = event => {
+          if (event.target !== tx) return;
+          // The admission spans the complete direct terminal-event dispatch.
+          window.setTimeout(() => {
+            try {
+              if (failure) throw failure;
+              requireOriginal(context);
+              if (changed) item.payload = structuredClone(capturedPayload);
+              resolve(changed);
+            } catch (error) { reject(error); }
+          }, 0);
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        requireOriginal(context);
+        const request = store.get(original.id);
+        request.onerror = () => refuse(request.error || tx.error || new Error('Queue proof persistence lookup failed.'));
+        request.onsuccess = () => {
+          try {
+            requireOriginal(context);
+
+            const current = request.result;
+            if (!sameClaimedQueueRow(current, original)) return;
+            const stored = storageRecord({ ...current, payload: structuredClone(capturedPayload) });
+            requireOriginal(context);
+            store.put(stored);
+            changed = true;
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+    }), { requireEnrollment: true, expectedGeneration: original.security_generation ?? null });
   }
 
-  function finishClaim(item, { succeeded, result = null, error = null, permanent = false, automaticRetry = false, retryAfterMs = 0 } = {}) {
-    if (!state.db || !item?.id) return Promise.resolve(false);
-    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
-      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-      const store = tx.objectStore(CONFIG.STORE_NAME);
-      const request = store.get(item.id);
-      let changed = false;
-      request.onsuccess = () => {
-        const current = request.result;
-        if (!current || current.lease_token !== item.lease_token || current.lease_owner !== state.workerId) return;
-        changed = true;
-        if (succeeded) {
-          try {
-            if (isTerminalReconciliation(item, result)) {
-              store.put(storageRecord({
-                ...current,
-                type: item.type,
-                dead_letter: true,
-                state: 'quarantined',
-                terminal_result: result,
-                last_error: safeText(result?.reason || result?.status || 'Manager recovery is required.').slice(0, 1000),
-                last_attempt_at: now(),
-                next_attempt_at: Number.MAX_SAFE_INTEGER,
-                lease_owner: null,
-                lease_token: null,
-                lease_until: 0,
-              }));
-              return;
-            }
-            applyProcessResult(item, result);
-            store.delete(item.id);
-          } catch (applyError) {
-            changed = false;
-            try { tx.abort(); } catch {}
-            reject(applyError);
-          }
-          return;
+  function requireClaimOwnership(item) {
+    const original = structuredClone(item);
+    const originalBytes = canonicalJson(original);
+    const security = queueMutationSecurity();
+    if (security && (!Number.isSafeInteger(original.security_generation) || original.security_generation < 0)) {
+      return Promise.reject(queueSecurityUnavailable());
+    }
+    const requireOriginal = context => {
+      queueOpeningCheckpoint(context);
+      if (canonicalJson(item) !== originalBytes) {
+        throw storageFailure('completion ownership', new Error('original queue claim changed'));
+      }
+    };
+    return mutateProtectedQueue(context => new Promise((resolve, reject) => {
+      let matches = false;
+      let tx = null, failure = null;
+      const refuse = error => {
+        if (failure) return;
+        failure = error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); }
+        catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Completion ownership read abort was unconfirmed.', { cause: failure }), {
+            code: failure.code || 'custodial_storage_unavailable',
+          });
         }
-        const retryCount = Math.min(Number.MAX_SAFE_INTEGER, Number(current.retry_count || 0) + 1);
-        // A confirmed transport/server outage is not a permanent rejection of saved work.
-        // Unknown failures retain the existing bounded hold; old held rows are not revived.
-        const deadLetter = permanent || (!automaticRetry && retryCount >= CONFIG.MAX_RETRIES);
-        const attemptedAt = now();
-        store.put(storageRecord({
-          ...current,
-          type: item.type,
-          retry_count: retryCount,
-          last_error: safeText(error || 'Sync failed').slice(0, 1000),
-          last_attempt_at: attemptedAt,
-          next_attempt_at: deadLetter ? Number.MAX_SAFE_INTEGER : attemptedAt + Math.max(boundedRetryAfterMs(retryAfterMs, attemptedAt), retryDelay(retryCount)),
-          dead_letter: deadLetter,
-          state: deadLetter ? 'dead-letter' : 'retrying',
-          lease_owner: null,
-          lease_token: null,
-          lease_until: 0,
-        }));
+        // Wait for direct abort/complete even if abort is unconfirmed.
       };
-      tx.oncomplete = () => resolve(changed);
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error || new Error('Queue completion transaction aborted.'));
-    }), { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
+      try {
+        requireOriginal(context);
+        tx = state.db.transaction(CONFIG.STORE_NAME, 'readonly');
+        tx.onerror = event => { failure = failure || event.target.error || tx.error || new Error('Completion ownership read failed.'); };
+        tx.onabort = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            const abortError = tx.error;
+            if (failure && abortError && failure !== abortError) {
+              reject(Object.assign(new AggregateError([failure, abortError],
+                'Completion ownership read aborted after refusal.', { cause: failure }), {
+                code: failure.code || 'custodial_storage_unavailable',
+              }));
+            } else reject(failure || abortError || new Error('Completion ownership read aborted.'));
+          }, 0);
+        };
+        tx.oncomplete = event => {
+          if (event.target !== tx) return;
+          // The admission spans the complete direct terminal-event dispatch.
+          window.setTimeout(() => {
+            try {
+              if (failure) throw failure;
+              requireOriginal(context);
+              if (!matches) throw storageFailure('completion cleanup', new Error('original queue ownership changed'));
+              resolve();
+            } catch (error) { reject(error); }
+          }, 0);
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        requireOriginal(context);
+        const request = store.get(original.id);
+        request.onerror = () => refuse(request.error || tx.error || new Error('Completion ownership read lookup failed.'));
+        request.onsuccess = () => {
+          try {
+            requireOriginal(context);
+
+            matches = sameClaimedQueueRow(request.result, original);
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+    }), { requireEnrollment: true, expectedGeneration: original.security_generation ?? null });
+  }
+
+  function finishClaim(item, options = {}) {
+    if (!state.db || item == null) return Promise.resolve(false);
+    try {
+      const security = queueMutationSecurity(), mobile = window.MemphisMobile;
+      const reader = security?.getStatus, writer = security?.mutateProtectedWork, stable = security?.waitForStableState;
+      const principalReader = mobile?.principalIdentity;
+      const status = security?.native === true ? reader.call(security) : null;
+      const owner = status ? Object.freeze({ generation: status.generation, deviceId: status.deviceId,
+        principal: canonicalJson(status.principal), identity: principalReader?.call(mobile) }) : null;
+      const db = state.db, transaction = db.transaction, storeName = CONFIG.STORE_NAME, worker = state.workerId;
+      const invalid = () => storageFailure('completion ownership', new Error('Original queue claim or settlement input changed.'));
+      // Only detached plain data may cross the FIFO. Descriptors reject raw
+      // getters; structuredClone additionally refuses proxy/internal brands.
+      const plain = (value, seen = new Set(), depth = 0) => {
+        if (value === null || ['undefined', 'string', 'boolean', 'number'].includes(typeof value)) return;
+        if (!value || typeof value !== 'object' || depth > 64 || seen.has(value)) throw invalid();
+        const array = Array.isArray(value), prototype = Object.getPrototypeOf(value);
+        if (prototype !== null) {
+          const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+          if (!constructor || !Object.hasOwn(constructor, 'value') || typeof constructor.value !== 'function'
+            || constructor.value.name !== (array ? 'Array' : 'Object')
+            || (!array && Object.getPrototypeOf(prototype) !== null)) throw invalid();
+        }
+        seen.add(value);
+        for (const key of Reflect.ownKeys(value)) {
+          if (array && key === 'length') continue;
+          const descriptor = Object.getOwnPropertyDescriptor(value, key);
+          if (typeof key !== 'string' || !descriptor || !Object.hasOwn(descriptor, 'value') || !descriptor.enumerable) throw invalid();
+          plain(descriptor.value, seen, depth + 1);
+        }
+        seen.delete(value);
+      };
+      plain(item); plain(options);
+      const original = structuredClone(item), originalOptions = structuredClone(options);
+      plain(original); plain(originalOptions);
+      if (!original || typeof original !== 'object' || Array.isArray(original)
+        || !originalOptions || typeof originalOptions !== 'object' || Array.isArray(originalOptions)) throw invalid();
+      if (!original.id) return Promise.resolve(false);
+      const { succeeded, result = null, error = null, permanent = false, automaticRetry = false, retryAfterMs = 0 } = originalOptions;
+      if (typeof succeeded !== 'boolean' || typeof permanent !== 'boolean' || typeof automaticRetry !== 'boolean'
+        || typeof retryAfterMs !== 'number' || error !== null && typeof error !== 'string'
+        || result !== null && (typeof result !== 'object' || Array.isArray(result))) throw invalid();
+      const freeze = value => {
+        if (value && typeof value === 'object') { for (const key of Object.keys(value)) freeze(value[key]); Object.freeze(value); }
+      };
+      freeze(original); freeze(originalOptions);
+      const requireOriginal = context => {
+        const liveSecurity = queueMutationSecurity();
+        if (liveSecurity !== security || security?.getStatus !== reader || security?.mutateProtectedWork !== writer
+          || security?.waitForStableState !== stable || window.MemphisMobile !== mobile || mobile?.principalIdentity !== principalReader
+          || state.db !== db || db.transaction !== transaction || CONFIG.STORE_NAME !== storeName || state.workerId !== worker)
+          throw queueSecurityUnavailable();
+        if (owner) {
+          const live = reader.call(security);
+          if (live?.ready !== true || live.available !== true || live.quarantined !== false || live.state !== 'enrolled'
+            || !Number.isSafeInteger(owner.generation) || owner.generation < 1 || live.generation !== owner.generation
+            || live.deviceId !== owner.deviceId || !live.principal || live.principal.device_id !== owner.deviceId
+            || !['custodial-protected-principal.v1', 'custodial-protected-principal.v2'].includes(live.principal.schema_version)
+            || !isUuid(live.principal.employee_id) || !isUuid(live.principal.credential_id)
+            || !Number.isSafeInteger(live.principal.assignment_epoch) || live.principal.assignment_epoch < 1
+            || canonicalJson(live.principal) !== owner.principal || typeof owner.identity !== 'string' || !owner.identity
+            || typeof principalReader !== 'function' || principalReader.call(mobile) !== owner.identity
+            || original.security_generation !== owner.generation) throw queueSecurityUnavailable();
+          if (context !== undefined && (context?.generation !== owner.generation || context?.deviceId !== owner.deviceId))
+            throw queueSecurityUnavailable();
+        } else if (liveSecurity?.native === true) throw queueSecurityUnavailable();
+        plain(item); plain(options);
+        if (!queueOpeningRowsMatch([item], [original])
+          || !queueOpeningRowsMatch([{ id: 1, value: options }], [{ id: 1, value: originalOptions }])) throw invalid();
+        if (context !== undefined) queueOpeningCheckpoint(context);
+      };
+      requireOriginal();
+      return mutateProtectedQueue(context => new Promise((resolve, reject) => {
+        let tx = null, changed = false, failure = null, abortAttempted = false;
+        const refuse = cause => {
+          failure = failure || cause; changed = false;
+          if (!tx) { reject(failure); return; }
+          if (abortAttempted) return;
+          abortAttempted = true;
+          try { tx.abort(); } catch (abortError) {
+            failure = Object.assign(new AggregateError([failure, abortError], 'Queue completion abort was unconfirmed.', { cause: failure }),
+              { code: failure.code || 'custodial_storage_unavailable' });
+          }
+          // A failed abort can still commit. Never release before a direct
+          // terminal dispatch or claim rollback/compensate/resend afterward.
+        };
+        const settle = (event, aborted) => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            let cause = failure || (aborted ? tx.error || new Error('Queue completion transaction aborted.') : null);
+            try { requireOriginal(context); } catch (withdrawn) { cause = cause || withdrawn; }
+            if (cause) reject(cause); else resolve(changed);
+          }, 0);
+        };
+        try {
+          requireOriginal(context);
+          tx = transaction.call(db, storeName, 'readwrite');
+          tx.oncomplete = event => settle(event, false);
+          tx.onabort = event => settle(event, true);
+          tx.onerror = event => {
+            failure = failure || event?.target?.error || tx.error || new Error('Queue completion transaction failed.');
+            try { requireOriginal(context); } catch (withdrawn) { failure = failure || withdrawn; }
+          };
+          requireOriginal(context);
+          const store = tx.objectStore(storeName);
+          const request = store.get(original.id);
+          request.onsuccess = () => {
+            try {
+              requireOriginal(context);
+              const current = request.result;
+              if (!sameClaimedQueueRow(current, original)) return;
+              changed = true;
+              if (succeeded) {
+                if (isTerminalReconciliation(original, result)) {
+                  const stored = storageRecord({ ...current, type: original.type, dead_letter: true, state: 'quarantined',
+                    terminal_result: result, last_error: safeText(result?.reason || result?.status || 'Manager recovery is required.').slice(0, 1000),
+                    last_attempt_at: now(), next_attempt_at: Number.MAX_SAFE_INTEGER,
+                    lease_owner: null, lease_token: null, lease_until: 0 });
+                  requireOriginal(context); store.put(stored); requireOriginal(context); return;
+                }
+                requireOriginal(context);
+                applyProcessResult(original, result);
+                requireOriginal(context);
+                store.delete(original.id);
+                requireOriginal(context); return;
+              }
+              const retryCount = Math.min(Number.MAX_SAFE_INTEGER, Number(current.retry_count || 0) + 1);
+              // Outage retry/backoff and old held evidence keep their existing meanings.
+              const deadLetter = permanent || (!automaticRetry && retryCount >= CONFIG.MAX_RETRIES), attemptedAt = now();
+              const stored = storageRecord({ ...current, type: original.type, retry_count: retryCount,
+                last_error: safeText(error || 'Sync failed').slice(0, 1000), last_attempt_at: attemptedAt,
+                next_attempt_at: deadLetter ? Number.MAX_SAFE_INTEGER
+                  : attemptedAt + Math.max(boundedRetryAfterMs(retryAfterMs, attemptedAt), retryDelay(retryCount)),
+                dead_letter: deadLetter, state: deadLetter ? 'dead-letter' : 'retrying',
+                lease_owner: null, lease_token: null, lease_until: 0 });
+              requireOriginal(context); store.put(stored); requireOriginal(context);
+            } catch (callbackError) { refuse(callbackError); }
+          };
+          request.onerror = () => refuse(request.error || tx.error || new Error('Queue completion lookup failed.'));
+        } catch (admissionError) { refuse(admissionError); }
+      }), { requireEnrollment: true, expectedGeneration: original.security_generation ?? null }).then(changed => {
+        // Admission is closed: compare observations/input only, never call its context here.
+        requireOriginal(); return changed;
+      });
+    } catch (captureError) { return Promise.reject(captureError); }
   }
 
   function retryDelay(retryCount) {
@@ -1355,54 +2634,19 @@
     try { window.dispatchEvent(new CustomEvent('memphis-scan-sync', { detail })); } catch (_err) {}
   }
 
-  function acquireFallbackLock() {
-    const at = now();
-    const token = crypto.randomUUID();
-    try {
-      const current = JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null');
-      if (current?.owner && at - Number(current.at || 0) < CONFIG.FALLBACK_LOCK_TTL_MS) return null;
-      localStorage.setItem(CONFIG.FALLBACK_LOCK_KEY, JSON.stringify({ owner: state.workerId, token, at }));
-      const acquired = JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null');
-      return acquired?.owner === state.workerId && acquired?.token === token ? token : null;
-    } catch (_err) { return null; }
-  }
-  function refreshFallbackLock(token) {
-    try {
-      const current = JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null');
-      if (current?.owner === state.workerId && current?.token === token) {
-        localStorage.setItem(CONFIG.FALLBACK_LOCK_KEY, JSON.stringify({ owner: state.workerId, token, at: now() }));
-      }
-    } catch (_err) {}
-  }
-  function releaseFallbackLock(token) {
-    try {
-      const current = JSON.parse(localStorage.getItem(CONFIG.FALLBACK_LOCK_KEY) || 'null');
-      if (current?.owner === state.workerId && current?.token === token) localStorage.removeItem(CONFIG.FALLBACK_LOCK_KEY);
-    } catch (_err) {}
-  }
   async function withQueueLock(operation, { ifAvailable = false } = {}) {
-    if (navigator.locks?.request) {
+    if (typeof navigator.locks?.request === 'function') {
       const options = { mode: 'exclusive' };
       if (ifAvailable) options.ifAvailable = true;
       return navigator.locks.request(CONFIG.WEB_LOCK_NAME, options, (lock) => lock ? operation({ recoverClaimsImmediately: true }) : false);
     }
-    const waitStartedAt = now();
-    let token = acquireFallbackLock();
-    while (!token && !ifAvailable && now() - waitStartedAt < CONFIG.FALLBACK_LOCK_WAIT_MS) {
-      await new Promise((resolve) => window.setTimeout(resolve, 50));
-      token = acquireFallbackLock();
-    }
-    if (!token) {
-      if (ifAvailable) return false;
-      throw new Error('The protected saved-work queue is busy. Retry after the current recovery pass finishes.');
-    }
-    const heartbeat = window.setInterval(() => refreshFallbackLock(token), CONFIG.FALLBACK_LOCK_HEARTBEAT_MS);
-    try {
-      return await operation({ recoverClaimsImmediately: false });
-    } finally {
-      window.clearInterval(heartbeat);
-      releaseFallbackLock(token);
-    }
+    // The shipping protected-work owner already requires the shared browser
+    // lock. A localStorage TTL record cannot replace that owner: the legacy
+    // fallback wrote/refreshed/deleted captured originals before the ensuing
+    // mutation was refused. Preserve any old lease bytes and queued work;
+    // report unavailable admission instead of creating a token, a timer, a
+    // misleading busy wait or a raw write/delete through a preservation hold.
+    throw Object.assign(queueSecurityUnavailable(), { reason: 'browser_shared_lock_unavailable' });
   }
   async function enqueue(action) {
     await ensureWorkerReady();
@@ -1440,30 +2684,102 @@
   }
 
   async function persistServerCompletionReceipt(item, result) {
-    const receipt={schema_version:'server-completion-receipt.v1',operation_id:item.operation_id,
-      logical_key:item.logical_key,semantic_fingerprint:item.semantic_fingerprint,result};
-    const encoded=canonicalJson(receipt);
-    if(encoded.length>65536)throw storageFailure('server acknowledgement',new Error('acknowledgement exceeds the safe bound'));
-    receipt.integrity_sha256=await sha256(encoded);
-    await mutateProtectedQueue(()=>new Promise((resolve,reject)=>{
-      const tx=state.db.transaction(CONFIG.STORE_NAME,'readwrite'),store=tx.objectStore(CONFIG.STORE_NAME);
-      const request=store.get(item.id);let written=false;
-      request.onsuccess=()=>{
-        const current=request.result;
-        if(!current||current.lease_token!==item.lease_token||current.lease_owner!==state.workerId)return;
-        store.put(storageRecord({...current,server_completion_receipt:receipt}));written=true;
+    const original = structuredClone(item);
+    const originalBytes = canonicalJson(original);
+    const security = queueMutationSecurity();
+    if (security && (!Number.isSafeInteger(original.security_generation) || original.security_generation < 0)) {
+      return Promise.reject(queueSecurityUnavailable());
+    }
+    const requireOriginal = context => {
+      queueOpeningCheckpoint(context);
+      if (canonicalJson(item) !== originalBytes) {
+        throw storageFailure('completion ownership', new Error('original queue claim changed'));
+      }
+    };
+    const receipt = {
+      schema_version: 'server-completion-receipt.v1', operation_id: original.operation_id,
+      logical_key: original.logical_key, semantic_fingerprint: original.semantic_fingerprint,
+      result: structuredClone(result),
+    };
+    const encoded = canonicalJson(receipt);
+    if (encoded.length > 65536) throw storageFailure('server acknowledgement', new Error('acknowledgement exceeds the safe bound'));
+    await mutateProtectedQueue(async context => {
+      requireOriginal(context);
+      // Hash exactly the captured result under the SAME original admission.
+      receipt.integrity_sha256 = await sha256(encoded);
+      requireOriginal(context);
+      return new Promise((resolve, reject) => {
+      let written = false;
+      let tx = null, failure = null;
+      const refuse = error => {
+        if (failure) return;
+        failure = error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); }
+        catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Server acknowledgement abort was unconfirmed.', { cause: failure }), {
+            code: failure.code || 'custodial_storage_unavailable',
+          });
+        }
+        // Wait for direct abort/complete even if abort is unconfirmed.
       };
-      tx.oncomplete=()=>written?resolve():reject(storageFailure('server acknowledgement',new Error('queue lease changed')));
-      tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('acknowledgement transaction aborted'));
-    }),{requireEnrollment:true,expectedGeneration:item.security_generation??null});
-    item.server_completion_receipt=receipt;
+      try {
+        requireOriginal(context);
+        tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
+        tx.onerror = event => { failure = failure || event.target.error || tx.error || new Error('Server acknowledgement failed.'); };
+        tx.onabort = event => {
+          if (event.target !== tx) return;
+          window.setTimeout(() => {
+            const abortError = tx.error;
+            if (failure && abortError && failure !== abortError) {
+              reject(Object.assign(new AggregateError([failure, abortError],
+                'Server acknowledgement aborted after refusal.', { cause: failure }), {
+                code: failure.code || 'custodial_storage_unavailable',
+              }));
+            } else reject(failure || abortError || new Error('Server acknowledgement aborted.'));
+          }, 0);
+        };
+        tx.oncomplete = event => {
+          if (event.target !== tx) return;
+          // The admission spans the complete direct terminal-event dispatch.
+          window.setTimeout(() => {
+            try {
+              if (failure) throw failure;
+              requireOriginal(context);
+              if (!written) throw storageFailure('server acknowledgement', new Error('queue lease changed'));
+              item.server_completion_receipt = structuredClone(receipt);
+              resolve();
+            } catch (error) { reject(error); }
+          }, 0);
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        requireOriginal(context);
+        const request = store.get(original.id);
+        request.onerror = () => refuse(request.error || tx.error || new Error('Server acknowledgement lookup failed.'));
+        request.onsuccess = () => {
+          try {
+            requireOriginal(context);
+
+            const current = request.result;
+            if (!sameClaimedQueueRow(current, original)) return;
+            const stored = storageRecord({ ...current, server_completion_receipt: structuredClone(receipt) });
+            requireOriginal(context);
+            store.put(stored);
+            written = true;
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+      });
+    }, { requireEnrollment: true, expectedGeneration: original.security_generation ?? null });
   }
   async function verifiedServerCompletionReceipt(item){
     if(item.type!=='commit_workflow') return null;
     // Browser receipt hashes prove consistency only. Never use them as server authority.
     const recover=window.MemphisMobile?.getAuthenticatedCompletion;
     if(typeof recover!=='function') return null;
-    const value=await recover({deviceId:safeText(item.payload?.p_device_id),completionPayload:item.payload});
+    const value=await recover({deviceId:safeText(item.payload?.p_device_id),completionPayload:item.payload,
+      expectedGeneration:item.security_generation??null});
     if(value?.found!==true) return null;
     validateProcessResult(item,value.result);
     if(value.result?.status!=='closed') throw processResultFailure('Native receipt does not identify accepted completion.');
@@ -1472,6 +2788,7 @@
 
   async function processAction(item) {
     const payload = item?.payload && typeof item.payload === 'object' ? { ...item.payload } : {};
+    if (item.type === 'commit_workflow') originalCompletionSession(item);
     let result = await verifiedServerCompletionReceipt(item);
     if (!result) switch (safeText(item?.type)) {
       case 'record_scan_event': {
@@ -1672,7 +2989,10 @@
         };
         Object.assign(payload, {
           p_response_json: response,
-          p_scan_evidence: Array.isArray(local?.scan_evidence) ? local.scan_evidence : payload.p_scan_evidence,
+          // The saved submission owns its evidence, including an intentional
+          // empty list. A later local journal cannot replace those original args.
+          p_scan_evidence: Array.isArray(payload.p_scan_evidence) ? payload.p_scan_evidence
+            : (Array.isArray(local?.scan_evidence) ? local.scan_evidence : payload.p_scan_evidence),
         });
         if (!await persistClaimPayload(item, payload)) {
           throw Object.assign(new Error('The durable completion proof lost queue ownership before submission.'), { httpStatus: 503 });
@@ -1687,9 +3007,11 @@
     validateProcessResult(item, result);
     if (item.type === 'commit_workflow' && safeText(result?.status).toLowerCase() === 'closed'
       && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v2') {
+      originalCompletionSession(item);
       // Persist the verified server response before native cleanup. A crash in the
       // next step must not require a deleted native record to be signed again.
       if (!item.server_completion_receipt) await persistServerCompletionReceipt(item, result);
+      await requireClaimOwnership(item);
       const acknowledge = window.MemphisMobile?.acknowledgeOfflineCompletion;
       if (typeof acknowledge !== 'function') {
         throw Object.assign(new Error('The protected completion journal cannot be acknowledged.'), { httpStatus: 503 });
@@ -1704,14 +3026,16 @@
         completionPayload: payload,
       });
       if (acknowledged?.acknowledged !== true) throw new Error('The native completion was not acknowledged.');
+      await requireClaimOwnership(item);
+      originalCompletionSession(item);
       const ids = new Set([payload.p_client_session_id,payload.p_session_uuid].map(safeText).filter(isUuid));
       for (const id of ids) {
-        await deleteCompletionDraft(id);
+        await deleteCompletionDraft(id, item.security_generation ?? null);
         await mutateProtectedQueue(() => {
           const key = `mz_scan_completion_draft:${id}`;
           localStorage.removeItem(key);
           if (localStorage.getItem(key) !== null) throw storageFailure('completed draft cleanup',new Error('draft could not be retired'));
-        });
+        }, { requireEnrollment: true, expectedGeneration: item.security_generation ?? null });
       }
     }
     return result;
@@ -1793,12 +3117,23 @@
       }
     }
     if ((item.type === 'complete_session' || item.type === 'commit_workflow') && result?.status === 'closed') {
-      const local = exactSessionForPayload(payload);
+      const local = originalCompletionSession(item);
       const canonical = safeText(local?.session_uuid || local?.client_session_id || payload.p_client_session_id || payload.p_session_uuid);
       const aliases = [...new Set([local?.client_session_id, payload.p_client_session_id, payload.p_session_uuid, result.session_uuid]
         .map(safeText).filter((value) => value && value !== canonical))];
-      aliases.forEach(removeSession);
-      if (canonical) removeSession(canonical);
+      // A server alias is not permission to delete another local occurrence.
+      // Validate all original local rows before the first deletion.
+      const removable = [...new Set([canonical, ...aliases])].filter(Boolean).filter((id) => {
+        const row = readSession(id);
+        if (!row) return false;
+        if (id === safeText(result.session_uuid) && ![canonical,payload.p_client_session_id,payload.p_session_uuid].includes(id)) {
+          try { originalCompletionSession(item, row); } catch { return false; }
+          return true;
+        }
+        originalCompletionSession(item, row);
+        return true;
+      });
+      removable.forEach(removeSession);
     }
   }
 
@@ -1895,9 +3230,15 @@
           });
           const result = await processAction(item);
           const retired = await critical(() => finishClaim(item, { succeeded: true, result }));
+          if (!retired) {
+            state.lastError = 'Saved work remains pending because original queue ownership changed.';
+            dispatchStatus({ status: 'retrying', item, error: state.lastError });
+            break;
+          }
           if(retired && item.type==='commit_workflow' && result?.status==='closed') {
             try { await window.MemphisMobile?.retireAuthenticatedCompletion?.({
-              deviceId:safeText(item.payload?.p_device_id),completionPayload:item.payload}); }
+              deviceId:safeText(item.payload?.p_device_id),completionPayload:item.payload,
+              expectedGeneration:item.security_generation??null}); }
             catch { dispatchStatus({status:'receipt-retention-pending'}); }
           }
           state.lastServerAckAt = new Date().toISOString();
@@ -2046,21 +3387,92 @@
   }
   async function persistLocalCompletionUnlocked(session, action) {
     validateLocalCompletion(session, action);
+    const originalSecurity = queueMutationSecurity(), originalMobile = window.MemphisMobile;
+    const originalStatusReader = originalSecurity?.getStatus, originalWriter = originalSecurity?.mutateProtectedWork;
+    const originalPrincipalReader = originalMobile?.principalIdentity;
+    const status = originalSecurity?.native === true ? originalSecurity.getStatus() : null;
+    const original = status ? Object.freeze({deviceId: status.deviceId, generation: status.generation,
+      principal: canonicalJson(status.principal), identity: originalMobile?.principalIdentity?.()}) : null;
+    const originalSession = canonicalJson(session), originalAction = canonicalJson(action);
+    const requireOriginal = (context) => {
+      const currentSecurity = queueMutationSecurity();
+      if (currentSecurity !== originalSecurity || canonicalJson(session) !== originalSession || canonicalJson(action) !== originalAction)
+        throw queueSecurityUnavailable();
+      if (!original) {
+        if (currentSecurity?.native === true) throw queueSecurityUnavailable();
+        return;
+      }
+      if (window.MemphisMobile !== originalMobile || currentSecurity.getStatus !== originalStatusReader
+        || currentSecurity.mutateProtectedWork !== originalWriter || originalMobile.principalIdentity !== originalPrincipalReader)
+        throw queueSecurityUnavailable();
+      const live = currentSecurity.getStatus();
+      if (live?.ready !== true || live.available !== true || live.quarantined !== false || live.state !== 'enrolled'
+        || !Number.isSafeInteger(original.generation) || original.generation < 1 || live.generation !== original.generation
+        || live.deviceId !== original.deviceId || safeText(session.device_id) !== original.deviceId
+        || !live.principal || live.principal.device_id !== original.deviceId
+        || !['custodial-protected-principal.v1', 'custodial-protected-principal.v2'].includes(live.principal.schema_version)
+        || !isUuid(live.principal.employee_id) || !isUuid(live.principal.credential_id)
+        || !Number.isSafeInteger(live.principal.assignment_epoch) || live.principal.assignment_epoch < 1
+        || typeof original.identity !== 'string' || !original.identity
+        || canonicalJson(live.principal) !== original.principal || originalMobile.principalIdentity() !== original.identity)
+        throw queueSecurityUnavailable();
+      if (context !== undefined) {
+        if (typeof context?.assertCurrent !== 'function' || context.generation !== original.generation || context.deviceId !== original.deviceId)
+          throw queueSecurityUnavailable();
+        context.assertCurrent();
+      }
+    };
+    const originalOptions = {requireEnrollment: true, ...(original ? {expectedGeneration: original.generation} : {})};
+    requireOriginal();let originalIntentRaw;
     // The intent is durable before queue insertion. A restart can finish this exact save.
-    await mutateProtectedQueue(() => saveSession({ ...session, completion_outbox: action }));
-    await enqueueUnlocked(action);
+    await mutateProtectedQueue(context => {
+      requireOriginal(context);saveSession({ ...session, completion_outbox: action });
+      originalIntentRaw = localStorage.getItem(sessionKey(session.session_uuid));requireOriginal(context);
+    }, originalOptions);
+    requireOriginal();
+    await enqueueUnlocked(action, original?.generation ?? null);
+    requireOriginal();
+    if (localStorage.getItem(sessionKey(session.session_uuid)) !== originalIntentRaw) throw queueSecurityUnavailable();
     const latest = readSession(session.session_uuid);
     if (!latest) throw storageFailure('completed cleaning', new Error('saved record disappeared'));
     const saved = { ...latest, status: 'saved_pending_sync', state: 'locally-completed',
       completion_pending: true, sync_status: 'delivery_pending' };
     saved.local_completion_receipt = localCompletionReceipt(saved);
-    await mutateProtectedQueue(() => {
+    let viewConfirmation = null;
+    await mutateProtectedQueue((context) => {
+      requireOriginal(context);
       saveSession(saved);
-      if (typeof window.MemphisUI?.retireCompletedScanView === 'function'
+      const security = queueMutationSecurity();
+      if (security?.native === true) {
+        if (typeof context?.assertCurrent !== 'function') throw queueSecurityUnavailable();
+        context.assertCurrent();
+        const status = security.getStatus(), identity = window.MemphisMobile?.principalIdentity?.();
+        const raw = localStorage.getItem(sessionKey(saved.session_uuid));
+        if (status?.ready !== true || status.available !== true || status.quarantined !== false
+          || status.deviceId !== context.deviceId || status.generation !== context.generation
+          || status.principal?.device_id !== context.deviceId || safeText(saved.device_id) !== context.deviceId
+          || typeof identity !== 'string' || !identity || typeof raw !== 'string' || !raw) throw queueSecurityUnavailable();
+        context.assertCurrent();
+        viewConfirmation = Object.freeze({deviceId: context.deviceId, generation: context.generation,
+          principalIdentity: identity, sessionRaw: raw});
+      } else if (typeof window.MemphisUI?.retireCompletedScanView === 'function'
         && window.MemphisUI.retireCompletedScanView(saved) !== true) {
         throw storageFailure('completed cleaning index', new Error('active view could not be retired'));
       }
-    });
+      requireOriginal(context);
+    }, originalOptions);
+    requireOriginal();
+    if (viewConfirmation) {
+      // Admission above has settled: do not re-enter the native FIFO from its
+      // own callback. A missing/changed/unknown index result retains completion
+      // intent and original receipt; it cannot announce a completed view.
+      const retire = window.MemphisUI?.retireCompletedScanViewConfirmed;
+      const original = JSON.parse(viewConfirmation.sessionRaw);
+      if (typeof retire !== 'function' || await retire(original, viewConfirmation) !== true)
+        throw storageFailure('completed cleaning index', new Error('active view retirement is unconfirmed'));
+      requireOriginal();
+      return original;
+    }
     return saved;
   }
   async function saveCompletedLocalWork(session, action) {
@@ -2345,37 +3757,344 @@
     });
   }
 
-  async function recoverDeadLetter(id, { syncAfter = true } = {}) {
+  async function recoverDeadLetter(id, options = {}) {
+    if (!Number.isSafeInteger(id) || id < 1) throw storageFailure('dead-letter recovery', new Error('Exact original row id required'));
+    // Keep the public {syncAfter} call shape, but never invoke an option getter.
+    if (!options || typeof options !== 'object' || Array.isArray(options))
+      throw storageFailure('dead-letter recovery', new Error('Original recovery options required'));
+    const descriptors = Object.getOwnPropertyDescriptors(options), sync = descriptors.syncAfter;
+    if (Reflect.ownKeys(descriptors).some(key => key !== 'syncAfter')
+      || sync && (!Object.hasOwn(sync, 'value') || typeof sync.value !== 'boolean'))
+      throw storageFailure('dead-letter recovery', new Error('Unsupported original recovery options'));
+    const syncAfter = sync ? sync.value : true;
+
+    const security = queueMutationSecurity(), mobile = window.MemphisMobile;
+    const reader = security?.getStatus, writer = security?.mutateProtectedWork, stable = security?.waitForStableState;
+    const principalReader = mobile?.principalIdentity, initial = security?.native === true ? security.getStatus() : null;
+    const original = initial ? Object.freeze({ generation: initial.generation, deviceId: initial.deviceId,
+      principal: canonicalJson(initial.principal), identity: mobile?.principalIdentity?.(),
+      employeeId: initial.principal?.employee_id, assignmentEpoch: initial.principal?.assignment_epoch,
+      credentialId: initial.principal?.credential_id }) : null;
+    let db = state.db, transactionMethod = db?.transaction;
+    const requireOriginal = context => {
+      const current = queueMutationSecurity();
+      if (current !== security || security?.getStatus !== reader || security?.mutateProtectedWork !== writer
+        || security?.waitForStableState !== stable || window.MemphisMobile !== mobile
+        || db && (state.db !== db || db.transaction !== transactionMethod)) throw queueSecurityUnavailable();
+      if (original) {
+        const live = reader.call(security);
+        if (mobile?.principalIdentity !== principalReader || live?.ready !== true || live.available !== true
+          || live.quarantined !== false || live.state !== 'enrolled' || !Number.isSafeInteger(original.generation)
+          || original.generation < 1 || live.generation !== original.generation || live.deviceId !== original.deviceId
+          || !live.principal || live.principal.device_id !== original.deviceId
+          || !['custodial-protected-principal.v1', 'custodial-protected-principal.v2'].includes(live.principal.schema_version)
+          || !isUuid(live.principal.employee_id) || !isUuid(live.principal.credential_id)
+          || !Number.isSafeInteger(live.principal.assignment_epoch) || live.principal.assignment_epoch < 1
+          || canonicalJson(live.principal) !== original.principal || typeof original.identity !== 'string' || !original.identity
+          || principalReader.call(mobile) !== original.identity
+          || state.deviceId !== original.deviceId && (db || state.deviceId !== '')) throw queueSecurityUnavailable();
+        if (context !== undefined && (context?.deviceId !== original.deviceId || context?.generation !== original.generation))
+          throw queueSecurityUnavailable();
+      } else if (current?.native === true) throw queueSecurityUnavailable();
+      if (context !== undefined) queueOpeningCheckpoint(context);
+    };
+    const bounds = { requireEnrollment: true, ...(original ? { expectedGeneration: original.generation } : {}) };
+    requireOriginal();
     await ensureWorkerReady();
-    if (!state.db) throw new Error('The durable scan queue is not ready.');
-    return mutateProtectedQueue(() => new Promise((resolve, reject) => {
-      const tx = state.db.transaction(CONFIG.STORE_NAME, 'readwrite');
-      const store = tx.objectStore(CONFIG.STORE_NAME);
-      const request = store.get(id);
-      let recovered = false;
-      request.onsuccess = () => {
-        if (!request.result) return;
-        if (request.result.recoverable === false) return;
-        recovered = true;
-        store.put(storageRecord({ ...normalizeRecord(request.result), dead_letter: false, state: 'reconciliation-required', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0 }));
+    requireOriginal();
+    if (!db) { db = state.db; transactionMethod = db?.transaction; }
+    if (!db || typeof transactionMethod !== 'function') throw storageFailure('dead-letter recovery', new Error('Original queue unavailable'));
+    requireOriginal();
+
+
+    const snapshot = raw => {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw storageFailure('dead-letter recovery', new Error('Unknown original row'));
+      const copy = JSON.parse(JSON.stringify(raw));
+      if (!queueOpeningRowsMatch([raw], [copy])) throw storageFailure('dead-letter recovery', new Error('Unknown original row representation'));
+      return copy;
+    };
+    const eligible = raw => {
+      if (raw == null) return false;
+      const forward = raw.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION;
+      const dead = forward ? raw.current_dead_letter : raw.dead_letter;
+      if (raw.recoverable === false || dead === false) return false;
+      const type = forward ? raw.forward_action_type : raw.type;
+      if (dead !== true || raw.recoverable !== undefined && typeof raw.recoverable !== 'boolean'
+        || raw.schema_version !== CONFIG.SCHEMA_VERSION || !Number.isSafeInteger(raw.id) || raw.id < 1
+        || typeof type !== 'string' || !['start_session','complete_session','commit_workflow','finish_session',
+          'record_scan_event','ping_device','evaluate_location_proximity_v2'].includes(type)
+        || forward && raw.type !== 'forward-replay-fenced:' + type
+        || !forward && raw.forward_replay_contract != null
+        || !isUuid(raw.operation_id) || typeof raw.operation_id !== 'string'
+        || raw.state !== 'dead-letter' || !raw.payload || typeof raw.payload !== 'object' || Array.isArray(raw.payload)
+        || raw.lease_owner != null || raw.lease_token != null || raw.lease_until != null && raw.lease_until !== 0)
+        throw storageFailure('dead-letter recovery', new Error('Unknown or leased original dead letter'));
+      if (original && (raw.payload.p_device_id !== original.deviceId
+        || raw.replay_binding?.employee_id !== original.employeeId
+        || raw.replay_binding?.assignment_epoch !== original.assignmentEpoch
+        || raw.replay_binding?.credential_id != null && raw.replay_binding.credential_id !== original.credentialId
+        || raw.payload.p_snapshot_employee_id != null && raw.payload.p_snapshot_employee_id !== original.employeeId
+        || raw.payload.p_snapshot_assignment_epoch != null && raw.payload.p_snapshot_assignment_epoch !== original.assignmentEpoch))
+        throw storageFailure('dead-letter recovery', new Error('Foreign original dead letter retained'));
+      return true;
+    };
+    // Every transaction keeps native FIFO ownership through a DIRECT terminal
+    // event's full dispatch. Put remains synchronous in get.onsuccess while IDB
+    // is active; there is no timer/microtask around the actual writer.
+    const transact = (context, key, expected, replacement) => new Promise((resolve, reject) => {
+      let tx = null, failure = null, value = null;
+      const refuse = error => {
+        failure = failure || error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); } catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Dead-letter recovery settlement is uncertain.', { cause: failure }),
+          { code: failure.code || 'custodial_storage_unavailable' });
+        }
       };
-      tx.oncomplete = () => {
-        resolve(recovered);
-        if (syncAfter && recovered) scheduleSync();
+      const settle = aborted => {
+        let error = failure || (aborted ? tx.error || new Error('Queue recovery transaction aborted.') : null);
+        try { requireOriginal(context); } catch (withdrawn) { error = error || withdrawn; }
+        if (error) reject(error); else resolve(value);
       };
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error || new Error('Queue recovery transaction aborted.'));
-    }));
+      try {
+        requireOriginal(context);
+        tx = transactionMethod.call(db, CONFIG.STORE_NAME, replacement ? 'readwrite' : 'readonly');
+        const terminal = (event, aborted) => {
+          if (event.target !== tx) return;
+          try { requireOriginal(context); } catch (withdrawn) { failure = failure || withdrawn; }
+          window.setTimeout(() => settle(aborted), 0);
+        };
+        tx.oncomplete = event => terminal(event, false);
+        tx.onabort = event => terminal(event, true);
+        tx.onerror = event => {
+          failure = failure || event.target?.error || tx.error || new Error('Queue recovery transaction failed.');
+          try { requireOriginal(context); } catch (error) { failure = failure || error; }
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        requireOriginal(context);
+        const request = key === null ? store.getAll() : store.get(key);
+        request.onerror = () => refuse(request.error || tx.error || new Error('Original queue read failed.'));
+        request.onsuccess = () => {
+          try {
+            requireOriginal(context);
+            if (failure) throw failure;
+            if (key === null) {
+              if (!Array.isArray(request.result)) throw new Error('Original queue list unavailable.');
+              value = request.result.map(snapshot);
+            } else {
+              value = request.result == null ? null : snapshot(request.result);
+              if (value && value.id !== key) throw new Error('Original queue key changed.');
+            }
+            if (replacement) {
+              if (!value || !queueOpeningRowsMatch([value], [expected]) || !eligible(value))
+                throw storageFailure('dead-letter recovery', new Error('Original dead letter changed before recovery'));
+              requireOriginal(context);
+              const put = store.put(replacement);
+              if (put) put.onerror = () => refuse(put.error || tx.error || new Error('Original recovery write failed.'));
+              requireOriginal(context);
+            }
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+    });
+
+    // Keep ONE original FIFO admission from first raw read through readback;
+    // no cooperating successor writer may slip between observation and put.
+    const recovered = await mutateProtectedQueue(async context => {
+      requireOriginal(context);
+      const raw = await transact(context, id);
+      requireOriginal(context);
+      if (!eligible(raw)) return false;
+
+      // Change only explicit reconciliation bookkeeping. Never rerun the queue
+      // normalizer/producer to refill IDs, payload, receipts or attempt history.
+      const actionType = raw.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION ? raw.forward_action_type : raw.type;
+      const replacement = { ...raw, forward_replay_contract: CONFIG.REQUIRED_SCAN_CONTRACT_VERSION,
+        forward_action_type: actionType, type: 'forward-replay-fenced:' + actionType, dead_letter: true, current_dead_letter: false,
+        state: 'reconciliation-required', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0 };
+      requireOriginal(context);
+      await transact(context, raw.id, raw, replacement);
+      requireOriginal(context);
+      const verified = await transact(context, raw.id);
+      requireOriginal(context);
+      if (!verified || !queueOpeningRowsMatch([verified], [replacement]))
+        throw storageFailure('dead-letter recovery', new Error('Original recovery readback unconfirmed'));
+      return true;
+    }, bounds);
+    requireOriginal(); // Callback is closed; only original readers may run here.
+    if (syncAfter && recovered === true) { requireOriginal(); scheduleSync(); }
+    return recovered === true;
   }
 
   async function recoverAllDeadLetters() {
+
+    const security = queueMutationSecurity(), mobile = window.MemphisMobile;
+    const reader = security?.getStatus, writer = security?.mutateProtectedWork, stable = security?.waitForStableState;
+    const principalReader = mobile?.principalIdentity, initial = security?.native === true ? security.getStatus() : null;
+    const original = initial ? Object.freeze({ generation: initial.generation, deviceId: initial.deviceId,
+      principal: canonicalJson(initial.principal), identity: mobile?.principalIdentity?.(),
+      employeeId: initial.principal?.employee_id, assignmentEpoch: initial.principal?.assignment_epoch,
+      credentialId: initial.principal?.credential_id }) : null;
+    let db = state.db, transactionMethod = db?.transaction;
+    const requireOriginal = context => {
+      const current = queueMutationSecurity();
+      if (current !== security || security?.getStatus !== reader || security?.mutateProtectedWork !== writer
+        || security?.waitForStableState !== stable || window.MemphisMobile !== mobile
+        || db && (state.db !== db || db.transaction !== transactionMethod)) throw queueSecurityUnavailable();
+      if (original) {
+        const live = reader.call(security);
+        if (mobile?.principalIdentity !== principalReader || live?.ready !== true || live.available !== true
+          || live.quarantined !== false || live.state !== 'enrolled' || !Number.isSafeInteger(original.generation)
+          || original.generation < 1 || live.generation !== original.generation || live.deviceId !== original.deviceId
+          || !live.principal || live.principal.device_id !== original.deviceId
+          || !['custodial-protected-principal.v1', 'custodial-protected-principal.v2'].includes(live.principal.schema_version)
+          || !isUuid(live.principal.employee_id) || !isUuid(live.principal.credential_id)
+          || !Number.isSafeInteger(live.principal.assignment_epoch) || live.principal.assignment_epoch < 1
+          || canonicalJson(live.principal) !== original.principal || typeof original.identity !== 'string' || !original.identity
+          || principalReader.call(mobile) !== original.identity
+          || state.deviceId !== original.deviceId && (db || state.deviceId !== '')) throw queueSecurityUnavailable();
+        if (context !== undefined && (context?.deviceId !== original.deviceId || context?.generation !== original.generation))
+          throw queueSecurityUnavailable();
+      } else if (current?.native === true) throw queueSecurityUnavailable();
+      if (context !== undefined) queueOpeningCheckpoint(context);
+    };
+    const bounds = { requireEnrollment: true, ...(original ? { expectedGeneration: original.generation } : {}) };
+    requireOriginal();
     await ensureWorkerReady();
-    await custodialSecurity()?.waitForStableState?.({ requireEnrollment: true });
-    const deadLetters = (await listActions()).filter((item) => item.dead_letter === true && item.recoverable !== false);
-    if (!deadLetters.length) return 0;
-    await Promise.all(deadLetters.map((item) => recoverDeadLetter(item.id, { syncAfter: false })));
-    scheduleSync();
-    return deadLetters.length;
+    requireOriginal();
+    if (!db) { db = state.db; transactionMethod = db?.transaction; }
+    if (!db || typeof transactionMethod !== 'function') throw storageFailure('dead-letter recovery', new Error('Original queue unavailable'));
+    requireOriginal();
+
+    if (typeof stable === 'function') { await stable.call(security, { requireEnrollment: true }); requireOriginal(); }
+
+    const snapshot = raw => {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw storageFailure('dead-letter recovery', new Error('Unknown original row'));
+      const copy = JSON.parse(JSON.stringify(raw));
+      if (!queueOpeningRowsMatch([raw], [copy])) throw storageFailure('dead-letter recovery', new Error('Unknown original row representation'));
+      return copy;
+    };
+    const eligible = raw => {
+      if (raw == null) return false;
+      const forward = raw.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION;
+      const dead = forward ? raw.current_dead_letter : raw.dead_letter;
+      if (raw.recoverable === false || dead === false) return false;
+      const type = forward ? raw.forward_action_type : raw.type;
+      if (dead !== true || raw.recoverable !== undefined && typeof raw.recoverable !== 'boolean'
+        || raw.schema_version !== CONFIG.SCHEMA_VERSION || !Number.isSafeInteger(raw.id) || raw.id < 1
+        || typeof type !== 'string' || !['start_session','complete_session','commit_workflow','finish_session',
+          'record_scan_event','ping_device','evaluate_location_proximity_v2'].includes(type)
+        || forward && raw.type !== 'forward-replay-fenced:' + type
+        || !forward && raw.forward_replay_contract != null
+        || !isUuid(raw.operation_id) || typeof raw.operation_id !== 'string'
+        || raw.state !== 'dead-letter' || !raw.payload || typeof raw.payload !== 'object' || Array.isArray(raw.payload)
+        || raw.lease_owner != null || raw.lease_token != null || raw.lease_until != null && raw.lease_until !== 0)
+        throw storageFailure('dead-letter recovery', new Error('Unknown or leased original dead letter'));
+      if (original && (raw.payload.p_device_id !== original.deviceId
+        || raw.replay_binding?.employee_id !== original.employeeId
+        || raw.replay_binding?.assignment_epoch !== original.assignmentEpoch
+        || raw.replay_binding?.credential_id != null && raw.replay_binding.credential_id !== original.credentialId
+        || raw.payload.p_snapshot_employee_id != null && raw.payload.p_snapshot_employee_id !== original.employeeId
+        || raw.payload.p_snapshot_assignment_epoch != null && raw.payload.p_snapshot_assignment_epoch !== original.assignmentEpoch))
+        throw storageFailure('dead-letter recovery', new Error('Foreign original dead letter retained'));
+      return true;
+    };
+    // Every transaction keeps native FIFO ownership through a DIRECT terminal
+    // event's full dispatch. Put remains synchronous in get.onsuccess while IDB
+    // is active; there is no timer/microtask around the actual writer.
+    const transact = (context, key, expected, replacement) => new Promise((resolve, reject) => {
+      let tx = null, failure = null, value = null;
+      const refuse = error => {
+        failure = failure || error;
+        if (!tx) { reject(failure); return; }
+        try { tx.abort(); } catch (abortError) {
+          failure = Object.assign(new AggregateError([failure, abortError],
+            'Dead-letter recovery settlement is uncertain.', { cause: failure }),
+          { code: failure.code || 'custodial_storage_unavailable' });
+        }
+      };
+      const settle = aborted => {
+        let error = failure || (aborted ? tx.error || new Error('Queue recovery transaction aborted.') : null);
+        try { requireOriginal(context); } catch (withdrawn) { error = error || withdrawn; }
+        if (error) reject(error); else resolve(value);
+      };
+      try {
+        requireOriginal(context);
+        tx = transactionMethod.call(db, CONFIG.STORE_NAME, replacement ? 'readwrite' : 'readonly');
+        const terminal = (event, aborted) => {
+          if (event.target !== tx) return;
+          try { requireOriginal(context); } catch (withdrawn) { failure = failure || withdrawn; }
+          window.setTimeout(() => settle(aborted), 0);
+        };
+        tx.oncomplete = event => terminal(event, false);
+        tx.onabort = event => terminal(event, true);
+        tx.onerror = event => {
+          failure = failure || event.target?.error || tx.error || new Error('Queue recovery transaction failed.');
+          try { requireOriginal(context); } catch (error) { failure = failure || error; }
+        };
+        const store = tx.objectStore(CONFIG.STORE_NAME);
+        requireOriginal(context);
+        const request = key === null ? store.getAll() : store.get(key);
+        request.onerror = () => refuse(request.error || tx.error || new Error('Original queue read failed.'));
+        request.onsuccess = () => {
+          try {
+            requireOriginal(context);
+            if (failure) throw failure;
+            if (key === null) {
+              if (!Array.isArray(request.result)) throw new Error('Original queue list unavailable.');
+              value = request.result.map(snapshot);
+            } else {
+              value = request.result == null ? null : snapshot(request.result);
+              if (value && value.id !== key) throw new Error('Original queue key changed.');
+            }
+            if (replacement) {
+              if (!value || !queueOpeningRowsMatch([value], [expected]) || !eligible(value))
+                throw storageFailure('dead-letter recovery', new Error('Original dead letter changed before recovery'));
+              requireOriginal(context);
+              const put = store.put(replacement);
+              if (put) put.onerror = () => refuse(put.error || tx.error || new Error('Original recovery write failed.'));
+              requireOriginal(context);
+            }
+          } catch (error) { refuse(error); }
+        };
+      } catch (error) { refuse(error); }
+    });
+
+    const count = await mutateProtectedQueue(async context => {
+      requireOriginal(context);
+      const listed = await transact(context, null);
+      requireOriginal(context);
+      const originals = listed.filter(raw => {
+        const dead = raw.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION ? raw.current_dead_letter : raw.dead_letter;
+        return dead === true && raw.recoverable !== false && eligible(raw);
+      }).sort((left, right) => left.created_at - right.created_at);
+      if (new Set(originals.map(raw => raw.id)).size !== originals.length)
+        throw storageFailure('dead-letter recovery', new Error('Ambiguous original queue row ids'));
+      let recovered = 0;
+      for (const raw of originals) {
+        requireOriginal(context);
+
+      // Change only explicit reconciliation bookkeeping. Never rerun the queue
+      // normalizer/producer to refill IDs, payload, receipts or attempt history.
+        const actionType = raw.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION ? raw.forward_action_type : raw.type;
+        const replacement = { ...raw, forward_replay_contract: CONFIG.REQUIRED_SCAN_CONTRACT_VERSION,
+          forward_action_type: actionType, type: 'forward-replay-fenced:' + actionType, dead_letter: true, current_dead_letter: false,
+          state: 'reconciliation-required', next_attempt_at: 0, lease_owner: null, lease_token: null, lease_until: 0 };
+        requireOriginal(context);
+        await transact(context, raw.id, raw, replacement);
+        requireOriginal(context);
+        const verified = await transact(context, raw.id);
+        requireOriginal(context);
+        if (!verified || !queueOpeningRowsMatch([verified], [replacement]))
+          throw storageFailure('dead-letter recovery', new Error('Original recovery readback unconfirmed'));
+        recovered++;
+      }
+      return recovered;
+    }, bounds);
+    requireOriginal(); // Never call the settled callback's checkpoint.
+    if (count > 0) scheduleSync();
+    return count;
   }
 
   function installWorkerListeners() {
@@ -2397,9 +4116,18 @@
   async function init() {
     installWorkerListeners();
     if (!window.indexedDB) return false;
+    const legacyBrowser = queueMutationSecurity() === null;
+    if (legacyBrowser) {
+      // Receiver selection is browser DATA, not native/auth admission. Bind it
+      // before import/FIFO waits; the callback must not resolve a successor.
+      const originalDeviceId = state.deviceId;
+      const selectedDeviceId = safeText(originalDeviceId) || resolveDeviceId();
+      if (queueMutationSecurity() !== null || state.deviceId !== originalDeviceId) throw queueSecurityUnavailable();
+      state.deviceId = selectedDeviceId;
+    }
     await mutateProtectedQueue(async (context) => {
-      state.deviceId = safeText(context?.deviceId) || resolveDeviceId();
-      state.db = await openDb();
+      if (!legacyBrowser) state.deviceId = safeText(context?.deviceId) || resolveDeviceId();
+      state.db = await openDb(context);
     });
     state.channel?.addEventListener('message', (event) => {
       if (event.data?.type === 'queued' && navigator.onLine) scheduleSync(50);
@@ -2438,6 +4166,8 @@
     drainForNewWork,
     admitNewLocalWork,
     saveCompletedLocalWork,
+    mutateProtectedWork: mutateProtectedQueue,
+    requireLegacyBrowserMutation,
     mutateLocalSessions,
     recoverLocalCompletionIntents,
     isLocallyCompleted,

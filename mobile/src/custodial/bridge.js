@@ -1,7 +1,10 @@
+import { installEmployeeSchedule } from './employee-schedule-runtime.js';
+import { custodialNewProducerAdmissionsEnabled, requireCustodialNewProducerAdmission } from './new-producer-scope.js';
 import { createActiveGpsLifecycle } from './active-gps-lifecycle.js';
 import { createNotificationPresentationMode } from './notification-mode.js';
-import { principalIdentity, profileMatchesPrincipal, protectedPrincipal } from './protected-principal.js';
+import { principalIdentity, profileMatchesPrincipal, protectedPrincipal, createProtectedFeedbackIdentity } from './protected-principal.js';
 import { createFeedbackOutbox } from './feedback-outbox.js';
+import { createEventNotificationOpenOutbox } from './event-notification-receipts.js';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
@@ -29,10 +32,13 @@ import {
   getCustodialProtectedStorage,
   getNativeCustodialVaultState,
   getNativeCustodialOfflineAuthorityState,
+  getNativeCustodialReadinessObservation,
+  getNativeProviderMirrorBridge,
   isCustodialNativeVaultPlatform,
   nativeCustodialAuthorizedFetch,
   nativeCustodialEnroll,
   nativeCustodialHttpStatus,
+  nativeCustodialRemovalPreflight,
   nativeCustodialRemoveEnrollment,
   loadNativeCustodialOfflineAuthoritySnapshot,
   reportNativeCustodialRecoveryDiagnostic,
@@ -47,6 +53,9 @@ import {
 import { isCustodialNativeScanDestination, resolveCustodialScanTarget } from './scan-target.ts';
 import {
   NATIVE_NOTIFICATION_RECEIPT_SCHEMA,
+  createNotificationOutboxFlusher,
+  captureNotificationOutboxSettlementOrigin,
+  settleNotificationOutboxRow,
   createNativeNotificationReceipt,
   receiptMatchesProtectedPrincipal,
   requiresBoundNotificationReceipt,
@@ -57,7 +66,10 @@ import {
   receiveNativeNotification,
 } from './notification-receipts.js';
 import { createNotificationPresenter } from './notification-presentation.js';
+import { createProviderMirror } from './provider-mirror.js';
 import { createPrincipalNotificationScheduler } from './notification-schedule.js';
+import { createScheduleNotificationAuthority } from './notification-schedule-authority.js';
+import { CUSTODIAL_RELEASE_CAPABILITIES, deferredCustodialFeature, custodialNotificationEnabled } from './release-scope.js';
 
 const OFFLINE_SCAN_SNAPSHOT_PREFIX = 'mz_scan_authority_snapshot:';
 const SCAN_ENTRY_ATTESTATION_PREFIX = 'mz_native_scan_entry:';
@@ -67,7 +79,7 @@ const NATIVE_NOTIFICATION_OUTBOX_PREFIX = 'mz_native_notification_outbox:';
 const PRESTART_RECOVERY_PREFIX = 'mz_custodial_prestart_recovery:';
 const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
 
-(() => {
+export function installCustodialBridge({ nativeApplicationSource = null } = {}) {
   const API = 'https://memphis-zoo-mcp.onrender.com';
   const API_ORIGIN = new URL(API).origin;
   const browserTestBuild = typeof __MZ_CUSTODIAL_BROWSER_TEST__ !== 'undefined'
@@ -87,6 +99,25 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   const { credentialStore, security } = getCustodialBridgeSecurityRuntime({
     secureStorage: getCustodialProtectedStorage(),
   });
+  // Provider mirror is shared by EVERY employee page. Native attachment remains
+  // NONE/SUSPENDED until its independent source/configuration gates are met.
+  let providerMirror=null,providerPageVisible=true,providerAppActive=true;
+  if(nativeVault&&custodialNewProducerAdmissionsEnabled()){
+    providerMirror=createProviderMirror({bridge:getNativeProviderMirrorBridge(),
+      visible:()=>providerPageVisible&&providerAppActive&&document.hidden!==true,
+      current:()=>security.getStatus().ready===true,
+      locationMatches:route=>{
+        const actual=new URL(window.location.href),expected=new URL(route,actual);
+        return actual.origin==='https://localhost'&&expected.origin===actual.origin&&actual.pathname===expected.pathname&&actual.search===expected.search;
+      }});
+    document.addEventListener('visibilitychange',()=>providerMirror.changed());
+    window.addEventListener('pagehide',()=>{providerPageVisible=false;void providerMirror.suspend();});
+    window.addEventListener('pageshow',()=>{providerPageVisible=true;providerMirror.changed();});
+    window.addEventListener('memphis:custodial-security-state',()=>{void providerMirror.suspend().then(()=>providerMirror.changed());});
+    window.addEventListener('online',()=>providerMirror.changed());
+    App.addListener('appStateChange',({isActive})=>{providerAppActive=isActive===true;providerMirror.changed();});
+    void providerMirror.start();
+  }
   const rawFetch = window.fetch.bind(window);
   let confirmationInFlight = null;
   let enrollmentResumeInFlight = null;
@@ -546,8 +577,9 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     const sessionId = canonicalSessionId(index.sessions[0]?.session_uuid);
     if (!sessionId) return { state: 'manager_required' };
     const archiveKey = `${PRESTART_RECOVERY_PREFIX}${sessionId}`;
+    const archiveRaw = localStorage.getItem(archiveKey);
     const validated = validatedPreStartArchive(
-      localStorage.getItem(archiveKey),
+      archiveRaw,
       enrolledDevice,
       disposition,
       sessionId,
@@ -558,10 +590,40 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     if (activeRaw != null && activeRaw !== validated.archive.preserved_session_raw) {
       return { state: 'manager_required' };
     }
-    const retireQueuedStart = window.MemphisScanSync?.retirePreservedInterruptedStart;
+    const queueOwner = window.MemphisScanSync;
+    const retireQueuedStart = queueOwner?.retirePreservedInterruptedStart;
     if (typeof retireQueuedStart !== 'function') return { state: 'manager_required' };
     try {
-      const retirement = await retireQueuedStart(sessionId, async (currentActions, preservationEvidence) => {
+      // Archival is not authority to delete whatever occupies this key later.
+      // Pin the actual original writer and all three raw records BEFORE the
+      // queue/FIFO waits. No caller ID/old archive grants current native work.
+      const reader = security.getStatus, writer = security.mutateProtectedWork;
+      if (security.native !== true || window.MemphisCustodialSecurity !== security
+        || typeof reader !== 'function' || typeof writer !== 'function') throw securityError('custodial_prestart_owner_unavailable');
+      const original = reader.call(security), generation = original?.generation;
+      const identity = principalIdentity(original?.principal);
+      if (!identity || !Number.isSafeInteger(generation) || generation < 1) throw securityError('custodial_prestart_owner_unavailable');
+      const requireOriginal = (expectedSession = activeRaw, expectedIndex = indexRaw) => {
+        if (window.MemphisCustodialSecurity !== security || security.native !== true
+          || security.getStatus !== reader || security.mutateProtectedWork !== writer
+          || window.MemphisScanSync !== queueOwner || queueOwner.retirePreservedInterruptedStart !== retireQueuedStart)
+          throw securityError('custodial_prestart_owner_changed');
+        const live = reader.call(security);
+        if (live?.ready !== true || live.available !== true || live.quarantined !== false
+          || live.state !== 'enrolled' || live.deviceId !== enrolledDevice || live.generation !== generation
+          || principalIdentity(live.principal) !== identity
+          || localStorage.getItem(archiveKey) !== archiveRaw
+          || localStorage.getItem(sessionKey) !== expectedSession || localStorage.getItem(indexKey) !== expectedIndex)
+          throw securityError('custodial_prestart_owner_changed');
+      };
+      const checkpoint = (context, expectedSession, expectedIndex) => {
+        if (typeof context?.assertCurrent !== 'function' || context.deviceId !== enrolledDevice || context.generation !== generation)
+          throw securityError('custodial_prestart_owner_unavailable');
+        context.assertCurrent(); requireOriginal(expectedSession, expectedIndex); context.assertCurrent();
+      };
+      requireOriginal();
+      const retirement = await retireQueuedStart.call(queueOwner, sessionId, async (currentActions, preservationEvidence) => {
+        requireOriginal();
         if (!Array.isArray(currentActions) || currentActions.length > 1) {
           throw securityError('custodial_prestart_queue_ambiguous');
         }
@@ -579,24 +641,64 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       if (retirement?.contract_version !== 'custodial-interrupted-start-retirement.v1') {
         return { state: 'manager_required' };
       }
+      requireOriginal();
+      let completed = false;
+      const result = await writer.call(security, context => {
+        checkpoint(context, activeRaw, indexRaw);
+        if (activeRaw !== null) localStorage.removeItem(sessionKey);
+        checkpoint(context, null, indexRaw);
+        // The exact original index was validated above as one original entry.
+        // Never prune a successor index or re-adopt a changed session.
+        localStorage.removeItem(indexKey);
+        checkpoint(context, null, null);
+        completed = true; return true;
+      }, { requireEnrollment: true, expectedGeneration: generation });
+      if (result !== true || !completed) return { state: 'manager_required' };
+      // The native callback lease has closed. Recheck its actual owner/raw
+      // readers, never call the expired context or compensate uncertain effects.
+      requireOriginal(null, null);
     } catch {
       return { state: 'manager_required' };
     }
-    await security.mutateProtectedWork(() => {
-      localStorage.removeItem(sessionKey);
-      retirePreStartIndex(enrolledDevice, sessionId);
-      if (localStorage.getItem(sessionKey) != null || localStorage.getItem(indexKey) != null) {
-        throw securityError('custodial_prestart_retirement_failed');
-      }
-    });
     return { state: 'retired_preserved', session_id: sessionId, resumed: true };
+  }
+
+  // Private rejection-only owner for the existing recovery journey. No IDs,
+  // credentials, ACK or finalizer capability leaves this compiled closure.
+  function capturePreStartRecoveryWriter(enrolledDevice) {
+    const reader=security.getStatus,writer=security.mutateProtectedWork;
+    if(security.native!==true||window.MemphisCustodialSecurity!==security
+      ||typeof reader!=='function'||typeof writer!=='function')throw securityError('custodial_prestart_owner_unavailable');
+    const original=reader.call(security),generation=original?.generation,identity=principalIdentity(original?.principal);
+    if(!identity||!Number.isSafeInteger(generation)||generation<1)throw securityError('custodial_prestart_owner_unavailable');
+    const current=()=>{
+      if(window.MemphisCustodialSecurity!==security||security.native!==true||security.getStatus!==reader||security.mutateProtectedWork!==writer)
+        throw securityError('custodial_prestart_owner_changed');
+      const live=reader.call(security);
+      if(live?.state!=='enrolled'||live.ready!==true||live.available!==true||live.quarantined!==false
+        ||live.deviceId!==enrolledDevice||live.generation!==generation||principalIdentity(live.principal)!==identity)
+        throw securityError('custodial_prestart_owner_changed');
+    };
+    current();
+    return Object.freeze({current,async mutate(operation){
+      current();
+      const result=await writer.call(security,async context=>{
+        const check=()=>{if(typeof context?.assertCurrent!=='function'||context.deviceId!==enrolledDevice||context.generation!==generation)
+          throw securityError('custodial_prestart_owner_unavailable');context.assertCurrent();current();context.assertCurrent();};
+        check();try{return await operation(check);}finally{check();}
+      },{requireEnrollment:true,expectedGeneration:generation});
+      current();return result; // Native context is closed: actual owner only.
+    }});
   }
 
   async function reconcileRecoveredPreStart() {
     if (!nativeVault) return { state: 'not_applicable' };
     const enrolledDevice = deviceId();
     if (!enrolledDevice) return { state: 'manager_required' };
+    try {
+    const originalOwner=capturePreStartRecoveryWriter(enrolledDevice);
     const nativeState = await getNativeCustodialVaultState();
+    originalOwner.current();
     const disposition = scanJournalDisposition(nativeState.scan_journal_disposition, enrolledDevice);
     if (!disposition) {
       return nativeState.scan_journal_recovery_required === true
@@ -605,6 +707,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     }
 
     const resumedRetirement = await finishArchivedPreStartRetirement(enrolledDevice, disposition);
+    originalOwner.current();
     if (resumedRetirement) return resumedRetirement;
 
     const resolved = window.MemphisUI?.resolveOpenScanSession?.(enrolledDevice)
@@ -617,19 +720,32 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       return { state: 'not_applicable' };
     }
 
-    const queueReady = await window.MemphisScanSync?.ready;
+    const queueOwner=window.MemphisScanSync;
+    const retireQueuedStart=queueOwner?.retirePreservedInterruptedStart,draftReader=queueOwner?.completionDraftExists;
+    const sessionKey = `session:${interruptedStart.sessionId}`;
+    const archiveKey = `${PRESTART_RECOVERY_PREFIX}${interruptedStart.sessionId}`;
+    const indexKey=`${PHONE_SCAN_RESUME_PREFIX}${enrolledDevice}`;
+    const originalSessionRaw=localStorage.getItem(sessionKey),originalIndexRaw=localStorage.getItem(indexKey);
+    let expectedArchiveRaw=localStorage.getItem(archiveKey);
+    const requireBrowser=(expectedSession=originalSessionRaw,expectedIndex=originalIndexRaw)=>{
+      originalOwner.current();
+      if(window.MemphisScanSync!==queueOwner||queueOwner?.retirePreservedInterruptedStart!==retireQueuedStart||queueOwner?.completionDraftExists!==draftReader
+        ||localStorage.getItem(sessionKey)!==expectedSession||localStorage.getItem(indexKey)!==expectedIndex
+        ||localStorage.getItem(archiveKey)!==expectedArchiveRaw)throw securityError('local_session_changed');
+    };
+    const queueReady = await queueOwner?.ready;
+    originalOwner.current();
     if (queueReady !== true) return interruptedStartManagerRequired('queue_not_ready');
-    const retireQueuedStart = window.MemphisScanSync?.retirePreservedInterruptedStart;
     if (typeof retireQueuedStart !== 'function') return interruptedStartManagerRequired('queue_retirement_unavailable');
-    if (typeof window.MemphisScanSync?.completionDraftExists !== 'function') {
+    if (typeof draftReader !== 'function') {
       return interruptedStartManagerRequired('durable_draft_reader_unavailable');
     }
 
-    const sessionKey = `session:${interruptedStart.sessionId}`;
-    const archiveKey = `${PRESTART_RECOVERY_PREFIX}${interruptedStart.sessionId}`;
+    requireBrowser();
     let retirement;
     try {
-      retirement = await retireQueuedStart(interruptedStart.sessionId, async (queueActions, preservationEvidence) => {
+      retirement = await retireQueuedStart.call(queueOwner, interruptedStart.sessionId, async (queueActions, preservationEvidence) => {
+        requireBrowser();
         if (!Array.isArray(queueActions) || queueActions.length > 1) {
           throw securityError('queue_session_chain_ambiguous');
         }
@@ -659,8 +775,9 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         }
         let durableCompletionDraft;
         try {
-          durableCompletionDraft = await window.MemphisScanSync.completionDraftExists(interruptedStart.sessionId);
+          durableCompletionDraft = await draftReader.call(queueOwner,interruptedStart.sessionId);
         } catch { throw securityError('durable_draft_check_failed'); }
+        requireBrowser();
         if (durableCompletionDraft !== false) throw securityError('durable_completion_draft_present');
 
         const localLocationCode = String(currentSession.location_code || '').trim().toUpperCase();
@@ -678,6 +795,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
             args: {},
           },
         });
+        requireBrowser();
         if (!transportProof?.data || typeof transportProof.data !== 'object') {
           throw securityError('release_canary_transport_probe_invalid');
         }
@@ -692,6 +810,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
             },
           },
         });
+        requireBrowser();
         const serverState = server?.data || {};
         if (String(serverState.location_code || '').trim().toUpperCase() !== localLocationCode
           || serverState.device_approved !== true) throw securityError('server_authority_mismatch');
@@ -731,7 +850,8 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
             server_suggested_action: String(serverState.suggested_action || '') || null,
           },
         };
-        await security.mutateProtectedWork(() => {
+        await originalOwner.mutate(check => {
+          check();requireBrowser();
           const existingRaw = localStorage.getItem(archiveKey);
           if (existingRaw) {
             const existing = validatedPreStartArchive(existingRaw, enrolledDevice, disposition, interruptedStart.sessionId);
@@ -752,7 +872,10 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
             || canonicalRecoveryActions(verified.preservedQueueActions) !== canonicalRecoveryActions(queueActions)) {
             throw securityError('custodial_prestart_archive_failed');
           }
+          expectedArchiveRaw=localStorage.getItem(archiveKey);
+          requireBrowser();check();
         });
+        requireBrowser();
         if (preservationEvidence?.canonical_actions !== canonicalRecoveryActions(queueActions)) {
           throw securityError('custodial_prestart_queue_canonical_mismatch');
         }
@@ -765,15 +888,27 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       return interruptedStartManagerRequired('queue_retirement_unverified');
     }
 
-    const rawSession = localStorage.getItem(sessionKey);
-    if (!rawSession) return interruptedStartManagerRequired('local_session_missing');
-    await security.mutateProtectedWork(() => {
+    requireBrowser();
+    if (!originalSessionRaw) return interruptedStartManagerRequired('local_session_missing');
+    // Derive the exact remaining index from the original bytes, never from a
+    // replacement inserted while the queue/server/native owners were awaited.
+    const originalIndex=JSON.parse(originalIndexRaw);
+    if(originalIndex?.schema_version!==2||!Array.isArray(originalIndex.sessions)||originalIndex.sessions.length>4)
+      throw securityError('custodial_prestart_index_corrupted');
+    const remaining=originalIndex.sessions.filter(row=>canonicalSessionId(row?.session_uuid)!==interruptedStart.sessionId);
+    if(remaining.length!==originalIndex.sessions.length-1)throw securityError('custodial_prestart_index_corrupted');
+    const nextIndex=remaining.length?JSON.stringify({...originalIndex,sessions:remaining,updated_at:new Date().toISOString()}):null;
+    await originalOwner.mutate(check => {
+      check();requireBrowser();
       localStorage.removeItem(sessionKey);
-      retirePreStartIndex(enrolledDevice, interruptedStart.sessionId);
-      if (localStorage.getItem(sessionKey) != null) throw securityError('custodial_prestart_retirement_failed');
+      requireBrowser(null,originalIndexRaw);check();
+      if(nextIndex===null)localStorage.removeItem(indexKey);else localStorage.setItem(indexKey,nextIndex);
+      requireBrowser(null,nextIndex);check();
     });
+    requireBrowser(null,nextIndex);
     recordInterruptedStartRecovery(interruptedStart.startState, 'retired_preserved');
     return { state: 'retired_preserved', session_id: interruptedStart.sessionId };
+    } catch { return {state:'manager_required'}; }
   }
 
   const bridgeReady = Promise.resolve(security.ready).then(async () => {
@@ -834,86 +969,245 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
 
   async function saveOfflineScanAuthoritySnapshot(snapshot) {
     await bridgeReady;
-    const id = deviceId();
+    const before = security.getStatus(), id = deviceId(), owner = currentPrincipalIdentity();
+    const generation = before.generation;
     validateOfflineScanAuthoritySnapshot(snapshot, id);
-    if (nativeVault) {
-      const anchored = await anchorNativeCustodialOfflineAuthoritySnapshot({
-        deviceId: id,
-        snapshotId: snapshot.snapshot_id,
-        generatedAt: snapshot.generated_at,
-        expiresAt: snapshot.expires_at,
-        snapshot,
-      });
-      if (anchored?.anchored !== true) throw new Error('The protected offline time anchor could not be saved.');
-    } else if (!browserTestBuild) {
-      throw new Error('The native vault is required to save offline employee authority.');
-    }
-    await security.mutateProtectedWork(() => localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, JSON.stringify(snapshot)));
-    return true;
+    const encoded = JSON.stringify(snapshot);
+    const freeze = value => {
+      if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
+      return value;
+    };
+    const original = freeze(JSON.parse(encoded));
+    validateOfflineScanAuthoritySnapshot(original, id);
+    const current = (context = null) => {
+      context?.assertCurrent?.();
+      const status = security.getStatus();
+      if (!Number.isSafeInteger(generation) || generation < 0 || !owner
+        || status.ready !== true || status.available !== true || status.quarantined !== false || status.state !== 'enrolled'
+        || generation !== status.generation || id !== status.deviceId || id !== deviceId() || owner !== currentPrincipalIdentity()
+        || encoded !== JSON.stringify(snapshot)
+        || (context && (context.generation !== generation || context.deviceId !== id || context.state !== 'enrolled')))
+        throw securityError('custodial_security_generation_changed');
+    };
+    current();
+    if (typeof security.mutateProtectedWork !== 'function') throw securityError('custodial_secure_storage_unavailable');
+    const result = await security.mutateProtectedWork(async context => {
+      current(context);
+      if (nativeVault) {
+        const anchored = await anchorNativeCustodialOfflineAuthoritySnapshot({
+          deviceId: id,
+          snapshotId: original.snapshot_id,
+          generatedAt: original.generated_at,
+          expiresAt: original.expires_at,
+          snapshot: original,
+        });
+        current(context);
+        if (anchored?.anchored !== true) throw new Error('The protected offline time anchor could not be saved.');
+      } else if (!browserTestBuild) {
+        throw new Error('The native vault is required to save offline employee authority.');
+      }
+      current(context);
+      localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, encoded);
+      current(context);
+      return true;
+    }, { requireEnrollment: true, expectedGeneration: generation });
+    current();
+    return result;
   }
 
   async function loadOfflineAuthoritySnapshot(requestedDeviceId) {
     await bridgeReady;
-    const id = deviceId();
+    const before = security.getStatus(), id = deviceId(), owner = currentPrincipalIdentity();
+    const generation = before.generation;
     if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id) {
       throw new Error('The protected device identity is unavailable for offline work admission.');
     }
     if (!nativeVault) throw new Error('The protected offline-authority capability is unavailable on this phone.');
-    const loaded = await loadNativeCustodialOfflineAuthoritySnapshot(id);
-    const snapshot = loaded?.snapshot && typeof loaded.snapshot === 'object' ? loaded.snapshot : loaded;
-    validateOfflineScanAuthoritySnapshot(snapshot, id);
-    await security.mutateProtectedWork(() => localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, JSON.stringify(snapshot)));
-    return Object.freeze({ ...snapshot });
+    const current = (context = null) => {
+      context?.assertCurrent?.();
+      const status = security.getStatus();
+      if (!Number.isSafeInteger(generation) || generation < 0 || !owner
+        || status.ready !== true || status.available !== true || status.quarantined !== false || status.state !== 'enrolled'
+        || generation !== status.generation || id !== status.deviceId || id !== deviceId() || owner !== currentPrincipalIdentity()
+        || (context && (context.generation !== generation || context.deviceId !== id || context.state !== 'enrolled')))
+        throw securityError('custodial_security_generation_changed');
+    };
+    current();
+    if (typeof security.mutateProtectedWork !== 'function') throw securityError('custodial_secure_storage_unavailable');
+    const result = await security.mutateProtectedWork(async context => {
+      current(context);
+      const loaded = await loadNativeCustodialOfflineAuthoritySnapshot(id);
+      current(context);
+      const snapshot = loaded?.snapshot && typeof loaded.snapshot === 'object' ? loaded.snapshot : loaded;
+      validateOfflineScanAuthoritySnapshot(snapshot, id);
+      const encoded = JSON.stringify(snapshot);
+      const freeze = value => {
+        if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
+        return value;
+      };
+      const original = freeze(JSON.parse(encoded));
+      validateOfflineScanAuthoritySnapshot(original, id);
+      current(context);
+      localStorage.setItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`, encoded);
+      current(context);
+      return original;
+    }, { requireEnrollment: true, expectedGeneration: generation });
+    current();
+    return result;
   }
 
   async function authorizeOfflineNewWork(requestedDeviceId, snapshotId) {
     await bridgeReady;
-    const id = deviceId();
-    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !/^[0-9a-f]{64}$/.test(String(snapshotId || ''))) {
+    const before = security.getStatus(), id = deviceId(), owner = currentPrincipalIdentity();
+    const generation = before.generation, originalDevice = String(requestedDeviceId || '').trim().toUpperCase();
+    const originalSnapshotId = String(snapshotId || '');
+    if (!id || originalDevice !== id || !/^[0-9a-f]{64}$/.test(originalSnapshotId)) {
       throw new Error('The protected offline authority is invalid for new work admission.');
     }
     if (!nativeVault) throw new Error('The protected offline-authority capability is unavailable on this phone.');
-    const result = await authorizeNativeCustodialOfflineNewWork(id, snapshotId);
-    if (result?.authorized !== true) throw new Error('The protected offline authority did not authorize new work.');
-    return Object.freeze({ authorized: true });
+    const current = (context = null) => {
+      context?.assertCurrent?.();
+      const status = security.getStatus();
+      if (!Number.isSafeInteger(generation) || generation < 0 || !owner
+        || status.ready !== true || status.available !== true || status.quarantined !== false || status.state !== 'enrolled'
+        || generation !== status.generation || id !== status.deviceId || id !== deviceId() || owner !== currentPrincipalIdentity()
+        || (context && (context.generation !== generation || context.deviceId !== id || context.state !== 'enrolled')))
+        throw securityError('custodial_security_generation_changed');
+    };
+    current();
+    if (typeof security.mutateProtectedWork !== 'function') throw securityError('custodial_secure_storage_unavailable');
+    const value = await security.mutateProtectedWork(async context => {
+      current(context);
+      const result = await authorizeNativeCustodialOfflineNewWork(id, originalSnapshotId);
+      current(context);
+      if (!result || typeof result !== 'object' || Array.isArray(result) || result.authorized !== true)
+        throw new Error('The protected offline authority did not authorize new work.');
+      const observed = Object.freeze({ authorized: true });
+      current(context);
+      return observed;
+    }, { requireEnrollment: true, expectedGeneration: generation });
+    current();
+    return value;
   }
 
   async function getOfflineAuthorityState(requestedDeviceId) {
     await bridgeReady;
-    const id = deviceId();
-    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+    const before = security.getStatus(), id = deviceId(), owner = currentPrincipalIdentity();
+    const generation = before.generation, originalDevice = String(requestedDeviceId || '').trim().toUpperCase();
+    if (!id || originalDevice !== id || !nativeVault) {
       throw new Error('The protected offline-authority capability is unavailable on this phone.');
     }
-    const result = await getNativeCustodialOfflineAuthorityState(id);
-    return Object.freeze({
-      occurrences_awaiting_acknowledgement: result?.occurrences_awaiting_acknowledgement === true,
-      rollback_fence_active: result?.rollback_fence_active === true,
-      rollback_fence_id: result?.rollback_fence_active === true ? String(result?.rollback_fence_id || '') : null,
-    });
+    const current = (context = null) => {
+      context?.assertCurrent?.();
+      const status = security.getStatus();
+      if (!Number.isSafeInteger(generation) || generation < 0 || !owner
+        || status.ready !== true || status.available !== true || status.quarantined !== false || status.state !== 'enrolled'
+        || generation !== status.generation || id !== status.deviceId || id !== deviceId() || owner !== currentPrincipalIdentity()
+        || (context && (context.generation !== generation || context.deviceId !== id || context.state !== 'enrolled')))
+        throw securityError('custodial_security_generation_changed');
+    };
+    current();
+    if (typeof security.mutateProtectedWork !== 'function') throw securityError('custodial_secure_storage_unavailable');
+    const value = await security.mutateProtectedWork(async context => {
+      current(context);
+      const result = await getNativeCustodialOfflineAuthorityState(id);
+      current(context);
+      if (!result || typeof result !== 'object' || Array.isArray(result))
+        throw new Error('The protected offline-authority state is unavailable or ambiguous.');
+      const awaiting = result.occurrences_awaiting_acknowledgement, active = result.rollback_fence_active, fenceId = result.rollback_fence_id;
+      if (typeof awaiting !== 'boolean' || typeof active !== 'boolean'
+        || (active ? typeof fenceId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(fenceId) : fenceId !== null))
+        throw new Error('The protected offline-authority state is unavailable or ambiguous.');
+      const observed = Object.freeze({ occurrences_awaiting_acknowledgement: awaiting, rollback_fence_active: active, rollback_fence_id: fenceId });
+      current(context);
+      return observed;
+    }, { requireEnrollment: true, expectedGeneration: generation });
+    current();
+    return value;
+  }
+
+  async function getReadinessObservation(requestedDeviceId) {
+    await bridgeReady;
+    const before = security.getStatus();
+    const id = deviceId(), identity = currentPrincipalIdentity();
+    if (!nativeVault || !id || id !== requestedDeviceId || !identity || !Number.isSafeInteger(before.generation)) {
+      throw new Error('Current native readiness observation is unavailable.');
+    }
+    const result = await getNativeCustodialReadinessObservation(id, identity);
+    const after = security.getStatus();
+    if (before.generation !== after.generation || id !== deviceId() || identity !== currentPrincipalIdentity()) {
+      throw new Error('Phone authority changed during readiness observation.');
+    }
+    return result;
   }
 
   async function beginRollbackFence(requestedDeviceId) {
     await bridgeReady;
-    const id = deviceId();
-    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+    const before = security.getStatus(), id = deviceId(), owner = currentPrincipalIdentity();
+    const generation = before.generation, originalDevice = String(requestedDeviceId || '').trim().toUpperCase();
+    if (!id || originalDevice !== id || !nativeVault) {
       throw new Error('The protected rollback-fence capability is unavailable on this phone.');
     }
-    const result = await beginNativeCustodialRollbackFence(id);
-    if (result?.rollback_fence_active !== true || !/^[0-9a-f-]{36}$/i.test(String(result?.rollback_fence_id || ''))) {
-      throw new Error('The protected rollback fence was not durably established.');
-    }
-    return Object.freeze({ rollback_fence_active: true, rollback_fence_id: String(result.rollback_fence_id).toLowerCase() });
+    const current = (context = null) => {
+      context?.assertCurrent?.();
+      const status = security.getStatus();
+      if (!Number.isSafeInteger(generation) || generation < 0 || !owner
+        || status.ready !== true || status.available !== true || status.quarantined !== false || status.state !== 'enrolled'
+        || generation !== status.generation || id !== status.deviceId || id !== deviceId() || owner !== currentPrincipalIdentity()
+        || (context && (context.generation !== generation || context.deviceId !== id || context.state !== 'enrolled')))
+        throw securityError('custodial_security_generation_changed');
+    };
+    current();
+    if (typeof security.mutateProtectedWork !== 'function') throw securityError('custodial_secure_storage_unavailable');
+    const value = await security.mutateProtectedWork(async context => {
+      current(context);
+      const result = await beginNativeCustodialRollbackFence(id);
+      current(context);
+      if (!result || typeof result !== 'object' || Array.isArray(result)) throw new Error('The protected rollback fence was not durably established.');
+      const active = result.rollback_fence_active, fenceId = result.rollback_fence_id;
+      if (active !== true || typeof fenceId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(fenceId))
+        throw new Error('The protected rollback fence was not durably established.');
+      const observed = Object.freeze({ rollback_fence_active: true, rollback_fence_id: fenceId.toLowerCase() });
+      current(context);
+      return observed;
+    }, { requireEnrollment: true, expectedGeneration: generation });
+    current();
+    return value;
   }
 
   async function clearRollbackFence(requestedDeviceId, rollbackFenceId) {
     await bridgeReady;
-    const id = deviceId();
-    if (!id || String(requestedDeviceId || '').trim().toUpperCase() !== id || !nativeVault) {
+    const before = security.getStatus(), id = deviceId(), owner = currentPrincipalIdentity();
+    const generation = before.generation, originalDevice = String(requestedDeviceId || '').trim().toUpperCase();
+    const originalFenceId = String(rollbackFenceId || '');
+    if (!id || originalDevice !== id || !nativeVault) {
       throw new Error('The protected rollback-fence capability is unavailable on this phone.');
     }
-    const result = await clearNativeCustodialRollbackFence(id, rollbackFenceId);
-    if (result?.cleared !== true) throw new Error('The protected rollback fence was not cleared.');
-    return Object.freeze({ cleared: true });
+    if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(originalFenceId))
+      throw new Error('The protected rollback fence identifier is invalid.');
+    const current = (context = null) => {
+      context?.assertCurrent?.();
+      const status = security.getStatus();
+      if (!Number.isSafeInteger(generation) || generation < 0 || !owner
+        || status.ready !== true || status.available !== true || status.quarantined !== false || status.state !== 'enrolled'
+        || generation !== status.generation || id !== status.deviceId || id !== deviceId() || owner !== currentPrincipalIdentity()
+        || (context && (context.generation !== generation || context.deviceId !== id || context.state !== 'enrolled')))
+        throw securityError('custodial_security_generation_changed');
+    };
+    current();
+    if (typeof security.mutateProtectedWork !== 'function') throw securityError('custodial_secure_storage_unavailable');
+    const value = await security.mutateProtectedWork(async context => {
+      current(context);
+      const result = await clearNativeCustodialRollbackFence(id, originalFenceId);
+      current(context);
+      if (!result || typeof result !== 'object' || Array.isArray(result) || result.cleared !== true)
+        throw new Error('The protected rollback fence was not cleared.');
+      const observed = Object.freeze({ cleared: true });
+      current(context);
+      return observed;
+    }, { requireEnrollment: true, expectedGeneration: generation });
+    current();
+    return value;
   }
 
   function currentPrincipal() { return protectedPrincipal(security.getStatus()?.principal); }
@@ -1141,21 +1435,99 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     });
   }
 
-  async function getAuthenticatedCompletion({deviceId:requestedDeviceId,completionPayload}) {
+  async function getAuthenticatedCompletion({deviceId:requestedDeviceId,completionPayload,expectedGeneration=null}) {
+    // This is a stored native HTTPS-captured original receipt, NOT fresh SQL.
+    // Capture caller bounds before either initialization or native await; an
+    // A->B->A principal return must not authorize an old asynchronous result.
+    const before=security.getStatus(),owner=currentPrincipalIdentity();
+    const generation=expectedGeneration===null?before.generation:expectedGeneration;
+    if(!Number.isSafeInteger(generation)||generation<0||before.generation!==generation||!owner)
+      throw securityError('custodial_security_generation_changed');
+    const encoded=JSON.stringify(completionPayload);
+    if(typeof encoded!=='string')throw securityError('custodial_native_server_receipt_required');
+    const freeze=value=>{
+      if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}
+      return value;
+    };
+    const original=freeze(JSON.parse(encoded));
     await bridgeReady;
     const id=deviceId();
     if (!id || String(requestedDeviceId||'').trim().toUpperCase()!==id) throw securityError('custodial_native_device_binding_mismatch');
+    const current=()=>{
+      if(generation!==security.getStatus()?.generation||owner!==currentPrincipalIdentity()
+        ||id!==deviceId()||encoded!==JSON.stringify(completionPayload))
+        throw securityError('custodial_security_generation_changed');
+    };
+    current();
     if (!nativeVault) return Object.freeze({found:false});
-    const value=await getNativeAuthenticatedCompletion({deviceId:id,completionPayload});
+    await security.waitForStableState({requireEnrollment:true,expectedGeneration:generation});current();
+    let value=await getNativeAuthenticatedCompletion({deviceId:id,completionPayload:original});
+    current();
+    await security.waitForStableState({requireEnrollment:true,expectedGeneration:generation});current();
     if (typeof value?.found!=='boolean') throw securityError('custodial_native_server_receipt_required');
+    // Only Main's native-owned fixed READ/capture mount may advertise this
+    // capability. Old native getters omit it: platform/path presence alone
+    // never enables the lookup. This hint is NOT completion acceptance.
+    if(value.found||value.fixed_read_capture_protocol!=='native-server-completion-fixed-read.v1'||expectedGeneration===null)return value;
+    if(!original||typeof original!=='object'||Array.isArray(original))
+      throw securityError('custodial_native_server_receipt_required');
+    current();
+    // Outside any protected mutation: the existing authorized native dispatch
+    // fences the ORIGINAL generation. No WRITE resend or replacement original
+    // operation/payload; only the fixed READ envelope wraps those same values.
+    // Ignore HTTP found/result: actual native TLS capture must retain the READ
+    // purpose before a subsequent native journal reread can supply acceptance.
+    await requestEnvelope('/scan-api/original-completion',{
+      method:'POST',body:{completion_payload:original},expectedGeneration:generation,
+    });
+    current();
+    await security.waitForStableState({requireEnrollment:true,expectedGeneration:generation});current();
+    value=await getNativeAuthenticatedCompletion({deviceId:id,completionPayload:original});
+    current();
+    await security.waitForStableState({requireEnrollment:true,expectedGeneration:generation});current();
+    // No native receipt is NOT server nonacceptance or a new resend grant.
+    // Preserve existing original-idempotent submission authorization separately;
+    // actual native/transport unknown errors propagate, never becoming false.
+    if(typeof value?.found!=='boolean')throw securityError('custodial_native_server_receipt_required');
     return value;
   }
-  async function retireAuthenticatedCompletion({deviceId:requestedDeviceId,completionPayload}) {
-    await bridgeReady;
-    const id=deviceId();
-    if (!id || String(requestedDeviceId||'').trim().toUpperCase()!==id) throw securityError('custodial_native_device_binding_mismatch');
-    if (!nativeVault) return {retired:false};
-    return retireNativeAuthenticatedCompletion({deviceId:id,completionPayload});
+  async function retireAuthenticatedCompletion({deviceId:requestedDeviceId,completionPayload,expectedGeneration=null}) {
+    // Local native effect only: keep its lifetime inside the EXISTING protected
+    // FIFO. Neither cached receipt shape nor this JS fence is current SQL proof.
+    const before=security.getStatus(),owner=currentPrincipalIdentity(),id=deviceId();
+    const generation=expectedGeneration===null?before.generation:expectedGeneration;
+    if(!Number.isSafeInteger(generation)||generation<0||before.generation!==generation||!owner)
+      throw securityError('custodial_security_generation_changed');
+    if(!id||String(requestedDeviceId||'').trim().toUpperCase()!==id)
+      throw securityError('custodial_native_device_binding_mismatch');
+    const encoded=JSON.stringify(completionPayload);
+    if(typeof encoded!=='string'||!completionPayload||typeof completionPayload!=='object'||Array.isArray(completionPayload))
+      throw securityError('custodial_native_server_receipt_required');
+    const freeze=(value)=>{
+      if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}
+      return value;
+    };
+    const original=freeze(JSON.parse(encoded));
+    const current=(context=null)=>{
+      context?.assertCurrent?.();
+      if(generation!==security.getStatus()?.generation||owner!==currentPrincipalIdentity()||id!==deviceId()
+        ||String(requestedDeviceId||'').trim().toUpperCase()!==id||encoded!==JSON.stringify(completionPayload)
+        ||(context&&(context.generation!==generation||context.deviceId!==id)))
+        throw securityError('custodial_security_generation_changed');
+    };
+    await bridgeReady;current();
+    if(!nativeVault)throw securityError('custodial_native_vault_required');
+    if(typeof security.mutateProtectedWork!=='function')throw securityError('custodial_secure_storage_unavailable');
+    const value=await security.mutateProtectedWork(async(context)=>{
+      current(context);
+      // The plugin still requires the original accepted native receipt and no
+      // remaining native occurrence. Do not add another deletion authority.
+      const result=await retireNativeAuthenticatedCompletion({deviceId:id,completionPayload:original});
+      current(context);
+      if(result?.retired!==true)throw securityError('custodial_native_server_receipt_required');
+      return Object.freeze({retired:true});
+    },{requireEnrollment:true,expectedGeneration:generation});
+    current();return value;
   }
 
   async function acknowledgeOfflineCompletion({
@@ -1455,7 +1827,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       || url.pathname === '/dashboard-api/current-attendance';
   }
 
-  async function bridgeFetch(input, init = {}, { confirmationRetry = false } = {}) {
+  async function bridgeFetch(input, init = {}, { confirmationRetry = false, expectedGeneration = null } = {}) {
     const url = target(input);
     if (!url || url.origin !== API_ORIGIN) return rawFetch(input, init);
     const requestMethod = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
@@ -1464,6 +1836,9 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     if (!nativeVault && publicUnauthenticatedRoute(url, requestMethod)) return rawFetch(input, init);
     const retryInput = input instanceof Request ? input.clone() : input;
     const supplied = init.headers || (input instanceof Request ? input.headers : undefined) || {};
+    const schedulePrincipal = currentPrincipalIdentity();
+    const scheduleResponseTicket = url.pathname === '/schedule-api/my-day-summary' && requestMethod === 'GET' && schedulePrincipal
+      ? await scheduleNotificationAuthority.beginResponse(schedulePrincipal) : null;
     const dispatched = await credentialStore.dispatchAuthorizedTransport(({
       credential,
       deviceId: enrolledDevice,
@@ -1483,7 +1858,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       }
       if (!browserCredentialTransport) throw new Error('Custodial browser test transport is unavailable.');
       return browserCredentialTransport.authorizedFetch(input, init, supplied, credential, enrolledDevice);
-    });
+    }, {expectedGeneration});
     const response = await dispatched.completion;
     await credentialStore.waitForStableState({
       requireEnrollment: true,
@@ -1497,7 +1872,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         pendingOperation: credentialStore.getPendingEnrollmentOperation(),
         confirmationRetry,
         confirm: confirmPendingEnrollment,
-        retry: () => bridgeFetch(retryInput, init, { confirmationRetry: true }),
+        retry: () => bridgeFetch(retryInput, init, { confirmationRetry: true, expectedGeneration }),
         requireManagerRecovery: credentialStore.requireManagerRecovery,
       });
       if (reconciliation.handled) return reconciliation.response;
@@ -1510,6 +1885,20 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     // assignment. Refresh only after the old dispatch-generation check above.
     if (nativeVault && url.pathname === '/device-auth/status' && requestMethod === 'GET' && response.ok) {
       await credentialStore.ensureSecurityState();
+    }
+    if (url.pathname === '/schedule-api/my-day-summary' && requestMethod === 'GET'
+      && schedulePrincipal && schedulePrincipal === currentPrincipalIdentity()) {
+      if(response.ok){
+        const payload=await responsePayload(response);
+        try{
+          if(payload?.ok!==true)throw Error('Schedule response unavailable.');
+          if(await scheduleNotificationAuthority.observe(payload.data,schedulePrincipal,scheduleResponseTicket)!==true)
+            await scheduleNotificationAuthority.unavailable(schedulePrincipal,scheduleResponseTicket);
+        }catch{await scheduleNotificationAuthority.unavailable(schedulePrincipal,scheduleResponseTicket);}
+      }else await scheduleNotificationAuthority.unavailable(schedulePrincipal,scheduleResponseTicket);
+      // Observe the exact authenticated response before any Home/Schedule cache
+      // write. Failed storage cannot revive an already-observed terminal alert.
+      void reconcileScheduleNotifications();
     }
     return response;
   }
@@ -1527,7 +1916,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       signal: options.signal,
       headers,
       body,
-    });
+    }, {expectedGeneration: options.expectedGeneration});
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.ok) throw responseError(response, payload);
     return payload;
@@ -1676,6 +2065,10 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
 
   async function removeEnrollment() {
     if (removalInFlight) return removalInFlight;
+    // Reject missing original admission before credential-store stages a
+    // durable browser intent or clears its active-enrollment presentation.
+    // The native effect repeats the owning admission under its own fence.
+    if (nativeVault) await nativeCustodialRemovalPreflight();
     const task = credentialStore.removeEnrollment({
       beforeRemove: async ({ credential, deviceId: enrolledDevice, operationId, checkpoint }) => {
         let result;
@@ -1806,13 +2199,14 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       const url = new URL(raw, location.href);
       const requestedFile = url.pathname.split('/').pop() || '';
       const aliases = new Map([
-        ['events.html', 'employee-events.html'],
+        ['employee-events.html', 'events.html'],
         ['system-feedback.html', 'employee-feedback.html'],
         ['employee-hub.html', 'index.html'],
         ['start_page1.html', 'index.html'],
       ]);
       const file = aliases.get(requestedFile) || requestedFile;
-      const allowed = new Set(['employee-events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
+      if(deferredCustodialFeature(file))return '';
+      const allowed = new Set(['events.html', 'employee-feedback.html', 'messages.html', 'messages-chatscope.html', 'thread.html', 'employee-schedule.html', 'index.html']);
       if (url.origin !== location.origin || !allowed.has(file)) return '';
       if (file !== requestedFile) url.pathname = `${url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1)}${file}`;
       url.searchParams.set('hub', 'employee');
@@ -1846,9 +2240,73 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     return 'employee-messages';
   }
 
+  const scheduleNotificationAuthority=createScheduleNotificationAuthority({
+    identity:currentPrincipalIdentity,principal:currentPrincipal,status:security.getStatus,storage:localStorage,
+    mutate:security.mutateProtectedWork,
+  });
+  let acceptedLocationSessionRead=null;
+  async function refreshAcceptedLocationSessions(){
+    const scope=currentPrincipalIdentity(),p=currentPrincipal();
+    const health=security.getStatus();
+    const generation=health?.generation;
+    if(!scope||!p||health?.ready!==true||health?.available!==true||health?.quarantined===true
+      ||!Number.isSafeInteger(generation)||generation<0)return false;
+    // A single flight belongs to its original principal/generation/schedule
+    // read token. An invalidated flight is not today's read merely because
+    // its HTTP is still settling. Keep its cleanup private and let only a
+    // currently admitted owner request the next read; never replay a START.
+    if(acceptedLocationSessionRead?.current())return acceptedLocationSessionRead.task;
+    const owner=JSON.stringify([p.device_id,p.employee_id,p.credential_id,p.assignment_epoch]);
+    const read=scheduleNotificationAuthority.beginAcceptedLocationSessionRead(scope);
+    const current=()=>security.getStatus()?.generation===generation&&currentPrincipalIdentity()===scope
+      &&owner===JSON.stringify([currentPrincipal()?.device_id,currentPrincipal()?.employee_id,currentPrincipal()?.credential_id,currentPrincipal()?.assignment_epoch])
+      &&scheduleNotificationAuthority.acceptedLocationSessionReadCurrent(read,scope);
+    if(!read||!current())return false;
+    const task=(async()=>{
+      try{
+        if(!current())return false;
+        const payload=await requestEnvelope(`/message-api/device-location-status-reminders?device_id=${encodeURIComponent(p.device_id)}&limit=5&accepted_sessions=1`,
+          {expectedGeneration:generation,signal:AbortSignal.timeout(8000)});
+        if(!current())return false;
+        const rows=payload?.meta?.accepted_location_sessions;
+        if(!Array.isArray(rows)||rows.length>128)return false;
+        for(const row of rows){
+          if(!current()||!scheduleNotificationAuthority.observeAcceptedLocationSession(row,scope,read))return false;
+        }
+        return current();
+      }catch{return false;}finally{scheduleNotificationAuthority.finishAcceptedLocationSessionRead(read);}
+    })();
+    const flight=Object.freeze({task,current});
+    acceptedLocationSessionRead=flight;
+    try{return await task;}finally{if(acceptedLocationSessionRead===flight)acceptedLocationSessionRead=null;}
+  }
+  async function reconcileScheduleNotifications(){
+    try{await scheduleNotificationAuthority.refresh();}catch{await scheduleNotificationAuthority.unavailable();}
+    await refreshAcceptedLocationSessions();
+    const pollRetired=window.MemphisDeviceReminders?.reconcileScheduleAuthority?.();
+    // Both paths retain failed cancellation/removal work. This is NOT an ACK.
+    // Capability is the immutable platform/plugin boundary, not permission or
+    // registration readiness. Do not materialize a plugin to cancel retained
+    // work on an incapable platform. False reports skipped/preserved, not ACK
+    // or successful native cleanup; the browser presenter still retries.
+    const nativeReconciliation=notificationPresentation.snapshot().capable
+      ?nativeNotificationScheduler.reconcile():Promise.resolve(false);
+    const results=await Promise.allSettled([nativeReconciliation,notificationPresenter?.retry()]);
+    return pollRetired!==false&&results.every(result=>result.status==='fulfilled')&&results[0].value!==false;
+  }
+  // The actual normal reconciliation owns its ENTIRE async continuation,
+  // including accepted-session transport and later reminder/native writers.
+  // This keeps a committed render's scheduling notice pending until that real
+  // invocation terminates; it does not replay a callback or admit a receipt.
+  if(nativeApplicationSource)reconcileScheduleNotifications=nativeApplicationSource.wrapNativeWriter(
+    reconcileScheduleNotifications,true,'BRIDGE_RECONCILE');
   const nativeNotificationScheduler = createPrincipalNotificationScheduler({
+    nativeApplicationSource,
     identity:currentPrincipalIdentity,mutate:security.mutateProtectedWork,storage:localStorage,
+    nativeStatus:security.getStatus,requireNativeOwner:nativeVault,
     prefix:`${NATIVE_NOTIFICATION_OUTBOX_PREFIX}schedule:`,plugin:LocalNotifications,
+    isCurrent:(notification,scope)=>custodialNotificationEnabled(notification?.extra)
+      &&scheduleNotificationAuthority.isCurrent(notification?.extra,scope),
   });
 
   function notificationId(data = {}) {
@@ -1861,15 +2319,48 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     return (hash >>> 0) % 2147483647 || 1;
   }
 
+  // Rejection-only owner for these private notification ports. A principal
+  // string alone cannot let an old permission/writer await adopt a new native
+  // generation. The existing native mutator still owns every actual write.
+  function captureOriginalNotificationWriter(expectedPrincipal, expectedGeneration) {
+    const reader=security.getStatus,writer=security.mutateProtectedWork;
+    if(security.native!==true||typeof reader!=='function'||typeof writer!=='function')throw new Error('Original native notification writer unavailable.');
+    const before=reader.call(security),generation=before?.generation,principal=principalIdentity(before?.principal),device=before?.deviceId;
+    if(!principal||principal!==expectedPrincipal||!Number.isSafeInteger(generation)||generation<1
+      ||expectedGeneration!==undefined&&expectedGeneration!==generation)throw new Error('Original native notification writer changed.');
+    const current=()=>{
+      try {
+      if(security.native!==true||security.getStatus!==reader||security.mutateProtectedWork!==writer)return false;
+      const now=reader.call(security);
+      return now?.state==='enrolled'&&now.ready===true&&now.available===true&&now.quarantined===false
+        &&now.generation===generation&&now.deviceId===device&&principalIdentity(now.principal)===principal
+        &&currentPrincipalIdentity()===principal;
+      } catch { return false; }
+    };
+    const requireCurrent=()=>{if(!current())throw new Error('Original native notification writer changed.');};
+    requireCurrent();
+    return Object.freeze({generation,current,requireCurrent,checkpoint(context){
+      if(typeof context?.assertCurrent!=='function'||context.generation!==generation||context.deviceId!==device)
+        throw new Error('Original native notification checkpoint unavailable.');
+      context.assertCurrent();requireCurrent();context.assertCurrent();
+    }});
+  }
+
   async function presentForegroundNotification(event, expectedPrincipal = currentPrincipalIdentity()) {
+    if(!custodialNotificationEnabled(event?.notification?.data))return false;
     if (!notificationPresentation.native) return false;
     // OS permission can change while this page is alive. Never record displayed
     // for a schedule skipped because permission was revoked or setup changed.
+    let original=null;
     try {
+      original=nativeVault?captureOriginalNotificationWriter(expectedPrincipal):null;
+      const notificationRaw=JSON.stringify(event?.notification||{}),notification=JSON.parse(notificationRaw);
+      original?.requireCurrent();
       const permission = await LocalNotifications.checkPermissions();
+      if(original&&!original.current())return false;
+      if(JSON.stringify(event?.notification||{})!==notificationRaw)return false;
       notificationPresentation.update({ displayPermission: permission.display || 'unavailable' });
       if (!notificationPresentation.native || expectedPrincipal !== currentPrincipalIdentity()) return false;
-      const notification = event?.notification || {};
       const data = notification.data && typeof notification.data === 'object' ? notification.data : {};
       if(requiresBoundNotificationReceipt(data)&&!receiptMatchesProtectedPrincipal(
         createNativeNotificationReceipt({data,action:'received',deviceId:deviceId()}),currentPrincipal()))return false;
@@ -1881,16 +2372,18 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
           extra: data,
           autoCancel: true,
       },expectedPrincipal);
+      original?.requireCurrent();
       if(!presented)notificationPresentation.update({displayPermission:'unavailable'});
       return presented;
     } catch {
-      notificationPresentation.update({ displayPermission: 'unavailable' });
+      if(!original||original.current())notificationPresentation.update({ displayPermission: 'unavailable' });
       // Preserve uncertain intent; do not create a competing browser display.
       throw new Error('Notification scheduling requires owned reconciliation.');
     }
   }
 
   async function registerPushToken(token) {
+    requireCustodialNewProducerAdmission();
     if (!token || !['android', 'ios'].includes(Capacitor.getPlatform())) return null;
     return requestEnvelope('/employee-notifications-api/register', {
       method: 'POST',
@@ -1904,6 +2397,9 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   }
 
   async function ensurePushRegistration({ requestPermission = false } = {}) {
+    if (!custodialNewProducerAdmissionsEnabled()) {
+      return Object.freeze({ deferred: true, reason: 'custodial_new_producer_scope_deferred', registered: false });
+    }
     pushRegistrationGeneration += 1;
     pushPermissionRequested ||= requestPermission === true;
     // New lifecycle/permission intent invalidates earlier readiness immediately.
@@ -1934,6 +2430,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   }
 
   async function refreshPushRegistration({ requestPermission, generation }) {
+    requireCustodialNewProducerAdmission();
     const commit = patch => {
       if (generation === pushRegistrationGeneration) notificationPresentation.update(patch);
     };
@@ -1987,6 +2484,46 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   }
 
   async function installNotificationRouting() {
+    let eventOpenWork=Promise.resolve(),eventRoutingEpoch=0,eventRoutingClosed=false,activeEventOwner=null;
+    const eventOwner=(data={kind:'employee_event'})=>({scope:currentPrincipalIdentity(),generation:security.getStatus()?.generation,
+      epoch:eventRoutingEpoch,href:location.href,data});
+    const eventOwnerCurrent=owner=>!eventRoutingClosed&&custodialNotificationEnabled(owner.data)&&owner.scope&&Number.isSafeInteger(owner.generation)
+      &&owner.scope===currentPrincipalIdentity()&&owner.generation===security.getStatus()?.generation
+      &&owner.epoch===eventRoutingEpoch&&owner.href===location.href;
+    const eventOpenOutbox=createEventNotificationOpenOutbox({storage:localStorage,mutate:security.mutateProtectedWork,
+      // Recheck this exact action/read owner INSIDE the domain's protected
+      // mutation callback too. A new pageshow cannot revive an older epoch.
+      getPrincipal:()=>activeEventOwner&&eventOwnerCurrent(activeEventOwner)?currentPrincipal():null,
+      getGeneration:()=>security.getStatus()?.generation});
+    // Serialize only this Event source/operation owner; never hold protected
+    // mutation or the credential FIFO over a network await.
+    const queueEventOpen=(owner,work)=>{
+      const next=eventOpenWork.then(async()=>{
+        if(!eventOwnerCurrent(owner))return false;
+        activeEventOwner=owner;try{return await work();}finally{activeEventOwner=null;}
+      });
+      eventOpenWork=next.catch(()=>{});return next;
+    };
+    const flushEventOpenOutbox=createNotificationOutboxFlusher(()=>{
+      const owner=eventOwner();
+      return queueEventOpen(owner,async()=>{
+        if(!eventOwnerCurrent(owner))return false;
+        const originals=await eventOpenOutbox.pendingOriginals();
+        for(const original of originals){
+          if(!eventOwnerCurrent(owner))return false;
+          const read=eventOpenOutbox.beginOriginalReadback(original);
+          if(!read||read.generation!==owner.generation)continue;
+          try{
+            const response=await requestEnvelope(read.request.path,{method:'GET',expectedGeneration:read.generation,signal:AbortSignal.timeout(8000)});
+            if(!eventOwnerCurrent(owner))return false;
+            await eventOpenOutbox.settleOriginalReadback(read.token,response.data);
+          }catch{ /* Unknown/offline/denied originals remain saved; GET never renews POST. */ }
+        }
+        return true;
+      });
+    });
+    window.addEventListener('pagehide',()=>{eventRoutingClosed=true;eventRoutingEpoch++;});
+    window.addEventListener('pageshow',()=>{eventRoutingClosed=false;void flushEventOpenOutbox();});
     async function persistDeviceNotificationReceipt(data, action, expectedPrincipal = currentPrincipalIdentity(), ownedNotification = null, actionIsCurrent = () => true) {
       return persistBoundNativeNotificationReceipt({data,action,deviceId:deviceId(),
         getPrincipal:()=>expectedPrincipal === currentPrincipalIdentity()
@@ -1997,6 +2534,9 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         prefix:NATIVE_NOTIFICATION_OUTBOX_PREFIX});
     }
     const presentationPrefix = `${NATIVE_NOTIFICATION_OUTBOX_PREFIX}presentation:`;
+    // Exact bytes from THIS normal save/readback and exact snapshot object.
+    // Lexical weak identity only: no public registry or supplied acceptance flag.
+    const nativePresentationSaves=nativeApplicationSource?new WeakMap():null;
     const presentationIdentity = currentPrincipalIdentity;
     const validPresentation = entry => entry && entry.scope === presentationIdentity()
       && ['native','browser',null].includes(entry.owner)
@@ -2004,16 +2544,49 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       && receiptMatchesProtectedPrincipal(createNativeNotificationReceipt({
         data:entry.event.notification.data,action:'received',deviceId:deviceId()}),currentPrincipal());
     notificationPresenter = createNotificationPresenter({
+      nativeApplicationSource,
+      // Lexical SAME normal storage reader; no public registration/Boolean.
+      readSavedNativeData:(scope,key)=>localStorage.getItem(presentationPrefix+JSON.stringify([scope,key])),
+      returnedSaveNativeData:snapshot=>nativePresentationSaves?.get(snapshot)??null,
       identity:presentationIdentity,nativeMode:()=>notificationPresentation.native,
+      nativeStatus:security.getStatus,requireNativeOwner:nativeVault,
+      isCurrent:(event,scope)=>custodialNotificationEnabled(event?.notification?.data)
+        &&scheduleNotificationAuthority.isCurrent(event?.notification?.data,scope),
       nativePresent:presentForegroundNotification,
-      save:entry=>security.mutateProtectedWork(()=>{
-        if (!validPresentation(entry)) throw new Error('Notification presentation principal changed.');
+      save:(entry,canWrite=()=>true,bounds={})=>{
+        if(nativeVault&&(!Number.isSafeInteger(bounds.expectedGeneration)||bounds.expectedGeneration<1))
+          throw new Error('Original notification generation required.');
+        const original=nativeVault?captureOriginalNotificationWriter(entry.scope,bounds.expectedGeneration):null;
+        return security.mutateProtectedWork(context=>{
+        const checkpoint=()=>{original?.checkpoint(context);
+          if(!validPresentation(entry)||canWrite()!==true)throw new Error('Notification presentation principal or action lease changed.');
+          original?.checkpoint(context);};
+        checkpoint();
+        if (!Number.isSafeInteger(entry.queueOrdinal) || entry.queueOrdinal<1) {
+          let last=0;
+          for(let i=0;i<localStorage.length;i++){
+            const storedKey=localStorage.key(i);if(!storedKey?.startsWith(presentationPrefix))continue;
+            try { const stored=JSON.parse(localStorage.getItem(storedKey));
+              if(stored.scope===entry.scope&&Number.isSafeInteger(stored.queueOrdinal))last=Math.max(last,stored.queueOrdinal);
+            } catch {}
+          }
+          if(last>=Number.MAX_SAFE_INTEGER)throw new Error('Notification queue ordinal exhausted.');
+          entry.queueOrdinal=last+1;
+        }
         const key = presentationPrefix + JSON.stringify([entry.scope,entry.key]);
         const encoded = JSON.stringify({schema_version:'native-notification-presentation.v2',
-          scope:entry.scope,key:entry.key,event:entry.event,owner:entry.owner,receiptRecorded:entry.receiptRecorded===true});
+          scope:entry.scope,key:entry.key,event:entry.event,owner:entry.owner,receiptRecorded:entry.receiptRecorded===true,
+          queueOrdinal:entry.queueOrdinal,queueOrderSource:entry.queueOrderSource,
+          visualState:entry.visualState,audioState:entry.audioState});
+        checkpoint();
         localStorage.setItem(key,encoded);
+        checkpoint();
         if (localStorage.getItem(key)!==encoded) throw new Error('Notification presentation readback failed.');
-      }),
+        checkpoint();
+        try{nativePresentationSaves?.set(entry,encoded);}catch{/* DATA unavailable; ordinary save remains unchanged. */}
+        return true;
+      },{requireEnrollment:true,...(original?{expectedGeneration:original.generation}:{})});
+      },
       load:()=>security.mutateProtectedWork(()=>{
         const pending=[];
         for(let i=0;i<localStorage.length;i++){
@@ -2025,8 +2598,8 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         }
         return pending;
       }),
-      displayed:async (event,scope)=>{
-        const saved=await persistDeviceNotificationReceipt(event.notification.data,'displayed',scope);
+      displayed:async (event,scope,isCurrent)=>{
+        const saved=await persistDeviceNotificationReceipt(event.notification.data,'displayed',scope,null,isCurrent);
         if(saved===true)void flushNativeNotificationOutbox();
         return saved;
       },
@@ -2038,9 +2611,15 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         return saved;
       },
     });
-    if(notificationFallback)notificationPresenter.registerBrowser(notificationFallback);
+    // Exact normal owners; no browser callback constitutes OS settlement/ACK.
+    nativeApplicationSource?.bindNotificationOwners(Object.freeze({
+      presenter: notificationPresenter, scheduler: nativeNotificationScheduler,
+      authority: scheduleNotificationAuthority, security, providerMirror,
+      principal: currentPrincipalIdentity,
+    }));
+    if(!nativeApplicationSource&&notificationFallback)notificationPresenter.registerBrowser(notificationFallback);
     window.addEventListener('memphis:notification-mode-changed',()=>{void notificationPresenter.retry();});
-    async function persistOpenedNotification(data) {
+    async function persistOpenedNotification(data,owner=eventOwner()) {
       const notificationKey = String(data?.notification_key || '').trim();
       const kind = String(data?.kind || '').trim();
       if (!notificationKey) return;
@@ -2048,40 +2627,102 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         await persistDeviceNotificationReceipt(data, 'opened');
         return;
       }
-      const id = `${kind}:${notificationKey}`;
-      await security.mutateProtectedWork(() => localStorage.setItem(`${NATIVE_NOTIFICATION_OUTBOX_PREFIX}${id}`, JSON.stringify({
-        schema_version: 'native-notification-outbox.v1', id, kind, notification_key: notificationKey,
-        device_id: deviceId(), created_at: new Date().toISOString(), attempts: 0,
-      })));
+      // Keep the exact key, not a clipped/trimmed card value or a new v1 row.
+      const originalKey=data?.notification_key;
+      if(typeof originalKey!=='string'||originalKey!==originalKey.trim()||!originalKey
+        ||/[\u0000-\u001f\u007f]/.test(originalKey)||new TextEncoder().encode(originalKey).length>240)return false;
+      return queueEventOpen(owner,async()=>{
+        if(!eventOwnerCurrent(owner))return false;
+        const source=await eventOpenOutbox.beginCurrentEventsRead();
+        if(!source||source.generation!==owner.generation||!eventOwnerCurrent(owner))return false;
+        let alreadyOpened=false;
+        try{
+          const response=await requestEnvelope(`/employee-notifications-api/events?notification_key=${encodeURIComponent(originalKey)}`,
+            {method:'GET',expectedGeneration:source.generation,signal:AbortSignal.timeout(8000)});
+          if(!eventOwnerCurrent(owner)){eventOpenOutbox.unavailableCurrentEvents(source.token);return false;}
+          // This is the fixed ORIGINAL read, not a capped-list/card substitute.
+          if(!Array.isArray(response.data)||response.data.length!==1||response.data[0]?.notification_key!==originalKey){
+            eventOpenOutbox.unavailableCurrentEvents(source.token);return false;
+          }
+          if(!eventOpenOutbox.acceptCurrentEventsRead(source.token,response.data))return false;
+          alreadyOpened=response.data[0].event_validity==='CURRENT'&&response.data[0].state==='opened';
+        }catch{eventOpenOutbox.unavailableCurrentEvents(source.token);return false;}
+        if(!eventOwnerCurrent(owner))return false;
+        // acceptCurrentEventsRead validated the exact typed first-open receipt.
+        // Navigation may use that observation; it does not create another POST.
+        if(alreadyOpened)return true;
+        const original=await eventOpenOutbox.prepareOpen(originalKey);
+        if(!original||!eventOwnerCurrent(owner))return false;
+        const request=await eventOpenOutbox.beginOpenDispatch(original);
+        if(!request){
+          // Existing UNKNOWN or failed fence readback is not a successful
+          // action. Keep the same original and request only fixed GET recovery.
+          void flushEventOpenOutbox();return false;
+        }
+        if(request.generation!==owner.generation||!eventOwnerCurrent(owner))return false;
+        try{
+          const response=await requestEnvelope(request.path,{method:'POST',headers:request.headers,body:request.body,
+            expectedGeneration:request.generation,signal:AbortSignal.timeout(8000)});
+          if(!eventOwnerCurrent(owner))return false;
+          await eventOpenOutbox.settleOriginalOpened(original,response.data);
+        }catch{ /* DISPATCH_UNKNOWN was saved BEFORE HTTP. No generic retry or cleanup. */ }
+        return eventOwnerCurrent(owner);
+      });
     }
-    async function flushNativeNotificationOutbox() {
+    const flushNativeNotificationOutbox = createNotificationOutboxFlusher(async () => {
       const entries = [];
       for (let index = localStorage.length - 1; index >= 0; index -= 1) {
         const key = localStorage.key(index);
         if (!key?.startsWith(NATIVE_NOTIFICATION_OUTBOX_PREFIX)) continue;
         try {
-          const row = JSON.parse(localStorage.getItem(key) || 'null');
-          if (['native-notification-outbox.v1','native-notification-outbox.v2', NATIVE_NOTIFICATION_RECEIPT_SCHEMA].includes(row?.schema_version)) entries.push([key, row]);
+          const encoded = localStorage.getItem(key);
+          const row = JSON.parse(encoded || 'null');
+          if (['native-notification-outbox.v1','native-notification-outbox.v2', NATIVE_NOTIFICATION_RECEIPT_SCHEMA].includes(row?.schema_version)) entries.push([key, row, encoded]);
         } catch {}
       }
-      for (const [key, row] of entries) {
+      for (const [key, row, encoded] of entries) {
         try {
-          if (row.kind === 'employee_event') await requestEnvelope('/employee-notifications-api/opened', {
-            method: 'POST', headers: { 'Idempotency-Key': row.id }, body: { notification_key: row.notification_key },
+          if(!custodialNotificationEnabled(row))continue; // Preserve deferred history/outbox; do not mass-send it.
+          const originalPrincipal = currentPrincipal();
+          const expectedPrincipalIdentity = principalIdentity(originalPrincipal);
+          const expectedGeneration = security.getStatus()?.generation;
+          const origin = captureNotificationOutboxSettlementOrigin({
+            storage:localStorage,key,encoded,row,expectedPrincipalIdentity,expectedGeneration,
+            getPrincipal:currentPrincipal,getPrincipalIdentity:currentPrincipalIdentity,
+            getGeneration:()=>security.getStatus()?.generation,
           });
-          else {
-            const request = nativeNotificationReceiptRequest(row);
-            if (!request) throw new Error('Unsupported native notification receipt.');
-            await requestEnvelope(request.path, { method: 'POST', headers: request.headers, body: request.body });
-          }
-          await security.mutateProtectedWork(() => localStorage.removeItem(key));
+          // Legacy Event/v1/v2/unknown originals cannot acquire the next
+          // occupant's binding. The separate Event domain is mounted by main.
+          if (!origin) continue;
+          const request = nativeNotificationReceiptRequest(row);
+          if (!request || currentPrincipalIdentity() !== expectedPrincipalIdentity
+            || security.getStatus()?.generation !== expectedGeneration) continue;
+          const response = await requestEnvelope(request.path, {
+            method:'POST',headers:request.headers,body:request.body,expectedGeneration,
+          });
+          if (currentPrincipalIdentity() !== expectedPrincipalIdentity
+            || security.getStatus()?.generation !== expectedGeneration
+            || !receiptMatchesProtectedPrincipal(row,currentPrincipal())) continue;
+          await settleNotificationOutboxRow({storage:localStorage,mutate:security.mutateProtectedWork,
+            key,encoded,row,origin,request,response,delivered:true});
         } catch {
-          await security.mutateProtectedWork(() => localStorage.setItem(key, JSON.stringify({ ...row, attempts: Number(row.attempts || 0) + 1, last_attempt_at: new Date().toISOString() })));
+          // Generic transport/denial/confirmation/unknown errors cannot prove
+          // NOT_DELIVERED. Preserve the original without attempts or cleanup.
         }
       }
-    }
+    });
     const handleAction = (notification, actionId) => {
       const data=notification?.data||notification?.extra||{},bound=requiresBoundNotificationReceipt(data);
+      if(!custodialNotificationEnabled(data))return Promise.resolve(false);
+      if(data.kind==='employee_event'){
+        const original=Object.freeze({...data}),owner=eventOwner(original),route=safeNativeRoute(original.route);
+        if(actionId!=='tap'||!eventOwnerCurrent(owner)
+          ||(data.native_presentation_principal!==undefined&&data.native_presentation_principal!==owner.scope))return Promise.resolve(false);
+        return persistOpenedNotification(original,owner).then(saved=>{
+          if(saved!==true||!eventOwnerCurrent(owner))return false;
+          void flushEventOpenOutbox();if(route)location.assign(route);return true;
+        });
+      }
       const scope=bound?data.native_presentation_principal:currentPrincipalIdentity();
       if(bound&&(!scope||scope!==currentPrincipalIdentity()))return Promise.resolve(false);
       return handleNativeNotificationAction({notification,actionId,
@@ -2091,15 +2732,20 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         const route=safeNativeRoute(data.route);if(route)location.assign(route);
       }});
     };
+    // Invoking a Capacitor proxy can construct its web implementation before
+    // the awaited method settles. Never instantiate native notification plugins
+    // on an incapable platform; retain the shared browser recovery below.
+    if (notificationPresentation.snapshot().capable) {
     let localRoutingReady = false;
     try {
-      await LocalNotifications.registerActionTypes({types:[{id:'custodial-receipt-actions',actions:[{id:'acknowledge',title:'Acknowledge'}]}]});
+      if(custodialNewProducerAdmissionsEnabled())await LocalNotifications.registerActionTypes({types:[{id:'custodial-receipt-actions',actions:[{id:'acknowledge',title:'Acknowledge'}]}]});
       await LocalNotifications.addListener('localNotificationActionPerformed', (event) => { void handleAction(event?.notification || {}, event?.actionId).catch(() => {}); });
       localRoutingReady = true;
     } catch {}
     try {
       await FirebaseMessaging.addListener('tokenReceived', () => { void ensurePushRegistration(); });
       await FirebaseMessaging.addListener('notificationReceived', (event) => {
+        if(!custodialNotificationEnabled(event?.notification?.data))return;
         const arrivalPrincipal = currentPrincipalIdentity();
         void receiveNativeNotification({event,persist:(data,action)=>persistDeviceNotificationReceipt(data,action,arrivalPrincipal),
           dispatch:value=>window.dispatchEvent(new CustomEvent('memphis:native-notification-received',{detail:value||{}})),
@@ -2116,10 +2762,15 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       await FirebaseMessaging.addListener('notificationActionPerformed', (event) => { void handleAction(event?.notification || {}, event?.actionId).catch(() => {}); });
       notificationPresentation.update({ routingReady: localRoutingReady });
     } catch { notificationPresentation.update({ routingReady: false }); }
-    security.subscribe(()=>{void nativeNotificationScheduler.reconcile().catch(()=>{});});
-    await nativeNotificationScheduler.reconcile();
+    }
+    security.subscribe(value=>{scheduleNotificationAuthority.securityChanged(value);void reconcileScheduleNotifications();});
+    window.addEventListener('storage',event=>{
+      if(event.key===null||scheduleNotificationAuthority.isStorageKey(event.key))void reconcileScheduleNotifications();
+    });
+    await reconcileScheduleNotifications();
     await notificationPresenter.restore();
-    const refreshNotifications = () => { void ensurePushRegistration(); void flushNativeNotificationOutbox(); };
+    void flushEventOpenOutbox();
+    const refreshNotifications = () => { void ensurePushRegistration(); void flushNativeNotificationOutbox(); void reconcileScheduleNotifications(); void flushEventOpenOutbox(); };
     window.addEventListener('online', refreshNotifications);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshNotifications(); });
     try {
@@ -2134,32 +2785,13 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   const feedbackOutbox=createFeedbackOutbox({
     storage:localStorage,
     mutate:operation=>security.mutateProtectedWork(operation),
-    identity:async({purpose}={})=>{
-      await bridgeReady;
-      const id=deviceId();
-      const validUuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
-      const fromProfile=profile=>profile?.authenticated===true
-        && String(profile.canonical_device_id||profile.device_id||'').toUpperCase()===id
-        ? String(profile.employee_id||profile.assigned_employee_id||profile.employee?.id||'').toLowerCase():'';
-      let employeeId=fromProfile(readCustodialHomeCache()?.profile);
-      if(!validUuid(employeeId)){
-        let snapshot=null;
-        try{snapshot=JSON.parse(localStorage.getItem(`${OFFLINE_SCAN_SNAPSHOT_PREFIX}${id}`)||'null');}catch{}
-        if(snapshot?.canonical_device_id===id)employeeId=String(snapshot.employee_id||'').toLowerCase();
-      }
-      // Direct entry to Feedback is valid; visiting Home first is not an identity prerequisite.
-      // Only Save needs a current person ID. Background delivery retains each record's original ID.
-      if(!validUuid(employeeId)&&purpose==='save'&&navigator.onLine!==false&&id){
+    identity:createProtectedFeedbackIdentity({ready:()=>bridgeReady,security,currentDeviceId:deviceId,
+      online:()=>navigator.onLine!==false,
+      refreshStatus:async({expectedGeneration})=>{
         const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
-        try{
-          const response=await requestEnvelope('/device-auth/status',{signal:controller.signal});
-          const profile=response?.data;
-          employeeId=fromProfile(profile);
-          if(validUuid(employeeId))await saveCustodialHomeCache({profile});
-        }finally{clearTimeout(timer);}
-      }
-      return {deviceId:id,employeeId:validUuid(employeeId)?employeeId:''};
-    },
+        try{return (await requestEnvelope('/device-auth/status',{expectedGeneration,signal:controller.signal})).data;}
+        finally{clearTimeout(timer);}
+      }}),
     request:async(path,options)=>{
       const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),15000);
       try{return await requestEnvelope(path,{...options,signal:abort.signal});}finally{clearTimeout(timer);}
@@ -2168,10 +2800,11 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
       ? navigator.locks.request('memphis-staff-feedback-outbox',{mode:'exclusive',ifAvailable:true},held=>held?operation():[]):operation(),
     onStatus:detail=>window.dispatchEvent(new CustomEvent('memphis:staff-feedback-sync',{detail})),
   });
-  const flushFeedback=()=>{void feedbackOutbox.flush().catch(()=>{});};
+  const flushFeedback=()=>{if(CUSTODIAL_RELEASE_CAPABILITIES.feedback)void feedbackOutbox.flush().catch(()=>{});};
   const feedbackVisible=()=>{if(!document.hidden)flushFeedback();};
   let feedbackInterval=null,feedbackNetworkListener=null;
   void bridgeReady.then(async()=>{
+    if(!CUSTODIAL_RELEASE_CAPABILITIES.feedback)return;
     flushFeedback();feedbackInterval=setInterval(flushFeedback,30000);
     window.addEventListener('online',flushFeedback);document.addEventListener('visibilitychange',feedbackVisible);
     try{feedbackNetworkListener=await Network.addListener('networkStatusChange',state=>{if(state.connected)flushFeedback();});}catch{}
@@ -2185,15 +2818,18 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
   let activeGpsLifecycle = null;
   let activeGpsNetworkListener = null;
   let activeGpsResumeListener = null;
+  let activeGpsGeneration = 0;
+  let activeGpsSuspended = false;
+  let activeGpsInstalling = false;
+  let activeGpsInstalled = false;
   const activeGpsVisible = () => { if (!document.hidden) void reconcileActiveGps('visible'); };
   const activeGpsOnline = () => { void reconcileActiveGps('online'); };
+  const removeGpsListener = handle => { try { void Promise.resolve(handle?.remove?.()).catch(() => {}); } catch {} };
 
   function ensureActiveGpsLifecycle() {
     if (activeGpsLifecycle) return activeGpsLifecycle;
     activeGpsLifecycle = createActiveGpsLifecycle({
-      storage: localStorage,
-      deviceId,
-      geolocation: navigator.geolocation,
+      storage: localStorage, deviceId, geolocation: navigator.geolocation,
       enqueue: async (action) => {
         const sync = window.MemphisScanSync;
         if (typeof sync?.enqueue !== 'function' || await sync.ready !== true) {
@@ -2201,52 +2837,72 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
         }
         return sync.enqueue(action);
       },
-      onStatus: (detail) => window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail })),
+      onStatus: detail => { if (!activeGpsSuspended) window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail })); },
     });
     return activeGpsLifecycle;
   }
 
   async function reconcileActiveGps(reason = 'bridge') {
+    const generation = activeGpsGeneration;
     await bridgeReady;
-    const lifecycle = ensureActiveGpsLifecycle();
-    if (await window.MemphisScanSync?.ready !== true) return Object.freeze({ state: 'queue_unavailable' });
-    return lifecycle.reconcile(reason);
+    if (activeGpsSuspended || generation !== activeGpsGeneration) return Object.freeze({state:'disposed'});
+    if (await window.MemphisScanSync?.ready !== true) return Object.freeze({state:'queue_unavailable'});
+    if (activeGpsSuspended || generation !== activeGpsGeneration) return Object.freeze({state:'disposed'});
+    return ensureActiveGpsLifecycle().reconcile(reason);
   }
 
   async function installActiveGpsLifecycle() {
+    if (activeGpsSuspended || activeGpsInstalling || activeGpsInstalled) return;
+    activeGpsInstalling = true;
+    const generation = ++activeGpsGeneration;
+    const current = () => !activeGpsSuspended && generation === activeGpsGeneration;
     try {
       await bridgeReady;
+      if (!current()) return;
       ensureActiveGpsLifecycle();
       await window.MemphisScanSync?.ready;
+      if (!current()) return;
       void reconcileActiveGps('page_load');
       window.addEventListener('online', activeGpsOnline);
       document.addEventListener('visibilitychange', activeGpsVisible);
-      activeGpsResumeListener = await App.addListener('resume', () => { void reconcileActiveGps('app_resume'); });
-      activeGpsNetworkListener = await Network.addListener('networkStatusChange', (status) => {
-        if (status.connected) void reconcileActiveGps('network_reconnected');
+      const resume = await App.addListener('resume', () => { if(current())void reconcileActiveGps('app_resume'); });
+      if (!current()) { removeGpsListener(resume); return; }
+      activeGpsResumeListener = resume;
+      const network = await Network.addListener('networkStatusChange', status => {
+        if(current() && status.connected) void reconcileActiveGps('network_reconnected');
       });
+      if (!current()) { removeGpsListener(network); return; }
+      activeGpsNetworkListener = network;
+      activeGpsInstalled = true;
     } catch {
-      window.dispatchEvent(new CustomEvent('memphis:active-gps-state', { detail: { state: 'gps_unavailable' } }));
-    }
+      if(current())window.dispatchEvent(new CustomEvent('memphis:active-gps-state', {detail:{state:'gps_unavailable'}}));
+    } finally { if(generation === activeGpsGeneration) activeGpsInstalling = false; }
   }
 
   window.addEventListener('pagehide', () => {
-    activeGpsLifecycle?.dispose();
+    activeGpsSuspended = true;activeGpsGeneration++;
+    activeGpsInstalling = false;activeGpsInstalled = false;
+    activeGpsLifecycle?.dispose();activeGpsLifecycle = null;
     window.removeEventListener('online', activeGpsOnline);
     document.removeEventListener('visibilitychange', activeGpsVisible);
-    void activeGpsResumeListener?.remove?.();
-    void activeGpsNetworkListener?.remove?.();
-  }, { once: true });
+    removeGpsListener(activeGpsResumeListener);activeGpsResumeListener = null;
+    removeGpsListener(activeGpsNetworkListener);activeGpsNetworkListener = null;
+  });
+  window.addEventListener('pageshow', event => {
+    if(event.persisted && activeGpsSuspended) { activeGpsSuspended = false;void installActiveGpsLifecycle(); }
+  });
 
   window.fetch = bridgeFetch;
   security.subscribe(routeProtectedRecovery);
   window.MemphisMobile = Object.freeze({
     edition: 'custodial',
+    releaseCapabilities:CUSTODIAL_RELEASE_CAPABILITIES,
     ready: bridgeReady,
     whenReady: () => bridgeReady,
     requestEnvelope,
-    saveEmployeeFeedback:body=>feedbackOutbox.save(body),
-    flushEmployeeFeedback:()=>feedbackOutbox.flush(),
+    saveEmployeeFeedback:body=>CUSTODIAL_RELEASE_CAPABILITIES.feedback?feedbackOutbox.save(body):Promise.reject(new Error('Feedback is not enabled in this release.')),
+    flushEmployeeFeedback:()=>CUSTODIAL_RELEASE_CAPABILITIES.feedback?feedbackOutbox.flush():Promise.resolve([]),
+    pendingEmployeeFeedback:()=>CUSTODIAL_RELEASE_CAPABILITIES.feedback?feedbackOutbox.readPending():Promise.resolve(Object.freeze({state:'unavailable'})),
     activeGpsLifecycle: true,
     reconcileActiveGps,
     requestJson: async (path, options) => (await requestEnvelope(path, options)).data,
@@ -2256,6 +2912,7 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     loadOfflineAuthoritySnapshot,
     authorizeOfflineNewWork,
     getOfflineAuthorityState,
+    getReadinessObservation,
     beginRollbackFence,
     clearRollbackFence,
     saveCustodialHomeCache,
@@ -2283,12 +2940,48 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     get nativeNotifications() { return notificationPresentation.native; },
     get notificationPresentation() { return notificationPresentation.snapshot(); },
     registerNotificationFallback(handler) {
+      if(nativeApplicationSource)return; // Fixed native renderer cannot be publicly replaced.
       if(typeof handler!=='function')return;
       notificationFallback=handler;
       notificationPresenter?.registerBrowser(handler);
     },
+    registerProviderMirrorRenderer(renderer){if(nativeApplicationSource)return;providerMirror?.setRenderer(renderer);},
+    retryProviderMirror(){void providerMirror?.reconcile();},
     presentBrowserNotification(key,show) { return notificationPresenter?.presentBrowser(key,show) === true; },
-    retryNotificationPresentation() { return notificationPresenter?.retry(); },
+    isLunchNotificationCurrent(data,scope) {
+      // Ordinary JS presentation only. Original accepted source/recipient/
+      // bounds are checked without synthesizing receipt fields. This is not
+      // native claim/clock, ACK, delivery, finalizer or key authority.
+      const p=currentPrincipal();
+      if(!p||!scope||scope!==currentPrincipalIdentity()||data?.kind!=='employee_lunch_coverage')return false;
+      return scheduleNotificationAuthority.isCurrent(data,scope);
+    },
+    isScheduleReminderCurrent(row,scope) {
+      const p=currentPrincipal();
+      if(!p||!scope||scope!==currentPrincipalIdentity()||row?.employee_id!==p.employee_id)return false;
+      // Only presentation of an authenticated HTTP poll row. Never synthesize
+      // a provider job, native receipt or missing schedule projection.
+      return scheduleNotificationAuthority.isCurrent({kind:'employee_location_status',
+        service_date:row.service_date,projection_id:row.projection_id,
+        location_id:row.location_id,notification_key:row.notification_key,
+        ...(row.schedule_authority_revision==null?{}:{schedule_authority_revision:row.schedule_authority_revision}),
+        receipt_device_id:p.device_id,receipt_employee_id:p.employee_id,
+        receipt_credential_id:p.credential_id,receipt_assignment_epoch:p.assignment_epoch},scope);
+    },
+    retryNotificationPresentation() { return reconcileScheduleNotifications(); },
+    isLocationReminderRetired(row,scope) {
+      const p=currentPrincipal();
+      if(!p||!scope||scope!==currentPrincipalIdentity())return false;
+      if(row?.employee_id!==undefined&&row.employee_id!==p.employee_id)return false;
+      if(row?.receipt_employee_id!==undefined&&row.receipt_employee_id!==p.employee_id)return false;
+      if(row?.receipt_device_id!==undefined&&row.receipt_device_id!==p.device_id)return false;
+      if(row?.receipt_credential_id!==undefined&&row.receipt_credential_id!==p.credential_id)return false;
+      if(row?.receipt_assignment_epoch!==undefined&&String(row.receipt_assignment_epoch)!==String(p.assignment_epoch))return false;
+      return scheduleNotificationAuthority.isLocationReminderRetired({
+        ...row,kind:'employee_location_status',
+        receipt_device_id:p.device_id,receipt_employee_id:p.employee_id,
+        receipt_credential_id:p.credential_id,receipt_assignment_epoch:p.assignment_epoch},scope);
+    },
     notificationLifecycle: NATIVE_NOTIFICATION_LIFECYCLE,
   });
 
@@ -2312,4 +3005,20 @@ const PHONE_SCAN_RESUME_PREFIX = 'mz_phone_scan_resume:';
     .then(() => ensurePushRegistration({ requestPermission: false }))
     .catch(() => {});
   document.addEventListener('DOMContentLoaded', install, { once: true });
-})();
+  const installSchedule = () => {
+    if (new URL(window.location.href).pathname !== '/employee-schedule.html'||!custodialNewProducerAdmissionsEnabled()) return;
+    installEmployeeSchedule({ nativeApplicationSource });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installSchedule, { once: true });
+  else installSchedule();
+  // Native-owned reminder factory starts only after THIS normal bridge's
+  // initial security check. This is initialization, never receipt admission.
+  if(nativeApplicationSource)void bridgeReady.then(()=>nativeApplicationSource.mountReminderOwner()).catch(()=>{});
+}
+
+
+// Denial-only duplicate startup marker: no private sink or native evidence.
+// Forging it can prevent startup; it cannot create a native producer.
+if (!Object.getOwnPropertyDescriptor(globalThis, 'custodialNativeNormalApplicationOwner')) {
+  installCustodialBridge();
+}

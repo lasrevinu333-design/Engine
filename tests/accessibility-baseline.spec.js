@@ -11,7 +11,8 @@ const SYNTHETIC_MESSAGE_ID = "00000000-0000-4000-8000-000000000906";
 const SYNTHETIC_LOCATION_ID = "00000000-0000-4000-8000-000000000907";
 const SYNTHETIC_SESSION_ID = "00000000-0000-4000-8000-000000000908";
 const SYNTHETIC_NFC_ENTRY_ID = "00000000-0000-4000-8000-000000000911";
-const REQUIRED_SCHEMA_FINGERPRINT = "3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb";
+// Candidate's isolated NORMAL catalog; browser execution remains a separate gate.
+const REQUIRED_SCHEMA_FINGERPRINT = "ce1406bf491d398acb0d9d81ce1ed8f5d9ad60f503bc27585b9991c93b1b6ee2";
 
 function violationKey(item) {
   return JSON.stringify({
@@ -543,5 +544,128 @@ test.describe("current serious and critical accessibility baseline", () => {
       }
       await context.close();
     });
+  }
+});
+
+test("admin repaired four labels through ticket modal [PREP-NEW-006]", async ({ browser, baseURL }, testInfo) => {
+  const origin = new URL(baseURL);
+  expect(origin.protocol).toBe("http:");
+  expect(origin.hostname).toBe("127.0.0.1");
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 960 },
+    reducedMotion: "reduce",
+    serviceWorkers: "block",
+  });
+  const calls = { session: 0, health: 0, bundle: 0 };
+  const denied = [];
+  const unexpected = [];
+  const pageErrors = [];
+  const ticketId = "00000000-0000-4000-8000-000000000921";
+  try {
+    // Existing fixture seeds only synthetic device/cache DATA. The real page,
+    // MemphisAuth, UI module, and modal handlers are never replaced.
+    await installDeterministicRuntime(context, { surface: "admin" });
+    // Last registered route owns every request: only loopback static reads and
+    // these three inert fixture endpoints are allowed. No real auth or mutation.
+    await context.route("**/*", async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      if (url.origin === origin.origin && ["GET", "HEAD"].includes(request.method())) {
+        return route.continue();
+      }
+      const reply = (body) => route.fulfill({
+        status: 200, contentType: "application/json", body: JSON.stringify(body),
+      });
+      if (url.origin === "https://memphis-zoo-mcp.onrender.com") {
+        if (url.pathname === "/auth-api/session" && request.method() === "GET") {
+          calls.session++;
+          return reply(managerSessionPayload());
+        }
+        if (url.pathname === "/admin-api/health" && request.method() === "GET") {
+          calls.health++;
+          return reply(jsonEnvelope({ status: "UNIT synthetic admin fixture" }));
+        }
+        if (url.pathname === "/admin-api/bundle" && request.method() === "POST") {
+          calls.bundle++;
+          return reply(jsonEnvelope({
+            snapshot: {}, exceptions: [], open_sessions: [], devices: [],
+            recent_activity: [], dashboard: [],
+            tickets: [{
+              ticket_id: ticketId, maintenance_issue: "UNIT label verification only",
+              location_name: "UNIT synthetic location", location_code: "UNIT",
+              reported_by: "UNIT synthetic fixture", out_of_order: false,
+            }],
+          }));
+        }
+      }
+      const entry = { method: request.method(), origin: url.origin, path: url.pathname };
+      denied.push(entry);
+      unexpected.push(entry);
+      return route.abort("blockedbyclient");
+    });
+    const page = await context.newPage();
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.goto("/admin.html", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(new URL("/admin.html", origin).href);
+    await expect(page.locator("#message-pill")).toHaveText("Dashboard updated");
+    await expect(page.locator("#tickets-count")).toHaveText("1 tickets");
+
+    for (const [role, name, id] of [
+      ["textbox", "Action as", "actor-input"],
+      ["textbox", "Search location", "location-search"],
+      ["combobox", "Location filter", "location-filter"],
+    ]) {
+      const control = page.getByRole(role, { name, exact: true });
+      await expect(control).toHaveCount(1);
+      await expect(control).toHaveAttribute("id", id);
+      await expect(control).toBeVisible();
+      await expect(control).toHaveAccessibleName(name);
+    }
+    await expect(page.locator("#action-modal")).toHaveAttribute("aria-hidden", "true");
+    await expect(page.getByRole("textbox", { name: "Enter notes or reason", exact: true })).toHaveCount(0);
+
+    await page.getByRole("textbox", { name: "Action as", exact: true }).fill("UNIT synthetic label verifier");
+    await page.getByRole("button", { name: "Close Ticket", exact: true }).click();
+    const modal = page.locator("#action-modal");
+    await expect(modal).toBeVisible();
+    await expect(modal).toHaveAttribute("aria-hidden", "false");
+    await expect(modal.locator("#modal-title")).toHaveText("Close Maintenance Ticket");
+    await expect(modal.locator("#modal-ticket-id")).toHaveText(ticketId);
+    const notes = page.getByRole("textbox", { name: "Enter notes or reason", exact: true });
+    await expect(notes).toHaveCount(1);
+    await expect(notes).toHaveAttribute("id", "modal-textarea");
+    await expect(notes).toBeVisible();
+    await expect(notes).toHaveAccessibleName("Enter notes or reason");
+    // The actual modal changes its placeholder; that must not change its name.
+    await expect(notes).toHaveAttribute("placeholder", "Close notes. Leave blank if you just need it gone.");
+    await expect(notes).toBeFocused();
+    await notes.fill("UNIT local rendered-control check; no action submitted.");
+    await testInfo.attach("admin-ticket-modal", {
+      body: await page.screenshot(), contentType: "image/png",
+    });
+    await modal.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(modal).toHaveAttribute("aria-hidden", "true");
+    await expect(modal).toBeHidden();
+    await expect(page.getByRole("textbox", { name: "Enter notes or reason", exact: true })).toHaveCount(0);
+    await expect(page.locator("#tickets-count")).toHaveText("1 tickets");
+    expect(calls.session).toBeGreaterThan(0);
+    expect(calls.health).toBeGreaterThan(0);
+    expect(calls.bundle).toBeGreaterThan(0);
+    expect(unexpected).toEqual([]);
+    expect(denied).toEqual([]);
+    expect(pageErrors).toEqual([]);
+    await testInfo.attach("admin-four-label-result", {
+      body: JSON.stringify({
+        finding: "PREP-NEW-006", rendered_names: [
+          ["actor-input", "Action as"], ["location-search", "Search location"],
+          ["location-filter", "Location filter"], ["modal-textarea", "Enter notes or reason"],
+        ], calls, denied, pageErrors, modal_opened_and_cancelled: true,
+        backend_fixture_only: true, real_auth: false, mutations_submitted: 0,
+        genuine_manager_or_G12_proof: false,
+      }, null, 2),
+      contentType: "application/json",
+    });
+  } finally {
+    await context.close();
   }
 });

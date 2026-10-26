@@ -1,0 +1,33 @@
+package org.memphiszoo.custodial.vault;
+import java.util.*;import org.junit.Test;import static org.junit.Assert.*;
+/** Actual finite native lane; all SDK callbacks/service/focus edges are fake. */
+public final class NativeProviderAudioSequenceTest {
+    static final class Fixture implements NativeProviderAudioSequence.Surface,NativeProviderAudioSequence.Scheduler,NativeProviderAudioSequence.Owner {
+        final NativeProviderAudioSequence lane=new NativeProviderAudioSequence(new Object(),new Object(),this,this);
+        final List<String> effects=new ArrayList<>(),texts=new ArrayList<>();final Map<Object,Runnable> timers=new LinkedHashMap<>();final Map<Object,Long> delays=new HashMap<>();
+        NativeProviderAudioSequence.Result prepared,tone,speech,stop;boolean ready=true,delayReady=false,grant=true,current=true,quiet=true,release=true,settle=true;int begins,completed,stopped;
+        public void prepare(String id,NativeProviderAudioSequence.Result cb){prepared=cb;if(!delayReady)cb.done(ready);}
+        public void tone(String id,NativeProviderAudioSequence.Authority authority,NativeProviderAudioSequence.Result cb)throws Exception{authority.perform(()->effects.add("tone"));tone=cb;}
+        public void speak(String id,String text,NativeProviderAudioSequence.Authority authority,NativeProviderAudioSequence.Result cb)throws Exception{authority.perform(()->{effects.add("speech");texts.add(text);});speech=cb;}
+        public void stop(String id,NativeProviderAudioSequence.Result cb){effects.add("stop");stop=cb;if(quiet)cb.done(true);}
+        public void release(String id,NativeProviderAudioSequence.Result cb){if(release)effects.add("release");cb.done(release);}
+        public Object after(Runnable cb,long ms){Object key=new Object();timers.put(key,cb);delays.put(key,ms);return key;}
+        public void cancel(Object key){timers.remove(key);delays.remove(key);}void tick(long ms){Object k=timers.keySet().stream().filter(x->delays.get(x)==ms).findFirst().orElseThrow();Runnable cb=timers.remove(k);delays.remove(k);cb.run();}
+        public void current()throws VaultFailure{if(!current)throw new VaultFailure("custodial_provider_operation_stale");}
+        public boolean begin(){begins++;return grant;}public void completed()throws VaultFailure{if(!settle)throw new VaultFailure("custodial_provider_commit_failed_preserved");completed++;}
+        public void stopped(){stopped++;}
+        void cycle(){tone.done(true);tick(900);speech.done(true);}void full(){cycle();tick(1200);cycle();}
+    }
+    @Test public void exactTwoToneSpeechCyclesCompleteOnlyAfterQuietReadback()throws Exception{Fixture f=new Fixture();assertTrue(f.lane.start("Exact full text",f));assertEquals(1,f.begins);f.full();assertEquals(List.of("tone","speech","tone","speech","stop","release"),f.effects);assertEquals(List.of("Exact full text","Exact full text"),f.texts);assertEquals(1,f.completed);assertFalse(f.lane.busy());assertTrue(f.timers.isEmpty());}
+    @Test public void occupiedGlobalLaneCannotStartDifferentRecord()throws Exception{Fixture f=new Fixture();assertTrue(f.lane.start("First",f));assertFalse(f.lane.start("Other",f));assertEquals(1,f.begins);f.full();assertTrue(f.lane.start("Other",f));f.lane.cancel();}
+    @Test public void readinessAndAtomicRefusalProduceNoAudibleEffect()throws Exception{for(boolean ready:new boolean[]{false,true}){Fixture f=new Fixture();f.ready=ready;f.grant=false;assertFalse(f.lane.start("Text",f));assertEquals(List.of("stop","release"),f.effects);assertFalse(f.lane.busy());assertEquals(ready?1:0,f.begins);assertEquals(0,f.stopped);}}
+    @Test public void duplicateOldCallbacksCannotAdvanceOrExtendEpisode()throws Exception{Fixture f=new Fixture();f.lane.start("Text",f);NativeProviderAudioSequence.Result old=f.tone;old.done(true);old.done(true);assertEquals(1,f.timers.size());f.tick(900);old.done(true);assertEquals(2,f.effects.size());f.speech.done(true);f.tick(1200);old.done(true);f.cycle();assertEquals(1,f.completed);old.done(true);assertEquals(6,f.effects.size());}
+    @Test public void lateInterruptedCallbackCannotAffectSuccessor()throws Exception{Fixture f=new Fixture();f.lane.start("Old",f);NativeProviderAudioSequence.Result old=f.tone;f.lane.cancel();assertEquals(1,f.stopped);f.lane.start("New",f);old.done(true);assertEquals(List.of("tone","stop","release","tone"),f.effects);f.lane.cancel();}
+    @Test public void unknownStopBlocksSuccessorUntilExactQuiet()throws Exception{Fixture f=new Fixture();f.quiet=false;f.lane.start("Text",f);f.lane.cancel();assertTrue(f.lane.busy());assertFalse(f.lane.start("New",f));assertEquals(0,f.stopped);f.stop.done(false);assertTrue(f.lane.busy());f.stop.done(true);assertFalse(f.lane.busy());assertEquals(1,f.stopped);assertEquals(0,f.completed);}
+    @Test public void deadlineIsFailureNotCompletion()throws Exception{Fixture f=new Fixture();f.lane.start("Text",f);f.tick(60000);assertFalse(f.lane.busy());assertEquals(0,f.completed);assertEquals(1,f.stopped);assertEquals("custodial_provider_audio_callback_timeout",f.lane.failure());}
+    @Test public void ownerLossCancelsWithoutNewSpeechOrCompletedFact()throws Exception{Fixture f=new Fixture();f.lane.start("Text",f);f.tone.done(true);f.current=false;f.tick(900);assertEquals(List.of("tone","stop","release"),f.effects);assertEquals(0,f.completed);assertEquals(1,f.stopped);}
+    @Test public void settlementFailureAfterQuietNeverBecomesCompletion()throws Exception{Fixture f=new Fixture();f.settle=false;f.lane.start("Text",f);f.full();assertEquals(0,f.completed);assertFalse(f.lane.busy());assertEquals("custodial_provider_audio_settlement_unknown",f.lane.failure());}
+    @Test public void releaseFailureKeepsLaneClosed()throws Exception{Fixture f=new Fixture();f.release=false;f.lane.start("Text",f);f.lane.cancel();assertTrue(f.lane.busy());assertFalse(f.lane.start("New",f));f.release=true;f.lane.reconcile();assertFalse(f.lane.busy());}
+    @Test public void preparationNeverClaimsBeforeCallbackAndLostCallbackCannotStartLate()throws Exception{Fixture f=new Fixture();f.delayReady=true;f.lane.start("Text",f);assertEquals(0,f.begins);assertTrue(f.effects.isEmpty());NativeProviderAudioSequence.Result old=f.prepared;f.tick(60000);assertEquals(0,f.begins);assertEquals(0,f.stopped);old.done(true);assertEquals(List.of("stop","release"),f.effects);}
+    @Test public void principalLossDuringPreparationStopsWithoutJournalGrant()throws Exception{Fixture f=new Fixture();f.delayReady=true;f.lane.start("Text",f);f.current=false;f.prepared.done(true);assertEquals(0,f.begins);assertEquals(0,f.stopped);assertEquals(List.of("stop","release"),f.effects);}
+}

@@ -11,10 +11,13 @@ public class CustodialNavigationPolicyTest {
         checks++;
     }
 
+    @Test public void retiredEmployeeEventsPageCannotNavigate() {
+        org.junit.Assert.assertTrue(CustodialNavigationPolicy.shouldBlock("https://localhost/employee-events.html"));
+    }
     @Test public void packagedCustodialRoutesStayInside() {
         for (String page : new String[] {"/", "/app-shell.html", "/index.html", "/scan.html",
             "/employee-hub.html", "/start_page1.html", "/messages.html", "/messages-chatscope.html",
-            "/thread.html", "/employee-schedule.html", "/employee-events.html", "/events.html",
+            "/thread.html", "/employee-schedule.html", "/events.html",
             "/employee-feedback.html", "/system-feedback.html"}) {
             check("https://localhost" + page, false);
             check("https://localhost" + page + "?hub=employee&assistant=memphis", false);

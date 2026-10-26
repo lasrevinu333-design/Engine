@@ -11,11 +11,55 @@ final class AndroidProviderCipher implements ProviderRecordStore.Crypto {
     static final String KEY_ALIAS = "org.memphiszoo.custodial.native-provider.v1";
     static final Object STORE_LOCK = new Object();
     private final ProviderEnvelopeCrypto crypto;
+    private boolean creationRefused;
 
-    AndroidProviderCipher(ProviderEnvelopeCrypto.Namespace namespace) {
-        crypto = new ProviderEnvelopeCrypto(new ProviderKeys(), namespace, STORE_LOCK);
+    AndroidProviderCipher(ProviderEnvelopeCrypto.Namespace namespace, AndroidProtectedWorkPreferences work) {
+        this(new ProviderKeys(), namespace, work);
     }
-    @Override public void initialize() throws VaultFailure { crypto.initialize(); }
+    /** Existing synthetic Keys port only; production always supplies the
+     * fixed private alias and the SAME provider namespace/WORK owner. */
+    AndroidProviderCipher(ProviderEnvelopeCrypto.Keys keys, ProviderEnvelopeCrypto.Namespace namespace,
+        AndroidProtectedWorkPreferences work) {
+        if (keys == null || namespace == null || work == null)
+            throw new IllegalArgumentException("provider_key_work_dependencies_required");
+        ProviderEnvelopeCrypto.Keys guarded = new ProviderEnvelopeCrypto.Keys() {
+            @Override public SecretKey existing() throws Exception { return keys.existing(); }
+            @Override public SecretKey createInEmptyNamespace() throws Exception {
+                if (creationRefused) throw new VaultFailure("custodial_provider_key_unavailable_preserved");
+                try {
+                    return work.withOrdinaryWriteAdmission(() -> {
+                        try {
+                            // Recheck INSIDE the actual retained epoch lock.
+                            // A concurrently supplied key is never replaced.
+                            SecretKey prior = keys.existing();
+                            if (prior != null) return prior;
+                            if (!namespace.isEmpty()) throw new VaultFailure("custodial_provider_key_missing_preserved");
+                            SecretKey created = keys.createInEmptyNamespace();
+                            SecretKey readback = keys.existing();
+                            if (created == null || readback == null)
+                                throw new VaultFailure("custodial_provider_key_creation_failed");
+                            return readback;
+                        } catch (VaultFailure failure) { throw failure; }
+                        catch (Exception failure) {
+                            throw new VaultFailure("custodial_provider_key_unavailable_preserved", failure);
+                        }
+                    });
+                } catch (VaultFailure | RuntimeException | Error failure) {
+                    // Never regenerate/replay this uncertain creation attempt.
+                    // The actual epoch owner retains its durable UNKNOWN.
+                    creationRefused = true;
+                    throw failure;
+                }
+            }
+        };
+        crypto = new ProviderEnvelopeCrypto(guarded, namespace, STORE_LOCK);
+    }
+    @Override public void initialize() throws VaultFailure {
+        synchronized (STORE_LOCK) {
+            if (creationRefused) throw new VaultFailure("custodial_provider_key_unavailable_preserved");
+            crypto.initialize();
+        }
+    }
     @Override public ProviderEnvelopeCrypto.Envelope encrypt(ProviderEnvelopeCrypto.Domain domain, String recordId, char[] value) throws VaultFailure {
         return crypto.encrypt(domain, recordId, value);
     }

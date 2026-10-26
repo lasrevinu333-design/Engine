@@ -15,8 +15,10 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 /**
- * Read-once adapter for both historical stores. Cleanup removes preference
- * values before deleting keys, making every crash point safely retryable.
+ * Read-once adapter for both historical stores. Cleanup must use the exact
+ * preceding successful read's private raw-row witness, not a fresh snapshot
+ * that could silently adopt a different known credential. Readback equality
+ * is NOT a durable all-writer/ABA fence or complete key-reference authority.
  */
 final class AndroidLegacyVaultSource implements LegacyVaultSource {
     private static final String V1_PREFERENCES = "MemphisZooCustodialNativeVaultV1";
@@ -49,17 +51,50 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
         "enrollment_operation_id"
     );
 
-    private final Context context;
+    private final SharedPreferences v1Preferences,securePreferences;
+    private final AndroidProtectedWorkPreferences work;
     private final VaultClock clock;
     private KeyStore keyStore;
+    private LegacyCleanupSnapshotGuard.Captured lastSuccessfulRead;
+    private LegacyMaterial lastSuccessfulReadMaterial;
 
     AndroidLegacyVaultSource(Context context, VaultClock clock) {
-        this.context = context.getApplicationContext();
+        this(context.getApplicationContext().getSharedPreferences(V1_PREFERENCES,Context.MODE_PRIVATE),
+            context.getApplicationContext().getSharedPreferences(SECURE_PREFERENCES,Context.MODE_PRIVATE),clock,
+            AndroidOfflineAuthorityTimeStore.bindOrdinaryAdmission(context));
+    }
+
+    /** Fixed raw-preferences fixture seam, not a Context/key/auth substitute.
+     * Every construction requires the same owning WORK admission adapter. */
+    AndroidLegacyVaultSource(SharedPreferences v1,SharedPreferences secure,VaultClock clock,
+        AndroidProtectedWorkPreferences work) {
+        if(v1==null||secure==null||clock==null||work==null)throw new IllegalArgumentException("legacy_work_admission_required");
+        this.v1Preferences=v1;this.securePreferences=secure;this.work=work;
         this.clock = clock;
     }
 
     @Override
     public synchronized LegacyMaterial read() throws VaultFailure {
+        // Never reuse a witness after a failed read, even if rows later revert.
+        lastSuccessfulRead=null;
+        lastSuccessfulReadMaterial=null;
+        SharedPreferences v1=v1Preferences;
+        SharedPreferences secure=securePreferences;
+        LegacyCleanupSnapshotGuard.Captured original=LegacyCleanupSnapshotGuard.capture(v1.getAll(),secure.getAll());
+        LegacyMaterial result=null;
+        try{
+            result=readLegacyMaterial();
+            original.requireOriginal(v1.getAll(),secure.getAll());
+            lastSuccessfulRead=original;
+            lastSuccessfulReadMaterial=result;
+            return result;
+        }catch(VaultFailure|RuntimeException error){
+            if(result!=null)result.close();
+            throw error;
+        }
+    }
+
+    private LegacyMaterial readLegacyMaterial() throws VaultFailure {
         LegacyMaterial firstParty = readFirstPartyV1();
         LegacyMaterial secureStorage;
         try {
@@ -88,28 +123,61 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
 
     @Override
     public synchronized void cleanup() throws VaultFailure {
-        SharedPreferences v1 = context.getSharedPreferences(V1_PREFERENCES, Context.MODE_PRIVATE);
-        if (!v1.getAll().isEmpty() && !v1.edit().clear().commit()) {
-            throw new VaultFailure("custodial_native_legacy_cleanup_failed");
-        }
-        SharedPreferences secure = context.getSharedPreferences(SECURE_PREFERENCES, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = secure.edit();
-        for (String alias : SECURE_ALIASES) editor.remove(alias);
-        if (!editor.commit()) throw new VaultFailure("custodial_native_legacy_cleanup_failed");
+        // The unbound legacy interface cannot select whichever read was latest.
+        throw new VaultFailure("custodial_native_legacy_cleanup_failed");
+    }
 
-        try {
-            KeyStore store = store();
-            for (String alias : SECURE_ALIASES) if (store.containsAlias(alias)) store.deleteEntry(alias);
-            if (store.containsAlias(V1_ALIAS)) store.deleteEntry(V1_ALIAS);
-        } catch (Exception error) {
-            throw new VaultFailure("custodial_native_legacy_cleanup_failed", error);
+    @Override
+    public void cleanupAfterRead(LegacyMaterial expected) throws VaultFailure {
+        final LegacyCleanupSnapshotGuard.Captured original;
+        synchronized(this){
+            original=lastSuccessfulRead;boolean sameRead=expected==lastSuccessfulReadMaterial;
+            lastSuccessfulRead=null; // one-use even when ordinary admission refuses
+            lastSuccessfulReadMaterial=null;
+            if(original==null||!sameRead)throw new VaultFailure("custodial_native_legacy_cleanup_failed");
         }
+        // Never hold the source monitor while acquiring WORK/provider's lock.
+        // Engine -> WORK -> source matches the owning ordinary storage order.
+        work.withOrdinaryWorkAdmission(()->{synchronized(this){
+            SharedPreferences v1=v1Preferences,secure=securePreferences;
+            original.requireOriginal(v1.getAll(),secure.getAll());
+            if(!original.originalV1Keys().isEmpty())work.withOrdinaryWriteAdmission(()->{
+                original.requireOriginal(v1.getAll(),secure.getAll());
+                // Never clear a whole namespace: a late unknown row survives.
+                SharedPreferences.Editor first=v1.edit();
+                for(String key:original.originalV1Keys())first.remove(key);
+                if(!first.commit())throw new VaultFailure("custodial_native_legacy_cleanup_failed");
+                return null;
+            });
+            original.requireAfterV1(v1.getAll(),secure.getAll());
+            work.withOrdinaryWriteAdmission(()->{
+                original.requireAfterV1(v1.getAll(),secure.getAll());
+                SharedPreferences.Editor editor=secure.edit();
+                for(String alias:SECURE_ALIASES)editor.remove(alias);
+                if(!editor.commit())throw new VaultFailure("custodial_native_legacy_cleanup_failed");
+                return null;
+            });
+            // Key removal is a storage mutation too. The same persisted writer
+            // lock must span the final legacy-key stage; a crypto/read-only
+            // precheck could race a HELD transition in another process.
+            // The preceding exact original/read/material guards remain the
+            // authority; this scope neither widens the aliases nor thaws WORK.
+            return work.withOrdinaryWriteAdmission(()->{
+                original.requireEmpty(v1.getAll(),secure.getAll());
+                try{
+                    KeyStore store=store();
+                    for(String alias:SECURE_ALIASES)if(store.containsAlias(alias))store.deleteEntry(alias);
+                    if(store.containsAlias(V1_ALIAS))store.deleteEntry(V1_ALIAS);
+                }catch(Exception error){throw new VaultFailure("custodial_native_legacy_cleanup_failed",error);}
+                return null;
+            });
+        }});
     }
 
     @Override
     public synchronized boolean isClean() throws VaultFailure {
-        SharedPreferences v1 = context.getSharedPreferences(V1_PREFERENCES, Context.MODE_PRIVATE);
-        SharedPreferences secure = context.getSharedPreferences(SECURE_PREFERENCES, Context.MODE_PRIVATE);
+        SharedPreferences v1=v1Preferences;
+        SharedPreferences secure=securePreferences;
         if (!v1.getAll().isEmpty()) return false;
         for (String alias : SECURE_ALIASES) if (secure.contains(alias)) return false;
         try {
@@ -123,7 +191,7 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
     }
 
     private LegacyMaterial readFirstPartyV1() throws VaultFailure {
-        SharedPreferences prefs = context.getSharedPreferences(V1_PREFERENCES, Context.MODE_PRIVATE);
+        SharedPreferences prefs=v1Preferences;
         String ciphertext = prefs.getString(V1_SECRET, "");
         String iv = prefs.getString(V1_IV, "");
         if (ciphertext.isEmpty() && iv.isEmpty()) {
@@ -238,7 +306,7 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
     }
 
     private String readSecureValue(String alias) throws VaultFailure {
-        String stored = context.getSharedPreferences(SECURE_PREFERENCES, Context.MODE_PRIVATE).getString(alias, null);
+        String stored=securePreferences.getString(alias,null);
         if (stored == null) return null;
         String[] parts = stored.split(Pattern.quote(String.valueOf(SECURE_SEPARATOR)), -1);
         if (parts.length != 2) throw new VaultFailure("custodial_native_legacy_vault_invalid");

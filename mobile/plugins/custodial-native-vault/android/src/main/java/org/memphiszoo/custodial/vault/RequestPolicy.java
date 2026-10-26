@@ -82,7 +82,7 @@ final class RequestPolicy {
             throw new VaultFailure("custodial_native_body_refused");
         }
 
-        URI uri = strictUri(request.path);
+        URI uri = genericRequestUri(request);
         String pathname = uri.getRawPath();
         // Native-only provider operations are never an arbitrary WebView signing service.
         // strictUri already rejects encoded, trailing-slash and ambiguous path aliases.
@@ -105,6 +105,20 @@ final class RequestPolicy {
         inspectHeaders(request.headers, deviceId);
         inspectBodyIdentity(request.body, request.headers, deviceId);
         return new AuthorizedRequest(request.path, method, request.headers, request.body);
+    }
+
+    /** Pure generic-entry guard, before any vault recovery, credential read or
+     * transport. Caller JSON cannot prove actual notification application.
+     * A future native-owned application journal must use its own fixed path;
+     * no flag or public request DTO enables this generic signing service. */
+    static URI genericRequestUri(AuthorizedRequest request) throws VaultFailure {
+        URI uri = strictUri(request.path);
+        String path = uri.getRawPath().toLowerCase(Locale.ROOT);
+        String receipt = "/schedule-api/my-day-summary/delivery-receipt";
+        if (path.equals(receipt) || path.startsWith(receipt + "/")) {
+            throw new VaultFailure("custodial_native_schedule_application_path_refused");
+        }
+        return uri;
     }
 
     private static URI strictUri(String value) throws VaultFailure {

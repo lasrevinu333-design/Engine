@@ -1,0 +1,768 @@
+[
+  {
+    "name": "NativeProviderClaims.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "b44286b671426a6af11df42780f5d5a764082959911af71d5660072fd56aa5e0",
+    "current_sha256": "64272a1bb5e62848b6f1132e8da157768f4fe4563116208d6600183079d84688",
+    "hunks": [
+      {
+        "new_start": 19,
+        "new_count": 1,
+        "before": [
+          "            boolean historical = observation.authenticatedAt == null || observation.authenticatedAt.isBefore(presentation.payload.reservedAt)",
+          "                || !observation.authenticatedAt.isBefore(presentation.payload.validUntil);"
+        ],
+        "after": [
+          "            boolean historical = !NativeProviderTime.live(observation.bounds, presentation.payload.reservedAt, presentation.payload.validUntil);"
+        ]
+      },
+      {
+        "new_start": 58,
+        "new_count": 1,
+        "before": [
+          "                boolean live = observation.authenticatedAt != null && !observation.authenticatedAt.isBefore(presentation.payload.reservedAt)",
+          "                    && observation.authenticatedAt.isBefore(presentation.payload.validUntil);"
+        ],
+        "after": [
+          "                boolean live = NativeProviderTime.live(observation.bounds, presentation.payload.reservedAt, presentation.payload.validUntil);"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderClockExchange.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "6b7e8b43173c8de407034e76462e8356869b83c5ba892293d900229ca4c8c1ae",
+    "current_sha256": "d2fbc56a8818a459a8c4d29d31d63408fc5430de445e14e54facdfb28fb836b8",
+    "hunks": [
+      {
+        "new_start": 26,
+        "new_count": 2,
+        "before": [],
+        "after": [
+          "            || path == null || !path.matches(\"/employee-notifications-api/native-provider/(register|status|inventory|events)\")",
+          "            || bodySha256 == null || !bodySha256.matches(\"[0-9a-f]{64}\")"
+        ]
+      },
+      {
+        "new_start": 44,
+        "new_count": 18,
+        "before": [],
+        "after": [
+          "        JSONObject json() throws Exception {",
+          "            return new JSONObject().put(\"request_id\",requestId).put(\"path\",path).put(\"body_sha256\",bodySha256)",
+          "                .put(\"before_elapsed_ms\",before.elapsedMillis).put(\"after_elapsed_ms\",after.elapsedMillis).put(\"boot_count\",before.bootCount)",
+          "                .put(\"server_now\",NativeProviderTime.canonical(serverMicros)).put(\"valid_until\",NativeProviderTime.canonical(validUntilMicros));",
+          "        }",
+          "        /** Only encrypted provider records may use this restore seam. Restoring",
+          "         * transport facts does NOT produce Bounds; every use rechecks native pin. */",
+          "        static Unqualified restore(JSONObject value) throws Exception {",
+          "            exact(value,\"request_id\",\"path\",\"body_sha256\",\"before_elapsed_ms\",\"after_elapsed_ms\",\"boot_count\",\"server_now\",\"valid_until\");",
+          "            for(String field:new String[]{\"before_elapsed_ms\",\"after_elapsed_ms\",\"boot_count\"})",
+          "                if(!(value.get(field) instanceof Integer || value.get(field) instanceof Long))throw invalid();",
+          "            long boot=value.getLong(\"boot_count\"); if(boot<0 || boot>Integer.MAX_VALUE)throw invalid();",
+          "            NativeProviderClockExchange exchange=new NativeProviderClockExchange(new AuthorizedResponse(200,java.util.Collections.emptyMap(),new byte[0]),",
+          "                value.getString(\"request_id\"),value.getString(\"path\"),value.getString(\"body_sha256\"),",
+          "                new Point(value.getLong(\"before_elapsed_ms\"),(int)boot),new Point(value.getLong(\"after_elapsed_ms\"),(int)boot));",
+          "            return exchange.validateClock(new JSONObject().put(\"native_request_id\",exchange.requestId)",
+          "                .put(\"server_now\",value.get(\"server_now\")).put(\"valid_until\",value.get(\"valid_until\")));",
+          "        }"
+        ]
+      },
+      {
+        "new_start": 89,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "            if (((String)value).startsWith(\"0000-\")) throw invalid();"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderClockOwner.java",
+    "origin": null,
+    "current_sha256": "79ef2939abb1bef1d4f86eb29215bc39f64eb78d2becae466b759f53f0c36ba8"
+  },
+  {
+    "name": "NativeProviderEventReceipts.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "1235ba1c4e1a1b0a53c122ccc33e09f40ad1e9359129a72c5a696498995a926a",
+    "current_sha256": "8f15b357ece3292f18b86fba5387130e71d65815857e5e176ccad3a04529616b",
+    "hunks": [
+      {
+        "new_start": 14,
+        "new_count": 1,
+        "before": [
+          "    static final String SCHEMA = \"custodial.native-provider-event-receipt.v1\";"
+        ],
+        "after": [
+          "    static final String SCHEMA = \"custodial.native-provider-event-receipt.v2\";"
+        ]
+      },
+      {
+        "new_start": 29,
+        "new_count": 1,
+        "before": [
+          "            if (!\"custodial.native-provider-event-receipts.v1\".equals(data.get(\"schema\"))) throw invalid();"
+        ],
+        "after": [
+          "            if (!\"custodial.native-provider-event-receipts.v2\".equals(data.get(\"schema\"))) throw invalid();"
+        ]
+      },
+      {
+        "new_start": 53,
+        "new_count": 7,
+        "before": [
+          "            JSONObject observation = result.getJSONObject(\"original_observation\"); exact(observation, \"authenticated_at\", \"elapsed_realtime_ms\", \"boot_count\");",
+          "            for (String field : new String[]{\"elapsed_realtime_ms\", \"boot_count\"})",
+          "                if (observation.get(field) != JSONObject.NULL) strictInteger(observation.get(field), false);",
+          "            if (observation.get(\"authenticated_at\") != JSONObject.NULL) {",
+          "                if (observation.get(\"elapsed_realtime_ms\") == JSONObject.NULL || observation.get(\"boot_count\") == JSONObject.NULL) return false;",
+          "                if (!(observation.get(\"authenticated_at\") instanceof String)) return false;",
+          "                NativeProviderPayload.timestamp(observation.getString(\"authenticated_at\"));",
+          "            }"
+        ],
+        "after": [
+          "            NativeProviderObservationWire.validate(result.getJSONObject(\"original_observation\"), false);",
+          "            NativeProviderObservationWire.validate(result.getJSONObject(\"admission_bounds\"), true);",
+          "            if (NativeProviderClockExchange.micros(result.getJSONObject(\"admission_bounds\").get(\"earliest_at\"))",
+          "                > NativeProviderClockExchange.micros(result.get(\"server_received_at\"))) return false;",
+          "            if (!result.getJSONObject(\"original_observation\").isNull(\"earliest_at\")",
+          "                && NativeProviderClockExchange.micros(result.getJSONObject(\"original_observation\").get(\"earliest_at\"))",
+          "                    > NativeProviderClockExchange.micros(result.get(\"server_received_at\"))) return false;"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderHttp.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "241db0a5249f550c0f3dfb0f46b1dda68260b81ecb1543bca51776cd8eaad982",
+    "current_sha256": "622ad61ef62f985d3a0237ec1e8bd1ac95fda92d7b2e2ad8a7961fd682a44ac5",
+    "hunks": [
+      {
+        "new_start": 68,
+        "new_count": 1,
+        "before": [
+          "    AuthorizedResponse inventory(NativeProviderInventory.Request request, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {"
+        ],
+        "after": [
+          "    NativeProviderClockExchange inventory(NativeProviderInventory.Request request, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {"
+        ]
+      },
+      {
+        "new_start": 73,
+        "new_count": 1,
+        "before": [
+          "                java.util.Collections.singletonMap(\"Content-Type\", \"application/json; charset=utf-8\"), body), deviceId, credential, attempt).response;"
+        ],
+        "after": [
+          "                java.util.Collections.singletonMap(\"Content-Type\", \"application/json; charset=utf-8\"), body), deviceId, credential, attempt);"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderInventory.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "61729eb16d2d19154e12116a0b91babc0115e9cc1071a87b3e209cba7285a5d3",
+    "current_sha256": "d4f6e1f9552badc123591c724670d6f57763226c2e2853f57f8a2d19119a3ea0",
+    "hunks": [
+      {
+        "new_start": 72,
+        "new_count": 23,
+        "before": [],
+        "after": [
+          "    static final class CheckedExchange {",
+          "        final Page page; final NativeProviderClockExchange.Unqualified clock;",
+          "        CheckedExchange(Page page,NativeProviderClockExchange.Unqualified clock){this.page=page;this.clock=clock;}",
+          "    }",
+          "    static CheckedExchange validateExchange(Request request,NativeProviderClockExchange exchange) throws VaultFailure {",
+          "        byte[] bytes=null;",
+          "        try {",
+          "            if(request==null||exchange==null||!\"/employee-notifications-api/native-provider/inventory\".equals(exchange.path))throw invalid();",
+          "            bytes=request.body();StringBuilder digest=new StringBuilder();",
+          "            for(byte b:java.security.MessageDigest.getInstance(\"SHA-256\").digest(bytes))digest.append(String.format(java.util.Locale.ROOT,\"%02x\",b&255));",
+          "            if(!digest.toString().equals(exchange.bodySha256))throw invalid();",
+          "            JSONObject envelope=ProviderWireJson.object(exchange.response.body,262144);exact(envelope,\"ok\",\"data\",\"clock\");",
+          "            NativeProviderClockExchange.Unqualified clock=exchange.validateClock(envelope.getJSONObject(\"clock\"));",
+          "            Page page=validateResponse(request,new AuthorizedResponse(exchange.response.status,exchange.response.headers,",
+          "                new JSONObject().put(\"ok\",envelope.get(\"ok\")).put(\"data\",envelope.get(\"data\")).toString().getBytes(StandardCharsets.UTF_8)));",
+          "            // Frozen pagination time is not a fresh clock sample.",
+          "            if(NativeProviderClockExchange.micros(page.data().get(\"server_now\"))>clock.serverMicros)throw invalid();",
+          "            return new CheckedExchange(page,clock);",
+          "        } catch(VaultFailure error){throw error;}",
+          "        catch(Exception error){throw new VaultFailure(\"custodial_provider_inventory_invalid\",error);}",
+          "        finally {if(bytes!=null)Arrays.fill(bytes,(byte)0);}",
+          "    }",
+          "    /** Pure page admission seam, cannot create a provider clock. Runtime uses validateExchange. */"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderJournal.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "718044366de45276382aa54922b1ef92aef65baec59af26a99ae0ef0e38b9699",
+    "current_sha256": "c5be172f1107eeb879bd7fc0fa31da18f6064b3cbe7c8a4c311ef6ccce3ac724",
+    "hunks": [
+      {
+        "new_start": 95,
+        "new_count": 2,
+        "before": [
+          "    /** Original native observation. Time may be unknown; never substitute Android/browser wall time.",
+          "     * Runtime must supply authenticated OfflineAuthorityTime plus actual monotonic boot/elapsed values. */"
+        ],
+        "after": [
+          "    /** Original native observation. Unknown time stays unknown on later admission.",
+          "     * Bounds can originate only from the provider-only qualified interval owner. */"
+        ]
+      },
+      {
+        "new_start": 98,
+        "new_count": 1,
+        "before": [
+          "        final Instant authenticatedAt;"
+        ],
+        "after": [
+          "        final NativeProviderTime.Bounds bounds;"
+        ]
+      },
+      {
+        "new_start": 101,
+        "new_count": 3,
+        "before": [
+          "        Observation(Instant authenticatedAt, long elapsedRealtimeMillis, int bootCount) throws VaultFailure {",
+          "            if (elapsedRealtimeMillis < -1 || bootCount < -1 || (authenticatedAt != null",
+          "                && (elapsedRealtimeMillis < 0 || bootCount < 0 || authenticatedAt.getNano() % 1000 != 0)))"
+        ],
+        "after": [
+          "        Observation(NativeProviderTime.Bounds bounds, long elapsedRealtimeMillis, int bootCount) throws VaultFailure {",
+          "            if (elapsedRealtimeMillis < -1 || bootCount < -1 || (bounds != null",
+          "                && (bounds.point.elapsedMillis != elapsedRealtimeMillis || bounds.point.bootCount != bootCount)))"
+        ]
+      },
+      {
+        "new_start": 105,
+        "new_count": 1,
+        "before": [
+          "            this.authenticatedAt = authenticatedAt; this.elapsedRealtimeMillis = elapsedRealtimeMillis; this.bootCount = bootCount;"
+        ],
+        "after": [
+          "            this.bounds = bounds; this.elapsedRealtimeMillis = elapsedRealtimeMillis; this.bootCount = bootCount;"
+        ]
+      },
+      {
+        "new_start": 108,
+        "new_count": 3,
+        "before": [
+          "            return new JSONObject().put(\"authenticated_at\", authenticatedAt == null ? JSONObject.NULL : canonicalTime(authenticatedAt))"
+        ],
+        "after": [
+          "            return new JSONObject().put(\"earliest_at\", bounds == null ? JSONObject.NULL : bounds.earliest())",
+          "                .put(\"latest_at\", bounds == null ? JSONObject.NULL : bounds.latest())",
+          "                .put(\"clock_profile_id\", bounds == null ? JSONObject.NULL : bounds.profileId)"
+        ]
+      },
+      {
+        "new_start": 126,
+        "new_count": 2,
+        "before": [
+          "            JSONObject value = new JSONObject().put(\"schema\", \"custodial.native-provider-event.v1\");"
+        ],
+        "after": [
+          "            if (!intervalRecord(event)) throw new VaultFailure(\"custodial_provider_historical_time_unqualified\");",
+          "            JSONObject value = new JSONObject().put(\"schema\", \"custodial.native-provider-event.v2\");"
+        ]
+      },
+      {
+        "new_start": 129,
+        "new_count": 1,
+        "before": [
+          "                \"receipt_credential_id\", \"receipt_employee_id\", \"receipt_device_id\", \"principal_digest\", \"token_digest\", \"original_observation\", \"admitted_at\"})"
+        ],
+        "after": [
+          "                \"receipt_credential_id\", \"receipt_employee_id\", \"receipt_device_id\", \"principal_digest\", \"token_digest\", \"original_observation\", \"admission_bounds\"})"
+        ]
+      },
+      {
+        "new_start": 149,
+        "new_count": 1,
+        "before": [
+          "                byte[] bytes = new JSONObject().put(\"schema\", \"custodial.native-provider-events.v1\").put(\"events\", list).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);"
+        ],
+        "after": [
+          "                byte[] bytes = new JSONObject().put(\"schema\", \"custodial.native-provider-events.v2\").put(\"events\", list).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);"
+        ]
+      },
+      {
+        "new_start": 162,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "                if (!intervalRecord(event)) continue; // Preserve historical point receipt, never promote it."
+        ]
+      },
+      {
+        "new_start": 377,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "            if (!intervalRecord(record)) throw new VaultFailure(\"custodial_provider_historical_time_unqualified\");"
+        ]
+      },
+      {
+        "new_start": 388,
+        "new_count": 1,
+        "before": [
+          "                if (\"CURRENT\".equals(record.getString(\"authority_state\")) && current.same(NativeProviderPrincipal.fromNativeJournal(record.getJSONObject(\"principal\")))) ids.add(key.id);"
+        ],
+        "after": [
+          "                if (intervalRecord(record) && \"CURRENT\".equals(record.getString(\"authority_state\")) && current.same(NativeProviderPrincipal.fromNativeJournal(record.getJSONObject(\"principal\")))) ids.add(key.id);"
+        ]
+      },
+      {
+        "new_start": 522,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "        if (!intervalRecord(record)) throw new VaultFailure(\"custodial_provider_historical_time_unqualified\");"
+        ]
+      },
+      {
+        "new_start": 533,
+        "new_count": 2,
+        "before": [
+          "        if (observation == null || observation.authenticatedAt == null || observation.authenticatedAt.isBefore(payload.reservedAt)",
+          "            || !observation.authenticatedAt.isBefore(payload.validUntil)) throw new VaultFailure(\"custodial_provider_display_time_unavailable\");"
+        ],
+        "after": [
+          "        if (observation == null || !NativeProviderTime.live(observation.bounds, payload.reservedAt, payload.validUntil))",
+          "            throw new VaultFailure(\"custodial_provider_display_time_unavailable\");"
+        ]
+      },
+      {
+        "new_start": 539,
+        "new_count": 1,
+        "before": [
+          "        JSONObject event = new JSONObject().put(\"schema\", SCHEMA).put(\"event_id\", id).put(\"record_id\", payload.recordId)"
+        ],
+        "after": [
+          "        JSONObject event = new JSONObject().put(\"schema\", SCHEMA).put(\"interval_version\", 2).put(\"event_id\", id).put(\"record_id\", payload.recordId)"
+        ]
+      },
+      {
+        "new_start": 542,
+        "new_count": 1,
+        "before": [
+          "            .put(\"original_observation\", observation.json()).put(\"admitted_at\", record.getString(\"accepted_at\"));"
+        ],
+        "after": [
+          "            .put(\"original_observation\", observation.json()).put(\"admission_bounds\", record.getJSONObject(\"admission_bounds\"));"
+        ]
+      },
+      {
+        "new_start": 552,
+        "new_count": 1,
+        "before": [
+          "            if (limit < 1 || limit > 16 || observation == null || observation.authenticatedAt == null)"
+        ],
+        "after": [
+          "            if (limit < 1 || limit > 16 || observation == null || observation.bounds == null)"
+        ]
+      },
+      {
+        "new_start": 560,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "                    if (!intervalRecord(tombstone)) continue;"
+        ]
+      },
+      {
+        "new_start": 562,
+        "new_count": 1,
+        "before": [
+          "                    if (!observation.authenticatedAt.isBefore(NativeProviderPayload.timestamp(tombstone.getString(\"dedupe_until\")))) { removals.add(key); compacted++; }"
+        ],
+        "after": [
+          "                    if (NativeProviderTime.reached(observation.bounds, NativeProviderPayload.timestamp(tombstone.getString(\"dedupe_until\")))) { removals.add(key); compacted++; }"
+        ]
+      },
+      {
+        "new_start": 567,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "                if (!intervalRecord(record)) continue;"
+        ]
+      },
+      {
+        "new_start": 570,
+        "new_count": 1,
+        "before": [
+          "                if (observation.authenticatedAt.isBefore(payload.validUntil) || !\"DISPLAYED\".equals(record.get(\"display_state\"))"
+        ],
+        "after": [
+          "                if (!NativeProviderTime.reached(observation.bounds, payload.validUntil) || !\"DISPLAYED\".equals(record.get(\"display_state\"))"
+        ]
+      },
+      {
+        "new_start": 593,
+        "new_count": 1,
+        "before": [
+          "                JSONObject tombstone = new JSONObject().put(\"schema\", SCHEMA).put(\"authority_state\", \"CURRENT\").put(\"state\", \"EXPIRED_SETTLED\")"
+        ],
+        "after": [
+          "                JSONObject tombstone = new JSONObject().put(\"schema\", SCHEMA).put(\"interval_version\", 2).put(\"authority_state\", \"CURRENT\").put(\"state\", \"EXPIRED_SETTLED\")"
+        ]
+      },
+      {
+        "new_start": 608,
+        "new_count": 1,
+        "before": [
+          "        if (record.length() != 13 || !\"EXPIRED_SETTLED\".equals(record.get(\"state\")) || !key.id.equals(record.get(\"record_id\"))) throw corrupt();"
+        ],
+        "after": [
+          "        if (record.length() != (intervalRecord(record) ? 14 : 13) || !\"EXPIRED_SETTLED\".equals(record.get(\"state\")) || !key.id.equals(record.get(\"record_id\"))) throw corrupt();"
+        ]
+      },
+      {
+        "new_start": 654,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "                if (!intervalRecord(existing)) return new Arrival(payload.recordId, \"HISTORICAL_TIME_UNQUALIFIED\", false);"
+        ]
+      },
+      {
+        "new_start": 658,
+        "new_count": 2,
+        "before": [
+          "            String reason = admissionWaitReason(meta, generation, payload, observation.authenticatedAt);",
+          "            if (observation.authenticatedAt != null && !observation.authenticatedAt.isBefore(payload.validUntil))"
+        ],
+        "after": [
+          "            String reason = admissionWaitReason(meta, generation, payload, observation.bounds);",
+          "            if (NativeProviderTime.reached(observation.bounds, payload.validUntil))"
+        ]
+      },
+      {
+        "new_start": 662,
+        "new_count": 1,
+        "before": [
+          "            JSONObject record = existing == null ? new JSONObject().put(\"schema\", SCHEMA).put(\"record_id\", payload.recordId)"
+        ],
+        "after": [
+          "            JSONObject record = existing == null ? new JSONObject().put(\"schema\", SCHEMA).put(\"interval_version\", 2).put(\"record_id\", payload.recordId)"
+        ]
+      },
+      {
+        "new_start": 672,
+        "new_count": 1,
+        "before": [
+          "            record.put(\"state\", \"ADMITTED\").put(\"quarantine_reason\", JSONObject.NULL).put(\"accepted_at\", canonicalTime(observation.authenticatedAt))"
+        ],
+        "after": [
+          "            record.put(\"state\", \"ADMITTED\").put(\"quarantine_reason\", JSONObject.NULL).put(\"admission_bounds\", observation.json())"
+        ]
+      },
+      {
+        "new_start": 678,
+        "new_count": 1,
+        "before": [
+          "            JSONObject event = new JSONObject().put(\"schema\", SCHEMA).put(\"event_id\", eventId).put(\"record_id\", payload.recordId)"
+        ],
+        "after": [
+          "            JSONObject event = new JSONObject().put(\"schema\", SCHEMA).put(\"interval_version\", 2).put(\"event_id\", eventId).put(\"record_id\", payload.recordId)"
+        ]
+      },
+      {
+        "new_start": 681,
+        "new_count": 1,
+        "before": [
+          "                .put(\"original_observation\", record.getJSONObject(\"received_observation\")).put(\"admitted_at\", canonicalTime(observation.authenticatedAt));"
+        ],
+        "after": [
+          "                .put(\"original_observation\", record.getJSONObject(\"received_observation\")).put(\"admission_bounds\", observation.json());"
+        ]
+      },
+      {
+        "new_start": 704,
+        "new_count": 1,
+        "before": [
+          "    private static String admissionWaitReason(JSONObject meta, JSONObject generation, NativeProviderPayload payload, Instant now) throws Exception {"
+        ],
+        "after": [
+          "    private static String admissionWaitReason(JSONObject meta, JSONObject generation, NativeProviderPayload payload, NativeProviderTime.Bounds now) throws Exception {"
+        ]
+      },
+      {
+        "new_start": 717,
+        "new_count": 1,
+        "before": [
+          "        if (now == null || now.isBefore(payload.reservedAt)) return \"AUTHENTICATED_TIME_UNCERTAIN\";"
+        ],
+        "after": [
+          "        if (!NativeProviderTime.live(now, payload.reservedAt, payload.validUntil)) return \"AUTHENTICATED_TIME_UNCERTAIN\";"
+        ]
+      },
+      {
+        "new_start": 720,
+        "new_count": 1,
+        "before": [],
+        "after": [
+          "    private static boolean intervalRecord(JSONObject value) { return Integer.valueOf(2).equals(value.opt(\"interval_version\")); }"
+        ]
+      },
+      {
+        "new_start": 914,
+        "new_count": 107,
+        "before": [],
+        "after": [
+          "    /** Provider-only conditional sample, one bounded encrypted record per existing",
+          "     * retained generation. Historical receipts and cleaning stores are untouched. */",
+          "    Prepared currentClockGeneration(NativeProviderPrincipal current) throws VaultFailure {",
+          "        return transition(() -> {",
+          "            ProviderRecordStore.Snapshot snapshot=store.load(); JSONObject meta=metadata(snapshot);requireAvailable(meta,current);",
+          "            if(meta.isNull(\"current_generation\")||!meta.isNull(\"pending_generation\"))throw new VaultFailure(\"custodial_provider_operation_stale\");",
+          "            Prepared result=new Prepared(required(snapshot,generationKey(meta.getString(\"current_generation\"))));",
+          "            requireConfirmedStatus(snapshot,meta,current,result);return result;",
+          "        });",
+          "    }",
+          "    boolean acceptClock(NativeProviderPrincipal current,long engineRevision,Prepared expected,long epoch,",
+          "        NativeProviderClockExchange.Unqualified sample,NativeProviderTime.Profile profile,NativeProviderTime.Platform platform,",
+          "        NativeProviderClockExchange.Point point) throws VaultFailure {",
+          "        return transition(() -> {",
+          "            ProviderRecordStore.Snapshot snapshot=store.load();JSONObject meta=metadata(snapshot);requireAvailable(meta,current);",
+          "            if(expected==null||engineRevision<0||number(meta,\"invalidation_epoch\")!=epoch)throw new VaultFailure(\"custodial_provider_operation_stale\");",
+          "            requireConfirmedStatus(snapshot,meta,current,expected);",
+          "            NativeProviderTime.Bounds fresh=NativeProviderTime.observe(sample,profile,platform,point);",
+          "            if(fresh==null)return false; // UNKNOWN never replaces or deletes original sample.",
+          "            ProviderRecordStore.Key key=clockKey(expected.generationId);JSONObject old=snapshot.keys().contains(key)?clockRecord(snapshot,key):null;",
+          "            if(old!=null){",
+          "                if(!\"CURRENT\".equals(old.getString(\"authority_state\"))||!current.same(NativeProviderPrincipal.fromNativeJournal(old.getJSONObject(\"principal\"))))",
+          "                    throw new VaultFailure(\"custodial_provider_operation_stale\");",
+          "                if(\"FENCED\".equals(old.getString(\"state\")))return false; // Explicit new generation/requalification needed, not automatic clock forgiveness.",
+          "                NativeProviderClockExchange.Unqualified previous=NativeProviderClockExchange.Unqualified.restore(old.getJSONObject(\"sample\"));",
+          "                if(previous.requestId.equals(sample.requestId)){",
+          "                    if(!NativeLegacyLineageJournal.same(previous.json(),sample.json()))throw corrupt();",
+          "                    return clockBoundTo(old,current,engineRevision,meta,profile)&&NativeProviderTime.observe(previous,profile,platform,point)!=null;",
+          "                }",
+          "                boolean conflict=sample.serverMicros<previous.serverMicros||sample.before.bootCount<number(old,\"last_observed_boot_count\");",
+          "                if(number(old,\"last_observed_boot_count\")==sample.before.bootCount){",
+          "                    conflict|=sample.before.elapsedMillis<number(old,\"last_observed_elapsed_ms\");",
+          "                }",
+          "                if(previous.after.bootCount==sample.before.bootCount){",
+          "                    if(profile.fingerprint().equals(old.getString(\"profile_fingerprint\"))){",
+          "                        NativeProviderTime.Bounds priorNow=NativeProviderTime.observe(previous,profile,platform,point);",
+          "                        if(priorNow!=null&&!NativeProviderTime.overlaps(priorNow,fresh))conflict=true;",
+          "                    }",
+          "                }",
+          "                if(conflict){",
+          "                    old.put(\"state\",\"FENCED\").put(\"conflicting_sample\",sample.json());",
+          "                    Map<ProviderRecordStore.Key,char[]> writes=new HashMap<>();put(writes,key,old);commit(snapshot,writes);return false;",
+          "                }",
+          "            }",
+          "            JSONObject record=new JSONObject().put(\"schema\",SCHEMA).put(\"clock_version\",1).put(\"state\",\"CURRENT\").put(\"authority_state\",\"CURRENT\")",
+          "                .put(\"principal\",current.json()).put(\"principal_digest\",current.digest).put(\"engine_revision\",engineRevision)",
+          "                .put(\"provider_epoch\",epoch).put(\"binding_id\",meta.get(\"binding_id\")).put(\"generation_id\",expected.generationId)",
+          "                .put(\"profile_id\",profile.id).put(\"profile_fingerprint\",profile.fingerprint()).put(\"sample\",sample.json())",
+          "                .put(\"last_observed_elapsed_ms\",point.elapsedMillis).put(\"last_observed_boot_count\",point.bootCount).put(\"conflicting_sample\",JSONObject.NULL);",
+          "            Map<ProviderRecordStore.Key,char[]> writes=new HashMap<>();put(writes,key,record);commit(snapshot,writes);return true;",
+          "        });",
+          "    }",
+          "    Observation clockObservation(NativeProviderPrincipal current,long engineRevision,NativeProviderTime.Profile profile,",
+          "        NativeProviderTime.Platform platform,NativeProviderClockExchange.Point point) throws VaultFailure {",
+          "        return transition(() -> {",
+          "            Observation unknown=new Observation(null,point.elapsedMillis,point.bootCount);",
+          "            ProviderRecordStore.Snapshot snapshot=store.load();JSONObject meta=metadata(snapshot);requireAvailable(meta,current);",
+          "            if(profile==null||!profile.matches(platform)||meta.isNull(\"current_generation\")||!meta.isNull(\"pending_generation\"))return unknown;",
+          "            ProviderRecordStore.Key key=clockKey(meta.getString(\"current_generation\"));if(!snapshot.keys().contains(key))return unknown;",
+          "            JSONObject record=clockRecord(snapshot,key);if(!clockBoundTo(record,current,engineRevision,meta,profile))return unknown;",
+          "            NativeProviderClockExchange.Unqualified sample=NativeProviderClockExchange.Unqualified.restore(record.getJSONObject(\"sample\"));",
+          "            if(point.bootCount<number(record,\"last_observed_boot_count\")",
+          "                ||(point.bootCount==number(record,\"last_observed_boot_count\")&&point.elapsedMillis<number(record,\"last_observed_elapsed_ms\"))){",
+          "                record.put(\"state\",\"FENCED\");Map<ProviderRecordStore.Key,char[]> writes=new HashMap<>();put(writes,key,record);commit(snapshot,writes);return unknown;",
+          "            }",
+          "            NativeProviderTime.Bounds bounds=NativeProviderTime.observe(sample,profile,platform,point);",
+          "            if(bounds==null){",
+          "                // An observed reboot/horizon failure cannot later revive this",
+          "                // sample if counters return to an old apparently usable value.",
+          "                // Preserve original evidence; only a NEW authenticated sample",
+          "                // with continuous high-water readings may establish authority.",
+          "                record.put(\"state\",\"REFRESH_REQUIRED\").put(\"last_observed_elapsed_ms\",point.elapsedMillis).put(\"last_observed_boot_count\",point.bootCount);",
+          "                Map<ProviderRecordStore.Key,char[]> writes=new HashMap<>();put(writes,key,record);commit(snapshot,writes);return unknown;",
+          "            }",
+          "            if(point.elapsedMillis>number(record,\"last_observed_elapsed_ms\")){",
+          "                record.put(\"last_observed_elapsed_ms\",point.elapsedMillis);Map<ProviderRecordStore.Key,char[]> writes=new HashMap<>();put(writes,key,record);commit(snapshot,writes);",
+          "            }",
+          "            return new Observation(bounds,point.elapsedMillis,point.bootCount);",
+          "        });",
+          "    }",
+          "    private static ProviderRecordStore.Key clockKey(String generation) throws VaultFailure {",
+          "        NativeLegacyLineageJournal.uuid(generation);return ProviderRecordStore.key(ProviderEnvelopeCrypto.Domain.METADATA,\"clock-\"+generation);",
+          "    }",
+          "    private static JSONObject clockRecord(ProviderRecordStore.Snapshot snapshot,ProviderRecordStore.Key key) throws Exception {",
+          "        JSONObject r=required(snapshot,key);",
+          "        NativeProviderClockExchange.exact(r,\"schema\",\"clock_version\",\"state\",\"authority_state\",\"principal\",\"principal_digest\",\"engine_revision\",",
+          "            \"provider_epoch\",\"binding_id\",\"generation_id\",\"profile_id\",\"profile_fingerprint\",\"sample\",\"last_observed_elapsed_ms\",\"last_observed_boot_count\",\"conflicting_sample\");",
+          "        if(!Integer.valueOf(1).equals(r.get(\"clock_version\"))||!key.equals(clockKey(r.getString(\"generation_id\")))",
+          "            ||!Arrays.asList(\"CURRENT\",\"FENCED\",\"REFRESH_REQUIRED\").contains(r.getString(\"state\"))",
+          "            ||!Arrays.asList(\"CURRENT\",\"REVOKED_OR_FOREIGN\").contains(r.getString(\"authority_state\"))",
+          "            ||!r.getString(\"profile_fingerprint\").matches(\"[0-9a-f]{64}\")",
+          "            ||!r.getString(\"profile_id\").matches(\"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\"))throw corrupt();",
+          "        NativeProviderPrincipal principal=NativeProviderPrincipal.fromNativeJournal(r.getJSONObject(\"principal\"));",
+          "        if(!principal.digest.equals(r.getString(\"principal_digest\")))throw corrupt();NativeLegacyLineageJournal.uuid(r.getString(\"binding_id\"));",
+          "        number(r,\"engine_revision\");number(r,\"provider_epoch\");number(r,\"last_observed_elapsed_ms\");",
+          "        if(number(r,\"last_observed_boot_count\")>Integer.MAX_VALUE)throw corrupt();",
+          "        NativeProviderClockExchange.Unqualified.restore(r.getJSONObject(\"sample\"));",
+          "        if(!r.isNull(\"conflicting_sample\"))NativeProviderClockExchange.Unqualified.restore(r.getJSONObject(\"conflicting_sample\"));return r;",
+          "    }",
+          "    private static boolean clockBoundTo(JSONObject record,NativeProviderPrincipal current,long revision,JSONObject meta,NativeProviderTime.Profile profile) throws Exception {",
+          "        return profile!=null&&\"CURRENT\".equals(record.get(\"state\"))&&\"CURRENT\".equals(record.get(\"authority_state\"))",
+          "            &&current.same(NativeProviderPrincipal.fromNativeJournal(record.getJSONObject(\"principal\")))",
+          "            &&record.get(\"binding_id\").equals(meta.get(\"binding_id\"))&&record.get(\"generation_id\").equals(meta.get(\"current_generation\"))",
+          "            &&number(record,\"engine_revision\")==revision&&number(record,\"provider_epoch\")==number(meta,\"invalidation_epoch\")",
+          "            &&profile.id.equals(record.get(\"profile_id\"))&&profile.fingerprint().equals(record.get(\"profile_fingerprint\"));",
+          "    }",
+          ""
+        ]
+      },
+      {
+        "new_start": 1050,
+        "new_count": 5,
+        "before": [],
+        "after": [
+          "            } else if (key.domain == ProviderEnvelopeCrypto.Domain.METADATA && key.id.startsWith(\"clock-\")) {",
+          "                JSONObject clock=clockRecord(snapshot,key);",
+          "                if(!\"REVOKED_OR_FOREIGN\".equals(clock.getString(\"authority_state\"))){",
+          "                    clock.put(\"authority_state\",\"REVOKED_OR_FOREIGN\");put(writes,key,clock);",
+          "                }"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderObservationWire.java",
+    "origin": null,
+    "current_sha256": "263055f6994dac61c57616f045a8e720f57d75efc5b64965ee742c0491092a06"
+  },
+  {
+    "name": "NativeProviderRegistrationCoordinator.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "a6b2b10f8d48d94fd45f701433e5529d613930fb53d93964e80dae5a1a2770b2",
+    "current_sha256": "764e9c9cfd260c1ad1570389177e3fd074ffbe451ad114764eb53f48baf4461d",
+    "hunks": [
+      {
+        "new_start": 77,
+        "new_count": 1,
+        "before": [
+          "        if (received == null || received.authenticatedAt != null) throw new VaultFailure(\"custodial_provider_clock_not_admitted\");"
+        ],
+        "after": [
+          "        if (received == null || received.bounds != null) throw new VaultFailure(\"custodial_provider_clock_not_admitted\");"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NativeProviderTime.java",
+    "origin": null,
+    "current_sha256": "5a204909ebf751d76d08fc20ba2a9ff3d1e714c82b2cbc85c720f6c460999f73"
+  },
+  {
+    "name": "OfflineAuthorityTime.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "32436b69369c6777fe48d8400aa7b9595a6b7b0019774a9f96c0bc560a191aa0",
+    "current_sha256": "0ae5be7fa6c106a900a81bcf75c30c8ae87332da248fb6dd9bc9dc36b534f407",
+    "hunks": [
+      {
+        "new_start": 147,
+        "new_count": 3,
+        "before": [
+          "    /** Read-only provider clock observation. Unknown continuity is quarantine, never wall-clock freshness.",
+          "     * This grants no NFC/new-work/assignment authority and never changes an existing anchor. */"
+        ],
+        "after": [
+          "    /** Retired provider-only point adapter. Cleaning anchor never grants provider",
+          "     * time authority; preserve native counters as unknown ingress evidence only.",
+          "     * All cleaning/NFC authority methods below remain unchanged. */"
+        ]
+      },
+      {
+        "new_start": 151,
+        "new_count": 1,
+        "before": [
+          "        String device = VaultValidation.deviceId(deviceId);"
+        ],
+        "after": [
+          "        VaultValidation.deviceId(deviceId);"
+        ]
+      },
+      {
+        "new_start": 157,
+        "new_count": 1,
+        "before": [
+          "        OfflineAuthorityAnchor anchor = store.loadAnchor();",
+          "        java.time.Instant authenticated = null;",
+          "        if (now.elapsedRealtimeMillis >= 0 && now.bootCount >= 0 && anchor != null && anchor.deviceId.equals(device) && store.loadRollbackFence() == null",
+          "            && anchor.bootCount == now.bootCount && now.elapsedRealtimeMillis >= anchor.anchorElapsedRealtimeMillis) {",
+          "            try { authenticated = java.time.Instant.parse(timestampAt(anchor, now.elapsedRealtimeMillis)); }",
+          "            catch (VaultFailure error) {",
+          "                if (!\"custodial_native_offline_anchor_expired\".equals(error.code)) throw error;",
+          "            }",
+          "        }",
+          "        return new NativeProviderJournal.Observation(authenticated, now.elapsedRealtimeMillis, now.bootCount);"
+        ],
+        "after": [
+          "        return new NativeProviderJournal.Observation(null, now.elapsedRealtimeMillis, now.bootCount);"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "VaultEngine.java",
+    "origin": "efe0cc3f0120e18c5e53f2c025a0ce0cfa1963cd",
+    "base_sha256": "e7dce8e017628b191e6364f8b79e24575835a0ed7aaaabd3c8bddfe1b6693f1c",
+    "current_sha256": "4b9c70608bcbd98fd5c26668f1202cf7fd8014c96c5319bba00f7c1cca8c72d5",
+    "hunks": [
+      {
+        "new_start": 543,
+        "new_count": 1,
+        "before": [
+          "        NativeProviderHttp.Attempt attempt, OfflineAuthorityTime authorityTime) throws VaultFailure {"
+        ],
+        "after": [
+          "        NativeProviderHttp.Attempt attempt, NativeProviderClockOwner clockOwner) throws VaultFailure {"
+        ]
+      },
+      {
+        "new_start": 555,
+        "new_count": 2,
+        "before": [
+          "            AuthorizedResponse response = http.inventory(request, before.deviceId, credential, attempt);"
+        ],
+        "after": [
+          "            NativeProviderClockExchange exchange = http.inventory(request, before.deviceId, credential, attempt);",
+          "            AuthorizedResponse response = exchange.response;"
+        ]
+      },
+      {
+        "new_start": 565,
+        "new_count": 4,
+        "before": [
+          "                return providerJournal.consumeInventory(current, request, NativeProviderInventory.validateResponse(request, response),",
+          "                    authorityTime.providerObservation(before.deviceId));"
+        ],
+        "after": [
+          "                providerJournal.requireInventoryCurrent(current, request);",
+          "                NativeProviderInventory.CheckedExchange checked = NativeProviderInventory.validateExchange(request, exchange);",
+          "                return providerJournal.consumeInventory(current, request, checked.page,",
+          "                    clockOwner.inventory(this, providerJournal, current, before.revision, request.invalidationEpoch, checked.clock));"
+        ]
+      }
+    ]
+  }
+]

@@ -9,8 +9,10 @@ import {
   parseAaptXmlTree,
   resolveAapt2,
 } from './verify-android-apk-backup.mjs';
+import {isQualifiedProviderRelease,inspectCompiledProviderOwner,PROVIDER_SERVICE,LEGACY_PROVIDER_SERVICES} from './custodial-provider-release-policy.mjs';
+import {isCleaningScope,assertCleaningScopeManifest,SCOPE_MARKER,CLEANING_SCOPE} from './custodial-new-producer-scope-policy.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.5.0';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.9.0';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
@@ -19,6 +21,8 @@ export const CUSTODIAL_ANDROID_PERMISSIONS = Object.freeze([
   'android.permission.ACCESS_COARSE_LOCATION',
   'android.permission.ACCESS_FINE_LOCATION',
   'android.permission.ACCESS_NETWORK_STATE',
+  'android.permission.FOREGROUND_SERVICE',
+  'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
   'android.permission.INTERNET',
   'android.permission.NFC',
   'android.permission.POST_NOTIFICATIONS',
@@ -37,9 +41,13 @@ const CUSTODIAL_ANDROID_SOURCE_PERMISSIONS = Object.freeze([
 export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
   activities: Object.freeze([
     `${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`,
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationOpenActivity`,
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.NativeProtectedRecoveryPreparationActivity`,
     'com.google.android.gms.common.api.GoogleApiActivity',
   ]),
   services: Object.freeze([
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`,
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderSyncJobService`,
     'com.google.android.datatransport.runtime.backends.TransportBackendDiscovery',
     'com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService',
     'com.google.firebase.components.ComponentDiscoveryService',
@@ -58,6 +66,8 @@ export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
     'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher',
     'com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver',
     'com.google.firebase.iid.FirebaseInstanceIdReceiver',
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`,
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationActionReceiver`,
   ]),
 });
 
@@ -266,6 +276,21 @@ const MAIN_ACTIVITY_INTENT_FILTERS = Object.freeze([
 
 export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
   activity: Object.freeze({
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.NativeProtectedRecoveryPreparationActivity`]: policyNode('activity', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.NativeProtectedRecoveryPreparationActivity`,
+      'android:exported': 'true',
+      'android:permission': 'android.permission.DUMP',
+      'android:excludeFromRecents': 'true',
+      'android:noHistory': 'true',
+    }, [intentFilter([
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.ORIGINAL_RECOVERY_PREPARATION`),
+    ])]),
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationOpenActivity`]: policyNode('activity', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationOpenActivity`,
+      'android:exported': 'false',
+      'android:excludeFromRecents': 'true',
+      'android:noHistory': 'true',
+    }),
     [`${CUSTODIAL_ANDROID_PACKAGE}.MainActivity`]: policyNode('activity', {
       'android:theme': RESOURCE_REFERENCE,
       'android:label': RESOURCE_REFERENCE,
@@ -281,6 +306,16 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
     }),
   }),
   service: Object.freeze({
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`]: policyNode('service', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`,
+      'android:exported': 'false',
+      'android:foregroundServiceType': '0x00000002',
+    }),
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderSyncJobService`]: policyNode('service', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderSyncJobService`,
+      'android:permission': 'android.permission.BIND_JOB_SERVICE',
+      'android:exported': 'false',
+    }),
     'io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService': policyNode('service', {
       'android:name': 'io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService',
       'android:exported': 'false',
@@ -337,6 +372,21 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
     ]),
   }),
   receiver: Object.freeze({
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationActionReceiver`]: policyNode('receiver', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationActionReceiver`,
+      'android:exported': 'false',
+    }),
+    // The native-vault manifest already ships this manager maintenance entry.
+    // Match its exact permission and two actions; do not accept an arbitrary
+    // exported receiver merely because its class name is recognized.
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`]: policyNode('receiver', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`,
+      'android:permission': 'android.permission.DUMP',
+      'android:exported': 'true',
+    }, [intentFilter([
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.ACTIVATE_ASSIGNED_DEVICE`),
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.ASSIGNED_ACTIVATION_STATUS`),
+    ])]),
     'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher': policyNode('receiver', {
       'android:name': 'com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher',
     }),
@@ -544,14 +594,24 @@ function assertPermissions(root) {
   return permissions.sort();
 }
 
-function assertComponents(application) {
+function assertComponents(application, providerRelease, cleaningScope) {
+  let policies = CUSTODIAL_ANDROID_COMPONENT_POLICY;
+  if (providerRelease !== null) {
+    if (!isQualifiedProviderRelease(providerRelease)) throw new Error('Unbound qualified provider release');
+    const service = {...policies.service};
+    for (const old of LEGACY_PROVIDER_SERVICES) delete service[old];
+    service[PROVIDER_SERVICE] = policyNode('service', {
+      'android:name': PROVIDER_SERVICE, 'android:exported': 'false',
+    }, [intentFilter([action('com.google.firebase.MESSAGING_EVENT')])]);
+    policies = {...policies, service};
+  }
   const componentTypes = ['activity', 'service', 'provider', 'receiver'];
   const proof = {};
   for (const type of componentTypes) {
     const nodes = application.children.filter((child) => child.name === type);
     const names = nodes.map((node) => String(node.attributes['android:name'] || ''));
     const unique = [...new Set(names)];
-    const expectedNames = Object.keys(CUSTODIAL_ANDROID_COMPONENT_POLICY[type]);
+    const expectedNames = Object.keys(policies[type]);
     if (
       names.some((name) => !name)
       || names.length !== unique.length
@@ -560,7 +620,7 @@ function assertComponents(application) {
       throw new Error(`Compiled Custodial ${type} component set differs from the exact policy`);
     }
     for (const node of nodes) {
-      assertPolicyNode(node, CUSTODIAL_ANDROID_COMPONENT_POLICY[type][node.attributes['android:name']], `${type} ${node.attributes['android:name']}`);
+      assertPolicyNode(node, policies[type][node.attributes['android:name']], `${type} ${node.attributes['android:name']}`);
     }
     proof[`${type === 'activity' ? 'activities' : `${type}s`}`] = names.sort();
   }
@@ -581,8 +641,14 @@ function assertComponents(application) {
   }
 
   const appMetadata = application.children.filter((child) => child.name === 'meta-data');
-  if (appMetadata.length !== 1) throw new Error('Compiled Custodial application metadata set differs from policy');
-  assertPolicyNode(appMetadata[0], metadata('com.google.android.gms.version', 'android:value', RESOURCE_REFERENCE), 'application Google Play services metadata');
+  if(cleaningScope){
+    if(!isCleaningScope(cleaningScope)||providerRelease!==null)throw Error('Mixed/unbound cleaning scope owner');
+    if(appMetadata.length!==2)throw Error('Exact cleaning metadata set differs');
+    const scope=appMetadata.filter(n=>n.attributes['android:name']===SCOPE_MARKER);if(scope.length!==1)throw Error('Cleaning scope marker missing/duplicate');
+    assertPolicyNode(scope[0],metadata(SCOPE_MARKER,'android:value',CLEANING_SCOPE),'cleaning scope');
+  }else if(appMetadata.length!==1)throw Error('Compiled Custodial application metadata set differs from policy');
+  const google=appMetadata.filter(n=>n.attributes['android:name']==='com.google.android.gms.version');if(google.length!==1)throw Error('Google metadata missing/duplicate');
+  assertPolicyNode(google[0], metadata('com.google.android.gms.version', 'android:value', RESOURCE_REFERENCE), 'application Google Play services metadata');
 
   const allowedChildren = new Set([...componentTypes, 'uses-library', 'meta-data']);
   const unexpected = application.children.filter((child) => !allowedChildren.has(child.name));
@@ -616,7 +682,11 @@ export function assertCompiledCustodialAndroidManifestSecurity({
   resourcesDump,
   networkSecurityDump,
   fileProviderPathsDump,
+  providerRelease = null,
+  cleaningScope = null,
 }) {
+  if(cleaningScope){if(providerRelease!==null)throw Error('Mixed provider scopes');assertCleaningScopeManifest(manifestDump,cleaningScope);}
+  if (providerRelease !== null) inspectCompiledProviderOwner(manifestDump,providerRelease);
   const root = parseAaptXmlTree(manifestDump);
   if (root.name !== 'manifest') throw new Error('Compiled Custodial Android manifest has the wrong root element');
   if (root.text.length) throw new Error('Compiled Custodial Android manifest must not contain text');
@@ -648,7 +718,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
   if (application.text.length) throw new Error('Compiled Custodial application must not contain text');
 
   const permissions = assertPermissions(root);
-  const components = assertComponents(application);
+  const components = assertComponents(application,providerRelease,cleaningScope);
   const resources = compiledXmlResources(resourcesDump);
 
   const networkId = resourceId(application.attributes['android:networkSecurityConfig'], 'Custodial networkSecurityConfig');
@@ -667,7 +737,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
 
   return {
     verifier_version: CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION,
-    policy: 'exact-custodial-android-manifest-v7',
+    policy: cleaningScope ? 'exact-custodial-android-manifest-v13-cleaning-first-retained-continuity' : providerRelease === null ? 'exact-custodial-android-manifest-v11-private-audio' : 'exact-custodial-android-manifest-v12-qualified-provider-private-audio',
     permissions,
     custom_permission: {
       name: `${CUSTODIAL_ANDROID_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`,
@@ -703,7 +773,7 @@ export function assertCompiledCustodialAndroidManifestSecurity({
   };
 }
 
-export function verifyCustodialAndroidManifestSecurity(apkPath, { aapt2Path } = {}) {
+export function verifyCustodialAndroidManifestSecurity(apkPath, { aapt2Path, providerRelease = null, cleaningScope = null } = {}) {
   const apk = resolve(apkPath);
   if (!existsSync(apk)) throw new Error(`APK does not exist: ${apk}`);
   const aapt2 = aapt2Path ? resolve(aapt2Path) : resolveAapt2();
@@ -737,6 +807,8 @@ export function verifyCustodialAndroidManifestSecurity(apkPath, { aapt2Path } = 
   const proof = assertCompiledCustodialAndroidManifestSecurity({
     manifestDump,
     resourcesDump,
+    providerRelease,
+    cleaningScope,
     networkSecurityDump: command(['dump', 'xmltree', apk, '--file', networkResource.files[0].path]),
     fileProviderPathsDump: command(['dump', 'xmltree', apk, '--file', filePathsResource.files[0].path]),
   });

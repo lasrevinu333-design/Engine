@@ -49,8 +49,8 @@ const GITHUB_TIMEOUT_MS = 30_000;
 const TEMPORARY_PARENT = '/home/eric/.cache';
 const TEMPORARY_PREFIX = 'memphis-zoo-custodial-admission-bootstrap-';
 const BOOTSTRAP_MARKER_NAME = 'MZ_CUSTODIAL_CODEMAGIC_ADMISSION_BOOTSTRAP';
-const EXPECTED_HOST_TOOLS_MODULE_SHA256 = '452ebf717141a0c67ffd9dd4fbb6e3e8ec619e2edb3f1c01fec45663e6327841';
-const EXPECTED_HOST_TOOLS_POLICY_SHA256 = 'ef52214a260463b2b5d80d56aeddcd789b22906ee22cf12c818b01d51e7c73bd';
+const EXPECTED_HOST_TOOLS_MODULE_SHA256 = '1216835897f7a9f5135a813c12443ecfe4e7f092311520f48c84832809d39c95';
+const EXPECTED_HOST_TOOLS_POLICY_SHA256 = '4f39115dc63e66c279c8df59e648e341585c7f414fd7b0052d6704e96c2a46ff';
 const snapshotPathspecs = Object.freeze([
   'codemagic.yaml',
   'package.json',
@@ -58,6 +58,7 @@ const snapshotPathspecs = Object.freeze([
   'mobile/package.json',
   'mobile/release-policies',
   'mobile/scripts',
+  'scripts/lib/runtime-sanitation-policy.mjs',
 ]);
 const requiredSnapshotPaths = Object.freeze([
   'codemagic.yaml',
@@ -72,6 +73,7 @@ const requiredSnapshotPaths = Object.freeze([
   'mobile/scripts/custodial-linux-admission-host-tools.mjs',
   'mobile/scripts/run-custodial-codemagic-admission.mjs',
   'mobile/scripts/verify-custodial-android-release.mjs',
+  'scripts/lib/runtime-sanitation-policy.mjs',
 ]);
 
 const inheritedHostEnvironmentKeys = Object.freeze([
@@ -334,13 +336,35 @@ function assertPinnedHostVerifierRootOfTrust() {
 }
 
 export function parseCustodialCodemagicAdmissionBootstrapArguments(args) {
-  if (!Array.isArray(args) || args.length !== 2 || args[0] !== '--build-id') {
+  if (!Array.isArray(args) || args.length < 2 || args[0] !== '--build-id') {
     fail('Usage: run-custodial-codemagic-admission.mjs --build-id <Codemagic build ID>');
   }
   if (typeof args[1] !== 'string' || !BUILD_ID.test(args[1])) {
     fail('Codemagic build ID must be exactly 24 lowercase hexadecimal characters');
   }
+  custodialCodemagicAdmissionForwardArguments(args.slice(2));
   return args[1];
+}
+
+export function custodialCodemagicAdmissionForwardArguments(args) {
+  if (!Array.isArray(args)) fail('Forward admission arguments are malformed');
+  if (!args.length) return [];
+  const names = ['--forward-source-input', '--forward-trusted-pins', '--forward-trusted-pins-sha256', '--forward-role'];
+  const flags = {};
+  for (let i = 0; i < args.length; i += 2) {
+    const name = args[i]; const value = args[i + 1];
+    if (!names.includes(name) || typeof value !== 'string' || !value || value.startsWith('--') || Object.hasOwn(flags, name)) fail('Usage: complete nonrepeated forward source/pins/SHA256/role arguments required');
+    flags[name] = value;
+  }
+  if (names.some((name) => !Object.hasOwn(flags, name)) || !/^[a-f0-9]{64}$/.test(flags['--forward-trusted-pins-sha256']) || !['candidate', 'recovery'].includes(flags['--forward-role'])) fail('Usage: complete independently pinned forward arguments required');
+  // Keep the bootstrap node-only and pristine before locked dependencies are
+  // installed. Only grammar is checked here; authority is never minted here.
+  // The private child executes the configure-owned reviewed-byte loader.
+  for (const name of ['--forward-source-input', '--forward-trusted-pins']) {
+    if (!flags[name].startsWith('/') || resolve(flags[name]) !== flags[name]) fail('Forward reviewed input paths must be canonical absolute paths');
+  }
+  if (flags['--forward-source-input'] === flags['--forward-trusted-pins']) fail('Forward reviewed input and pins must be distinct files');
+  return names.flatMap((name) => [name, flags[name]]);
 }
 
 function validatedToken(environment) {
@@ -1082,6 +1106,7 @@ export async function runCustodialCodemagicAdmissionBootstrap({
   expectedVerifiedHostIdentity,
 } = {}) {
   const buildId = parseCustodialCodemagicAdmissionBootstrapArguments(args);
+  const forwardArguments = custodialCodemagicAdmissionForwardArguments(args.slice(2));
   const token = validatedToken(sourceEnvironment);
   if (
     typeof loadHostTools !== 'function'
@@ -1216,7 +1241,7 @@ export async function runCustodialCodemagicAdmissionBootstrap({
     const admissionStatus = spawnBounded(
       spawn,
       pinned.nodePath,
-      [join(tree.checkout, 'mobile', 'scripts', basename(admissionScriptPath)), '--build-id', buildId],
+      [join(tree.checkout, 'mobile', 'scripts', basename(admissionScriptPath)), '--build-id', buildId, ...forwardArguments],
       {
         cwd: tree.checkout,
         environment: admissionEnvironment,

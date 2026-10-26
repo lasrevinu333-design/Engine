@@ -36,10 +36,11 @@
     els.toast.className = `uxToast show ${kind}`.trim();
     state.toastTimer = setTimeout(() => { els.toast.className = 'uxToast'; }, 2600);
   }
+  const ownerAccess = () => window.MemphisAuth?.hasPermission?.('write') === true;
   async function authHeaders() {
     if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
     const session = await window.MemphisAuth?.requireOpsManagerSession?.({
-      accessLevel: 'full_access', interactive: true, redirect: false, throwOnFailure: true,
+      accessLevel: 'read_only', interactive: true, redirect: false, throwOnFailure: true,
     });
     if (!session?.token) throw new Error('Custodial Manager access is required.');
     return {
@@ -48,6 +49,7 @@
     };
   }
   async function request(path, { method = 'GET', body = null, headers: extraHeaders = {} } = {}) {
+    if (method !== 'GET' && !ownerAccess()) throw new Error('Phone assignment and activation are owner-only.');
     if (window.MemphisMobile?.requestEnvelope) return (await window.MemphisMobile.requestEnvelope(path, { method, body, headers: extraHeaders })).data;
     const headers = { ...await authHeaders(), ...extraHeaders };
     if (body != null) headers['Content-Type'] = 'application/json';
@@ -56,7 +58,7 @@
       body: body == null ? undefined : JSON.stringify(body),
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    if (!response.ok || !payload?.ok) throw Object.assign(new Error(payload?.error || `HTTP ${response.status}`),{status:response.status});
     return payload.data;
   }
   function employeeOptions(device) {
@@ -119,16 +121,16 @@
         ${operationalWarnings(device).length ? `<div class="phoneOperationalWarning">${operationalWarnings(device).map(escapeHtml).join('<br>')}</div>` : ''}
       </div>
       <div class="phoneControls">
-        <select class="uxSelect" data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
+        <select class="uxSelect" ${ownerAccess()?'':'disabled'} data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
       </div>
-      <div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button></div>
+      ${ownerAccess()?'<div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button></div>':'<div class="phoneLastSeen">Read-only phone assignment information</div>'}
       <div class="rowStatus" data-row-status></div>
-      <div class="phoneActivation">
+      ${ownerAccess()?`<div class="phoneActivation">
         <p>Saving an assignment does not activate the phone. Activation uses the trusted maintenance computer with this phone connected by USB; saved work is retained.</p>
         <div class="phoneActionRow"><button class="uxButton compact" data-activate type="button" ${!device.assigned_employee_id?'disabled':''}>Activate / recover phone</button>
         <button class="uxButton compact" data-activation-status type="button">Check activation status</button></div>
         <div class="rowStatus" data-activation-result role="status" aria-live="polite">No current activation result checked.</div>
-      </div>
+      </div>`:''}
     </article>`;
   }
   function render() {
@@ -142,6 +144,7 @@
       render();
       setStatus(els.status, `${state.data.devices?.length || 0} kiosk assignments loaded. Phone activation is verified separately.`, 'ok');
     } catch (error) {
+      if([401,403].includes(error?.status)){state.data=null;els.list.innerHTML='';}
       setStatus(els.status, safe(error), 'error');
     }
   }
@@ -172,6 +175,7 @@
     return `${labels[result.state]} Request: ${record.operation_id}`;
   }
   async function activationRow(row,start) {
+    if(!ownerAccess())return showToast('Phone activation is owner-only.','error');
     const deviceId=row.dataset.device;
     if(state.activating.has(deviceId))return;
     const output=row.querySelector('[data-activation-result]'),buttons=[row.querySelector('[data-activate]'),row.querySelector('[data-activation-status]')];
@@ -212,6 +216,7 @@
     finally{state.activating.delete(deviceId);buttons.forEach(button=>{button.disabled=false;});}
   }
   async function saveRow(row) {
+    if(!ownerAccess())return showToast('Changing phone assignments is owner-only.','error');
     const deviceId = row.dataset.device;
     const employeeId = row.querySelector('[data-employee]').value || null;
     const device = state.data.devices.find((item) => item.device_id === deviceId) || {};

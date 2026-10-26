@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {scheduleLocks} from './synthetic-schedule-locks.mjs';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
@@ -20,7 +21,7 @@ function element(id) {
   return elements.get(id);
 }
 const stored = new Map();
-let fetchCalls = 0;
+let fetchCalls = 0,mutationCalls=0;
 const freshItem = {
   id: 'fixture-area', name: 'Fresh Area', group_name: 'Fresh Area',
   coverage_start: '11:00', coverage_end: '14:00', coverage_purpose: 'area_owner',
@@ -30,7 +31,7 @@ const freshData = {
   raw_items: [freshItem], current_items: [freshItem], notice: 'Fresh schedule',
 };
 const context = {
-  Date: FixedDate, Intl, URL, console,
+  Date: FixedDate, Intl, URL, console,AbortController,
   document: { getElementById: element, addEventListener() {}, hidden: false },
   localStorage: {
     getItem: (key) => stored.get(key) ?? null,
@@ -43,18 +44,23 @@ const context = {
   setTimeout: () => 1, clearTimeout() {}, setInterval: () => 2, clearInterval() {},
 };
 context.window = {
-  MemphisMobile: { ready: Promise.resolve(), deviceId: () => 'KIOSK_08' },
+  navigator:{locks:scheduleLocks},
+  MemphisMobile: { ready: Promise.resolve(), deviceId: () => 'KIOSK_08',principalIdentity:()=> 'cache-failure-test',
+    profileMatchesPrincipal:()=>true,requestJson:async()=>({}) },
   MemphisCustodialSecurity: {
-    getStatus: () => ({ deviceId: 'KIOSK_08' }),
-    mutateProtectedWork: async () => { throw new Error('offline cache unavailable'); },
+    native:true,
+    getStatus: () => ({ deviceId: 'KIOSK_08',ready:true,available:true,quarantined:false }),
+    mutateProtectedWork: async () => { mutationCalls++;throw new Error('offline cache unavailable'); },
   },
   addEventListener() {},
 };
 vm.createContext(context);
+vm.runInContext(readFileSync(new URL('../memphis-recurring-schedule-target.js',import.meta.url),'utf8'),context);
 vm.runInContext(inline, context);
 await new Promise((resolve) => setTimeout(resolve, 20));
 
 assert.equal(fetchCalls, 1, 'the fresh schedule should be fetched once');
+assert.equal(mutationCalls,2,'cacheless read-ahead attempt and response persistence both exercised native protected failure');
 assert.equal(element('employee').textContent, 'Fresh Employee', 'fresh server data must render even when optional cache persistence fails');
 assert.equal(element('content').hidden, false, 'fresh schedule content must remain visible');
 assert.match(element('areas').innerHTML, /Fresh Area/, 'fresh assignment must be shown');

@@ -11,7 +11,7 @@ import org.json.JSONObject;
 /** Exact item admission after typed authenticated HTTPS; no JS/FCM settlement path.
  * Missing/rejected/mismatched items remain pending. Duplicate IDs invalidate an ambiguous batch. */
 final class NativeProviderEventReceipts {
-    static final String SCHEMA = "custodial.native-provider-event-receipt.v1";
+    static final String SCHEMA = "custodial.native-provider-event-receipt.v2";
     private final NativeProviderJournal.EventBatch batch;
     private final Map<String, String> admitted;
     private NativeProviderEventReceipts(NativeProviderJournal.EventBatch batch, Map<String, String> admitted) {
@@ -26,7 +26,7 @@ final class NativeProviderEventReceipts {
             JSONObject envelope = ProviderWireJson.object(response.body, 262144); exact(envelope, "ok", "data");
             if (!Boolean.TRUE.equals(envelope.get("ok"))) throw invalid();
             JSONObject data = envelope.getJSONObject("data"); exact(data, "schema", "results");
-            if (!"custodial.native-provider-event-receipts.v1".equals(data.get("schema"))) throw invalid();
+            if (!"custodial.native-provider-event-receipts.v2".equals(data.get("schema"))) throw invalid();
             JSONArray rows = data.getJSONArray("results"); if (rows.length() > 16) throw invalid();
             Map<String, String> admitted = new HashMap<>(); Set<String> seen = new HashSet<>();
             for (int i = 0; i < rows.length(); i++) {
@@ -50,18 +50,29 @@ final class NativeProviderEventReceipts {
             if (!(result.get("server_received_at") instanceof String)) return false;
             NativeProviderPayload.timestamp(result.getString("server_received_at"));
             strictInteger(result.get("receipt_assignment_epoch"), true);
-            JSONObject observation = result.getJSONObject("original_observation"); exact(observation, "authenticated_at", "elapsed_realtime_ms", "boot_count");
-            for (String field : new String[]{"elapsed_realtime_ms", "boot_count"})
-                if (observation.get(field) != JSONObject.NULL) strictInteger(observation.get(field), false);
-            if (observation.get("authenticated_at") != JSONObject.NULL) {
-                if (observation.get("elapsed_realtime_ms") == JSONObject.NULL || observation.get("boot_count") == JSONObject.NULL) return false;
-                if (!(observation.get("authenticated_at") instanceof String)) return false;
-                NativeProviderPayload.timestamp(observation.getString("authenticated_at"));
-            }
+            NativeProviderObservationWire.validate(result.getJSONObject("original_observation"), false);
+            NativeProviderObservationWire.validate(result.getJSONObject("admission_bounds"), true);
+            if (NativeProviderClockExchange.micros(result.getJSONObject("admission_bounds").get("earliest_at"))
+                > NativeProviderClockExchange.micros(result.get("server_received_at"))) return false;
+            if (!result.getJSONObject("original_observation").isNull("earliest_at")
+                && NativeProviderClockExchange.micros(result.getJSONObject("original_observation").get("earliest_at"))
+                    > NativeProviderClockExchange.micros(result.get("server_received_at"))) return false;
             JSONObject reduced = new JSONObject(result.toString());
             reduced.remove("admitted_state"); reduced.remove("server_received_at"); reduced.remove("replayed"); reduced.put("schema", wire.get("schema"));
             return NativeLegacyLineageJournal.same(reduced, wire);
         } catch (Exception rejected) { return false; }
+    }
+    /** Only already-validated decision positives enter the existing settlement
+     * type. Recheck each ORIGINAL receipt; never manufacture a server envelope. */
+    static NativeProviderEventReceipts originalAcceptances(NativeProviderJournal.EventBatch batch, Map<String, JSONObject> originals) throws VaultFailure {
+        if (batch == null || originals == null || originals.size() > 16) throw invalid();
+        Map<String, String> admitted = new HashMap<>();
+        for (Map.Entry<String, JSONObject> entry : originals.entrySet()) {
+            NativeProviderJournal.PendingEvent expected = batch.events.get(entry.getKey()); JSONObject receipt = entry.getValue();
+            if (expected == null || receipt == null || !Boolean.TRUE.equals(receipt.opt("replayed")) || !matches(expected, receipt)) throw invalid();
+            admitted.put(entry.getKey(), receipt.toString());
+        }
+        return new NativeProviderEventReceipts(batch, admitted);
     }
     private static void strictInteger(Object value, boolean positive) throws VaultFailure {
         if (!(value instanceof Integer || value instanceof Long) || ((Number) value).longValue() < (positive ? 1 : 0)

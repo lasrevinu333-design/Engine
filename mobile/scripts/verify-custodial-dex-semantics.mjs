@@ -53,6 +53,9 @@ export const CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS = Object.freeze([
   'Lorg/memphiszoo/custodial/vault/NativeAttestation;',
   'Lorg/memphiszoo/custodial/vault/OfflineAuthorityTime;',
   'Lorg/memphiszoo/custodial/vault/AndroidOfflineAuthorityTimeStore;',
+  'Lorg/memphiszoo/custodial/vault/AndroidProtectedWorkPreferences;',
+  'Lorg/memphiszoo/custodial/vault/AndroidReadOnlyPreferences;',
+  'Lorg/memphiszoo/custodial/vault/NativeReadinessObservation;',
   'Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;',
   'Lorg/memphiszoo/custodial/vault/CancellationCoordinator;',
   'Lorg/memphiszoo/custodial/vault/RemovalCoordinator;',
@@ -70,6 +73,7 @@ export const CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS = Object.freeze([
   'bindScanEntry',
   'cancelEnrollment',
   'captureOfflineCompletionTime',
+  'checkRemovalAdmission',
   'clearRollbackFence',
   'completeLegacyBinding',
   'completeLocalBinding',
@@ -78,9 +82,17 @@ export const CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS = Object.freeze([
   'enroll',
   'finalizeRemoval',
   'getAuthenticatedCompletion',
+  'getCustodialReadinessObservation',
   'getOfflineAuthorityState',
   'getState',
   'loadOfflineAuthoritySnapshot',
+  'providerApplyAction',
+  'providerClaimNext',
+  'providerClaimState',
+  'providerMirrorAttach',
+  'providerMirrorDetach',
+  'providerMirrorStopped',
+  'providerRetireClaim',
   'recoverPendingScanIntent',
   'removeEnrollment',
   'reportRecoveryDiagnostic',
@@ -113,7 +125,7 @@ function sameArray(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-class DexSemanticReader {
+export class DexSemanticReader {
   constructor(input, label) {
     this.bytes = Buffer.from(input || []);
     this.label = String(label || 'classes.dex');
@@ -626,4 +638,100 @@ export function inspectCustodialNativeVaultDexSemantics(
     required_class_locations: classLocations,
     dex_sha256: dexSha256,
   };
+}
+
+// Closed compiler-output subset for immutable NEW-producer scope. This reads
+// actual class definitions/code, never DEX strings alone or caller proof flags.
+export function inspectCustodialNewProducerScopeDexSemantics(dexEntries,{profile,policySha256}) {
+  if(!['full-system','cleaning-first-retained-continuity-v1'].includes(profile)||!/^[a-f0-9]{64}$/.test(policySha256))throw Error('Exact declared scope inputs required');
+  const enabled=profile==='full-system'?1:0;
+  const families=['org/memphiszoo/custodial/vault','com/capacitorjs/plugins/localnotifications','io/capawesome/capacitorjs/plugins/firebase/messaging'];
+  const scopes=families.map(x=>'L'+x+'/CustodialNewProducerScope;');
+  const plugins=['Lcom/capacitorjs/plugins/localnotifications/LocalNotificationsPlugin;','Lio/capawesome/capacitorjs/plugins/firebase/messaging/FirebaseMessagingPlugin;','Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;'];
+  const wanted=new Set([...scopes,...plugins]),defs=new Map(),names=new Set();
+  for(const e of dexEntries){if(!/^classes(?:[2-9]|[1-9][0-9]+)?\.dex$/.test(e.name)||names.has(e.name))throw Error('Scope DEX identity');names.add(e.name);const reader=new DexSemanticReader(Buffer.from(e.bytes),e.name);for(const[d,definition]of reader.classes())if(wanted.has(d)){if(defs.has(d))throw Error('Duplicate compiled scope/plugin definition');defs.set(d,{reader,definition,dexName:e.name});}}
+  if(names.size>16)throw Error('Unsupported scope DEX census');for(let i=1;i<=names.size;i++)if(!names.has(i===1?'classes.dex':`classes${i}.dex`))throw Error('Noncontiguous scope DEX census');
+  if(defs.size!==wanted.size)throw Error('Incomplete compiled scope/plugin closure');
+  function method(rec,name,descriptor){const found=[...rec.definition.methods].filter(([i])=>{const m=rec.reader.method(i);return m.name===name&&m.descriptor===descriptor;});if(found.length!==1)throw Error('Missing/duplicate scoped method '+name);const[i,c]=found[0];if(!c.codeOffset||(c.accessFlags&(ACC_NATIVE|ACC_ABSTRACT)))throw Error('Non-code scoped method');return {i,c,code:rec.reader.methodCode(c.codeOffset),base:c.codeOffset+16};}
+  function unit(rec,m,i){if(i<0||i>=m.code.instructionCount)throw Error('Scope instruction boundary');return rec.reader.u2(m.base+i*2,'scope instruction');}
+  function scalar(rec,name,desc,want){const m=method(rec,name,desc),u=unit(rec,m,0),op=u&255;if(rec.reader.u2(m.c.codeOffset+6)!==0)throw Error('Literal scope scalar cannot have exception handlers');let reg=u>>>8,n,value;
+    if(op===0x12){reg=(u>>>8)&15;value=(u>>12)&15;if(value&8)value-=16;n=1;}
+    else if(op===0x1a||op===0x1b){const ix=op===0x1a?unit(rec,m,1):rec.reader.u4(m.base+2,'scope jumbo string');value=rec.reader.string(ix);n=op===0x1a?2:3;}
+    else throw Error('Unsupported compiled scope scalar');
+    if(m.code.instructionCount!==n+1||unit(rec,m,n)!==((reg<<8)|(desc==='()Z'?0x0f:0x11))||value!==want)throw Error('Compiled scope scalar mismatch');
+    if((m.c.accessFlags&ACC_STATIC)===0||m.code.incoming!==0)throw Error('Scoped scalar must be static');
+  }
+  for(const d of scopes){const r=defs.get(d);if(r.definition.superclass!=='Ljava/lang/Object;'||r.definition.accessFlags!==ACC_FINAL)throw Error('Scope class shape');
+    const offsets=[];for(let j=0;j<r.reader.classCount;j++){const o=r.reader.classOffset+32*j;if(r.reader.u4(o)===r.definition.classIndex)offsets.push(o);}if(offsets.length!==1)throw Error('Scope class metadata identity');const o=offsets[0],interfaces=r.reader.u4(o+12),annotations=r.reader.u4(o+20),data=r.reader.u4(o+24);if((interfaces&&r.reader.u4(interfaces)!==0)||r.reader.u4(o+28)!==0||r.reader.string(r.reader.u4(o+16))!=='CustodialNewProducerScope.java')throw Error('Unexpected scope interfaces/static values/Source file');const sf=r.reader.uleb(data),f=r.reader.uleb(sf.next);if(sf.value||f.value)throw Error('Unexpected scope fields');if(annotations&&(r.reader.u4(annotations+4)||r.reader.u4(annotations+8)||r.reader.u4(annotations+12)))throw Error('Unexpected scope annotation directory');if(r.definition.annotations.classAnnotations.length)throw Error('Unexpected scope class annotations');
+    const n=[...r.definition.methods].map(([i])=>r.reader.method(i).name).sort();if(JSON.stringify(n)!==JSON.stringify(['<init>','enabled','profile','sourcePolicySha256']))throw Error('Scope class has unexpected methods/static initializer');
+    for(const [i,c]of r.definition.methods){const m=r.reader.method(i);if(c.accessFlags!==(m.name==='<init>'?0x10002:ACC_STATIC))throw Error('Scope method Source access');}
+    const ctor=method(r,'<init>','()V'),first=unit(r,ctor,0),target=r.reader.method(unit(r,ctor,1));if(ctor.code.registers!==1||ctor.code.incoming!==1||ctor.code.instructionCount!==4||r.reader.u2(ctor.c.codeOffset+4)!==1||r.reader.u2(ctor.c.codeOffset+6)!==0||first!==0x1070||unit(r,ctor,2)!==0||unit(r,ctor,3)!==0x0e||r.reader.type(target.classIndex)!=='Ljava/lang/Object;'||target.name!=='<init>'||target.descriptor!=='()V')throw Error('Scope constructor differs from literal Source');
+    scalar(r,'enabled','()Z',enabled);scalar(r,'profile','()Ljava/lang/String;',profile);scalar(r,'sourcePolicySha256','()Ljava/lang/String;',policySha256);
+  }
+  function called(rec,index){const m=rec.reader.method(index);return {...m,owner:rec.reader.type(m.classIndex)};}
+  function invocation(rec,m,at){const u=unit(rec,m,at),op=u&255,index=unit(rec,m,at+1);let regs=[];
+    if(op>=0x6e&&op<=0x72){const count=(u>>>12)&15,g=(u>>>8)&15,v=unit(rec,m,at+2);regs=[v&15,(v>>>4)&15,(v>>>8)&15,(v>>>12)&15,g].slice(0,count);}
+    else if(op>=0x74&&op<=0x78){const count=u>>>8,start=unit(rec,m,at+2);regs=Array.from({length:count},(_,i)=>start+i);}
+    else throw Error('Unsupported scoped invoke');return {op,method:called(rec,index),regs};
+  }
+  function proveHelper(rec,scopeDescriptor,name,withCall){const m=method(rec,name,withCall?'(Lcom/getcapacitor/PluginCall;)Z':'()Z'),regs=new Map();if(rec.reader.u2(m.c.codeOffset+6)!==0)throw Error('Literal new admission helper cannot have exception handlers');if(withCall)regs.set(m.code.registers-1,'ACTUAL_PLUGIN_CALL');let pc=0,last,steps=0,rejected=0;const visited=new Set();
+    while(++steps<=64){if(visited.has(pc))throw Error('Scope helper loop');visited.add(pc);const u=unit(rec,m,pc),op=u&255,a=u>>>8;
+      if([0x71,0x77].includes(op)){const c=invocation(rec,m,pc);if(c.method.owner!==scopeDescriptor||c.method.name!=='enabled'||c.method.descriptor!=='()Z'||c.regs.length!==0)throw Error('Unexpected scope helper call');last=enabled;pc+=3;}
+      else if(op===0x0a){if(last!==enabled)throw Error('Scope result');regs.set(a,last);pc++;}
+      else if(op===0x38||op===0x39){if(!regs.has(a))throw Error('Unknown scope branch');const delta=(unit(rec,m,pc+1)<<16)>>16;const zero=regs.get(a)===0;pc+=(op===0x38?zero:!zero)?delta:2;}
+      else if(op===0x12){const r=(u>>>8)&15,v=(u>>12)&15;regs.set(r,v&8?v-16:v);pc++;}
+      else if(op===0x1a||op===0x1b){regs.set(a,rec.reader.string(op===0x1a?unit(rec,m,pc+1):rec.reader.u4(m.base+(pc+1)*2,'scope string')));pc+=op===0x1a?2:3;}
+      else if([0x07,0x01].includes(op)){const dst=(u>>>8)&15,src=(u>>>12)&15;if(!regs.has(src))throw Error('Unknown scope move');regs.set(dst,regs.get(src));pc++;}
+      else if([0x08,0x02].includes(op)){const src=unit(rec,m,pc+1);if(!regs.has(src))throw Error('Unknown scope move');regs.set(a,regs.get(src));pc+=2;}
+      else if([0x6e,0x74].includes(op)){const c=invocation(rec,m,pc);if(!withCall||c.method.owner!=='Lcom/getcapacitor/PluginCall;'||c.method.name!=='reject'||c.method.descriptor!=='(Ljava/lang/String;)V'||c.regs.length!==2||regs.get(c.regs[0])!=='ACTUAL_PLUGIN_CALL'||regs.get(c.regs[1])!=='custodial_new_producer_scope_deferred'||++rejected!==1)throw Error('Unexpected scoped refusal effect');pc+=3;}
+      else if(op===0x0f){if(regs.get(a)!==enabled||rejected!==(withCall&&!enabled?1:0))throw Error('Scope helper differs from declared admission semantics');return;}
+      else if(op===0x00&&u===0)pc++;else throw Error('Unsupported scope helper opcode '+op.toString(16));
+    }throw Error('Unbounded scope helper');
+  }
+  // Literal Source prepends the NEW guard outside every retained body try.
+  // Reject protected ranges or handler entry points that can add an exceptional
+  // edge from/into that prefix. Retained body exception tables remain intact.
+  function rejectPublicGuardExceptionEdges(rec,m){
+    const count=rec.reader.u2(m.c.codeOffset+6);if(!count)return;
+    const start=m.base+2*m.code.instructionCount+(m.code.instructionCount%2?2:0),handlersBase=start+8*count;
+    rec.reader.table(start,count,8,'public method tries');const offsets=[];let previousEnd=7;
+    for(let j=0;j<count;j++){const o=start+8*j,a=rec.reader.u4(o),n=rec.reader.u2(o+4);if(a<7||a<previousEnd||n===0||a+n>m.code.instructionCount)throw Error('NEW guard exception coverage differs from literal Source');previousEnd=a+n;offsets.push(rec.reader.u2(o+6));}
+    const h=rec.reader.uleb(handlersBase);if(h.value<1||h.value>65535)throw Error('Public guard handler bound');let at=h.next;const seen=new Set();
+    function signed(){let value=0n,shift=0n;for(let k=0;k<5;k++){const b=rec.reader.u1(at++);value|=BigInt(b&127)<<shift;shift+=7n;if(!(b&128)){if(b&64)value|=(-1n)<<shift;if(value< -2147483648n||value>2147483647n)throw Error('Public guard handler overflow');return Number(value);}}throw Error('Malformed public guard handler');}
+    function address(){const q=rec.reader.uleb(at);at=q.next;if(q.value<7||q.value>=m.code.instructionCount)throw Error('Exception handler enters NEW guard prefix');}
+    for(let j=0;j<h.value;j++){seen.add(at-handlersBase);const n=signed();if(Math.abs(n)>65535)throw Error('Public guard catch bound');rec.reader.table(at,Math.abs(n),2,'public catch pairs');for(let k=0;k<Math.abs(n);k++){const t=rec.reader.uleb(at);at=t.next;rec.reader.type(t.value);address();}if(n<=0)address();}
+    for(const o of offsets)if(!seen.has(o))throw Error('Public try references unknown handler');
+  }
+  const targetLists=[['schedule','requestPermissions','changeExactNotificationSetting','createChannel','registerActionTypes'],['getToken','subscribeToTopic','requestPermissions','createChannel']];let guarded=0;
+  for(let p=0;p<2;p++){const rec=defs.get(plugins[p]);proveHelper(rec,scopes[p+1],'admitNewProducerCall',true);
+    for(const name of targetLists[p]){const m=method(rec,name,'(Lcom/getcapacitor/PluginCall;)V'),c=invocation(rec,m,0);if(![0x70,0x76].includes(c.op)||c.method.owner!==plugins[p]||c.method.name!=='admitNewProducerCall'||c.method.descriptor!=='(Lcom/getcapacitor/PluginCall;)Z'||JSON.stringify(c.regs)!==JSON.stringify([m.code.registers-2,m.code.registers-1]))throw Error('NEW producer missing first guard: '+name);const move=unit(rec,m,3),branch=unit(rec,m,4);if((move&255)!==0x0a||(branch&255)!==0x39||(move>>>8)!==(branch>>>8)||unit(rec,m,5)!==3||unit(rec,m,6)!==0x0e)throw Error('NEW producer can bypass scope refusal: '+name);rejectPublicGuardExceptionEdges(rec,m);guarded++;}
+  }
+  proveHelper(defs.get(plugins[2]),scopes[0],'newProducerAdmissionsEnabled',false);
+  // A bounded instruction-boundary walk proves the sole NEW native attachment
+  // is dominated by the same compiled profile predicate, including exception
+  // handler and ordinary branch entry points. Existing callbacks are untouched.
+  function instructions(rec,m){
+    const rows=[];let at=0;
+    while(at<m.code.instructionCount){const u=unit(rec,m,at),op=u&255;let n;
+      if(op===0){if(u===0)n=1;else if(u===0x100)n=4+2*unit(rec,m,at+1);else if(u===0x200)n=2+4*unit(rec,m,at+1);else if(u===0x300)n=4+Math.ceil(unit(rec,m,at+1)*rec.reader.u4(m.base+(at+2)*2,'array payload')/2);else throw Error('Unknown DEX payload');}
+      else if([1,4,7,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,0x10,0x11,0x12,0x1d,0x1e,0x21,0x27,0x28].includes(op)||(op>=0x7b&&op<=0x8f)||(op>=0xb0&&op<=0xcf))n=1;
+      else if([2,5,8,0x13,0x15,0x16,0x19,0x1a,0x1c,0x1f,0x20,0x22,0x23,0x29,0xfe,0xff].includes(op)||(op>=0x2d&&op<=0x3d)||(op>=0x44&&op<=0x6d)||(op>=0x90&&op<=0xaf)||(op>=0xd0&&op<=0xe2))n=2;
+      else if([3,6,9,0x14,0x17,0x1b,0x24,0x25,0x26,0x2a,0x2b,0x2c,0xfc,0xfd].includes(op)||(op>=0x6e&&op<=0x72)||(op>=0x74&&op<=0x78))n=3;
+      else if(op===0xfa||op===0xfb)n=4;else if(op===0x18)n=5;else throw Error('Unsupported native attachment opcode '+op.toString(16));
+      if(!Number.isSafeInteger(n)||n<1||at+n>m.code.instructionCount)throw Error('Malformed native attachment instruction');rows.push({at,op,n});at+=n;
+    }return rows;
+  }
+  const native=defs.get(plugins[2]);let attachments=0,predicates=0;
+  for(const[i,c]of native.definition.methods){if(!c.codeOffset)continue;const m={i,c,code:native.reader.methodCode(c.codeOffset),base:c.codeOffset+16},rows=instructions(native,m),invokes=rows.filter(r=>(r.op>=0x6e&&r.op<=0x72)||(r.op>=0x74&&r.op<=0x78)).map(r=>({...r,call:invocation(native,m,r.at)}));
+    const targets=invokes.filter(r=>r.call.method.owner==='Lorg/memphiszoo/custodial/vault/CustodialNativeRuntime;'&&r.call.method.name==='attachRecurringApplication');
+    predicates+=invokes.filter(r=>r.call.method.owner===plugins[2]&&r.call.method.name==='newProducerAdmissionsEnabled').length;
+    for(const call of targets){attachments++;const guards=invokes.filter(r=>r.at<call.at&&r.call.method.owner===plugins[2]&&r.call.method.name==='newProducerAdmissionsEnabled'&&r.call.method.descriptor==='()Z');if(guards.length!==1)throw Error('Native attachment predicate is missing/ambiguous');const g=guards[0],move=unit(native,m,g.at+3),branch=unit(native,m,g.at+4);if((move&255)!==0x0a||(branch&255)!==0x38||(move>>>8)!==(branch>>>8))throw Error('Native attachment missing false branch');const dest=g.at+4+((unit(native,m,g.at+5)<<16)>>16),lo=g.at+3,hi=call.at+3;if(dest<hi||!rows.some(r=>r.at===dest))throw Error('Native attachment false path does not skip call');
+      for(const r of rows){if(r.at>=g.at+6&&r.at<call.at&&!((r.op>=1&&r.op<=9)||(r.op>=0x52&&r.op<=0x58)))throw Error('Unexpected effect between native scope and attachment');if(r.op===0x26||r.op===0x2b||r.op===0x2c)throw Error('Native attachment method has unsupported indirect branch');let target=null;if(r.op===0x28)target=r.at+((unit(native,m,r.at)>>8)<<24>>24);else if(r.op===0x29||r.op>=0x32&&r.op<=0x3d)target=r.at+((unit(native,m,r.at+1)<<16)>>16);else if(r.op===0x2a)target=r.at+(native.reader.u4(m.base+(r.at+1)*2,'native goto')|0);if(target!==null&&target>=lo&&target<hi)throw Error('Branch enters protected native attachment region');}
+      const tries=native.reader.u2(c.codeOffset+6,'native try count');if(tries){let off=m.base+m.code.instructionCount*2+(m.code.instructionCount%2?2:0)+tries*8;const count=native.reader.uleb(off,'native handler count');off=count.next;function signed(){let v=0,b=0,shift=0;do{b=native.reader.u1(off++,'native signed LEB');v|=(b&127)<<shift;shift+=7;if(shift>35)throw Error('Native handler overflow');}while(b&128);return shift<32&&(b&64)?v|(-1<<shift):v;}
+        for(let h=0;h<count.value;h++){const n=signed();for(let k=0;k<Math.abs(n);k++){const type=native.reader.uleb(off,'handler type');off=type.next;const address=native.reader.uleb(off,'handler address');off=address.next;if(address.value>=lo&&address.value<hi)throw Error('Exception enters native attachment region');}if(n<=0){const address=native.reader.uleb(off,'catch all address');off=address.next;if(address.value>=lo&&address.value<hi)throw Error('Catch-all enters native attachment region');}}
+      }
+    }
+  }
+  if(attachments!==1||predicates!==1)throw Error('Native NEW attachment callsite closure differs');
+  return {scope_classes:3,guarded_public_new_methods:guarded,native_new_attachment_guard_verified:true,profile,policy_sha256:policySha256};
 }

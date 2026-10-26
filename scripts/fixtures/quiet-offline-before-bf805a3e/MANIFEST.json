@@ -1,0 +1,44 @@
+{
+  "schema": "custodial.quiet-offline-frozen-comparison-fixture.v1",
+  "source_commit": "bf805a3e5f18577fa83cc28800d30a469d053ecf",
+  "source_tree": "9cb421d0594994bb1e6b8a1598db444dbd83e054",
+  "source_only": true,
+  "production": false,
+  "files": [
+    {
+      "path": "mobile/src/custodial/readiness.js",
+      "bytes": 3814,
+      "sha256": "c8a95b00a05626ba4b6737e342b93873c1dc80114afc911e25fbf993a445d150"
+    },
+    {
+      "path": "mobile/src/custodial/app.js",
+      "bytes": 19468,
+      "sha256": "4505316d5184ed5f4e907989c0730c8dad3605015526265fd05bbfb278a7ade4"
+    },
+    {
+      "path": "mobile/src/custodial/index.html",
+      "bytes": 16181,
+      "sha256": "688d87150e855d3758f13e6de5c1257dff7626055ce01554721a4a619a9bcb6c"
+    },
+    {
+      "path": "employee-schedule.html",
+      "bytes": 38796,
+      "sha256": "db8a06d52da0746cb7efbecbc805320c269c2b00e358432dc072ff6cf4d75057"
+    },
+    {
+      "path": "index.html",
+      "bytes": 123906,
+      "sha256": "82bd889063aee47f1e863376b8fa4c56e73822503d1bab093fb6bd3be7d0f753"
+    },
+    {
+      "path": "memphis-scan-sync.js",
+      "bytes": 127966,
+      "sha256": "3bfd0889470339452c5b420eef2158d8c54398dc51cdcd0ee04f6fb5ca768b8c"
+    },
+    {
+      "path": "mobile/src/chatscope/app.jsx",
+      "bytes": 73645,
+      "sha256": "6c16fc6afb8cb9b9a110293250200bbd1c486f2771a38552a5fdb9d16f4abbf7"
+    }
+  ]
+}

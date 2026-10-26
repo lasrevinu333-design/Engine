@@ -6,6 +6,7 @@ on:
       - 'mobile/**'
       - '**.html'
       - '**.js'
+      - '**.mjs'
       - '**.ts'
       - '**.tsx'
       - '**.css'
@@ -37,6 +38,7 @@ on:
       - 'mobile/**'
       - '**.html'
       - '**.js'
+      - '**.mjs'
       - '**.ts'
       - '**.tsx'
       - '**.css'
@@ -72,7 +74,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prebuild-source:
+    name: Source and dependency checks without app compilation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.1'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.1'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install exact dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+      - name: Verify source contracts without building an app
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci-toolchain-contract-tests.mjs
+          node scripts/batch-0a-baseline-contract-tests.mjs
+          node mobile/scripts/custodial-generated-app-test-contracts.mjs
+          node scripts/refresh-frontend-release-manifest.mjs --check
+
   shell-browser:
+    needs: prebuild-source
+    environment: custodial-prebuild-final-audit
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -97,6 +132,8 @@ jobs:
         run: npm run --silent test:batch-0b:browser
 
   web-builds:
+    needs: prebuild-source
+    environment: custodial-prebuild-final-audit
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:

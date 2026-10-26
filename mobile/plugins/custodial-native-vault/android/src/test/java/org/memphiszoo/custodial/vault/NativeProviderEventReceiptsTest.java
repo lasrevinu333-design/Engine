@@ -20,7 +20,7 @@ public final class NativeProviderEventReceiptsTest {
     }
     static AuthorizedResponse response(JSONArray rows) throws Exception {
         return new AuthorizedResponse(200, Map.of("Content-Type", "application/json"), new JSONObject().put("ok", true)
-            .put("data", new JSONObject().put("schema", "custodial.native-provider-event-receipts.v1").put("results", rows)).toString().getBytes(StandardCharsets.UTF_8));
+            .put("data", new JSONObject().put("schema", "custodial.native-provider-event-receipts.v2").put("results", rows)).toString().getBytes(StandardCharsets.UTF_8));
     }
     static NativeProviderEventReceipts validate(NativeProviderJournal.EventBatch batch, JSONObject... rows) throws Exception {
         JSONArray array = new JSONArray(); for (JSONObject row : rows) array.put(row); return NativeProviderEventReceipts.validateResponse(batch, response(array));
@@ -133,8 +133,51 @@ public final class NativeProviderEventReceiptsTest {
         assertTrue(f.r.f.journal().drainQuarantine(f.r.principal, f.payload.recordId, NativeProviderIngressTest.observation(NativeProviderIngressTest.NOW, 500, 8)).newlyAdmitted);
         NativeProviderJournal.EventBatch batch = batch(f); JSONObject row = receipt(batch.events.values().iterator().next());
         JSONObject original = row.getJSONObject("original_observation");
-        assertTrue(original.isNull("authenticated_at")); assertTrue(original.isNull("boot_count")); assertTrue(original.isNull("elapsed_realtime_ms"));
+        assertFalse(original.has("authenticated_at")); assertTrue(original.isNull("earliest_at")); assertTrue(original.isNull("latest_at")); assertTrue(original.isNull("clock_profile_id")); assertTrue(original.isNull("boot_count")); assertTrue(original.isNull("elapsed_realtime_ms"));
         assertEquals(1, f.r.f.journal().settleEvents(f.r.principal, batch, validate(batch, row)));
-        ProviderRecordStoreTest.failure("custodial_provider_observation_invalid", () -> new NativeProviderJournal.Observation(java.time.Instant.parse(NativeProviderIngressTest.NOW), -1, -1));
+        ProviderRecordStoreTest.failure("custodial_provider_observation_invalid", () -> new NativeProviderJournal.Observation(NativeProviderTimeTest.at(java.time.Instant.parse(NativeProviderIngressTest.NOW), 1, 1), -1, -1));
+    }
+    @Test public void receivedFirstSelectionSurvivesRestartAndDrainsMoreThanSixteenWithoutStarvingPrerequisites() throws Exception {
+        NativeProviderIngressTest.Fixture f = fixture();
+        for (int i = 1; i < 20; i++) {
+            Map<String, String> data = new TreeMap<>(f.payload.data());
+            data.put("receipt_job_id", String.format(java.util.Locale.ROOT, "77000000-0000-4000-8000-%012d", i + 10));
+            f.r.f.journal().recordArrival(f.r.principal, NativeProviderPayloadTest.accept(NativeProviderPayloadTest.signed(data)), NativeProviderIngressTest.observation(NativeProviderIngressTest.NOW, 301, 7));
+        }
+        for (String record : f.r.f.journal().admittedRecordIds(f.r.principal))
+            f.r.f.journal().applyPresentationAction(f.r.principal, f.r.f.journal().presentation(f.r.principal, record), "opened", NativeProviderIngressTest.observation(NativeProviderIngressTest.NOW, 400, 7));
+        // Deterministic synthetic UUID layout: every Open sorts BEFORE received.
+        // Update matching fixture inbox references too; production IDs are never
+        // changed by the selection implementation under test.
+        ProviderRecordStore store = f.r.f.storage.store(); ProviderRecordStore.Snapshot snapshot = store.load();
+        Map<ProviderRecordStore.Key, char[]> writes = new HashMap<>(); java.util.Set<ProviderRecordStore.Key> removals = new java.util.HashSet<>();
+        Map<String, String> renamed = new HashMap<>(); int n = 0;
+        for (ProviderRecordStore.Key key : snapshot.keys()) if (key.domain == ProviderEnvelopeCrypto.Domain.EVENT) {
+            JSONObject event = f.r.f.read(key.domain, key.id);
+            String id = String.format(java.util.Locale.ROOT, ("received".equals(event.getString("action")) ? "ff000000" : "01000000") + "-0000-4000-8000-%012d", ++n);
+            renamed.put(key.id, id); event.put("event_id", id); removals.add(key);
+            writes.put(ProviderRecordStore.key(key.domain, id), event.toString().toCharArray());
+        }
+        for (ProviderRecordStore.Key key : snapshot.keys()) if (key.domain == ProviderEnvelopeCrypto.Domain.INBOX) {
+            JSONObject record = f.r.f.read(key.domain, key.id);
+            for (String name : new String[]{"received_event_id", "opened_event_id"}) record.put(name, renamed.get(record.getString(name)));
+            writes.put(key, record.toString().toCharArray());
+        }
+        store.commit(snapshot.revision, writes, removals);
+        Map<String, Object> beforeSelection = new HashMap<>(f.r.f.storage.memory.raw);
+        NativeProviderJournal.EventBatch first = batch(f), restarted = batch(f);
+        assertEquals(first.events.keySet(), restarted.events.keySet()); assertEquals(16, first.events.size());
+        for (NativeProviderJournal.PendingEvent e : first.events.values()) assertEquals("received", e.wire().getString("action"));
+        assertEquals(beforeSelection, f.r.f.storage.memory.raw);
+        JSONArray rows = new JSONArray(); for (NativeProviderJournal.PendingEvent e : first.events.values()) rows.put(receipt(e));
+        assertEquals(16, f.r.f.journal().settleEvents(f.r.principal, first, NativeProviderEventReceipts.validateResponse(first, response(rows))));
+        NativeProviderJournal.EventBatch second = batch(f); assertEquals(16, second.events.size()); int index = 0;
+        for (NativeProviderJournal.PendingEvent e : second.events.values()) assertEquals(index++ < 4 ? "received" : "opened", e.wire().getString("action"));
+        rows = new JSONArray(); for (NativeProviderJournal.PendingEvent e : second.events.values()) rows.put(receipt(e));
+        f.r.f.journal().settleEvents(f.r.principal, second, NativeProviderEventReceipts.validateResponse(second, response(rows)));
+        NativeProviderJournal.EventBatch third = batch(f); assertEquals(8, third.events.size());
+        rows = new JSONArray(); for (NativeProviderJournal.PendingEvent e : third.events.values()) { assertEquals("opened", e.wire().getString("action")); rows.put(receipt(e)); }
+        f.r.f.journal().settleEvents(f.r.principal, third, NativeProviderEventReceipts.validateResponse(third, response(rows)));
+        assertEquals(0, batch(f).events.size()); assertEquals(40, f.count(ProviderEnvelopeCrypto.Domain.EVENT));
     }
 }

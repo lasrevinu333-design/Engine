@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#071c19">
   <meta name="robots" content="noindex,nofollow">
-  <title>Custodial Work Statistics</title>
+  <title>Custodial Operational Insights</title>
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css">
   <link rel="stylesheet" href="./operational-insights.css">
@@ -22,8 +22,8 @@
         </div>
         <div>
           <div class="uxEyebrow">Custodial evidence</div>
-          <h1>Custodial Work Statistics</h1>
-          <p>Review recorded cleaning times, services and recurring location problems.</p>
+          <h1>Operational Insights</h1>
+          <p>Read cleaning history, retained historical inspection results, and recurring location problems. New inspection recording is retired.</p>
         </div>
       </div>
       <button id="refresh-insights" class="uxButton compact refreshButton" type="button">Refresh</button>
@@ -32,6 +32,8 @@
     <section class="summaryGrid" aria-label="Operational summary">
       <article class="summaryCard uxCard"><span class="summaryLabel">Cleanings compared</span><strong id="summary-cleanings">—</strong><small>Employee-by-location records</small></article>
       <article class="summaryCard uxCard"><span class="summaryLabel">Average clean time</span><strong id="summary-duration">—</strong><small>Across loaded comparisons</small></article>
+      <article class="summaryCard uxCard"><span class="summaryLabel">Historical inspection average</span><strong id="summary-score">—</strong><small>Quality result when inspected</small></article>
+      <article id="inspection-coverage-card" class="summaryCard uxCard"><span class="summaryLabel">Historical spot checks</span><strong id="summary-coverage">—</strong><small id="summary-coverage-detail">Rolling 30-day sample · no quota</small></article>
       <article class="summaryCard uxCard"><span class="summaryLabel">Recurring ticket patterns</span><strong id="summary-hotspots">—</strong><small>Repeat or hotspot fixtures</small></article>
     </section>
 
@@ -40,13 +42,14 @@
         <button id="tab-performance" class="insightsTab active" role="tab" type="button" data-tab="performance" aria-controls="panel-performance" aria-selected="true" tabindex="0">Performance</button>
         <button id="tab-cleanings" class="insightsTab" role="tab" type="button" data-tab="cleanings" aria-controls="panel-cleanings" aria-selected="false" tabindex="-1">Cleanings</button>
         <button id="tab-tickets" class="insightsTab" role="tab" type="button" data-tab="tickets" aria-controls="panel-tickets" aria-selected="false" tabindex="-1">Ticket Trends</button>
+        <button id="tab-inspections" class="insightsTab" role="tab" type="button" data-tab="inspections" aria-controls="panel-inspections" aria-selected="false" tabindex="-1">Inspection History</button>
       </nav>
 
       <div id="global-status" class="uxStatus workspaceStatus" aria-live="polite"></div>
 
       <section id="panel-performance" class="tabPanel active" role="tabpanel" aria-labelledby="tab-performance" tabindex="0" data-panel="performance">
         <div class="panelHeading">
-          <div><div class="uxEyebrow">Time and result</div><h2>Employee-by-location comparison</h2><p>Compare recorded work over time. These statistics do not measure cleaning quality or record your personal observations.</p></div>
+          <div><div class="uxEyebrow">Time and result</div><h2>Employee-by-location comparison</h2><p>Use enough cleaning records to see a pattern. Historical inspection results remain available; no new inspection entry is recorded.</p></div>
         </div>
         <div class="filterGrid">
           <label>Employee<select id="performance-employee" class="uxSelect"><option value="">All employees</option></select></label>
@@ -59,7 +62,7 @@
 
       <section id="panel-cleanings" class="tabPanel" role="tabpanel" aria-labelledby="tab-cleanings" tabindex="0" data-panel="cleanings" hidden>
         <div class="panelHeading">
-          <div><div class="uxEyebrow">Finished work</div><h2>Recent cleaning facts</h2><p>Duration, services and linked issues remain tied to the employee who performed the work.</p></div>
+          <div><div class="uxEyebrow">Finished work</div><h2>Recent cleaning facts</h2><p>Duration, services, ticket connections, and historical inspection results remain tied to the employee who performed the work.</p></div>
         </div>
         <div class="filterGrid cleaningFilters">
           <label>From<input id="cleanings-from" class="uxInput" type="date"></label>
@@ -69,6 +72,12 @@
           <button id="apply-cleanings" class="uxButton primary" type="button">Apply</button>
         </div>
         <div id="cleanings-list" class="dataList" aria-live="polite"></div>
+        <section id="completion-evidence-panel" class="uxCard" hidden aria-labelledby="completion-evidence-heading" style="padding:18px;margin-top:16px">
+          <h3 id="completion-evidence-heading" tabindex="-1">Exact completion record — read-only</h3>
+          <button id="close-completion-evidence" class="uxButton compact" type="button">Close record</button>
+          <p id="completion-evidence-status" role="status" aria-live="polite"></p>
+          <div id="completion-evidence-content" style="overflow-wrap:anywhere"></div>
+        </section>
       </section>
 
       <section id="panel-tickets" class="tabPanel" role="tabpanel" aria-labelledby="tab-tickets" tabindex="0" data-panel="tickets" hidden>
@@ -83,13 +92,19 @@
         <div id="tickets-list" class="dataList" aria-live="polite"></div>
       </section>
 
+      <section id="panel-inspections" class="tabPanel" role="tabpanel" aria-labelledby="tab-inspections" tabindex="0" data-panel="inspections" hidden>
+        <div class="panelHeading">
+          <div><div class="uxEyebrow">Quality evidence</div><h2>Inspection history</h2><p>Retained inspection records describe their original cleaning session, location, employee, and duration. This view does not record a new inspection.</p></div>
+        </div>
+        <div id="inspections-list" class="dataList" aria-live="polite"></div>
+      </section>
     </section>
   </main>
 
-  <div id="insights-toast" class="uxToast" role="status" aria-live="polite"></div>
   <script src="./memphis-auth.js"></script>
   <script src="./memphis-ui.js"></script>
   <script src="./operational-insights-native-auth.js"></script>
+  <script src="./memphis-completion-evidence.js"></script>
   <script src="./operational-insights.js"></script>
 </body>
 </html>

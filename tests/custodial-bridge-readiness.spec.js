@@ -33,17 +33,6 @@ async function installDelayedNativeVault(page, {
       blocked: false,
       installation,
     };
-    const capturedPrincipal = () => ({
-      schema_version: 'custodial-protected-principal.v1',
-      device_id: authoritativeDevice,
-      employee_id: '00000000-0000-4000-8000-000000000809',
-      credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
-      credential_operation_id: '00000000-0000-4000-8000-000000000807',
-      assignment_epoch: 1,
-      installation_seal: seal,
-      enrolled_at: installation.enrolled_at,
-    });
-    nativeState.principal = capturedPrincipal();
     if (journalDisposition) {
       nativeState.scan_journal_state = 'READY';
       nativeState.scan_journal_recovery_required = false;
@@ -61,33 +50,11 @@ async function installDelayedNativeVault(page, {
     });
     const authorizedResponse = (request) => {
       const path = String(request?.path || '');
-      if (path === '/version') {
-        return response({
-          ok: true,
-          version: 'release-2026.07.19.custodial-v3.12',
-          contracts: { scan: 'scan.v4.snapshot-bound-authority' },
-          release_manifest: {
-            schema: {
-              fingerprint: '3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb',
-            },
-          },
-        });
-      }
-      if (path === '/dashboard-api/current-attendance') {
-        return response({ ok: true, data: {
-          attendance: 0,
-          planned: 0,
-          source_timestamp: '2026-08-01T12:00:00.000Z',
-        } });
-      }
       if (localStorage.getItem('__custodial_test_offline_home') === '1'
         && (path.startsWith('/device-auth/status') || path.startsWith('/schedule-api/my-day-summary'))) {
         return Promise.reject(new Error('simulated employee Home refresh outage'));
       }
       if (path.startsWith('/device-auth/status')) {
-        // The real native vault journals this authenticated response before it
-        // resolves authorizedRequest. Mirror that durable principal transition.
-        nativeState.principal = capturedPrincipal();
         return response({ ok: true, data: {
           authenticated: true,
           canonical_device_id: authoritativeDevice,
@@ -95,7 +62,6 @@ async function installDelayedNativeVault(page, {
           credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
           employee_name: 'Karen Robinson',
           employee_id: '00000000-0000-4000-8000-000000000809',
-          assignment_epoch: 1,
         } });
       }
       if (path.startsWith('/messaging-api/me/by-device')) {
@@ -111,9 +77,6 @@ async function installDelayedNativeVault(page, {
       if (path.startsWith('/schedule-api/my-day-summary')) {
         return response({ ok: true, data: {
           employee_name: 'Karen Robinson',
-          employee_id: '00000000-0000-4000-8000-000000000809',
-          credential_id: '285ef315-3455-4b62-9a33-d6b5c4d6f901',
-          assignment_epoch: 1,
           device_id: authoritativeDevice,
           service_date: '2026-08-01',
           source: 'static_weekly_projection',
@@ -260,14 +223,7 @@ async function installQueuedAction(page, action) {
       request.onsuccess = () => {
         const db = request.result;
         const tx = db.transaction('actions', 'readwrite');
-        const store = tx.objectStore('actions');
-        const existing = store.get(seed.id);
-        existing.onsuccess = () => {
-          // A reload models process death, not a second writer. Preserve the
-          // exact leased/retry bytes that the first process archived.
-          if (existing.result == null) store.put(seed);
-        };
-        existing.onerror = () => reject(existing.error);
+        tx.objectStore('actions').put(seed);
         tx.oncomplete = () => { db.close(); resolve(true); };
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error || new Error('Queue seed was aborted.'));
@@ -384,7 +340,7 @@ test('employee feedback waits at submit and sends the authoritative native devic
   expect(await nativeRequests(page)).toEqual([]);
 
   await releaseNativeState(page);
-  await expect(page.locator('#status')).toHaveText('Received by the program.');
+  await expect(page.locator('#status')).toHaveText('Sent.');
   const feedback = (await nativeRequests(page)).find(({ path }) => path === '/feedback-api/submit');
   expect(feedback?.device_id).toBe(AUTHORITATIVE_DEVICE);
   expect(JSON.parse(Buffer.from(feedback.body_base64, 'base64').toString('utf8'))).toMatchObject({
@@ -416,7 +372,7 @@ test('protected Home renders only the employee name and four fixed choices', asy
 
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   await expect(page.locator('.homeButton')).toHaveCount(4);
   const afterReleaseRequests = await nativeRequests(page);
   const scheduleRequests = afterReleaseRequests.filter(({ path }) => path.startsWith('/schedule-api/'));
@@ -439,7 +395,7 @@ test('protected Home retires an exact historical server quarantine before restor
 
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   const reconciliation = await page.evaluate(() => ({
     status: window.MemphisMobile?.securityStatus?.(),
     quarantine: localStorage.getItem('memphisZooCustodialRestoreQuarantine'),
@@ -471,7 +427,7 @@ test('protected Home retires a reconstructed historical server quarantine only a
 
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   const reconciliation = await page.evaluate(() => ({
     status: window.MemphisMobile?.securityStatus?.(),
     quarantine: localStorage.getItem('memphisZooCustodialRestoreQuarantine'),
@@ -524,7 +480,7 @@ test('protected Home describes one interrupted pre-start truthfully without addi
   await expect(page.locator('#active-cleaning-text')).toHaveText(
     'Cleaning did not start at Nocturnal. Tap the location tag again.',
   );
-  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   await expect(page.locator('.homeButton')).toHaveCount(4);
   expect(new URL(page.url()).pathname).toMatch(/\/index\.html$/);
 });
@@ -779,7 +735,7 @@ test('manager recovery archives and retires one exact queued interrupted Start C
   await waitForQueuedActionSeed(page);
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   await expect(page.locator('#active-cleaning')).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(0);
 
@@ -920,7 +876,7 @@ test('queued interrupted-start retirement resumes after process death following 
   await waitForQueuedActionSeed(page);
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   await expect(page.locator('#active-cleaning')).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(0);
   expect(await page.evaluate((id) => localStorage.getItem(`session:${id}`), sessionId)).toBeNull();
@@ -1171,14 +1127,14 @@ test('protected employee Home reloads from its verified cache during a refresh o
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
   await expect(page.locator('.homeButton')).toHaveCount(4);
-  await expect.poll(() => page.evaluate(() => Boolean(window.MemphisMobile?.readCustodialHomeCache?.()))).toBe(true);
+  await expect.poll(() => page.evaluate(() => Boolean(localStorage.getItem('mz_custodial_home_cache:KIOSK_08')))).toBe(true);
 
   await page.evaluate(() => localStorage.setItem('__custodial_test_offline_home', '1'));
   await page.reload();
   await waitForDelayedGetState(page);
   await releaseNativeState(page);
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeLabel')).toHaveText(['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback']);
+  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
   expect((await nativeRequests(page)).some(({ path }) => path.startsWith('/schedule-api/'))).toBe(false);
 });
 

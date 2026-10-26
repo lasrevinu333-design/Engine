@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#102018">
+  <link rel="icon" href="./Zoo_Logo_ui.webp" type="image/webp">
   <title>Memphis Zoo Custodial</title>
   <style>
     :root{color-scheme:dark;--text:#fff;--panel:rgba(5,15,20,.88);--line:rgba(255,255,255,.42);--green:#b7e66a;--danger:#fecaca}
@@ -51,7 +52,8 @@
     .action{width:100%;min-height:58px;margin-top:12px;border:0;border-radius:17px;padding:12px 16px;background:linear-gradient(180deg,#c7ef81,#9bd449);color:#102106;font-size:1.12rem;font-weight:900}.action.secondary{background:#f8fafc;color:#111827}.action.danger{background:#fecaca;color:#450a0a}
     .status{min-height:1.4em;margin-top:14px;text-align:center;font-size:1rem;font-weight:800;line-height:1.35}.status.error{color:var(--danger)}.status.ok{color:#d9f99d}.status.info{color:#dbeafe}
     .factNote{font-size:.75rem;color:#dbeafe;margin:6px 0 0;line-height:1.2}.infoGrid [data-stale="true"]{color:#ffe9b0}
-    .hourlyFacts{list-style:none;padding:0;margin:10px 0 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(114px,1fr);gap:8px;overflow-x:auto;max-width:100%;text-align:center}.hourlyFacts li{padding:10px 8px;border:1px solid rgba(255,255,255,.2);border-radius:12px;display:grid;gap:4px;font-size:.78rem;line-height:1.3}.hourlyFacts strong{font-size:1.05rem}.weatherWarnings{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px;text-align:left}.weatherWarnings li{padding:10px;border:1px solid rgba(255,210,90,.65);border-radius:12px;overflow-wrap:anywhere}.weatherWarnings [data-urgent="true"]{border-width:2px}.weatherWarnings p{white-space:pre-line;margin:6px 0;font-size:.9rem}.shiftFacts{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:8px;font-size:.9rem}.weatherCard{min-width:0;overflow:hidden}.activeCleaning{order:-1;margin-bottom:12px}
+    .phoneReadiness{width:100%;max-width:720px;padding:12px 14px;margin:10px 0;border:2px solid #fde68a;border-radius:14px;background:#17212c;color:#fff;font-size:.94rem;line-height:1.45;overflow-wrap:anywhere;text-align:left}.phoneReadiness.ready{border-color:#b7e66a}.phoneReadiness.do_not_use{border-color:#fecaca}.phoneReadiness.needs_manager{border-color:#fdba74}
+    .hourlyFacts{list-style:none;padding:0;margin:10px 0 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(114px,1fr);gap:8px;overflow-x:auto;max-width:100%;text-align:center}.hourlyFacts:focus-visible{outline:3px solid #fff;outline-offset:3px}.hourlyFacts li{padding:10px 8px;border:1px solid rgba(255,255,255,.2);border-radius:12px;display:grid;gap:4px;font-size:.78rem;line-height:1.3}.hourlyFacts strong{font-size:1.05rem}.weatherWarnings{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px;text-align:left}.weatherWarnings li{padding:10px;border:1px solid rgba(255,210,90,.65);border-radius:12px;overflow-wrap:anywhere}.weatherWarnings [data-urgent="true"]{border-width:2px}.weatherWarnings p{white-space:pre-line;margin:6px 0;font-size:.9rem}.shiftFacts{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:8px;font-size:.9rem}.weatherCard{min-width:0;overflow:hidden}.activeCleaning{order:-1;margin-bottom:12px}
     @media(max-width:640px){.homeScreen{padding:calc(max(10px,env(safe-area-inset-top)) + 6px) 14px max(30px,env(safe-area-inset-bottom))}.heroStack{grid-template-columns:1fr;gap:7px;margin:4px 0 10px}.hubTitle{padding:10px 16px 11px;border-radius:20px}.hubTitle h1{font-size:clamp(1.5rem,6.2vw,1.85rem)}.hubTitleSub{font-size:.75rem}.hubClock{margin-top:7px}.clockText{font-size:1.65rem}.dateText{font-size:.8rem}.infoGrid{gap:7px}.weatherCard,.attendanceCard{padding:9px 10px;border-radius:18px}.weatherValue,.attendanceValue{font-size:1.55rem}.employeeCard{margin-bottom:10px;padding:10px;border-radius:18px}.employeeLabel{font-size:.72rem;margin-bottom:5px}.homeMenu{max-width:360px;gap:12px 4px;margin:2px auto 0}.homeButton{gap:6px}.homeLabel{font-size:.84rem}}
   </style>
   <script>document.documentElement.classList.add('mz-native-app',/Android/i.test(navigator.userAgent)?'mz-native-android':'mz-native-ios');</script>
@@ -63,14 +65,16 @@
       <div id="phone-lock-clock" class="phoneLockClock">--:--</div>
       <div id="phone-lock-date" class="phoneLockDate">--</div>
       <div id="phone-lock-name" class="phoneLockName" aria-live="polite">Employee phone</div>
+      <p id="lock-readiness" class="phoneReadiness" role="status" hidden></p>
       <button id="phone-unlock" class="phoneUnlock" type="button">Unlock</button>
     </div>
   </section>
   <main id="home" class="homeScreen" hidden>
+    <p id="home-readiness" class="phoneReadiness" role="status" hidden></p>
     <div class="heroStack">
       <header class="hubTitle"><h1>Custodial Hub</h1><div class="hubTitleSub">Team Devices</div><div class="hubClock"><div id="home-clock" class="clockText">--:--</div><div id="home-date" class="dateText">--</div></div></header>
       <div class="infoGrid">
-        <section class="weatherCard" aria-label="Today's Weather"><div class="factLabel">Today’s Weather</div><div class="weatherValue"><span id="home-weather-icon" class="weatherIcon" aria-hidden="true">--</span><span id="home-weather-current">Unavailable</span></div><div id="home-weather-summary" class="weatherMeta"></div><p id="home-weather-freshness" class="factNote">Weather feed unavailable.</p><ul id="home-weather-hours" class="hourlyFacts" aria-label="Hourly weather"></ul><p id="home-hourly-freshness" class="factNote">Hourly weather unavailable.</p><ul id="home-weather-alerts" class="weatherWarnings" aria-label="Weather warnings"></ul><p id="home-alerts-freshness" class="factNote">Weather warnings unavailable.</p></section>
+        <section class="weatherCard" aria-label="Today's Weather"><div class="factLabel">Today’s Weather</div><div class="weatherValue"><span id="home-weather-icon" class="weatherIcon" aria-hidden="true">--</span><span id="home-weather-current">Unavailable</span></div><div id="home-weather-summary" class="weatherMeta"></div><p id="home-weather-freshness" class="factNote">Weather feed unavailable.</p><ul id="home-weather-hours" class="hourlyFacts" role="region" tabindex="0" aria-label="Hourly weather forecast; use left and right arrow keys to scroll"></ul><p id="home-hourly-freshness" class="factNote">Hourly weather unavailable.</p><ul id="home-weather-alerts" class="weatherWarnings" aria-label="Weather warnings"></ul><p id="home-alerts-freshness" class="factNote">Weather warnings unavailable.</p></section>
         <section class="attendanceCard" aria-label="Today's Guest Entries"><div class="factLabel">Today’s Guest Entries</div><div id="home-guest-count" class="attendanceValue">Unavailable</div><div id="home-guest-details" class="attendanceDetails"></div><p id="home-attendance-freshness" class="factNote">Guest count has not been verified.</p></section>
       </div>
     </div>
@@ -82,8 +86,9 @@
     <nav class="homeMenu" aria-label="Employee menu">
       <a class="homeButton" href="./messages.html?hub=employee"><span class="homeIcon messengerIcon"><img alt="" src="./memphis_avatar_ui.webp"></span><span class="homeLabel">Memphis Messenger</span></a>
       <a class="homeButton" href="./employee-schedule.html?hub=employee"><span class="homeIcon scheduleIcon"><img alt="" src="./scheduler_icon_ui.webp"></span><span class="homeLabel">My Schedule</span></a>
-      <a class="homeButton" href="./employee-events.html?hub=employee"><span class="homeIcon eventsIcon"><img alt="" src="./Event_Icon_ui.webp"></span><span class="homeLabel">Upcoming Events</span></a>
+      <a class="homeButton" href="./events.html?hub=employee"><span class="homeIcon eventsIcon"><img alt="" src="./Event_Icon_ui.webp"></span><span class="homeLabel">Upcoming Events</span></a>
       <a class="homeButton" href="./employee-feedback.html?hub=employee"><span class="homeIcon feedbackIcon" aria-hidden="true">💬</span><span class="homeLabel">Program Feedback</span></a>
+      <a class="homeButton" href="./supply-coming-soon.html" aria-label="Supplies — coming soon"><span class="homeIcon supplyIcon"><img src="./assets/supply_request_icon.svg" alt=""></span><span class="homeLabel">Supplies</span></a>
     </nav>
     <div class="homeLogo" aria-hidden="true"><img src="./Zoo_Logo_ui.webp" alt=""></div>
   </main>
@@ -92,6 +97,7 @@
     <section class="stateCard">
       <h1 id="boot-title">Please wait</h1>
       <p id="boot-status">Opening your work phone…</p>
+      <p id="boot-readiness" class="phoneReadiness" role="status" hidden></p>
     </section>
   </main>
 
@@ -99,6 +105,7 @@
     <section class="stateCard">
       <h1>Waiting for manager assignment</h1>
       <p id="assignment-status">Your manager assigns this phone. No employee sign-in is needed.</p>
+      <p id="assignment-readiness" class="phoneReadiness" role="status">Needs manager — Your manager assigns this phone. Saved work is retained.</p>
     </section>
   </main>
 

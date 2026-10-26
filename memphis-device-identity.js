@@ -17,18 +17,50 @@
   let enrollmentPromise=null;
   let banner=null;
   let overlay=null;
+  let nativeCustodialObserved=false;
 
   function isNativeCustodialSecurity(){
-    return window.MemphisCustodialSecurity?.native===true
-      || window.MemphisMobile?.edition==='custodial'
-      || window.MemphisMobileBuildIdentity?.edition==='custodial';
+    // Evidence requires the protected reader; it never supplies an identity.
+    // Once observed, missing/unreadable successors cannot thaw raw web writes.
+    if(nativeCustodialObserved)return true;
+    try{
+      if(window.MemphisCustodialSecurity?.native===true
+        || window.MemphisMobile?.edition==='custodial'
+        || window.MemphisMobileBuildIdentity?.edition==='custodial'
+        || window.Capacitor?.isNativePlatform?.()===true
+        || ['android','ios'].includes(window.Capacitor?.getPlatform?.()))nativeCustodialObserved=true;
+    }catch(_err){nativeCustodialObserved=true;}
+    return nativeCustodialObserved;
+  }
+
+  function nativeIdentityOwner(){
+    try{
+      if(!isNativeCustodialSecurity())return null;
+      const security=window.MemphisCustodialSecurity,mobile=window.MemphisMobile;
+      const reader=security?.getStatus,principalReader=mobile?.principalIdentity;
+      if(security?.native!==true||mobile?.edition!=='custodial'
+        ||typeof reader!=='function'||typeof principalReader!=='function')return null;
+      const status=reader.call(security),identity=principalReader.call(mobile);
+      const deviceId=status?.deviceId;
+      if(status?.ready!==true||status.available!==true||status.quarantined!==false
+        ||!Number.isSafeInteger(status.generation)||status.generation<1
+        ||typeof deviceId!=='string'||normalize(deviceId)!==deviceId||!isEmployeeKiosk(deviceId)
+        ||status.principal?.device_id!==deviceId||typeof identity!=='string'||!identity)return null;
+      const securityReady=security.ready,mobileReady=mobile.ready,pending=mobileReady||securityReady;
+      if(!pending||typeof pending.then!=='function')return null;
+      return Object.freeze({security,mobile,reader,principalReader,securityReady,mobileReady,pending,
+        identity,generation:status.generation,deviceId,status});
+    }catch(_err){return null;}
+  }
+
+  function sameNativeIdentityOwner(original){
+    const current=nativeIdentityOwner();
+    return current&&['security','mobile','reader','principalReader','securityReady','mobileReady','pending',
+      'identity','generation','deviceId'].every(key=>current[key]===original[key])?current:null;
   }
 
   function protectedNativeDeviceId(){
-    if(!isNativeCustodialSecurity())return '';
-    const status=window.MemphisCustodialSecurity?.getStatus?.();
-    const value=normalize(status?.deviceId||'');
-    return status?.ready===true&&status?.available===true&&isEmployeeKiosk(value)?value:'';
+    return nativeIdentityOwner()?.deviceId||'';
   }
 
   function normalize(value){
@@ -78,17 +110,125 @@
   }
 
   function resolveFullyIdentifier(){
+    if(isNativeCustodialSecurity())return protectedNativeDeviceId();
     const candidates=fullyCandidates();
     const canonical=candidates.find((candidate)=>isCanonicalKiosk(candidate.value));
     return canonical?.value||candidates[0]?.value||'';
   }
 
+  // Synchronous return values below are resolver DATA, never save receipts.
+  // One private original attempt is joined by resolveReady(), not retried.
+  let browserPersistence=null,browserAdmissionPromise=null,browserPersistenceUncertain=false,browserPageIdentityOwner=null;
+  const BROWSER_ROOT_IDENTITY=Symbol('original-three-key-identity'),BROWSER_PAGE_IDENTITY=Symbol('page-two-or-three-key-identity');
+  const browserPersistenceUnavailable=()=>new Error('Original browser identity persistence unavailable.');
+  function browserIdentitySource(){
+    const area=localStorage,prototype=Object.getPrototypeOf(area),navigatorObject=window.navigator,
+      locks=navigatorObject?.locks,request=locks?.request,methods={};
+    for(const name of ['getItem','setItem']){
+      const descriptor=Object.getOwnPropertyDescriptor(prototype,name);
+      if(!descriptor||descriptor.writable!==true||descriptor.configurable!==true
+        ||typeof descriptor.value!=='function'||area[name]!==descriptor.value)throw browserPersistenceUnavailable();
+      methods[name]=descriptor.value;
+    }
+    if(typeof request!=='function')throw browserPersistenceUnavailable();
+    const current=()=>{
+      if(isNativeCustodialSecurity()||localStorage!==area||window.localStorage!==area
+        ||Object.getPrototypeOf(area)!==prototype||window.navigator!==navigatorObject
+        ||navigatorObject.locks!==locks||locks.request!==request)throw browserPersistenceUnavailable();
+      for(const name of Object.keys(methods)){
+        const descriptor=Object.getOwnPropertyDescriptor(prototype,name);
+        if(area[name]!==methods[name]||descriptor?.value!==methods[name]
+          ||descriptor.writable!==true||descriptor.configurable!==true)throw browserPersistenceUnavailable();
+      }
+    };
+    const read=key=>{
+      current();const raw=methods.getItem.call(area,key);current();
+      if(raw!==null&&typeof raw!=='string')throw browserPersistenceUnavailable();return raw;
+    };
+    const write=(key,value)=>{current();methods.setItem.call(area,key,value);current();};
+    current();return {current,read,write,locks,storage:Object.freeze({getItem:read,setItem:write})};
+  }
+  function browserIdentityAdmission(source){
+    if(!browserAdmissionPromise)browserAdmissionPromise=(async()=>{
+      const module=await import('./mobile/src/custodial/protected-browser-admission.js');source.current();
+      const gate=module.createProtectedBrowserAdmission({storage:source.storage,locks:source.locks});
+      source.current();return {gate,current:source.current};
+    })();
+    return browserAdmissionPromise;
+  }
+  function persistBrowserIdentity(value,policy){
+    if(policy!==BROWSER_ROOT_IDENTITY&&policy!==BROWSER_PAGE_IDENTITY)throw browserPersistenceUnavailable();
+    // Repeated calls for this SAME selection AND closed policy join a refusal.
+    // A cached DATA selection does not validate source or confirm persistence.
+    if(browserPersistence?.value===value&&browserPersistence.policy===policy)return;
+    const attempt={value,policy,settled:null,requireResult:()=>{throw browserPersistenceUnavailable();}};
+    browserPersistence=attempt;
+    try{
+      if(browserPersistenceUncertain)throw browserPersistenceUnavailable();
+      const source=browserIdentitySource(),original=STORAGE_KEYS.map(source.read),expected=original.slice();
+      const count=policy===BROWSER_ROOT_IDENTITY||/^KIOSK_[0-9]{2}$/i.test(value)?3:2;
+      const intended=original.map((raw,index)=>index<count?value:raw),pageOwner=policy===BROWSER_PAGE_IDENTITY?browserPageIdentityOwner:null;
+      let owner=null,entered=false,effectAttempted=false;
+      const current=()=>{
+        if(browserPersistence!==attempt||browserPersistenceUncertain)throw browserPersistenceUnavailable();
+        if(policy===BROWSER_PAGE_IDENTITY&&(!pageOwner||window.MemphisDeviceIdentity!==pageOwner
+          ||pageOwner.persistPageDeviceId!==persistPageDeviceId))throw browserPersistenceUnavailable();
+        source.current();if(owner)owner.current();
+      };
+      const exact=rows=>{
+        for(let index=0;index<STORAGE_KEYS.length;index++){
+          current();if(source.read(STORAGE_KEYS[index])!==rows[index])throw browserPersistenceUnavailable();current();
+        }
+      };
+      const checkpoint=()=>{current();owner.gate.requireMutation();current();};
+      attempt.requireResult=()=>{
+        current();owner.gate.requireAdmission();exact(intended);owner.gate.requireAdmission();current();
+      };
+      attempt.settled=(async()=>{
+        owner=await browserIdentityAdmission(source);current();exact(original);
+        const result=await owner.gate.mutate(()=>{
+          if(entered)throw browserPersistenceUnavailable();entered=true;
+          for(let index=0;index<count;index++){
+            checkpoint();exact(expected);checkpoint();effectAttempted=true;
+            source.write(STORAGE_KEYS[index],value);expected[index]=value;
+            checkpoint();exact(expected);checkpoint();
+          }
+          return true;
+        });
+        if(result!==true||!entered)throw browserPersistenceUnavailable();
+        attempt.requireResult();return true;
+      })().catch(()=>{
+        // A partial/uncertain effect is retained, never adopted as a new
+        // original for an automatic retry, refund or compensating rollback.
+        if(effectAttempted)browserPersistenceUncertain=true;
+        return false;
+      });
+    }catch(_err){attempt.settled=Promise.resolve(false);}
+  }
+
   function persist(value){
     const normalized=normalize(value);
+    if(isNativeCustodialSecurity()){
+      const protectedId=protectedNativeDeviceId();
+      return normalized===protectedId?protectedId:'';
+    }
     if(!isPlausible(normalized))return '';
-    if(isNativeCustodialSecurity())return normalized;
-    for(const key of STORAGE_KEYS){try{localStorage.setItem(key,normalized);}catch(_err){}}
+    persistBrowserIdentity(normalized,BROWSER_ROOT_IDENTITY);
     return normalized;
+  }
+
+  // Fixed ordinary page DATA operation: no caller policy, keys or callback.
+  // The page has already normalized this string; do not reinterpret its ID.
+  function persistPageDeviceId(value){
+    if(typeof value!=='string'||!value)return '';
+    try{
+      if(!browserPageIdentityOwner||window.MemphisDeviceIdentity!==browserPageIdentityOwner
+        ||browserPageIdentityOwner.persistPageDeviceId!==persistPageDeviceId)return '';
+      if(isNativeCustodialSecurity()){
+        const protectedId=protectedNativeDeviceId();return value===protectedId?protectedId:'';
+      }
+      persistBrowserIdentity(value,BROWSER_PAGE_IDENTITY);return value;
+    }catch(_err){return '';}
   }
 
   function storedCandidates(){
@@ -141,14 +281,33 @@
 
   async function waitForAuthority(){
     if(!isNativeCustodialSecurity())return null;
-    const pending=window.MemphisMobile?.ready||window.MemphisCustodialSecurity?.ready;
-    if(pending&&typeof pending.then==='function')await pending;
-    return window.MemphisCustodialSecurity?.getStatus?.()||null;
+    const original=nativeIdentityOwner();
+    if(!original)return null;
+    try{
+      await original.pending;
+      return sameNativeIdentityOwner(original)?.status||null;
+    }catch(_err){return null;}
   }
 
   async function resolveReady(options={}){
-    await waitForAuthority();
-    return resolve(options);
+    if(!isNativeCustodialSecurity()){
+      const original=resolve(options),attempt=browserPersistence;
+      if(!original.deviceId)return original;
+      try{
+        if(!attempt||attempt.policy!==BROWSER_ROOT_IDENTITY||attempt.value!==original.deviceId||!await attempt.settled)throw browserPersistenceUnavailable();
+        attempt.requireResult();return original;
+      }catch(_err){return {deviceId:'',source:'browser_persistence_unavailable'};}
+    }
+    const unavailable={deviceId:'',source:'protected_native_unavailable'};
+    const original=nativeIdentityOwner();
+    // No original ready principal exists: this request cannot adopt one that
+    // happens to appear during bootstrap. A later explicit call may observe it.
+    if(!original)return unavailable;
+    try{
+      await original.pending;
+      return sameNativeIdentityOwner(original)
+        ? {deviceId:original.deviceId,source:'protected_native_credential'}:unavailable;
+    }catch(_err){return unavailable;}
   }
 
   function currentDeviceId(){return resolve().deviceId||'';}
@@ -393,7 +552,7 @@
 
   if(hasDom&&hasNativeFetch&&!isNativeCustodialSecurity())ready(()=>{installUi();void refreshCredentialStatus();});
 
-  window.MemphisDeviceIdentity={
+  window.MemphisDeviceIdentity=browserPageIdentityOwner={
     RELEASE,
     normalize,
     isPlausible,
@@ -404,6 +563,7 @@
     resolveFullyIdentifier,
     readStored,
     persist,
+    persistPageDeviceId,
     resolve,
     resolveReady,
     ready:waitForAuthority,

@@ -31,6 +31,7 @@ export function scheduleFacts(data, identity, receivedAt, now=Date.now()) {
   const employeeId=String(data.employee_id||data.employee?.id||'');
   const employeeName=String(data.employee_name||data.employee?.display_name||'').trim();
   if(identity.employeeId ? employeeId!==identity.employeeId : !employeeName||employeeName!==identity.employeeName)return unavailable;
+  if(data.projection_status==='blocked_recurring_authority')return {...unavailable,detail:'Schedule pending a manager’s updated plan. Saved cleaning work is preserved.'};
   if(data.projection_status&&data.projection_status!=='current')return {...unavailable,detail:'Schedule update required.'};
   const freshness=sourceLabel(receivedAt,now,5*minute,data.stale===true);
   if(data.schedule_status==='off'||data.phase==='off_day'||data.shift?.active===false)
@@ -46,7 +47,12 @@ export function attendanceFacts(data,now=Date.now()) {
   const count=numeric(data?.attendance);
   if(count===null||!Number.isSafeInteger(count)||count<0||data?.available===false)
     return {value:'Unavailable',stale:true,detail:'Guest count has not been verified.'};
-  const fresh=sourceLabel(data.source_timestamp??data.fetched_at??data.updated_at,now,60*minute,data.stale===true);
+  const source=data.source_timestamp??data.fetched_at??data.updated_at;
+  const time=stamp(source),declared=data.service_date??data.date;
+  if(!Number.isFinite(time)||time>now+minute||zooServiceDate(time)!==zooServiceDate(now)
+    ||declared!==undefined&&declared!==zooServiceDate(now))
+    return {value:'Unavailable',stale:true,detail:'Today’s guest count has not been verified.'};
+  const fresh=sourceLabel(source,now,60*minute,data.stale===true);
   const optional=value=>{const n=numeric(value);return n!==null&&Number.isSafeInteger(n)&&n>=0?n.toLocaleString('en-US'):'--';};
   return {value:count.toLocaleString('en-US'),...fresh,detail:fresh.label,
     comparison:`Planned ${optional(data.planned)} · Last Year ${optional(data.last_year)} / Plan ${optional(data.yesterday_plan)}`};
@@ -116,21 +122,40 @@ export function weatherAlertsFacts(data,receivedAt,now=Date.now()) {
   const fresh=sourceLabel(receivedAt,now,5*minute,data?.stale===true);
   const missing={alerts:[],available:false,stale:true,detail:'Weather warnings unavailable.'};
   if(data?.type!=='FeatureCollection'||!Array.isArray(data.features))return missing;
-  let malformed=false;const byId=new Map();
+  let malformed=false;const byId=new Map(),replaced=[];
   for(const feature of data.features){
     const p=feature?.properties,id=String(p?.id||feature?.id||'').trim();
     if(!p||!id||!p.status||!p.scope){malformed=true;continue;}
     if(p.status!=='Actual'||p.scope!=='Public')continue;
-    if(p.messageType==='Cancel'){byId.delete(id);continue;}
     const effective=stamp(p.effective),expires=stamp(p.expires),sent=stamp(p.sent),end=p.ends?stamp(p.ends):expires;
-    if(!['Alert','Update'].includes(p.messageType)||!String(p.event||'').trim()||![effective,expires,sent,end].every(Number.isFinite)||expires<=effective||sent>now+minute){malformed=true;continue;}
-    if(effective>now||Math.min(end,expires)<=now)continue;
+    if(!['Alert','Update','Cancel'].includes(p.messageType)||(!String(p.event||'').trim()&&p.messageType!=='Cancel')
+      ||!Number.isFinite(sent)||sent>now+minute){malformed=true;continue;}
+    if(p.messageType!=='Cancel'&&(![effective,expires,end].every(Number.isFinite)||expires<=effective)){malformed=true;continue;}
+    if(p.messageType!=='Cancel'&&(effective>now||Math.min(end,expires)<=now))continue;
+    if(['Cancel','Update'].includes(p.messageType)){
+      const refs=p.references,sender=String(p.sender||'');
+      if(refs!==undefined&&!Array.isArray(refs)){malformed=true;continue;}
+      if(p.messageType==='Cancel'&&(!Array.isArray(refs)||!refs.length)){malformed=true;continue;}
+      for(const ref of refs||[]){
+        const identifier=String(ref?.identifier||''),referenceSender=String(ref?.sender||''),referenceSent=stamp(ref?.sent);
+        if(!identifier||!referenceSender||!Number.isFinite(referenceSent)||referenceSent>sent||referenceSender!==sender){malformed=true;continue;}
+        replaced.push({identifier, sender:referenceSender, sent:referenceSent, featureId:String(ref?.['@id']||'')});
+      }
+      if(p.messageType==='Cancel')continue;
+    }
     const event=String(p.event),instruction=String(p.instruction||'');
     const interrupt=!fresh.stale&&p.urgency==='Immediate'&&['Severe','Extreme'].includes(p.severity)&&['Tornado Warning','Severe Thunderstorm Warning'].includes(event);
-    const row={id,event,headline:String(p.headline||event),instruction,description:String(p.description||''),expires:new Date(Math.min(end,expires)).toISOString(),sent:p.sent,interrupt,source:'National Weather Service'};
+    const sender=String(p.sender||'');
+    const row={id,event,headline:String(p.headline||event),instruction,description:String(p.description||''),expires:new Date(Math.min(end,expires)).toISOString(),sent:p.sent,sender,featureId:String(feature.id||''),interrupt,source:'National Weather Service'};
     if(!byId.has(id)||stamp(byId.get(id).sent)<sent)byId.set(id,row);
   }
-  const alerts=[...byId.values()].sort((a,b)=>Number(b.interrupt)-Number(a.interrupt)||a.id.localeCompare(b.id));
+  for(const ref of replaced){
+    const sameIdentifier=[...byId.values()].filter(row=>row.id===ref.identifier);
+    if(sameIdentifier.length&& !sameIdentifier.some(row=>row.sender===ref.sender&&stamp(row.sent)===ref.sent&&(!ref.featureId||row.featureId===ref.featureId)))malformed=true;
+  }
+  const alerts=[...byId.values()].filter(row=>!replaced.some(ref=>ref.identifier===row.id&&ref.sender===row.sender
+    &&ref.sent===stamp(row.sent)&&(!ref.featureId||ref.featureId===row.featureId)))
+    .map(({sender,featureId,...row})=>row).sort((a,b)=>Number(b.interrupt)-Number(a.interrupt)||a.id.localeCompare(b.id));
   return {alerts,available:!malformed,stale:malformed||fresh.stale,detail:malformed?'Some weather warnings could not be verified.':`National Weather Service · ${fresh.label}${!alerts.length&&!fresh.stale?' · No active alerts reported.':''}`};
 }
 

@@ -1,0 +1,149 @@
+{
+  "acceptedArtRaster": {
+    "file": "Memphis-Zoo-Approved-Overall-Fit-Art-Only-20261010.png",
+    "fullCropRegisteredScreenshotPixels": [
+      80,
+      240,
+      2120,
+      1130
+    ],
+    "pixels": [
+      2040,
+      890
+    ],
+    "role": "Use styled artwork only; registered Google screenshot/composite stays an internal source-review image.",
+    "sha256": "7da4c536fc40b261a4466670c19d7e0e7af26ecc833d84c34f2c5b00474a9072",
+    "sourceApprovedRasterSha256": "73d4d6116819d34b0c5e6d35bf0d3c8397d582445fb92bf734fc6448fbb3a57a",
+    "sourceOpaqueBoundsInNativeCanvas": [
+      55,
+      55,
+      1141,
+      431
+    ],
+    "transparent": true
+  },
+  "acceptedPacket": {
+    "directory": "/home/eric/Documents/Codex/2026-10-09/task/gps-lane-export/geographic-fit-candidate-v2-20261010",
+    "fitResultSha256": "29dce557c6bfac17a5a32650a3c997c6e85441e3936fcac1b9d6b494ae368ea2",
+    "phonePreviewLibraryFileId": "libfile_a032a7af73fc819189fe6eac176ac695",
+    "phonePreviewPngSha256": "a40e451909ef28197ac233f5fb78cd10ae695a76c3e394e88bc5a486554a67bb",
+    "sha256sumsSha256": "e50e0545ac0dee8d75f4a64275d489e37fb3a3fe814c6f81cd63fd8764c97b91"
+  },
+  "coordinateDomain": {
+    "input": "approved original 1282x550 native artwork canvas pixels",
+    "output": "full art-only raster pixels, screen coordinate minus crop origin [80,240]",
+    "registeredScreenshot": "original 2200x1300 Google screenshot pixel coordinates",
+    "wgs84": "degrees latitude/longitude via EPSG:3857 projection"
+  },
+  "fieldTest": "Deferred until authorized app installation and phones physically at the Zoo; does not block otherwise-authorized source audit/build.",
+  "fitEvidence": {
+    "fitMarkCount": 8,
+    "limitation": "These are approximate artwork-to-owner-selected-Google-point discrepancies, not phone GPS or surveyed ground error. Eric approved visual fit despite documented outlier.",
+    "localMeshReservedRmsFt": 17.0156195223456,
+    "localMeshWorstReservedFt": 35.05177804745088,
+    "overallReservedRmsFt": 16.409646919190738,
+    "overallWorstReservedFt": 32.22164405094598,
+    "reservedMarkCount": 6,
+    "worstCode": "MEMM"
+  },
+  "integrationBoundary": [
+    "Main owns shared frontend map wiring, history/API reader, active work GPS path, release and audit.",
+    "Transform all 47 decorative markers with artwork for initial placement, keeping stable IDs, then allow later owner repositioning. Do not use icons as control points.",
+    "GPS/path advisory only during authorized active work; render reported phone accuracy, stale/missing samples and path gaps truthfully. Never gate NFC Start/Finish.",
+    "Use original approved raster/47 anchors and v2 local comparison as rollback; no map replacement was performed in this seal."
+  ],
+  "kind": "owner_approved_overall_visual_map_fit",
+  "notClaimed": [
+    "No measured phone GPS accuracy PASS",
+    "No physical Zoo walking test",
+    "No final app/browser/release audit or deployment",
+    "No change to native collection, auth, roles, retention, credentials or production data"
+  ],
+  "schemaVersion": 1,
+  "sealedAtUtc": "2026-10-10T00:24:56.678311+00:00",
+  "sourceChecks": {
+    "all47ProjectedInsideFullRaster": true,
+    "mercatorRoundtripMaxM": 0.0,
+    "nativeCanvasRoundtripMaxPx": 1.1368683772161603e-13,
+    "originalOpaqueArtworkFullyInsideFullRaster": true,
+    "sourceInputSha256": {
+      "SHA256SUMS.txt": "e50e0545ac0dee8d75f4a64275d489e37fb3a3fe814c6f81cd63fd8764c97b91",
+      "affine-art-only.png": "4f0cc5bcfe49602e6689bc12a38ad1bbd69d55af3dcedeaddd2e710383817eb9",
+      "approved-47-anchors.json": "3bf0761cb42f1e5f9b435ae3774ea3c018c749daf261de44357880ae3841ebef",
+      "approved-map.png": "73d4d6116819d34b0c5e6d35bf0d3c8397d582445fb92bf734fc6448fbb3a57a",
+      "display-registration.json": "a3efffe3b507db1d6008bec2e60c29ae81b3ac4343534b15719c0b867d95b805",
+      "fit-result.json": "29dce557c6bfac17a5a32650a3c997c6e85441e3936fcac1b9d6b494ae368ea2",
+      "local-mesh-art-only.png": "4bd1b9fa352bfde8267657261a993cf1f129a7fc9af29092fa47a29e74b08ba8"
+    }
+  },
+  "status": "APPROVED_VISUAL_MAP_FIT_PENDING_MAIN_PRODUCT_INTEGRATION",
+  "transforms": {
+    "fullRasterPixelToMercator": "([x,y] + [80,240] - mercatorToScreenshotOffset) @ inverse(mercatorDeltaToScreenshotRowMatrix2x2) + registeredScreenshotMercatorOrigin",
+    "mercatorDeltaToScreenshotRowMatrix2x2": [
+      [
+        1.6746210164321618,
+        -4.583961295865573e-05
+      ],
+      [
+        0.00010785930021506296,
+        -1.674682174984381
+      ]
+    ],
+    "mercatorToFullRasterPixel": "(mercator - registeredScreenshotMercatorOrigin) @ mercatorDeltaToScreenshotRowMatrix2x2 + mercatorToScreenshotOffset - [80,240]",
+    "mercatorToScreenshotOffset": [
+      1133.3298231916808,
+      716.6812487653435
+    ],
+    "nativeCanvasToFullRasterRowMatrix3x2": [
+      [
+        1.6995804656178382,
+        0.20900071821384034
+      ],
+      [
+        -0.21547359918899872,
+        1.6854965938053965
+      ],
+      [
+        37.00399332225882,
+        -99.32135246297207
+      ]
+    ],
+    "nativeCanvasToMercatorLinearRowMatrix2x2": [
+      [
+        1.0149125759215463,
+        -0.12482800888201794
+      ],
+      [
+        -0.12860524360052625,
+        -1.006454074550907
+      ]
+    ],
+    "nativeCanvasToMercatorOffsetRowVector": [
+      -10018527.618789228,
+      4184713.22592571
+    ],
+    "nativeCanvasToRegisteredScreenshotRowMatrix3x2": [
+      [
+        1.6995804656178382,
+        0.20900071821384034
+      ],
+      [
+        -0.21547359918899872,
+        1.6854965938053965
+      ],
+      [
+        117.00399332225882,
+        140.67864753702793
+      ]
+    ],
+    "registeredScreenshotMercatorOrigin": [
+      -10017920.697629387,
+      4184369.2619002587
+    ]
+  },
+  "userApproval": {
+    "dateUtc": "2026-10-10",
+    "quoted": "that map fit is more than acceptable, let's use it.",
+    "scope": "OVERALL affine fit of approved illustrated artwork to accepted Google geographic layout; local mesh remains comparison only."
+  }
+}

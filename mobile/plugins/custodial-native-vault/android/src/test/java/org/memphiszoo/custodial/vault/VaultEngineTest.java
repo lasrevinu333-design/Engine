@@ -28,6 +28,421 @@ public final class VaultEngineTest {
     private static final String DEVICE = "KIOSK_02";
     private static final String SEAL = "installation-seal-0002";
 
+    /** Changed private pins/binding copies must not cache a successful owner
+     * verdict. Existing committed originals and real file-identity guards run;
+     * only the host credential/clock/HTTP reply are synthetic test DATA. */
+    @Test public void OWNER_COPY_boundUnknownReplacementDuringReplyStillRefusesOnce() throws Exception {
+        try(var f=NativePrivateCustodyExchangeTest.GuardedIdentityFixture.boundDurableFirstOriginalForHostModel();
+            var write=f.write(0)) {
+            var row=NativePrivateCustodyReplySetTest.readback(write);
+            f.engine.fenceOriginalPrivateCustodyExchange(write);
+            try(var query=f.query(0)) {
+                f.engine.fenceOriginalPrivateCustodyExchange(query);
+                // Existing test reply recipe only: no Engine/private control,
+                // manager, ACK, writer or finalization factory is invoked.
+                var recipe=NativePrivateCustodyHttpOutcomeTest.class.getDeclaredMethod("identityPieceReply",
+                    NativePrivateCustodyExchangeTest.GuardedIdentityFixture.class,
+                    VaultEngine.NativePrivateCustodyPreparedExchange.class,org.json.JSONObject.class,int.class);
+                recipe.setAccessible(true);
+                byte[] reply=(byte[])recipe.invoke(null,f,query,row,0);
+                var originals=NativePrivateCustodyOwnerTest.files(f.dir);
+                final int[] opens={0};
+                final NativePrivateCustodyHttpOutcomeTest.Connection[] used={null};
+                try(var dispatch=f.engine.prepareCurrentOriginalPrivateCustodyQueryRead(f.plan,f.journal,0)) {
+                    var http=new NativePrivateCustodyHttp(url->{
+                        assertEquals(NativePrivateCustodyHttp.ORIGIN+"/device-auth/private-custody-current-read",url.toString());
+                        assertFalse(Thread.holdsLock(f.engine));opens[0]++;
+                        used[0]=new NativePrivateCustodyHttpOutcomeTest.Connection(url);used[0].response=reply;
+                        used[0].onReply=()->NativePrivateCustodyExchangeTest.replaceIdentityOriginal(
+                            f,"query_unknown-0.bin","owner-copy-current-query-unknown");
+                        return used[0];
+                    },f.clock);
+                    org.junit.Assert.assertThrows(VaultFailure.class,()->f.engine.readCurrentOriginalPrivateCustodyQuery(
+                        dispatch,http,new NativeRetainedHttp.Attempt()));
+                    assertEquals(1,opens[0]);assertEquals(1,used[0].disconnects);
+                    NativePrivateCustodyOwnerTest.sameFiles(originals,f.dir);
+                    assertFalse(java.nio.file.Files.exists(f.dir.resolve("query_observation-0.bin")));
+                    assertFalse(java.nio.file.Files.exists(f.dir.resolve("write_observation-0.bin")));
+                    // Restoring the original bytes cannot revive this same
+                    // refused/closed dispatch or open a second connection.
+                    org.junit.Assert.assertThrows(VaultFailure.class,()->f.engine.readCurrentOriginalPrivateCustodyQuery(
+                        dispatch,http,new NativeRetainedHttp.Attempt()));
+                    assertEquals(1,opens[0]);NativePrivateCustodyOwnerTest.sameFiles(originals,f.dir);
+                } finally {
+                    java.util.Arrays.fill(reply,(byte)0);NativePrivateCustodyExchangeTest.wipeIdentitySnapshot(originals);
+                }
+            }
+        }
+    }
+
+    /** Only the newly affected entry refusal, never the historical suite. */
+    public static void main(String[] args) throws Exception {
+        if(args.length==1&&"--owner-copy-currentness-only".equals(args[0])) {
+            var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,
+                "OWNER_COPY_boundUnknownReplacementDuringReplyStillRefusesOnce"));
+            if(result.getRunCount()!=1||!result.wasSuccessful()) {
+                for(var failure:result.getFailures())failure.getException().printStackTrace(System.err);
+                throw new AssertionError("new bound owning currentness member failed");
+            }
+            System.out.println("PASS_NEW_OWNER_COPY_BOUND_UNKNOWN_REPLACEMENT zero acceptance, one read, no retry");
+            System.out.println("HOST_DATA_IDENTITY_ONLY_NOT_ANDROID_SQL_ACK_FINALIZATION_OR_A2_PROOF");return;
+        }
+        if(args.length==1&&"--protected-enrollment-separation-entry-only".equals(args[0])){
+            var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,
+                "PROTECTED_SEPARATION_typedEntryRetainsMissingAndLockedOriginals"));
+            for(var failure:result.getFailures())System.err.println(failure.getTrace());
+            if(result.getRunCount()!=1||!result.wasSuccessful())throw new AssertionError("protected separation entry");
+            System.out.println("PASS_NEW_PROTECTED_SEPARATION_ENTRY; null/locked/closed original zero effects; positive ACK/commit/restart/Android NOT_RUN");return;
+        }
+        if(args.length==2&&"--original-one-shot-finalization-entry-only".equals(args[0])){
+            if(!java.util.Set.of("ONE_SHOT_FINALIZATION_missingOriginalNeverActs",
+                "ONE_SHOT_FINALIZATION_lockedEntryNeverActs","ONE_SHOT_FINALIZATION_closedAckHasNoDataFactory").contains(args[1]))
+                throw new IllegalArgumentException("new one-shot finalization boundary member required");
+            var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,args[1]));
+            for(var failure:result.getFailures())System.err.println(failure.getTrace());
+            if(result.getRunCount()!=1||!result.wasSuccessful())throw new AssertionError(args[1]);
+            System.out.println("PASS_NEW_ONE_SHOT_FINALIZATION_BOUNDARY "+args[1]+"; positive owning ACK/commit/restart/Android NOT_RUN");return;
+        }
+        if(args.length==2&&"--logical-separation-admission-entry-only".equals(args[0])){
+            if(!java.util.Set.of("LOGICAL_ADMISSION_missingOriginalHasZeroEffects","LOGICAL_ADMISSION_lockedOrIncompleteEntryRefuses",
+                "LOGICAL_ADMISSION_noPublicReceiptFactory").contains(args[1]))throw new IllegalArgumentException("new logical admission entry member required");
+            var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,args[1]));
+            for(var failure:result.getFailures())System.err.println(failure.getTrace());
+            if(result.getRunCount()!=1||!result.wasSuccessful())throw new AssertionError("logical admission entry failed");
+            System.out.println("PASS_NEW_LOGICAL_ADMISSION_ENTRY "+args[1]+"; valid private admission/finalizer/Android NOT_RUN");return;
+        }
+        if(args.length==2&&"--inventory-manifest-entry-only".equals(args[0])){
+            if(!java.util.Set.of("MANIFEST_missingOriginalHasZeroEffects","MANIFEST_engineMonitorRefusesBeforeIO",
+                "MANIFEST_missingTypedSignerAndDispatchCannotOpenNetwork").contains(args[1]))throw new IllegalArgumentException("new manifest entry member required");
+            var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,args[1]));
+            for(var failure:result.getFailures())System.err.println(failure.getTrace());
+            if(result.getRunCount()!=1||!result.wasSuccessful())throw new AssertionError("manifest owning entry refused incorrectly");
+            System.out.println("PASS_NEW_MANIFEST_ENTRY_REFUSAL "+args[1]+"; valid current manifest publication/crash recovery NOT_RUN");return;
+        }
+        if(args.length==1&&"--inventory-ack-request-entry-only".equals(args[0])){
+            var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,
+                "inventoryAckRequestMissingOriginalCannotSignOrOpenRemoval"));
+            for(var failure:result.getFailures())System.err.println(failure.getTrace());
+            if(result.getRunCount()!=1||!result.wasSuccessful())throw new AssertionError("inventory request entry refusal failed");
+            System.out.println("PASS_NEW_MISSING_ORIGINAL_REQUEST_AND_PURPOSE_SIGNER_REFUSAL; valid signing/journal/transport/ACK NOT_RUN");return;
+        }
+        if(args.length==1&&"--inventory-ack-intent-entry-only".equals(args[0])){
+            var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,
+                "inventoryAckIntentMissingOriginalCannotMintOrOpenLegacyRemoval"));
+            for(var failure:result.getFailures())System.err.println(failure.getTrace());
+            if(result.getRunCount()!=1||!result.wasSuccessful())throw new AssertionError("inventory ACK intent entry refusal failed");
+            System.out.println("PASS_NEW_LOCAL_ACK_INTENT_MISSING_ORIGINAL_REFUSAL; valid issuer/journal/ACK/finalizer NOT_RUN");return;
+        }
+        if(args.length==2&&"--enrollment-existing-fence-only".equals(args[0])){
+            if(!java.util.Set.of("ENROLL_FENCE_requestedStopsDispatchCommit",
+                "ENROLL_FENCE_dispatchedStopsEnrollmentTransport",
+                "ENROLL_FENCE_dispatchedStopsCancellationTransport",
+                "ENROLL_FENCE_uncertainDispatchCannotReadBackPastDenial",
+                "ENROLL_FENCE_priorDispatchCannotReplayPastDenial",
+                "ENROLL_FENCE_readbackDenialCannotBecomeCompensation",
+                "ENROLL_FENCE_allowedExactUncertainDispatchStagesOnce").contains(args[1]))
+                throw new IllegalArgumentException("new enrollment fence member required");
+            var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,args[1]));
+            for(var failure:result.getFailures())System.err.println(failure.getTrace());
+            if(result.getRunCount()!=1||!result.wasSuccessful())throw new AssertionError(args[1]);
+            System.out.println("PASS_SOURCE_MEMORY_ENROLLMENT_FENCE "+args[1]);return;
+        }
+        if(args.length!=1||!"--g08-reentrant-challenge-only".equals(args[0]))throw new IllegalArgumentException("new owning selector required");
+        var result=new org.junit.runner.JUnitCore().run(org.junit.runner.Request.method(VaultEngineTest.class,
+            "originalRecoveryChallengeRejectsExternallyHeldEngineBeforeAnyEffects"));
+        for(var failure:result.getFailures())System.err.println(failure.getTrace());
+        if(!result.wasSuccessful())throw new AssertionError("new original challenge lock refusal failed");
+        System.out.println("PASS_NEW_SOURCE_REENTRANT_ENGINE_REFUSAL_NO_AUTHENTICATED_DISPATCH_OR_ANDROID_PROOF");
+    }
+
+    private static java.lang.reflect.Method originalOneShotEntry()throws Exception {
+        var method=VaultEngine.class.getDeclaredMethod("finalizeOriginalInventoryPreservingWork",
+            VaultEngine.NativeOriginalInventoryAckRequestControl.class,NativeOriginalInventoryAckRequestJournal.Result.class,
+            NativePrivateCustodyHttp.class,NativePrivateCustodyFrameReadControl.class);
+        assertTrue(java.lang.reflect.Modifier.isPrivate(method.getModifiers()));method.setAccessible(true);return method;
+    }
+    private static void invokeOriginalOneShot(VaultEngine engine,NativePrivateCustodyHttp http,
+        NativePrivateCustodyFrameReadControl control)throws Exception {
+        try{originalOneShotEntry().invoke(engine,null,null,http,control);}
+        catch(java.lang.reflect.InvocationTargetException failure){
+            if(failure.getCause() instanceof VaultFailure)throw (VaultFailure)failure.getCause();throw failure;
+        }
+    }
+    @Test public void PROTECTED_SEPARATION_typedEntryRetainsMissingAndLockedOriginals()throws Exception {
+        Fixture f=new Fixture();var before=f.persistence.load();var opens=new java.util.concurrent.atomic.AtomicInteger();
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("unowned protected entry opened HTTP");},f.clock);
+        try(var control=new NativePrivateCustodyFrameReadControl()){
+            expectCode(NativeRetainedAttempt.FAILURE,()->f.engine.separateHeldOriginalEnrollmentKeepingWork(null,null,http,control));
+            synchronized(f.engine){expectCode("custodial_native_vault_concurrent_change",
+                ()->f.engine.separateHeldOriginalEnrollmentKeepingWork(null,null,http,control));}
+            control.close();
+            expectCode(NativeRetainedAttempt.FAILURE,()->f.engine.separateHeldOriginalEnrollmentKeepingWork(null,null,http,control));
+        }
+        assertTrue(before==f.persistence.load());assertEquals(0,f.persistence.commitAttempts.get());assertEquals(0,opens.get());
+        assertEquals(0,f.cipher.existingKeyEncryptCalls);assertEquals(0,f.cipher.destroyCalls);
+        expectCode("custodial_native_removal_inventory_admission_required",f.engine::requireOriginalRemovalAdmission);
+        var runtime=CustodialNativeRuntime.class.getDeclaredMethod("separateHeldOriginalEnrollmentKeepingWork",NativePrivateCustodyFrameReadControl.class);
+        assertFalse(java.lang.reflect.Modifier.isPublic(runtime.getModifiers()));
+        assertEquals(org.json.JSONObject.class,runtime.getReturnType());
+        assertTrue(java.util.Arrays.equals(new Class<?>[]{NativePrivateCustodyFrameReadControl.class},runtime.getParameterTypes()));
+    }
+
+    @Test public void ONE_SHOT_FINALIZATION_missingOriginalNeverActs()throws Exception {
+        Fixture f=new Fixture();var before=f.persistence.load();var opens=new java.util.concurrent.atomic.AtomicInteger();
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("missing original opened HTTP");},f.clock);
+        try(var control=new NativePrivateCustodyFrameReadControl()){
+            expectCode(NativeRetainedAttempt.FAILURE,()->invokeOriginalOneShot(f.engine,http,control));
+        }
+        assertTrue(before==f.persistence.load());assertEquals(0,f.persistence.commitAttempts.get());assertEquals(0,opens.get());
+        assertEquals(0,f.cipher.existingKeyEncryptCalls);assertEquals(0,f.cipher.destroyCalls);
+        expectCode("custodial_native_removal_inventory_admission_required",f.engine::requireOriginalRemovalAdmission);
+    }
+    @Test public void ONE_SHOT_FINALIZATION_lockedEntryNeverActs()throws Exception {
+        Fixture f=new Fixture();var before=f.persistence.load();var opens=new java.util.concurrent.atomic.AtomicInteger();
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("locked entry opened HTTP");},f.clock);
+        try(var control=new NativePrivateCustodyFrameReadControl()){
+            synchronized(f.engine){expectCode("custodial_native_vault_concurrent_change",()->invokeOriginalOneShot(f.engine,http,control));}
+        }
+        assertTrue(before==f.persistence.load());assertEquals(0,f.persistence.commitAttempts.get());assertEquals(0,opens.get());
+        assertEquals(0,f.cipher.existingKeyEncryptCalls);assertEquals(0,f.cipher.destroyCalls);
+    }
+    @Test public void ONE_SHOT_FINALIZATION_closedAckHasNoDataFactory()throws Exception {
+        Class<?> ack=java.util.Arrays.stream(VaultEngine.class.getDeclaredClasses())
+            .filter(type->type.getSimpleName().equals("NativeOriginalInventoryAcknowledgement")).findFirst().orElseThrow();
+        assertTrue(java.lang.reflect.Modifier.isPrivate(ack.getModifiers()));
+        assertEquals(1,ack.getDeclaredConstructors().length);
+        var constructor=ack.getDeclaredConstructors()[0];assertTrue(java.lang.reflect.Modifier.isPrivate(constructor.getModifiers()));
+        assertTrue(java.util.Arrays.equals(new Class<?>[]{VaultEngine.NativeOriginalInventoryDecisionReadLease.class},constructor.getParameterTypes()));
+        for(var method:ack.getDeclaredMethods()){
+            if(method.getName().equals("close"))continue;
+            assertTrue(java.lang.reflect.Modifier.isPrivate(method.getModifiers()));
+        }
+        var factory=VaultEngine.class.getDeclaredMethod("prepareOriginalInventoryFinalization",ack);
+        assertTrue(java.lang.reflect.Modifier.isPrivate(factory.getModifiers()));
+        assertEquals(VaultEngine.NativeOriginalInventoryFinalizationControl.class,factory.getReturnType());
+        for(var method:VaultEngine.class.getDeclaredMethods())if(method.getName().equals("prepareOriginalInventoryFinalization"))
+            assertTrue(java.util.Arrays.equals(new Class<?>[]{ack},method.getParameterTypes()));
+        // Reflection inspects API shape only. Never construct or patch a
+        // private ACK, Source owner, current manager or finalization control.
+    }
+
+    @Test public void LOGICAL_ADMISSION_missingOriginalHasZeroEffects()throws Exception{
+        Fixture f=new Fixture();var before=f.persistence.load();var opens=new java.util.concurrent.atomic.AtomicInteger();
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("unowned logical admission opened HTTP");},f.clock);
+        try(var control=new NativePrivateCustodyFrameReadControl()){
+            expectCode(NativeRetainedAttempt.FAILURE,()->f.engine.readOriginalInventoryDecisionLease(null,null,http,control));
+            expectCode(NativeRetainedAttempt.FAILURE,()->f.engine.retainOriginalInventoryManagerDecisionObservation(null,null,http,control));
+        }
+        assertTrue(before==f.persistence.load());assertEquals(0,f.persistence.commitAttempts.get());assertEquals(0,opens.get());
+        assertEquals(0,f.cipher.existingKeyEncryptCalls);assertEquals(0,f.cipher.destroyCalls);
+        assertEquals(0,f.transport.enrollCalls.get());assertEquals(0,f.transport.issuanceCount.get());
+        expectCode("custodial_native_removal_inventory_admission_required",f.engine::requireOriginalRemovalAdmission);
+    }
+    @Test public void LOGICAL_ADMISSION_lockedOrIncompleteEntryRefuses()throws Exception{
+        Fixture f=new Fixture();var before=f.persistence.load();var opens=new java.util.concurrent.atomic.AtomicInteger();
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("incomplete logical admission opened HTTP");},f.clock);
+        try(var control=new NativePrivateCustodyFrameReadControl()){
+            synchronized(f.engine){expectCode("custodial_native_vault_concurrent_change",
+                ()->f.engine.readOriginalInventoryDecisionLease(null,null,http,control));}
+            expectCode(NativeRetainedAttempt.FAILURE,()->f.engine.readOriginalInventoryDecisionLease(null,null,null,control));
+            expectCode(NativeRetainedAttempt.FAILURE,()->f.engine.readOriginalInventoryDecisionLease(null,null,http,null));
+        }
+        assertTrue(before==f.persistence.load());assertEquals(0,f.persistence.commitAttempts.get());assertEquals(0,opens.get());
+        assertEquals(0,f.cipher.existingKeyEncryptCalls);assertEquals(0,f.cipher.destroyCalls);
+    }
+    @Test public void LOGICAL_ADMISSION_noPublicReceiptFactory()throws Exception{
+        Class<?> type=VaultEngine.NativeOriginalInventoryDecisionReadLease.class;
+        for(var constructor:type.getDeclaredConstructors())assertTrue(java.lang.reflect.Modifier.isPrivate(constructor.getModifiers()));
+        for(var method:type.getDeclaredMethods()){
+            assertFalse(java.lang.reflect.Modifier.isStatic(method.getModifiers()));
+            assertFalse(java.lang.reflect.Modifier.isPublic(method.getModifiers())&&!"close".equals(method.getName()));
+            assertFalse("A decision read must not grant finalizer effects",method.getName().equals("beginLocalFinalization"));
+            assertTrue("Read lease methods expose no admission/effect operation",
+                java.util.Set.of("requireCurrent","projection","close").contains(method.getName()));
+        }
+        var entry=VaultEngine.class.getDeclaredMethod("readOriginalInventoryDecisionLease",
+            VaultEngine.NativeOriginalInventoryAckRequestControl.class,NativeOriginalInventoryAckRequestJournal.Result.class,
+            NativePrivateCustodyHttp.class,NativePrivateCustodyFrameReadControl.class);
+        assertFalse(java.lang.reflect.Modifier.isPublic(entry.getModifiers()));
+        assertEquals(type,entry.getReturnType());
+    }
+    @Test public void MANIFEST_missingOriginalHasZeroEffects()throws Exception{
+        Fixture f=new Fixture();var before=f.persistence.load();var opens=new java.util.concurrent.atomic.AtomicInteger();
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("missing original opened HTTP");},f.clock);
+        try(var control=new NativePrivateCustodyFrameReadControl()){
+            expectCode(NativeRetainedAttempt.FAILURE,()->f.engine.advanceOriginalInventoryManifest(null,null,http,control));
+        }
+        assertTrue(before==f.persistence.load());assertEquals(0,f.persistence.commitAttempts.get());
+        assertEquals(0,f.cipher.existingKeyEncryptCalls);assertEquals(0,f.cipher.destroyCalls);assertEquals(0,opens.get());
+        assertEquals(0,f.transport.enrollCalls.get());assertEquals(0,f.transport.issuanceCount.get());
+        expectCode("custodial_native_removal_inventory_admission_required",f.engine::requireOriginalRemovalAdmission);
+    }
+    @Test public void MANIFEST_engineMonitorRefusesBeforeIO()throws Exception{
+        Fixture f=new Fixture();var before=f.persistence.load();var opens=new java.util.concurrent.atomic.AtomicInteger();
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("locked original opened HTTP");},f.clock);
+        try(var control=new NativePrivateCustodyFrameReadControl()){
+            synchronized(f.engine){expectCode("custodial_native_vault_concurrent_change",()->f.engine.advanceOriginalInventoryManifest(null,null,http,control));}
+        }
+        assertTrue(before==f.persistence.load());assertEquals(0,f.persistence.commitAttempts.get());assertEquals(0,opens.get());
+        assertEquals(0,f.cipher.existingKeyEncryptCalls);assertEquals(0,f.cipher.destroyCalls);
+    }
+    @Test public void MANIFEST_missingTypedSignerAndDispatchCannotOpenNetwork()throws Exception{
+        Fixture f=new Fixture();var before=f.persistence.load();var opens=new java.util.concurrent.atomic.AtomicInteger();
+        expectCode(NativeRetainedAttempt.FAILURE,()->NativeAttestation.originalInventoryManifestChunkPurposeSignature(null,null));
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("unbound dispatcher opened HTTP");},f.clock);
+        try{http.exchangeOriginalInventoryManifestChunk(null,"KIOSK_02",new char[0],new NativeRetainedHttp.Attempt());fail("unbound dispatch accepted");}
+        catch(VaultFailure refused){assertEquals("custodial_private_custody_transport_outcome_unknown",refused.code);}
+        assertTrue(before==f.persistence.load());assertEquals(0,f.persistence.commitAttempts.get());assertEquals(0,opens.get());
+        assertEquals(0,f.cipher.existingKeyEncryptCalls);assertEquals(0,f.cipher.destroyCalls);
+    }
+
+    @Test
+    public void inventoryAckIntentMissingOriginalCannotMintOrOpenLegacyRemoval()throws Exception{
+        Fixture fixture=new Fixture();var before=fixture.persistence.load();
+        expectCode(NativeRetainedAttempt.FAILURE,()->fixture.engine.prepareOriginalInventoryAckIntentControl(null,null));
+        try(var control=new NativePrivateCustodyFrameReadControl()){
+            expectCode(NativeRetainedAttempt.FAILURE,()->fixture.engine.prepareOriginalInventoryAckIntentControl(null,control));
+        }
+        expectCode("custodial_native_removal_inventory_admission_required",fixture.engine::requireOriginalRemovalAdmission);
+        assertEquals(before,fixture.persistence.load());
+        assertEquals(0,fixture.transport.enrollCalls.get());assertEquals(0,fixture.cipher.destroyCalls);
+    }
+
+    @Test
+    public void inventoryAckRequestMissingOriginalCannotSignOrOpenRemoval()throws Exception{
+        Fixture fixture=new Fixture();var before=fixture.persistence.load();
+        expectCode(NativeRetainedAttempt.FAILURE,()->fixture.engine.prepareOriginalInventoryAckRequestControl(null,null));
+        expectCode(NativeRetainedAttempt.FAILURE,()->NativeAttestation.originalInventoryAckRequestPurposeSignature(null,null));
+        expectCode("custodial_native_removal_inventory_admission_required",fixture.engine::requireOriginalRemovalAdmission);
+        assertTrue(before==fixture.persistence.load());assertEquals(0,fixture.persistence.commitAttempts.get());
+        assertEquals(0,fixture.cipher.existingKeyEncryptCalls);assertEquals(0,fixture.cipher.destroyCalls);
+        assertEquals(0,fixture.transport.enrollCalls.get());assertEquals(0,fixture.transport.issuanceCount.get());
+    }
+
+    @Test
+    public void originalRecoveryChallengeRejectsExternallyHeldEngineBeforeAnyEffects() throws Exception {
+        Fixture fixture=new Fixture();var before=fixture.persistence.load();
+        var opens=new java.util.concurrent.atomic.AtomicInteger();
+        var http=new NativePrivateCustodyHttp(url->{opens.incrementAndGet();throw new AssertionError("locked caller opened network");},fixture.clock);
+        synchronized(fixture.engine){
+            expectCode("custodial_native_vault_concurrent_change",()->fixture.engine.sendOriginalRecoveryChallenge(
+                null,http,new NativeRetainedHttp.Attempt()));
+        }
+        // The lock refusal precedes even missing-input inspection; no prepared
+        // capability is minted merely to exercise this entry boundary.
+        assertTrue(before==fixture.persistence.load());assertEquals(0,fixture.persistence.commitAttempts.get());
+        assertEquals(0,fixture.cipher.existingKeyEncryptCalls);assertEquals(0,fixture.cipher.destroyCalls);
+        assertEquals(0,fixture.transport.enrollCalls.get());assertEquals(0,fixture.transport.issuanceCount.get());assertEquals(0,opens.get());
+    }
+
+    private static final String FENCE_DENIED="test_ordinary_vault_admission_denied";
+    private static VaultEngine withEnrollmentFence(Fixture f,NativeSeparationFreeze.OrdinaryVaultAdmission admission){
+        return new VaultEngine(f.persistence,f.cipher,f.transport,f.legacy,f.seals,f.clock,admission);
+    }
+    /** Admission can only refuse. These are actual MemoryPersistence commits
+     * and FakeTransport calls, never a reflected private positive capability. */
+    @Test public void ENROLL_FENCE_requestedStopsDispatchCommit()throws Exception {
+        Fixture f=new Fixture();AtomicReference<VaultSnapshot> requested=new AtomicReference<>();
+        f.engine=withEnrollmentFence(f,()->{
+            if(f.persistence.current().phase==VaultPhase.ENROLLMENT_REQUESTED){
+                requested.set(f.persistence.current());throw new VaultFailure(FENCE_DENIED);
+            }
+        });
+        VaultFailure failure=null;
+        try{f.engine.enroll(OP1,DEVICE,"enrollment",code());}catch(VaultFailure error){failure=error;}
+        assertEquals("Only the original REQUESTED commit is admitted",1,f.persistence.commitAttempts.get());
+        assertEquals(0,f.transport.enrollCalls.get());assertEquals(0,f.transport.issuanceCount.get());
+        assertNotNull(failure);assertEquals(FENCE_DENIED,failure.code);
+        assertTrue(requested.get()==f.persistence.current());assertEquals(OP1,f.persistence.current().operationId);
+        assertEquals(SecretKind.ENROLLMENT_CODE,f.persistence.current().secretKind);assertEquals(0,f.cipher.destroyCalls);
+    }
+    @Test public void ENROLL_FENCE_dispatchedStopsEnrollmentTransport()throws Exception {
+        Fixture f=new Fixture();var dispatchedChecks=new java.util.concurrent.atomic.AtomicInteger();
+        f.engine=withEnrollmentFence(f,()->{
+            if(f.persistence.current().phase==VaultPhase.ENROLLMENT_DISPATCHED&&dispatchedChecks.incrementAndGet()>1)
+                throw new VaultFailure(FENCE_DENIED);
+        });
+        VaultFailure failure=null;
+        try{f.engine.enroll(OP1,DEVICE,"enrollment",code());}catch(VaultFailure error){failure=error;}
+        assertEquals("Admission withdrawal must precede actual enroll transport",0,f.transport.enrollCalls.get());
+        assertEquals(0,f.transport.issuanceCount.get());assertNotNull(failure);assertEquals(FENCE_DENIED,failure.code);
+        assertEquals(VaultPhase.ENROLLMENT_DISPATCHED,f.persistence.current().phase);
+        assertEquals(2,f.persistence.commitAttempts.get());assertEquals(OP1,f.persistence.current().operationId);
+        assertEquals(SecretKind.ENROLLMENT_CODE,f.persistence.current().secretKind);assertEquals(0,f.cipher.destroyCalls);
+    }
+    @Test public void ENROLL_FENCE_dispatchedStopsCancellationTransport()throws Exception {
+        Fixture f=new Fixture();f.persistence.failBeforeCommits.add(2);
+        expectCode("test_commit_failure",()->f.engine.enroll(OP1,DEVICE,"enrollment",code()));
+        VaultSnapshot requested=f.persistence.current();assertEquals(VaultPhase.ENROLLMENT_REQUESTED,requested.phase);
+        var dispatchedChecks=new java.util.concurrent.atomic.AtomicInteger();
+        f.engine=withEnrollmentFence(f,()->{
+            if(f.persistence.current().phase==VaultPhase.ENROLLMENT_DISPATCHED&&dispatchedChecks.incrementAndGet()>1)
+                throw new VaultFailure(FENCE_DENIED);
+        });
+        VaultFailure failure=null;
+        try{f.engine.cancelEnrollment(OP1);}catch(VaultFailure error){failure=error;}
+        assertEquals("Cancellation recovery cannot enroll behind the fence",0,f.transport.enrollCalls.get());
+        assertEquals(0,f.transport.issuanceCount.get());assertEquals(0,f.transport.cancelCalls.get());
+        assertNotNull(failure);assertEquals(FENCE_DENIED,failure.code);
+        assertEquals(VaultPhase.ENROLLMENT_DISPATCHED,f.persistence.current().phase);
+        assertTrue(requested.secret==f.persistence.current().secret);assertEquals(OP1,f.persistence.current().operationId);
+    }
+    @Test public void ENROLL_FENCE_uncertainDispatchCannotReadBackPastDenial()throws Exception {
+        Fixture f=new Fixture();f.persistence.writeThenFailCommits.add(2);
+        f.engine=withEnrollmentFence(f,()->{
+            if(f.persistence.current().phase==VaultPhase.ENROLLMENT_DISPATCHED)throw new VaultFailure(FENCE_DENIED);
+        });
+        VaultFailure failure=null;
+        try{f.engine.enroll(OP1,DEVICE,"enrollment",code());}catch(VaultFailure error){failure=error;}
+        assertEquals("Exact landed bytes do not re-admit transport",0,f.transport.enrollCalls.get());
+        assertNotNull(failure);assertEquals(FENCE_DENIED,failure.code);
+        assertEquals(2,f.persistence.commitAttempts.get());assertEquals(VaultPhase.ENROLLMENT_DISPATCHED,f.persistence.current().phase);
+        assertEquals(OP1,f.persistence.current().operationId);assertEquals(SecretKind.ENROLLMENT_CODE,f.persistence.current().secretKind);
+        assertEquals(0,f.transport.issuanceCount.get());assertEquals(0,f.cipher.destroyCalls);
+    }
+    @Test public void ENROLL_FENCE_priorDispatchCannotReplayPastDenial()throws Exception {
+        Fixture f=new Fixture();f.transport.failEnrollBeforeIssueNetwork=1;
+        expectCode("custodial_native_network_unavailable",()->f.engine.enroll(OP1,DEVICE,"enrollment",code()));
+        VaultSnapshot original=f.persistence.current();assertEquals(VaultPhase.ENROLLMENT_DISPATCHED,original.phase);
+        var checks=new java.util.concurrent.atomic.AtomicInteger();
+        f.engine=withEnrollmentFence(f,()->{
+            if(f.persistence.current().phase==VaultPhase.ENROLLMENT_DISPATCHED&&checks.incrementAndGet()>1)
+                throw new VaultFailure(FENCE_DENIED);
+        });
+        VaultFailure failure=null;
+        try{f.engine.resumeEnrollment(OP1);}catch(VaultFailure error){failure=error;}
+        assertEquals("The original failed dispatch must not be retried behind admission",1,f.transport.enrollCalls.get());
+        assertEquals(0,f.transport.issuanceCount.get());assertTrue(original==f.persistence.current());
+        assertNotNull(failure);assertEquals(FENCE_DENIED,failure.code);
+    }
+    @Test public void ENROLL_FENCE_allowedExactUncertainDispatchStagesOnce()throws Exception {
+        Fixture f=new Fixture();f.persistence.writeThenFailCommits.add(2);
+        f.engine=withEnrollmentFence(f,()->{});
+        EnrollmentView view=f.engine.enroll(OP1,DEVICE,"enrollment",code());
+        assertEquals(VaultPhase.CREDENTIAL_STAGED,view.phase);assertEquals(OP1,f.persistence.current().operationId);
+        assertEquals(1,f.transport.enrollCalls.get());assertEquals(1,f.transport.issuanceCount.get());
+        int attempts=f.persistence.commitAttempts.get();
+        assertEquals(VaultPhase.CREDENTIAL_STAGED,f.engine.resumeEnrollment(OP1).phase);
+        assertEquals(attempts,f.persistence.commitAttempts.get());assertEquals(1,f.transport.enrollCalls.get());
+        assertEquals(0,f.cipher.destroyCalls);
+    }
+    @Test public void ENROLL_FENCE_readbackDenialCannotBecomeCompensation()throws Exception {
+        Fixture f=new Fixture();var checks=new java.util.concurrent.atomic.AtomicInteger();
+        var denied=new VaultFailure("custodial_native_vault_concurrent_change");
+        f.engine=withEnrollmentFence(f,()->{
+            // Allow the mark postcheck, pretransport check, and received-result
+            // check. Refuse the actual staging readback once; later allowance
+            // cannot reclassify this denial as a persistence failure.
+            if(f.persistence.current().phase==VaultPhase.ENROLLMENT_DISPATCHED&&checks.incrementAndGet()==4)throw denied;
+        });
+        VaultFailure failure=null;
+        try{f.engine.enroll(OP1,DEVICE,"enrollment",code());}catch(VaultFailure error){failure=error;}
+        assertEquals("An admission denial cannot enter compensating transport",0,f.transport.cancelCalls.get());
+        assertTrue(failure==denied);assertEquals(1,f.transport.enrollCalls.get());assertEquals(1,f.transport.issuanceCount.get());
+        assertEquals(VaultPhase.ENROLLMENT_DISPATCHED,f.persistence.current().phase);
+        assertEquals(SecretKind.ENROLLMENT_CODE,f.persistence.current().secretKind);assertEquals(2,f.persistence.commitAttempts.get());
+    }
+
     @Test
     public void fullLifecycleKeepsGenericTransportActiveOnlyAndEndsEmpty() throws Exception {
         Fixture fixture = new Fixture();

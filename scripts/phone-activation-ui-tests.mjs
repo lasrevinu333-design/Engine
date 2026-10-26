@@ -6,7 +6,7 @@ const source=readFileSync(new URL('../phone-assignments.js',import.meta.url),'ut
 const employee='11000000-0000-4000-8000-000000000006';
 const key='custodial.manager.activation-requests.v1';
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-async function fixture({mobile=false,denyStorage=false}={}){
+async function fixture({mobile=false,denyStorage=false,owner=true}={}){
  const storage=new Map(),calls=[],events={},elements={};let loseResponse=false,server=null;
  const device={device_id:'KIOSK_08',assigned_employee_id:employee,employee_name:'Synthetic Custodian',assignment_epoch:2};
  const row={dataset:{device:'KIOSK_08'},querySelector:s=>controls[s]};
@@ -26,7 +26,7 @@ async function fixture({mobile=false,denyStorage=false}={}){
   }
   if(!server)throw new Error('Synthetic request not found');return server;
  }
- const context={document:{getElementById:id=>elements[id]},window:{MemphisAuth:{requireOpsManagerSession:async()=>({token:'synthetic',device_id:'synthetic-browser'})}},
+ const context={document:{getElementById:id=>elements[id]},window:{MemphisAuth:{hasPermission:action=>owner&&action==='write',requireOpsManagerSession:async()=>({token:'synthetic',device_id:'synthetic-browser'})}},
   localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>{if(denyStorage)throw new Error('Storage unavailable');storage.set(k,v);}},
   crypto:{randomUUID},fetch:async(url,options)=>({ok:true,json:async()=>({ok:true,data:await api(url.replace('https://memphis-zoo-mcp.onrender.com',''),options)})}),
   setTimeout,clearTimeout,confirm:()=>false,console};
@@ -60,4 +60,7 @@ const unsaved=await fixture();unsaved.controls['[data-employee]'].value='differe
 check('unsaved assignment never activates',!unsaved.calls.some(c=>c.options.method==='POST'));
 const noRequest=await fixture();await noRequest.click('[data-activation-status]');
 check('status-only never creates request',noRequest.calls.length===1);
+
+
+const delegate=await fixture({owner:false});check('delegate sees assignments without owner activation controls',delegate.elements['phone-list'].innerHTML.includes('KIOSK_08')&&!delegate.elements['phone-list'].innerHTML.includes('data-activate'));await delegate.click('[data-activate]');check('forged delegate activation click sends no request',!delegate.calls.some(c=>c.options.method==='POST'));
 console.log(JSON.stringify({status:'PASS',checks,actualController:true,syntheticServer:true,browserVisual:false,phoneRuntime:false}));

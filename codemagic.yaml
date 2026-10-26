@@ -5,15 +5,136 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
-        recovery_branch='release/custodial-build29-recovery-v53-implementation-20260918'
-        test "${CM_BRANCH:-}" = "$recovery_branch"
-        test "${CM_COMMIT:-}" = "$(git rev-parse HEAD)"
-        git fetch --no-tags --depth=1 origin \
-          "+refs/heads/$recovery_branch:refs/remotes/origin/$recovery_branch"
-        test "$(git rev-parse "refs/remotes/origin/$recovery_branch")" = "$CM_COMMIT"
-        printf 'Protected Build 29 recovery source verified: %s at %s\n' \
-          "$recovery_branch" \
-          "$CM_COMMIT"
+        # Reviewed forward inputs are externally provisioned job variables/files;
+        # never inferred from an APK, acceptance JSON, branch or build number.
+        # BEGIN custodial_forward_input_transport
+        # The two existing official inputs select an independently hash-pinned
+        # metadata-only Git ref. No new credential, workflow input or Source checkout.
+        if [ -n "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}" ] \
+            && [ -n "${MZ_CUSTODIAL_FORWARD_ROLE:-}" ] \
+            && ! declare -p MZ_CUSTODIAL_FORWARD_SOURCE_INPUT >/dev/null 2>&1 \
+            && ! declare -p MZ_CUSTODIAL_FORWARD_TRUSTED_PINS >/dev/null 2>&1; then
+          custodial_transport_paths="$(node mobile/scripts/provision-custodial-forward-build-inputs.mjs \
+            --root "$CM_BUILD_DIR" \
+            --pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" \
+            --role "$MZ_CUSTODIAL_FORWARD_ROLE" \
+            --environment-output "$CM_ENV")"
+          custodial_transport_source_seen=0
+          custodial_transport_pins_seen=0
+          while IFS= read -r custodial_transport_line; do
+            case "$custodial_transport_line" in
+              MZ_CUSTODIAL_FORWARD_SOURCE_INPUT=/*)
+                test "$custodial_transport_source_seen" -eq 0
+                export MZ_CUSTODIAL_FORWARD_SOURCE_INPUT="${custodial_transport_line#*=}"
+                custodial_transport_source_seen=1
+                ;;
+              MZ_CUSTODIAL_FORWARD_TRUSTED_PINS=/*)
+                test "$custodial_transport_pins_seen" -eq 0
+                export MZ_CUSTODIAL_FORWARD_TRUSTED_PINS="${custodial_transport_line#*=}"
+                custodial_transport_pins_seen=1
+                ;;
+              *) printf 'Unexpected forward input transport output\n' >&2; exit 1 ;;
+            esac
+          done <<< "$custodial_transport_paths"
+          test "$custodial_transport_source_seen" -eq 1
+          test "$custodial_transport_pins_seen" -eq 1
+        fi
+        # END custodial_forward_input_transport
+        # BEGIN custodial_forward_arguments
+        custodial_forward_args=()
+        custodial_forward_count=0
+        custodial_forward_pair_count=0
+        for custodial_forward_name in MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+          if declare -p "$custodial_forward_name" >/dev/null 2>&1; then
+            custodial_forward_pair_count=$((custodial_forward_pair_count + 1))
+          fi
+        done
+        test "$custodial_forward_pair_count" -eq 0 || test "$custodial_forward_pair_count" -eq 2
+        if [ -z "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}" ] \
+            && [ -z "${MZ_CUSTODIAL_FORWARD_ROLE:-}" ]; then
+          # Absent/both-empty DECLARED inputs are legacy, never a review.
+          # Provisioned forward file paths without that pair are incomplete.
+          if declare -p MZ_CUSTODIAL_FORWARD_SOURCE_INPUT >/dev/null 2>&1 \
+              || declare -p MZ_CUSTODIAL_FORWARD_TRUSTED_PINS >/dev/null 2>&1; then
+            printf 'Forward file paths require nonempty declared review inputs\n' >&2; exit 1
+          fi
+        else
+          test "${MZ_APP_EDITION:-}" = custodial
+          for custodial_forward_name in \
+            MZ_CUSTODIAL_FORWARD_SOURCE_INPUT MZ_CUSTODIAL_FORWARD_TRUSTED_PINS \
+            MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+            declare -p "$custodial_forward_name" >/dev/null 2>&1
+            test -n "${!custodial_forward_name}" || { printf 'Empty reviewed forward input: %s\n' "$custodial_forward_name" >&2; exit 1; }
+            custodial_forward_count=$((custodial_forward_count + 1))
+          done
+          test "$custodial_forward_count" -eq 4
+          [[ "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_ROLE" = candidate || "$MZ_CUSTODIAL_FORWARD_ROLE" = recovery ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" = /* && "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS" = /* ]]
+          test "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" != "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+          custodial_forward_args=(
+            --forward-source-input "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT"
+            --forward-trusted-pins "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+            --forward-trusted-pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256"
+            --forward-role "$MZ_CUSTODIAL_FORWARD_ROLE"
+          )
+        fi
+        readonly -a custodial_forward_args
+        # END custodial_forward_arguments
+        if [ "$custodial_forward_count" -ne 0 ]; then
+          # BEGIN custodial_reviewed_forward_build_number
+          # Select DATA only from the existing externally pinned role reader.
+          # The unchanged private source admission below must still succeed.
+          custodial_reviewed_build_number="$(node --input-type=module - "${custodial_forward_args[@]}" <<'NODE'
+        import { parseForwardBuildArguments, readReviewedForwardBuildSourceSelection }
+          from './mobile/scripts/configure-native-release.mjs';
+        const selection = await readReviewedForwardBuildSourceSelection(parseForwardBuildArguments(process.argv.slice(2)));
+        if (selection === null) throw new Error('Reviewed forward build role selection is required');
+        process.stdout.write(String(selection.version_code));
+        NODE
+          )"
+          [[ "$custodial_reviewed_build_number" =~ ^[1-9][0-9]*$ ]]
+          export PROJECT_BUILD_NUMBER="$custodial_reviewed_build_number"
+          # END custodial_reviewed_forward_build_number
+          # Observe genuine named clean source/review/private brand before effects.
+          # No checkout/reset/symbolic-ref substitute for the actual CI source.
+          node --input-type=module - "${custodial_forward_args[@]}" <<'NODE'
+        import {
+          assertReviewedForwardBuild, loadReviewedForwardBuild,
+          parseForwardBuildArguments, resolveBuildNumber,
+        } from './mobile/scripts/configure-native-release.mjs';
+        const flags = parseForwardBuildArguments(process.argv.slice(2));
+        const build = resolveBuildNumber(process.env);
+        const context = await loadReviewedForwardBuild(flags, { buildNumber: build.numeric });
+        const descriptor = assertReviewedForwardBuild(context, {
+          buildNumber: build.numeric, sourceCommit: process.env.CM_COMMIT,
+          sourceRef: 'refs/heads/' + process.env.CM_BRANCH,
+        });
+        if (process.env.CM_COMMIT !== descriptor.source.commit
+            || process.env.CM_BRANCH !== descriptor.source.ref.slice('refs/heads/'.length)) {
+          throw new Error('Codemagic source identity differs from the owner-reviewed forward role');
+        }
+        NODE
+          git check-ref-format "refs/heads/$CM_BRANCH"
+          git fetch --no-tags --depth=1 origin \
+            "+refs/heads/$CM_BRANCH:refs/remotes/origin/$CM_BRANCH"
+          test "$(git rev-parse "refs/remotes/origin/$CM_BRANCH")" = "$CM_COMMIT"
+          # BEGIN custodial_reviewed_forward_build_number_export
+          # Later normal configure/provenance/verifier steps consume this value.
+          : "${CM_ENV:?Codemagic environment output path is required}"
+          printf 'PROJECT_BUILD_NUMBER=%s\n' "$PROJECT_BUILD_NUMBER" >> "$CM_ENV"
+          # END custodial_reviewed_forward_build_number_export
+        else
+          recovery_branch='release/custodial-build29-recovery-v53-implementation-20260918'
+          test "${CM_BRANCH:-}" = "$recovery_branch"
+          test "${CM_COMMIT:-}" = "$(git rev-parse HEAD)"
+          git fetch --no-tags --depth=1 origin \
+            "+refs/heads/$recovery_branch:refs/remotes/origin/$recovery_branch"
+          test "$(git rev-parse "refs/remotes/origin/$recovery_branch")" = "$CM_COMMIT"
+          printf 'Protected Build 29 recovery source verified: %s at %s\n' \
+            "$recovery_branch" \
+            "$CM_COMMIT"
+        fi
     custodial_android_toolchain: &custodial_android_toolchain
       name: Verify reviewed Custodial Android toolchain
       script: |
@@ -64,6 +185,8 @@ definitions:
         npm run --silent test:mobile
         npm run --silent test:batch-0a
         node scripts/native-mobile-build-contract-tests.mjs
+        npm run --silent test:immutable-snapshot-failure-ownership
+        npm run --silent test:custodial-protected-queue-schema
         node scripts/runtime-manifest-contract-tests.mjs
         node scripts/ci-toolchain-contract-tests.mjs
         npm run --silent release:manifest:check
@@ -126,6 +249,49 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
+        # Reviewed forward inputs are externally provisioned job variables/files;
+        # never inferred from an APK, acceptance JSON, branch or build number.
+        # BEGIN custodial_forward_arguments
+        custodial_forward_args=()
+        custodial_forward_count=0
+        custodial_forward_pair_count=0
+        for custodial_forward_name in MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+          if declare -p "$custodial_forward_name" >/dev/null 2>&1; then
+            custodial_forward_pair_count=$((custodial_forward_pair_count + 1))
+          fi
+        done
+        test "$custodial_forward_pair_count" -eq 0 || test "$custodial_forward_pair_count" -eq 2
+        if [ -z "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}" ] \
+            && [ -z "${MZ_CUSTODIAL_FORWARD_ROLE:-}" ]; then
+          # Absent/both-empty DECLARED inputs are legacy, never a review.
+          # Provisioned forward file paths without that pair are incomplete.
+          if declare -p MZ_CUSTODIAL_FORWARD_SOURCE_INPUT >/dev/null 2>&1 \
+              || declare -p MZ_CUSTODIAL_FORWARD_TRUSTED_PINS >/dev/null 2>&1; then
+            printf 'Forward file paths require nonempty declared review inputs\n' >&2; exit 1
+          fi
+        else
+          test "${MZ_APP_EDITION:-}" = custodial
+          for custodial_forward_name in \
+            MZ_CUSTODIAL_FORWARD_SOURCE_INPUT MZ_CUSTODIAL_FORWARD_TRUSTED_PINS \
+            MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+            declare -p "$custodial_forward_name" >/dev/null 2>&1
+            test -n "${!custodial_forward_name}" || { printf 'Empty reviewed forward input: %s\n' "$custodial_forward_name" >&2; exit 1; }
+            custodial_forward_count=$((custodial_forward_count + 1))
+          done
+          test "$custodial_forward_count" -eq 4
+          [[ "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_ROLE" = candidate || "$MZ_CUSTODIAL_FORWARD_ROLE" = recovery ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" = /* && "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS" = /* ]]
+          test "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" != "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+          custodial_forward_args=(
+            --forward-source-input "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT"
+            --forward-trusted-pins "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+            --forward-trusted-pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256"
+            --forward-role "$MZ_CUSTODIAL_FORWARD_ROLE"
+          )
+        fi
+        readonly -a custodial_forward_args
+        # END custodial_forward_arguments
         cd mobile
         rm -rf android
         npx --no-install cap add android
@@ -160,7 +326,7 @@ definitions:
         node scripts/configure-branding.mjs
         node scripts/configure-native-links.mjs android
         node scripts/configure-android-backup.mjs
-        node scripts/configure-native-release.mjs android
+        node scripts/configure-native-release.mjs android ${custodial_forward_args[@]+"${custodial_forward_args[@]}"}
         grep -Fxq \
           "apply from: rootProject.file('../scripts/native-version.gradle')" \
           android/app/build.gradle
@@ -263,6 +429,49 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
+        # Reviewed forward inputs are externally provisioned job variables/files;
+        # never inferred from an APK, acceptance JSON, branch or build number.
+        # BEGIN custodial_forward_arguments
+        custodial_forward_args=()
+        custodial_forward_count=0
+        custodial_forward_pair_count=0
+        for custodial_forward_name in MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+          if declare -p "$custodial_forward_name" >/dev/null 2>&1; then
+            custodial_forward_pair_count=$((custodial_forward_pair_count + 1))
+          fi
+        done
+        test "$custodial_forward_pair_count" -eq 0 || test "$custodial_forward_pair_count" -eq 2
+        if [ -z "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}" ] \
+            && [ -z "${MZ_CUSTODIAL_FORWARD_ROLE:-}" ]; then
+          # Absent/both-empty DECLARED inputs are legacy, never a review.
+          # Provisioned forward file paths without that pair are incomplete.
+          if declare -p MZ_CUSTODIAL_FORWARD_SOURCE_INPUT >/dev/null 2>&1 \
+              || declare -p MZ_CUSTODIAL_FORWARD_TRUSTED_PINS >/dev/null 2>&1; then
+            printf 'Forward file paths require nonempty declared review inputs\n' >&2; exit 1
+          fi
+        else
+          test "${MZ_APP_EDITION:-}" = custodial
+          for custodial_forward_name in \
+            MZ_CUSTODIAL_FORWARD_SOURCE_INPUT MZ_CUSTODIAL_FORWARD_TRUSTED_PINS \
+            MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+            declare -p "$custodial_forward_name" >/dev/null 2>&1
+            test -n "${!custodial_forward_name}" || { printf 'Empty reviewed forward input: %s\n' "$custodial_forward_name" >&2; exit 1; }
+            custodial_forward_count=$((custodial_forward_count + 1))
+          done
+          test "$custodial_forward_count" -eq 4
+          [[ "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_ROLE" = candidate || "$MZ_CUSTODIAL_FORWARD_ROLE" = recovery ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" = /* && "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS" = /* ]]
+          test "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" != "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+          custodial_forward_args=(
+            --forward-source-input "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT"
+            --forward-trusted-pins "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+            --forward-trusted-pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256"
+            --forward-role "$MZ_CUSTODIAL_FORWARD_ROLE"
+          )
+        fi
+        readonly -a custodial_forward_args
+        # END custodial_forward_arguments
         if [ "$MZ_APP_EDITION" = "custodial" ]; then
           test -n "${ANDROID_SDK_ROOT:-}"
           custodial_apk=''
@@ -275,16 +484,32 @@ definitions:
           test "$custodial_apk" = 'mobile/android/app/build/outputs/apk/release/app-release.apk'
           test -f "$custodial_apk"
           test ! -L "$custodial_apk"
+          custodial_callback_args=()
+          custodial_source_scope="$(node --input-type=module -e "import {readCustodialBuildScope} from './mobile/scripts/custodial-new-producer-scope-policy.mjs'; console.log(readCustodialBuildScope(process.cwd()+'/mobile').profile);")"
+          case "$custodial_source_scope" in
+            cleaning-first-retained-continuity-v1)
+              [[ "${MZ_CUSTODIAL_CALLBACK_REFERENCE_BUILD_ID:-}" =~ ^[a-f0-9]{24}$ ]]
+              test -n "${CODEMAGIC_API_TOKEN:-}"
+              custodial_callback_args=(--callback-reference-build-id "$MZ_CUSTODIAL_CALLBACK_REFERENCE_BUILD_ID")
+              ;;
+            full-system)
+              test -z "${MZ_CUSTODIAL_CALLBACK_REFERENCE_BUILD_ID:-}"
+              ;;
+            *) printf 'Unknown actual Source release scope\n' >&2; exit 1 ;;
+          esac
+          readonly -a custodial_callback_args
           node mobile/scripts/verify-custodial-android-release.mjs \
             --apk "$custodial_apk" \
             --build-number "$PROJECT_BUILD_NUMBER" \
             --source-commit "$CM_COMMIT" \
-            --source-ref "$CM_BRANCH" \
+            --source-ref "$(if [ "$custodial_forward_count" -ne 0 ]; then printf 'refs/heads/%s' "$CM_BRANCH"; else printf '%s' "$CM_BRANCH"; fi)" \
             --build-run "$CM_BUILD_ID" \
             --build-workflow custodial-android \
             --build-tools-directory "$ANDROID_SDK_ROOT/build-tools/35.0.1" \
             --runtime-directory mobile/mobile-dist \
-            --output build/provenance/custodial-android-release-acceptance.json
+            --output build/provenance/custodial-android-release-acceptance.json \
+            ${custodial_forward_args[@]+"${custodial_forward_args[@]}"} \
+            ${custodial_callback_args[@]+"${custodial_callback_args[@]}"}
         else
           while IFS= read -r -d '' apk; do
             sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
@@ -525,20 +750,35 @@ workflows:
 
   custodial-android:
     name: Memphis Zoo Custodial - Private Android APK
+    inputs:
+      custodial_forward_review_pins_sha256:
+        description: Independently reviewed forward recipe SHA256; empty retains legacy
+        type: string
+        default: ''
+      custodial_forward_review_role:
+        description: Reviewed forward role candidate or recovery; empty retains legacy
+        type: string
+        default: ''
+      custodial_callback_reference_build_id:
+        description: Exact independently finished Source-bound callback evidence build; empty only for full-system
+        type: string
+        default: ''
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       xcode: '26.2'
       node: '22.23.1'
       java: 21
-      groups:
-        - android_signing_credentials
       vars:
         MZ_APP_EDITION: custodial
         MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
         MZ_RELEASE_VERSION: 1.0.0
         MZ_SHELL_START: '1'
         PROJECT_BUILD_NUMBER: '53'
+        # Official workflow inputs, not inferred environment echoes or approval.
+        MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: ${{ inputs.custodial_forward_review_pins_sha256 }}
+        MZ_CUSTODIAL_FORWARD_ROLE: ${{ inputs.custodial_forward_review_role }}
+        MZ_CUSTODIAL_CALLBACK_REFERENCE_BUILD_ID: ${{ inputs.custodial_callback_reference_build_id }}
       android_signing:
         # External Codemagic configuration must provide this distinct Custodial key.
         - memphis_zoo_custodial_keystore
@@ -585,6 +825,62 @@ workflows:
       - *native_provenance
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
+      - build/provenance/**
+
+  custodial-callback-reference:
+    name: Custodial callback reference - evidence only
+    inputs:
+      custodial_forward_review_pins_sha256:
+        description: Independently reviewed exact Source role; reference is never release approval
+        type: string
+        default: ''
+      custodial_forward_review_role:
+        description: Existing reviewed candidate or recovery role
+        type: string
+        default: ''
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: '26.2'
+      node: '22.23.1'
+      java: 21
+      vars:
+        MZ_APP_EDITION: custodial
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_SHELL_START: '1'
+        PROJECT_BUILD_NUMBER: '53'
+        MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: ${{ inputs.custodial_forward_review_pins_sha256 }}
+        MZ_CUSTODIAL_FORWARD_ROLE: ${{ inputs.custodial_forward_review_role }}
+      android_signing:
+        - memphis_zoo_custodial_keystore
+    scripts:
+      - *protected_main
+      - *install
+      - *custodial_android_toolchain
+      - name: Build exact candidate web Source for reference compilation only
+        script: npm run --silent build:custodial
+      - *web_provenance
+      - *add_android
+      - name: Compile frozen guarded callbacks as evidence only
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          umask 077
+          test "${CM_WORKFLOW_ID:-}" = custodial-callback-reference
+          test -n "${MZ_CUSTODIAL_FORWARD_SOURCE_INPUT:-}"
+          test -n "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS:-}"
+          test -n "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}"
+          test -n "${MZ_CUSTODIAL_FORWARD_ROLE:-}"
+          node mobile/scripts/produce-custodial-callback-reference.mjs \
+            --forward-source-input "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" \
+            --forward-trusted-pins "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS" \
+            --forward-trusted-pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" \
+            --forward-role "$MZ_CUSTODIAL_FORWARD_ROLE"
+      - *source_attestation
+    # No native_provenance/release acceptance, store publisher or install step.
+    artifacts:
+      - build/callback-reference/app-release.apk
       - build/provenance/**
 
   viewer-android:

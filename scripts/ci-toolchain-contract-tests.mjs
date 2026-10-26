@@ -158,11 +158,81 @@ const workflows = Object.fromEntries(
   workflowNames.map((name) => [name, read(`.github/workflows/${name}`)]),
 );
 const workflowJobs = (source) => {
+  // This finite inventory grammar supports LF workflow bodies only. Reject CR
+  // before validation or extraction so their line-boundary grammars cannot differ.
+  assert.doesNotMatch(source, /\r/, 'Workflow inventory requires LF line endings without carriage returns');
   const jobsStart = source.indexOf('\njobs:\n');
   if (jobsStart === -1) return [];
   const jobsSource = source.slice(jobsStart + '\njobs:\n'.length);
+  // Never let an unsupported job-key spelling disappear from the inventory.
+  // This finite grammar admits only the explicit unquoted job mappings below.
+  for (const line of jobsSource.split(/\r?\n/)) {
+    if (!line.trim() || line.trimStart().startsWith('#') || !/^  \S/.test(line)) continue;
+    assert.match(line, /^  [a-zA-Z0-9_-]+:$/,
+      'Workflow jobs must use explicit supported unquoted job mappings');
+  }
   return [...jobsSource.matchAll(/^  ([a-zA-Z0-9_-]+):\n([\s\S]*?)(?=^  [a-zA-Z0-9_-]+:\n|(?![\s\S]))/gm)]
     .map((match) => ({ name: match[1], source: match[0] }));
+};
+// This is a finite parser for the committed Actions mapping shape. A nonempty
+// plain scalar is admitted on one physical line only; otherwise YAML folding
+// could change controls or shell metadata after their inspected first line.
+// Empty nested mappings/sequences and explicit block scalars retain their bodies.
+const assertWorkflowFieldSpans = (lines, fields, fieldLines, indent, label) => {
+  const positions = [...fieldLines.values()];
+  for (const [key, start] of fieldLines) {
+    const end = Math.min(lines.length, ...positions.filter((position) => position > start));
+    const following = lines.slice(start + 1, end)
+      .filter((line) => line.trim() && !line.trimStart().startsWith('#'));
+    const value = fields.get(key).trim();
+    assert.ok(following.every((line) => line.match(/^ */)[0].length > indent),
+      `${label} field ${key} has unsupported mapping indentation`);
+    if (value && !/^[>|][+-]?$/.test(value)) {
+      assert.equal(following.length, 0,
+        key === 'run' && label === 'Workflow step'
+          ? 'Workflow scalar run must occupy one physical line without continuations'
+          : `${label} scalar field ${key} must occupy one physical line without continuations`);
+    }
+  }
+};
+// Job control keys are YAML mapping keys too: quoted spellings are identical,
+// and duplicate/merge keys cannot override an earlier admitted dependency/hold.
+const workflowJobFields = (jobSource) => {
+  const fields = new Map();
+  const fieldLines = new Map();
+  const lines = jobSource.split(/\r?\n/);
+  // Read the full mapping, including fields following steps, and each complete
+  // scalar span rather than just its first physical line.
+  for (const [index, line] of lines.entries()) {
+    if (!line.trim() || line.trimStart().startsWith('#') || !/^    \S/.test(line)) continue;
+    const field = line.match(/^    (?:(['"])([a-zA-Z0-9_-]+)\1|([a-zA-Z0-9_-]+)):\s*(.*)$/);
+    assert.ok(field, 'Workflow job must use an explicit top-level YAML mapping');
+    const key = field[2] || field[3];
+    assert.ok(!fields.has(key), `Workflow job repeats YAML mapping key ${key}`);
+    fields.set(key, field[4]);
+    fieldLines.set(key, index);
+  }
+  assertWorkflowFieldSpans(lines, fields, fieldLines, 4, 'Workflow job');
+  return fields;
+};
+// Parse each step's top-level YAML mapping, including its sequence-first key.
+// Only the explicit mapping shape used by these workflows is admitted here;
+// aliases/merges or duplicate keys cannot hide required-step control metadata.
+const workflowStepFields = (stepLines) => {
+  const fields = new Map();
+  const fieldLines = new Map();
+  for (const [index, original] of stepLines.entries()) {
+    const line = index === 0 ? original.replace(/^      - /, '        ') : original;
+    if (!line.trim() || line.trimStart().startsWith('#') || !/^        \S/.test(line)) continue;
+    const field = line.match(/^        (?:(['"])([a-zA-Z0-9_-]+)\1|([a-zA-Z0-9_-]+)):\s*(.*)$/);
+    assert.ok(field, 'Workflow step must use an explicit top-level YAML mapping');
+    const key = field[2] || field[3];
+    assert.ok(!fields.has(key), `Workflow step repeats YAML mapping key ${key}`);
+    fields.set(key, field[4]);
+    fieldLines.set(key, index);
+  }
+  assertWorkflowFieldSpans(stepLines, fields, fieldLines, 8, 'Workflow step');
+  return { fields, fieldLines };
 };
 // Model the job/step/run YAML shape used by Actions before inspecting shell text.
 const workflowRunSteps = (jobSource) => {
@@ -172,36 +242,42 @@ const workflowRunSteps = (jobSource) => {
   if (stepsStart === -1) return runSteps;
   for (let index = stepsStart + 1; index < lines.length;) {
     const line = lines[index];
-    if (line.trim() && line.match(/^ */)[0].length <= 4) break;
+    if (line.trim() && !line.trimStart().startsWith('#') && line.match(/^ */)[0].length <= 4) break;
     if (!/^      - /.test(line)) {
+      assert.ok(!line.trim() || line.trimStart().startsWith('#'),
+        'Workflow steps must use an explicit supported sequence mapping');
       index += 1;
       continue;
     }
     let end = index + 1;
-    while (end < lines.length && !/^      - /.test(lines[end])) {
-      if (lines[end].trim() && lines[end].match(/^ */)[0].length <= 4) break;
+    while (end < lines.length && !/^      -(?:[ \t]|$)/.test(lines[end])) {
+      if (lines[end].trim() && !lines[end].trimStart().startsWith('#')
+        && lines[end].match(/^ */)[0].length <= 4) break;
       end += 1;
     }
     const stepLines = lines.slice(index, end);
-    const inlineRun = stepLines[0].match(/^      - run:\s*(.*)$/);
-    const runIndex = inlineRun ? 0 : stepLines.findIndex((candidate) => /^        run:\s*/.test(candidate));
-    if (runIndex === -1) {
+    // Parse the entire explicit mapping before choosing run versus uses. Quoted
+    // run keys are executable too; unknown/merged forms cannot vanish here.
+    const { fields, fieldLines } = workflowStepFields(stepLines);
+    assert.ok(fields.has('run') !== fields.has('uses'),
+      'Workflow step must declare exactly one explicit run or uses mapping key');
+    if (!fields.has('run')) {
       index = end;
       continue;
     }
-    const value = (inlineRun?.[1] ?? stepLines[runIndex].replace(/^        run:\s*/, '')).trim();
-    const runIndent = inlineRun ? 6 : 8;
+    const runIndex = fieldLines.get('run');
+    const value = fields.get('run').trim();
+    const nextField = Math.min(stepLines.length,
+      ...[...fieldLines.values()].filter((position) => position > runIndex));
+    const followingLines = stepLines.slice(runIndex + 1, nextField);
     if (!/^[>|][+-]?$/.test(value)) {
-      runSteps.push({ script: value, style: 'scalar' });
+      // YAML folds plain scalar continuations. This finite contract admits a
+      // scalar run only on one physical line, never an ignored `|| true` tail.
+      assert.ok(followingLines.every((candidate) => !candidate.trim() || candidate.trimStart().startsWith('#')),
+        'Workflow scalar run must occupy one physical line without continuations');
+      runSteps.push({ script: value, style: 'scalar', fields });
     } else {
-      const block = [];
-      for (let next = runIndex + 1; next < stepLines.length; next += 1) {
-        const blockLine = stepLines[next];
-        const indentation = blockLine.match(/^ */)[0].length;
-        if (blockLine.trim() && indentation <= runIndent) break;
-        block.push(blockLine);
-      }
-      runSteps.push({ script: block.join('\n'), style: value.slice(0, 1) });
+      runSteps.push({ script: followingLines.join('\n'), style: value.slice(0, 1), fields });
     }
     index = end;
   }
@@ -305,6 +381,8 @@ const assertWorkflowHasExactCommand = (source, requiredCommand, label) => {
   const matches = parsedWorkflowCommands(source).filter(({ command }) => requiredCommandMention(command, requiredCommand));
   assert.ok(matches.length > 0, `${label} must include ${requiredCommand}`);
   for (const match of matches) {
+    assert.ok(!match.runStep.fields.has('if') && !match.runStep.fields.has('continue-on-error'),
+      `${label} required step must not carry if or continue-on-error`);
     assert.equal(
       match.command,
       requiredCommand,
@@ -321,6 +399,309 @@ const expectedMobileContractOwners = [
   'whole-system-quality-gate.yml:full-system',
 ];
 assertMobileContractBrowserDependencies(workflows, expectedMobileContractOwners);
+
+
+// Preserve owner-held app compilation while source checks keep running. Naming
+// this environment is NOT proof of protection: publication also requires Root's
+// independent readback of required-reviewer protection and no-admin-bypass.
+const PREBUILD_HOLD_ENVIRONMENT = 'custodial-prebuild-final-audit';
+const prebuildHoldOwners = {
+  'android-test-apks.yml': ['build', 'custodial-native-generated-app'],
+  'mobile-editions-build.yml': ['shell-browser', 'web-builds'],
+  'whole-system-quality-gate.yml': ['full-system'],
+  'custodial-production-repair.yml': ['frontend'],
+  'device-credential-foundation.yml': ['validate'],
+  'foundation-security-gate.yml': ['validate'],
+  'pr-regression-diagnostics.yml': ['diagnostics'],
+};
+const prebuildSourceCommands = [
+  'npm ci --ignore-scripts --no-audit --no-fund',
+  'npm audit --audit-level=high',
+  'node scripts/ci-toolchain-contract-tests.mjs',
+  'node scripts/batch-0a-baseline-contract-tests.mjs',
+  'node mobile/scripts/custodial-generated-app-test-contracts.mjs',
+  'node scripts/refresh-frontend-release-manifest.mjs --check',
+];
+const prebuildRequiredRunSteps = [
+  {
+    name: 'Install and verify exact Node and npm toolchain', shell: 'bash', style: '|',
+    commands: [
+      'set -euo pipefail',
+      'npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund',
+      `test "$(node --version)" = 'v22.23.1'`,
+      `test "$(npm --version)" = '11.17.0'`,
+    ],
+  },
+  { name: 'Install exact dependencies without lifecycle scripts', style: 'scalar',
+    commands: ['npm ci --ignore-scripts --no-audit --no-fund'] },
+  { name: 'Dependency audit', style: 'scalar', commands: ['npm audit --audit-level=high'] },
+  { name: 'Verify source contracts without building an app', shell: 'bash', style: '|',
+    commands: ['set -euo pipefail', ...prebuildSourceCommands.slice(2)] },
+];
+const appCompilationMention = /build:chatscope|build:batch-0b:browser-fixtures|build:\$\{\{|build:custodial|"build:\$edition"|test:batch-0b:browser|test:mobile|frontend-contract-inventory\.mjs --(?:run|diagnostics)|\bgradlew\b|\bkeytool\b|\bcap (?:add|sync)\b|native-actual-sql-fixtures\.mjs --prepare/;
+const assertPrebuildHoldWorkflow = (source, heldOwners, label) => {
+  const jobs = workflowJobs(source);
+  const sourceJobs = jobs.filter((job) => job.name === 'prebuild-source');
+  assert.equal(sourceJobs.length, 1, `${label} must retain exactly one unheld source job`);
+  const sourceJob = sourceJobs[0].source;
+  assert.deepEqual(Object.fromEntries(workflowJobFields(sourceJob)), {
+    name: 'Source and dependency checks without app compilation',
+    'runs-on': 'ubuntu-24.04',
+    'timeout-minutes': '15',
+    steps: '',
+  }, `${label} source job must retain its exact unconditional unheld mapping`);
+  assert.doesNotMatch(sourceJob, appCompilationMention,
+    `${label} source job must not compile apps or invoke compilation-bearing aggregates`);
+  const sourceRunSteps = workflowRunSteps(sourceJob);
+  assert.equal(sourceRunSteps.length, prebuildRequiredRunSteps.length,
+    `${label} must retain exactly the required source run steps`);
+  for (const [index, expected] of prebuildRequiredRunSteps.entries()) {
+    const step = sourceRunSteps[index];
+    assert.ok(!step.fields.has('if') && !step.fields.has('continue-on-error'),
+      `${label} required step must not carry if or continue-on-error`);
+    assert.deepEqual([...step.fields.keys()].sort(),
+      (expected.shell ? ['name', 'run', 'shell'] : ['name', 'run']).sort(),
+      `${label} required step must retain its exact explicit YAML mapping`);
+    assert.equal(step.fields.get('name'), expected.name, `${label} required source step order/name changed`);
+    assert.equal(step.fields.get('shell'), expected.shell, `${label} required source step shell changed`);
+    assert.equal(step.style, expected.style, `${label} required source step run style changed`);
+    assert.deepEqual(executableLines(step.script), expected.commands,
+      `${label} required source step executable sequence must be exact`);
+  }
+  for (const command of prebuildSourceCommands) {
+    assertWorkflowHasExactCommand(`name: source-checks\njobs:\n${sourceJob}`, command, `${label}:prebuild-source`);
+  }
+  for (const owner of heldOwners) {
+    const found = jobs.filter((job) => job.name === owner);
+    assert.equal(found.length, 1, `${label} must preserve compiling owner ${owner}`);
+    const fields = workflowJobFields(found[0].source);
+    assert.equal(fields.get('needs'), 'prebuild-source',
+      `${label}:${owner} must depend on successful unheld source checks`);
+    assert.equal(fields.get('environment'), PREBUILD_HOLD_ENVIRONMENT,
+      `${label}:${owner} must wait for the exact protected environment`);
+    assert.ok(!fields.has('continue-on-error'),
+      `${label}:${owner} must not bypass failed source prerequisites`);
+    const conditions = fields.has('if') ? [fields.get('if')] : [];
+    assert.deepEqual(conditions,
+      label === 'whole-system-quality-gate.yml' && owner === 'full-system'
+        ? ["github.event_name != 'pull_request'"] : [],
+      `${label}:${owner} must retain its exact prerequisite-success-compatible condition`);
+  }
+  for (const job of jobs) {
+    if (appCompilationMention.test(job.source)) {
+      assert.ok(heldOwners.includes(job.name),
+        `${label}:${job.name} contains app compilation outside the held-owner inventory`);
+    }
+    if (!heldOwners.includes(job.name)) {
+      assert.doesNotMatch(job.source, /^    environment:/m,
+        `${label}:${job.name} must not move unheld checks behind approval`);
+    }
+  }
+};
+for (const [name, owners] of Object.entries(prebuildHoldOwners)) {
+  assertPrebuildHoldWorkflow(workflows[name], owners, name);
+}
+const holdFixture = workflows['android-test-apks.yml'];
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('    environment: custodial-prebuild-final-audit\n', ''),
+  prebuildHoldOwners['android-test-apks.yml'], 'missing environment'), /exact protected environment/);
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('    needs: prebuild-source\n', ''),
+  prebuildHoldOwners['android-test-apks.yml'], 'missing prerequisite'), /successful unheld source checks/);
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('  prebuild-source:\n', '  prebuild-source:\n    environment: custodial-prebuild-final-audit\n'),
+  prebuildHoldOwners['android-test-apks.yml'], 'held source checks'), /exact unconditional unheld mapping/);
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('          node scripts/batch-0a-baseline-contract-tests.mjs\n',
+    '          node scripts/batch-0a-baseline-contract-tests.mjs\n          npm run --silent build:custodial\n'),
+  prebuildHoldOwners['android-test-apks.yml'], 'compiling source checks'), /must not compile apps/);
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('          node scripts/batch-0a-baseline-contract-tests.mjs\n', ''),
+  prebuildHoldOwners['android-test-apks.yml'], 'removed source command'), /executable sequence must be exact/);
+
+// These valid Actions mutations used to pass the hold guard while skipping or
+// neutralizing required checks, or admitting a held job after prerequisite failure.
+for (const firstKey of ['if: false', 'continue-on-error: true']) {
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    holdFixture.replace('      - name: Verify source contracts without building an app\n',
+      `      - ${firstKey}\n        name: Verify source contracts without building an app\n`),
+    prebuildHoldOwners['android-test-apks.yml'], `sequence-first ${firstKey}`),
+  /required step must not carry if or continue-on-error/);
+}
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('          node scripts/ci-toolchain-contract-tests.mjs\n',
+    '          exit 0\n          node scripts/ci-toolchain-contract-tests.mjs\n'),
+  prebuildHoldOwners['android-test-apks.yml'], 'early successful shell exit'),
+/executable sequence must be exact/);
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('  build:\n', '  build:\n    if: ${{ !success() }}\n'),
+  prebuildHoldOwners['android-test-apks.yml'], 'held not-success bypass'),
+/exact prerequisite-success-compatible condition/);
+
+for (const quotedControl of ["'if': false", '"continue-on-error": true']) {
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    holdFixture.replace('  prebuild-source:\n', `  prebuild-source:\n    ${quotedControl}\n`),
+    prebuildHoldOwners['android-test-apks.yml'], 'quoted source-job control'),
+  /exact unconditional unheld mapping/);
+}
+for (const [key, admitted, override] of [
+  ['needs', 'prebuild-source', '[]'],
+  ['environment', PREBUILD_HOLD_ENVIRONMENT, 'unprotected'],
+]) {
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    holdFixture.replace(`    ${key}: ${admitted}\n`,
+      `    ${key}: ${admitted}\n    "${key}": ${override}\n`),
+    prebuildHoldOwners['android-test-apks.yml'], `duplicate held ${key}`),
+  /Workflow job repeats YAML mapping key/);
+}
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('  prebuild-source:\n', '  prebuild-source:\n    <<: {if: false}\n'),
+  prebuildHoldOwners['android-test-apks.yml'], 'merged source-job control'),
+/Workflow job must use an explicit top-level YAML mapping/);
+
+const withTrailingJobFields = (workflow, jobName, fields) => {
+  const job = workflowJobs(workflow).find((item) => item.name === jobName);
+  assert.ok(job, `Trailing-field fixture requires job ${jobName}`);
+  return workflow.replace(job.source, `${job.source.trimEnd()}\n${fields}\n\n`);
+};
+for (const control of ['if: false', 'continue-on-error: true']) {
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    withTrailingJobFields(holdFixture, 'prebuild-source', `    ${control}`),
+    prebuildHoldOwners['android-test-apks.yml'], `trailing source-job ${control}`),
+  /exact unconditional unheld mapping/);
+}
+assert.throws(() => assertPrebuildHoldWorkflow(
+  withTrailingJobFields(holdFixture, 'build', '    if: ${{ !success() }}'),
+  prebuildHoldOwners['android-test-apks.yml'], 'trailing held not-success bypass'),
+/exact prerequisite-success-compatible condition/);
+assert.throws(() => assertPrebuildHoldWorkflow(
+  withTrailingJobFields(holdFixture, 'prebuild-source', '    steps:\n      - run: echo skipped'),
+  prebuildHoldOwners['android-test-apks.yml'], 'duplicate trailing source-job steps'),
+/Workflow job repeats YAML mapping key steps/);
+// YAML mapping order is not execution order: a unique ordinary job name may
+// follow steps without changing any control, step or executable command.
+const sourceJobName = '    name: Source and dependency checks without app compilation\n';
+assert.doesNotThrow(() => assertPrebuildHoldWorkflow(
+  withTrailingJobFields(holdFixture.replace(sourceJobName, ''), 'prebuild-source', sourceJobName.trimEnd()),
+  prebuildHoldOwners['android-test-apks.yml'], 'ordinary trailing job name'));
+
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('        run: npm audit --audit-level=high\n',
+    '        run: npm audit --audit-level=high\n          || true\n'),
+  prebuildHoldOwners['android-test-apks.yml'], 'continued plain audit scalar'),
+/Workflow scalar run must occupy one physical line without continuations/);
+for (const quotedRun of ["'run'", '"run"']) {
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    withTrailingJobFields(holdFixture, 'prebuild-source', `      - ${quotedRun}: echo extra`),
+    prebuildHoldOwners['android-test-apks.yml'], `extra executable ${quotedRun} step`),
+  /exactly the required source run steps/);
+}
+
+assert.throws(() => assertPrebuildHoldWorkflow(
+  holdFixture.replace('    steps:\n', '    steps:\n      -\n        run: echo extra\n'),
+  prebuildHoldOwners['android-test-apks.yml'], 'standalone sequence dash with extra executable step'),
+/Workflow steps must use an explicit supported sequence mapping/);
+
+// A sequence boundary is significant at every position, including after uses
+// steps whose nested maps must not absorb another executable item.
+const sourceStepStarts = [...workflowJobs(holdFixture)
+  .find((job) => job.name === 'prebuild-source').source.matchAll(/^      - /gm)];
+const sourceStepJob = workflowJobs(holdFixture).find((job) => job.name === 'prebuild-source');
+for (let boundary = 0; boundary <= sourceStepStarts.length; boundary += 1) {
+  const offset = boundary < sourceStepStarts.length
+    ? sourceStepStarts[boundary].index : sourceStepJob.source.trimEnd().length;
+  const mutated = sourceStepJob.source.slice(0, offset)
+    + '\n      -\n          run: echo extra\n' + sourceStepJob.source.slice(offset);
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    holdFixture.replace(sourceStepJob.source, mutated),
+    prebuildHoldOwners['android-test-apks.yml'], `standalone dash at step boundary ${boundary}`),
+  /Workflow steps must use an explicit supported sequence mapping/);
+}
+// The same complete-span rule covers job controls before and after steps.
+for (const [workflowName, owner, key, value, continuation] of [
+  ['android-test-apks.yml', 'build', 'needs', 'prebuild-source', 'unknown-job'],
+  ['android-test-apks.yml', 'build', 'environment', PREBUILD_HOLD_ENVIRONMENT, 'unprotected'],
+  ['whole-system-quality-gate.yml', 'full-system', 'if', "github.event_name != 'pull_request'", '|| always()'],
+]) {
+  const original = workflows[workflowName];
+  const field = `    ${key}: ${value}\n`;
+  for (const trailing of [false, true]) {
+    const without = original.replace(field, '');
+    const continued = `${field}      ${continuation}`;
+    const mutated = trailing ? withTrailingJobFields(without, owner, continued)
+      : without.replace(`  ${owner}:\n`, `  ${owner}:\n${continued}\n`);
+    assert.throws(() => assertPrebuildHoldWorkflow(mutated,
+      prebuildHoldOwners[workflowName], workflowName),
+    /Workflow job scalar field .* must occupy one physical line without continuations/);
+  }
+}
+// Shell is executable metadata too; its folded continuation must never be
+// mistaken for the exact bash shell inspected by the required-step contract.
+for (const afterRun of [false, true]) {
+  const sourceJob = sourceStepJob.source;
+  const runStep = sourceJob.indexOf('      - name: Verify source contracts without building an app\n');
+  const shell = sourceJob.indexOf('        shell: bash\n', runStep);
+  assert.ok(runStep >= 0 && shell >= 0);
+  const continuedShell = "        shell: bash\n          -c 'exit 0' {0}\n";
+  let mutated = sourceJob.slice(0, shell) + sourceJob.slice(shell + '        shell: bash\n'.length);
+  if (afterRun) mutated = `${mutated.trimEnd()}\n${continuedShell}\n`;
+  else mutated = mutated.slice(0, shell) + continuedShell + mutated.slice(shell);
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    holdFixture.replace(sourceJob, mutated), prebuildHoldOwners['android-test-apks.yml'],
+    `continued shell ${afterRun ? 'after' : 'before'} run`),
+  /Workflow step scalar field shell must occupy one physical line without continuations/);
+}
+
+// Quoted keys and merge mappings are valid YAML forms outside this finite
+// inventory grammar. They must fail closed before matchAll can omit a job.
+for (const key of ["'extra'", '"extra"', '<<']) {
+  const extraJob = `  ${key}:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: npm run build\n`;
+  for (const beforeFirst of [true, false]) {
+    const mutated = beforeFirst
+      ? holdFixture.replace('jobs:\n', `jobs:\n${extraJob}`)
+      : `${holdFixture.trimEnd()}\n${extraJob}`;
+    assert.throws(() => assertPrebuildHoldWorkflow(mutated,
+      prebuildHoldOwners['android-test-apks.yml'], 'android-test-apks.yml'),
+    /Workflow jobs must use explicit supported unquoted job mappings/);
+  }
+}
+
+// YAML comments do not close a job, step mapping or run block. Both structural
+// scans must pass low-indentation comments before inspecting later executable
+// steps or control metadata belonging to the same required step.
+for (const indentation of [0, 2, 4]) {
+  const comment = `${' '.repeat(indentation)}# YAML comment does not end steps`;
+  for (const boundary of sourceStepStarts) {
+    const commented = sourceStepJob.source.slice(0, boundary.index)
+      + `${comment}\n` + sourceStepJob.source.slice(boundary.index);
+    assert.doesNotThrow(() => assertPrebuildHoldWorkflow(
+      holdFixture.replace(sourceStepJob.source, commented),
+      prebuildHoldOwners['android-test-apks.yml'], 'android-test-apks.yml'));
+  }
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    withTrailingJobFields(holdFixture, 'prebuild-source', `${comment}\n      - run: echo extra`),
+    prebuildHoldOwners['android-test-apks.yml'], 'android-test-apks.yml'),
+  /must retain exactly the required source run steps/);
+  assert.throws(() => assertPrebuildHoldWorkflow(
+    withTrailingJobFields(holdFixture, 'prebuild-source', `${comment}\n        if: false`),
+    prebuildHoldOwners['android-test-apks.yml'], 'android-test-apks.yml'),
+  /required step must not carry if or continue-on-error/);
+}
+// CRLF is deliberately unsupported by this finite grammar, including mixed
+// line endings that previously passed job-key validation but escaped extraction.
+for (const location of ['before-first', 'after-first', 'after-last']) {
+  const extra = '  extra:\r\n    runs-on: ubuntu-24.04\r\n    steps:\r\n      - run: echo extra\r\n';
+  const firstJob = workflowJobs(holdFixture)[0];
+  const mutated = location === 'before-first' ? holdFixture.replace('jobs:\n', `jobs:\n${extra}`)
+    : location === 'after-first' ? holdFixture.replace(firstJob.source, `${firstJob.source}${extra}`)
+      : `${holdFixture.trimEnd()}\n${extra}`;
+  assert.throws(() => assertPrebuildHoldWorkflow(mutated,
+    prebuildHoldOwners['android-test-apks.yml'], 'android-test-apks.yml'),
+  /Workflow inventory requires LF line endings without carriage returns/);
+}
+assert.throws(() => assertPrebuildHoldWorkflow(holdFixture.replace(/\n/g, '\r\n'),
+  prebuildHoldOwners['android-test-apks.yml'], 'android-test-apks.yml'),
+/Workflow inventory requires LF line endings without carriage returns/);
 
 const workflowFixture = (steps, suffix = '') => `name: fixture\njobs:\n  build:\n    steps:\n${steps}${suffix}`;
 const fixtureOwner = ['fixture.yml:build'];
@@ -395,13 +776,30 @@ const actionPins = new Map([
   ['android-actions/setup-android', ['40fd30fb8d7440372e1316f5d1809ec01dcd3699', 'v4.0.1']],
 ]);
 
+// Only the reviewed tracked-backend prefix may precede the same exact flags.
+const frozenNpmCiLine = /\bnpm ci(?: --prefix test-fixtures\/ci\/current-backend)? --ignore-scripts --no-audit --no-fund[ \t]*$/;
+for (const command of [
+  'npm ci --ignore-scripts --no-audit --no-fund',
+  'npm ci --prefix test-fixtures/ci/current-backend --ignore-scripts --no-audit --no-fund',
+]) assert.match(command, frozenNpmCiLine);
+for (const command of [
+  'npm ci --prefix test-fixtures/ci/current-backend --ignore-scripts=false --no-audit --no-fund',
+  'npm ci --ignore-scripts --no-audit=false --no-fund',
+  'npm ci --ignore-scripts --no-audit --no-fund=false',
+  'npm ci --no-audit --no-fund',
+  'npm ci --ignore-scripts --no-fund',
+  'npm ci --ignore-scripts --no-audit',
+  'npm ci --prefix unknown --ignore-scripts --no-audit --no-fund',
+  'npm ci --ignore-scripts --no-audit --no-fund --ignore-scripts=false',
+]) assert.doesNotMatch(command, frozenNpmCiLine);
+
 for (const [name, source] of Object.entries(workflows)) {
   assert.doesNotMatch(source, /node-version:\s*['"]?22['"]?\s*$/m, `${name} must not float on the Node 22 major`);
   assert.doesNotMatch(source, /mobile\/package-lock\.json/, `${name} must use the root workspace lockfile`);
   for (const installLine of source.split(/\r?\n/).filter((line) => /\bnpm ci\b/.test(line))) {
     assert.match(
       installLine,
-      /\bnpm ci --ignore-scripts --no-audit --no-fund\b/,
+      frozenNpmCiLine,
       `${name} must suppress dependency lifecycle scripts in every frozen workspace install`,
     );
   }
@@ -1319,8 +1717,9 @@ assertCodemagicSourceAttestation(codemagic);
 assertCodemagicMobileBrowserDependencies(
   codemagic,
   ['install'],
-  ['manager-ios', 'viewer-ios', 'manager-android', 'custodial-android', 'viewer-android'],
+  ['manager-ios', 'viewer-ios', 'manager-android', 'custodial-android', 'custodial-callback-reference', 'viewer-android'],
 );
+// This sixth workflow is existing G30 reference evidence, not a sixth release role.
 const codemagicInstallLines = codemagic
   .split(/\r?\n/)
   .map((line) => line.trim())
@@ -1333,13 +1732,13 @@ assert.deepEqual(
 assert.match(codemagic, /test "\$\(npm --version\)" = "11\.17\.0"/, 'Codemagic must verify npm 11.17.0');
 assert.equal(
   [...codemagic.matchAll(/^\s+node:\s*['"]22\.23\.1['"]\s*$/gm)].length,
-  5,
-  'Every Codemagic workflow must use Node 22.23.1 exactly',
+  6,
+  'All five release workflows and the callback reference must use Node 22.23.1 exactly',
 );
 assert.equal(
   [...codemagic.matchAll(/^\s+instance_type:\s*mac_mini_m2\s*$/gm)].length,
-  5,
-  'Every release workflow must remain on the personal-plan machine with free monthly minutes',
+  6,
+  'All five release workflows and the callback reference must remain on the personal-plan machine with free monthly minutes',
 );
 assert.doesNotMatch(
   codemagic,
@@ -1373,8 +1772,8 @@ assert.equal(
 );
 assert.equal(
   [...codemagic.matchAll(/^\s+xcode:\s*['"]26\.2['"]\s*$/gm)].length,
-  3,
-  'Every Android workflow must pin the documented Xcode 26.2 image containing Build Tools 35.0.1',
+  4,
+  'All three Android release workflows and the callback reference must pin the documented Xcode 26.2 image containing Build Tools 35.0.1',
 );
 assert.doesNotMatch(codemagic, /xcode:\s*latest/, 'Codemagic must not float on the latest Xcode image');
 assert.match(codemagic, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, 'Codemagic must reject ChatScope bundle drift');
@@ -1505,8 +1904,8 @@ for (const name of ['android-test-apks.yml', 'mobile-editions-build.yml']) {
   assert.match(source, /push:\s*\n\s*branches:\s*\[main\]/, `${name} must build main`);
   assert.equal(
     [...source.matchAll(/^\s*run:\s+npm ci --ignore-scripts --no-audit --no-fund\s*$/gm)].length,
-    2,
-    `${name} must suppress dependency lifecycle scripts in both artifact-producing installs`,
+    3,
+    `${name} must suppress dependency lifecycle scripts in both artifact-producing installs and the unheld source install`,
   );
   assert.doesNotMatch(
     source,

@@ -1,6 +1,7 @@
 #!/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   copyFileSync,
@@ -23,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import {
   custodialCodemagicAdmissionBootstrapInternals,
   parseCustodialCodemagicAdmissionBootstrapArguments,
+  custodialCodemagicAdmissionForwardArguments,
   runCustodialCodemagicAdmissionBootstrap,
 } from './run-custodial-codemagic-admission.mjs';
 
@@ -54,6 +56,7 @@ const SNAPSHOT_PATHS = [
   'mobile/scripts/custodial-linux-admission-host-tools.mjs',
   'mobile/scripts/run-custodial-codemagic-admission.mjs',
   'mobile/scripts/verify-custodial-android-release.mjs',
+  'scripts/lib/runtime-sanitation-policy.mjs',
 ].sort();
 
 function createCanonicalTemporaryDirectory(prefix, temporaryParent = tmpdir()) {
@@ -315,6 +318,222 @@ function removeExportFixture(fixture) {
   rmSync(fixture.root, { recursive: true, force: false });
 }
 
+if (process.argv.includes('--ci-forward-provider-inputs-source-only') || process.argv.includes('--ci-forward-provider-inputs-dispatch-only')) {
+  const sourceOnly = process.argv.includes('--ci-forward-provider-inputs-source-only');
+  const yaml = readFileSync(join(SDK_ROOT, 'codemagic.yaml'), 'utf8');
+  const definition = name => yaml.match(new RegExp('^    ' + name + ': &' + name + '\\n([\\s\\S]*?)(?=^    [a-z_]+: &|^workflows:)', 'm'))[1]
+    .split('      script: |\n')[1].split('\n').map(line => line.startsWith('        ') ? line.slice(8) : line).join('\n');
+  const scripts = ['protected_main', 'add_android', 'native_provenance'].map(definition);
+  const collectors = scripts.map(script => script.match(/# BEGIN custodial_forward_arguments\n([\s\S]*?)# END custodial_forward_arguments/)[1]);
+  assert.equal(collectors[0], collectors[1]); assert.equal(collectors[0], collectors[2]);
+  const inputs = '    inputs:\n      custodial_forward_review_pins_sha256:\n        description: Independently reviewed forward recipe SHA256; empty retains legacy\n        type: string\n        default: \'\'\n      custodial_forward_review_role:\n        description: Reviewed forward role candidate or recovery; empty retains legacy\n        type: string\n        default: \'\'\n';
+  assert.equal(yaml.split(inputs).length, 2, 'exact declared pair occurs once');
+  const mappings = '        # Official workflow inputs, not inferred environment echoes or approval.\n        MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: ${{ inputs.custodial_forward_review_pins_sha256 }}\n        MZ_CUSTODIAL_FORWARD_ROLE: ${{ inputs.custodial_forward_review_role }}\n';
+  assert.equal(yaml.split(mappings).length, 2);
+  const workflows = yaml.slice(yaml.indexOf('\nworkflows:\n'));
+  assert.equal((workflows.match(/^    inputs:/gm) || []).length, 1);
+  assert.doesNotMatch(yaml.slice(0, yaml.indexOf('\nworkflows:\n')), /\$\{\{ inputs\./, 'untrusted values are environment inputs, never interpolated shell script');
+  const custodialBlock = workflows.match(/^  custodial-android:\n[\s\S]*?(?=^  [a-z][a-z-]+:\n|(?![\s\S]))/m)[0];
+  assert(custodialBlock.includes(inputs) && custodialBlock.includes(mappings));
+  assert.equal(createHash('sha256').update(custodialBlock.replace(inputs, '').replace(mappings, '')).digest('hex'), '3d1980ccf5ab25f461e2aae1cd2e833e3d54349c1189f55c690e48f009ea16dd', 'all prior Custodial defaults/signing/publishing preserved');
+  const unaffected = { 'manager-ios': 'd5fbc826007d54771480118f90404acf37a76272e536c180b807a47766eba165', 'viewer-ios': 'fddd7701ded47417d9b47119fda157ffa329ba598a27e8d13412adcc18ccf273', 'manager-android': '1d2684673ea3b623e08548c154f3d4411bbb638f59b5ca2bba4f8d7e591d7f6a', 'viewer-android': '343cc454f02d88f44145e0fed0c6af0fa964effec86722457c70f4af242147b1' };
+  for (const [name, hash] of Object.entries(unaffected)) assert.equal(createHash('sha256').update(workflows.match(new RegExp('^  ' + name + ':\\n[\\s\\S]*?(?=^  [a-z][a-z-]+:\\n|(?![\\s\\S]))', 'm'))[0]).digest('hex'), hash);
+  for (const collector of collectors) {
+    assert.match(collector, /Absent\/both-empty DECLARED inputs are legacy/);
+    assert.match(collector, /Forward file paths require nonempty declared review inputs/);
+    assert.match(collector, /test "\$custodial_forward_count" -eq 4/);
+    assert.match(collector, /test "\$custodial_forward_pair_count" -eq 0 \|\| test "\$custodial_forward_pair_count" -eq 2/);
+    assert.match(collector, /\^\[a-f0-9\]\{64\}\$/);
+    assert.match(collector, /MZ_CUSTODIAL_FORWARD_ROLE" = candidate \|\|/);
+    assert.doesNotMatch(collector, /\beval\b|forward_review_context|CM_ENV/);
+  }
+  const optional = '${custodial_forward_args[@]+"${custodial_forward_args[@]}"}';
+  const configure = scripts[1].split('\n').find(line => line.startsWith('node scripts/configure-native-release.mjs android'));
+  const start = scripts[2].indexOf('  node mobile/scripts/verify-custodial-android-release.mjs');
+  const verifier = scripts[2].slice(start, scripts[2].indexOf('else\n', start)).trim();
+  assert(configure.endsWith(optional) && verifier.endsWith(optional));
+  assert.match(scripts[0], /loadReviewedForwardBuild\(flags, \{ buildNumber: build.numeric \}\)/);
+  if (!sourceOnly) {
+    // Main's permitted environment may run ONLY these new pair/default cases.
+    // Task7 must not retry the already-denied Bash route to qualify them.
+    const run = (collector, call, variables) => {
+      const result = spawnSync('/bin/bash', ['--noprofile', '--norc', '-c', 'set -euo pipefail\n' + collector + '\nnode() { printf \'%s\\0\' "$@"; }\ncustodial_apk=synthetic.apk\n' + call], { cwd: SDK_ROOT, env: { PATH: '/usr/bin:/bin', MZ_APP_EDITION: 'custodial', PROJECT_BUILD_NUMBER: '53', CM_BRANCH: 'main', CM_COMMIT: 'c'.repeat(40), CM_BUILD_ID: BUILD_ID, ANDROID_SDK_ROOT: '/synthetic-sdk', ...variables }, timeout: 2000, maxBuffer: 1024 * 1024 });
+      if (result.error) throw result.error;
+      return { status: result.status, values: result.stdout.toString().split('\0').filter(Boolean) };
+    };
+    const empty = { MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: '', MZ_CUSTODIAL_FORWARD_ROLE: '' };
+    const complete = { MZ_CUSTODIAL_FORWARD_SOURCE_INPUT: '/synthetic/input.json', MZ_CUSTODIAL_FORWARD_TRUSTED_PINS: '/synthetic/pins.json', MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: 'a'.repeat(64), MZ_CUSTODIAL_FORWARD_ROLE: 'candidate' };
+    for (const collector of collectors) {
+      const legacy = run(collector, 'node legacy', empty); assert.equal(legacy.status, 0); assert.deepEqual(legacy.values, ['legacy']);
+      for (const bad of [{ MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: '' }, { MZ_CUSTODIAL_FORWARD_ROLE: '' }, { ...empty, MZ_CUSTODIAL_FORWARD_SOURCE_INPUT: '/synthetic/input.json' }, { ...empty, MZ_CUSTODIAL_FORWARD_TRUSTED_PINS: '' }, { ...complete, MZ_CUSTODIAL_FORWARD_ROLE: '' }, { ...complete, MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: '' }, { ...complete, MZ_CUSTODIAL_FORWARD_ROLE: 'unknown' }, { ...complete, MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: 'invalid' }]) {
+        const result = run(collector, 'node must-not-run', bad); assert.notEqual(result.status, 0); assert.deepEqual(result.values, []);
+      }
+    }
+    for (const role of ['candidate', 'recovery']) {
+      const variables = { ...complete, MZ_CUSTODIAL_FORWARD_ROLE: role };
+      const flags = ['--forward-source-input', variables.MZ_CUSTODIAL_FORWARD_SOURCE_INPUT, '--forward-trusted-pins', variables.MZ_CUSTODIAL_FORWARD_TRUSTED_PINS, '--forward-trusted-pins-sha256', variables.MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256, '--forward-role', role];
+      assert.deepEqual(run(collectors[1], configure, variables).values.slice(-8), flags);
+      assert.deepEqual(run(collectors[2], verifier, variables).values.slice(-8), flags);
+    }
+  }
+  process.stdout.write(sourceOnly ? 'NEW_DECLARED_INPUTS_SOURCE_ONLY: approved YAML inputs/defaults/context mapping, identical collectors and producer tails, closed empty/partial barriers in source, preserved workflow/signing/default bytes passed. Bash behavior remains UNEXECUTED after prior EPERM; no CI/API/build effects.\n' : 'NEW_DECLARED_INPUTS_SYNTHETIC_DISPATCH: actual YAML collectors reject incomplete declared pair and preserve empty defaults; both producer calls forward matched role/digest. No real CI/API/Git/build/artifact admission.\n');
+} else if (process.argv.includes('--ci-forward-workflow-only') || process.argv.includes('--ci-forward-workflow-source-only')) {
+  const sourceOnly = process.argv.includes('--ci-forward-workflow-source-only');
+  // Source-only invocation tests. We never run full CI scripts, signing/native
+  // commands, real Git, or the previously qualified positive loader cases.
+  const yaml = readFileSync(join(SDK_ROOT, 'codemagic.yaml'), 'utf8');
+  const definition = (name) => {
+    const match = yaml.match(new RegExp('^    ' + name + ': &' + name + '\\n([\\s\\S]*?)(?=^    [a-z_]+: &|^workflows:)', 'm'));
+    assert.ok(match, 'actual YAML definition: ' + name);
+    return match[1].split('      script: |\n')[1].split('\n').map(line => line.startsWith('        ') ? line.slice(8) : line).join('\n');
+  };
+  const scripts = ['protected_main', 'add_android', 'native_provenance'].map(definition);
+  const helper = source => {
+    const match = source.match(/# BEGIN custodial_forward_arguments\n([\s\S]*?)# END custodial_forward_arguments/);
+    assert.ok(match, 'actual producer must collect the reviewed inputs');
+    return match[1];
+  };
+  const helpers = scripts.map(helper);
+  assert.equal(helpers[0], helpers[1]); assert.equal(helpers[0], helpers[2]);
+  const configureCall = scripts[1].split('\n').find(line => line.startsWith('node scripts/configure-native-release.mjs android'));
+  assert.ok(configureCall);
+  const verifierStart = scripts[2].indexOf('  node mobile/scripts/verify-custodial-android-release.mjs');
+  const verifierEnd = scripts[2].indexOf('else\n', verifierStart);
+  assert.ok(verifierStart >= 0 && verifierEnd > verifierStart);
+  const verifierCall = scripts[2].slice(verifierStart, verifierEnd).trim();
+  const vars = ['MZ_CUSTODIAL_FORWARD_SOURCE_INPUT', 'MZ_CUSTODIAL_FORWARD_TRUSTED_PINS', 'MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256', 'MZ_CUSTODIAL_FORWARD_ROLE'];
+  const forward = Object.fromEntries(vars.map((name, i) => [name, ['/synthetic reviewed/source-input.json', '/synthetic reviewed/owner-pins.json', 'a'.repeat(64), 'candidate'][i]]));
+  const expectedFlags = ['--forward-source-input', forward[vars[0]], '--forward-trusted-pins', forward[vars[1]], '--forward-trusted-pins-sha256', forward[vars[2]], '--forward-role', 'candidate'];
+  const env = {
+    PATH: '/usr/bin:/bin', LANG: 'C', LC_ALL: 'C', MZ_APP_EDITION: 'custodial',
+    PROJECT_BUILD_NUMBER: '53', CM_BRANCH: 'reviewed/synthetic-source', CM_COMMIT: 'c'.repeat(40),
+    CM_BUILD_ID: BUILD_ID, ANDROID_SDK_ROOT: '/synthetic-sdk',
+  };
+  const optionalArrayExpansion = '${custodial_forward_args[@]+"${custodial_forward_args[@]}"}';
+  assert.ok(configureCall.endsWith(optionalArrayExpansion));
+  assert.ok(verifierCall.endsWith(optionalArrayExpansion));
+  for (const name of vars) for (const collector of helpers) assert.ok(collector.includes(name));
+  for (const collector of helpers) {
+    assert.match(collector, /custodial_forward_count" -eq 4/);
+    assert.match(collector, /MZ_APP_EDITION:-\}" = custodial/);
+    assert.match(collector, /\^\[a-f0-9\]\{64\}\$/);
+    assert.match(collector, /readonly -a custodial_forward_args/);
+    assert.doesNotMatch(collector, /\beval\b|CM_ENV|forward_review_context/);
+  }
+  if (!sourceOnly) {
+  const dispatch = (collector, call, additions = {}) => {
+    const result = spawnSync('/bin/bash', ['--noprofile', '--norc', '-c',
+      'set -euo pipefail\n' + collector +
+      '\nnode() { printf \'%s\\0\' "$@"; }\ncustodial_apk=synthetic.apk\n' + call],
+    {cwd: SDK_ROOT, env: {...env, ...additions}, timeout: 2000, maxBuffer: 2 * 1024 * 1024});
+    if (result.error) throw result.error;
+    const values = result.stdout.toString('utf8').split('\0'); if (!values.at(-1)) values.pop();
+    return {status: result.status, values, stderr: result.stderr.toString('utf8')};
+  };
+  // Reproduce the frozen before-call's missing transport, not a release proof.
+  assert.deepEqual(dispatch('', 'node scripts/configure-native-release.mjs android', forward).values, ['scripts/configure-native-release.mjs', 'android']);
+  for (const role of ['candidate', 'recovery']) {
+    const input = {...forward, MZ_CUSTODIAL_FORWARD_ROLE: role};
+    const expected = [...expectedFlags.slice(0, -1), role];
+    assert.deepEqual(dispatch(helpers[1], configureCall, input).values, ['scripts/configure-native-release.mjs', 'android', ...expected]);
+    const compiled = dispatch(helpers[2], verifierCall, input);
+    assert.equal(compiled.status, 0);
+    assert.deepEqual(compiled.values.slice(-8), expected);
+    assert.equal(compiled.values[compiled.values.indexOf('--source-ref') + 1], 'refs/heads/' + env.CM_BRANCH);
+    for (const name of ['--apk', '--build-number', '--source-commit', '--build-run', '--build-workflow', '--build-tools-directory', '--runtime-directory', '--output']) assert.ok(compiled.values.includes(name), 'normal immutable artifact argument retained: ' + name);
+  }
+  for (const edition of ['custodial', 'manager', 'viewer']) {
+    assert.deepEqual(dispatch(helpers[1], configureCall, {MZ_APP_EDITION: edition}).values, ['scripts/configure-native-release.mjs', 'android']);
+  }
+  const legacyArtifact = dispatch(helpers[2], verifierCall);
+  assert.equal(legacyArtifact.values[legacyArtifact.values.indexOf('--source-ref') + 1], env.CM_BRANCH);
+  assert.equal(legacyArtifact.values.includes('--forward-role'), false);
+  const invalid = [
+    ...vars.map(name => Object.fromEntries(Object.entries(forward).filter(([key]) => key !== name))),
+    ...vars.map(name => ({...forward, [name]: ''})),
+    {...forward, MZ_CUSTODIAL_FORWARD_ROLE: 'candidate;exit 0'},
+    {...forward, MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: 'INVALID'},
+    {...forward, MZ_CUSTODIAL_FORWARD_SOURCE_INPUT: 'relative.json'},
+    {...forward, MZ_CUSTODIAL_FORWARD_TRUSTED_PINS: forward.MZ_CUSTODIAL_FORWARD_SOURCE_INPUT},
+    {...forward, MZ_APP_EDITION: 'manager'},
+    {...forward, MZ_APP_EDITION: 'viewer'},
+  ];
+  for (const inputs of invalid) for (const collector of helpers) {
+    const refused = dispatch(collector, 'node normal-producer-must-not-run', inputs);
+    assert.notEqual(refused.status, 0); assert.deepEqual(refused.values, []);
+  }
+  }
+  // Execute only actual preflight JavaScript and missing/unreviewed-byte
+  // negatives which fail BEFORE its Git loader observation. No mock Git/ref.
+  const preflight = scripts[0].match(/<<'NODE'\n([\s\S]*?)\nNODE\n/)[1];
+  assert.match(preflight, /await loadReviewedForwardBuild\(flags/);
+  assert.match(preflight, /assertReviewedForwardBuild\(context/);
+  assert.match(preflight, /sourceCommit: process.env.CM_COMMIT/);
+  assert.match(preflight, /sourceRef: 'refs\/heads\/' \+ process.env.CM_BRANCH/);
+  assert.doesNotMatch(scripts[0], /git (?:checkout|reset|symbolic-ref)/);
+  if (!sourceOnly) {
+  const missing = spawnSync(process.execPath, ['--input-type=module', '-', ...expectedFlags], {
+    cwd: SDK_ROOT, env, input: preflight, timeout: 2000, maxBuffer: 2 * 1024 * 1024,
+  });
+  if (missing.error) throw missing.error;
+  assert.notEqual(missing.status, 0); assert.match(missing.stderr.toString(), /existing regular non-symlink file/);
+  } else {
+    const {loadReviewedForwardBuild, parseForwardBuildArguments} = await import('./configure-native-release.mjs');
+    await assert.rejects(() => loadReviewedForwardBuild(parseForwardBuildArguments(expectedFlags), {buildNumber: 53}), /existing regular non-symlink file/);
+  }
+  const directory = createCanonicalTemporaryDirectory('custodial-ci-review-negative-');
+  try {
+    const pinsPath = join(directory, 'pins.json'); const inputPath = join(directory, 'input.json');
+    writeFileSync(pinsPath, '{"SYNTHETIC_UNREVIEWED":true}'); writeFileSync(inputPath, '{}');
+    if (sourceOnly) {
+      const {loadReviewedForwardBuild, parseForwardBuildArguments} = await import('./configure-native-release.mjs');
+      const flags = parseForwardBuildArguments(['--forward-source-input', inputPath, '--forward-trusted-pins', pinsPath, '--forward-trusted-pins-sha256', 'a'.repeat(64), '--forward-role', 'candidate']);
+      await assert.rejects(() => loadReviewedForwardBuild(flags, {buildNumber: 53}), /independent reviewed pin/);
+    } else {
+    const refused = spawnSync(process.execPath, ['--input-type=module', '-', '--forward-source-input', inputPath, '--forward-trusted-pins', pinsPath, '--forward-trusted-pins-sha256', 'a'.repeat(64), '--forward-role', 'candidate'], {
+      cwd: SDK_ROOT, env, input: preflight, timeout: 2000, maxBuffer: 2 * 1024 * 1024,
+    });
+    if (refused.error) throw refused.error;
+    assert.notEqual(refused.status, 0); assert.match(refused.stderr.toString(), /independent reviewed pin/);
+    }
+  } finally { rmSync(directory, {recursive: true, force: false}); }
+  // Frozen workflow blocks, defaults, store publishing and signed identities
+  // are not replaced. Only shared producer script bodies changed.
+  const expectedWorkflowHashes = {"manager-ios":"d5fbc826007d54771480118f90404acf37a76272e536c180b807a47766eba165","viewer-ios":"fddd7701ded47417d9b47119fda157ffa329ba598a27e8d13412adcc18ccf273","manager-android":"1d2684673ea3b623e08548c154f3d4411bbb638f59b5ca2bba4f8d7e591d7f6a","custodial-android":"3d1980ccf5ab25f461e2aae1cd2e833e3d54349c1189f55c690e48f009ea16dd","viewer-android":"343cc454f02d88f44145e0fed0c6af0fa964effec86722457c70f4af242147b1"};
+  for (const [name, expected] of Object.entries(expectedWorkflowHashes)) {
+    let block = yaml.match(new RegExp('^  ' + name + ':\\n[\\s\\S]*?(?=^  [a-z][a-z-]+:\\n|(?![\\s\\S]))', 'm'))[0];
+    if (name === 'custodial-android') block = block.replace(/    inputs:\n[\s\S]*?(?=    max_build_duration:)/, '').replace(/        # Official workflow inputs[^\n]*\n        MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:[^\n]*\n        MZ_CUSTODIAL_FORWARD_ROLE:[^\n]*\n/, '');
+    assert.equal(createHash('sha256').update(block).digest('hex'), expected, name + ' unchanged workflow/defaults');
+  }
+  assert.doesNotMatch(yaml, /forward_review_context|CM_ENV/);
+  assert.match(scripts[0], /git fetch --no-tags --depth=1 origin/);
+  assert.match(scripts[0], /refs\/remotes\/origin\/\$CM_BRANCH/);
+  process.stdout.write(sourceOnly
+    ? 'SOURCE_ONLY: YAML flag/preflight composition, unchanged workflow/default hashes, and in-process missing/unreviewed loader negatives passed; subprocess invocation checks HELD after EPERM, no Git/CI/API/build/sign/artifact admission.\n'
+    : 'SYNTHETIC_SOURCE_ONLY: actual YAML producer argv, both roles, preflight missing/unreviewed refusal, partial/malformed input barriers, and unchanged edition/default workflows passed; no real Git/CI/API/build/sign/artifact admission.\n');
+} else if (process.argv.includes('--forward-command-only')) {
+  const flags = ['--forward-source-input', '/synthetic/source.json', '--forward-trusted-pins', '/synthetic/pins.json', '--forward-trusted-pins-sha256', 'a'.repeat(64), '--forward-role', 'candidate'];
+  assert.equal(parseCustodialCodemagicAdmissionBootstrapArguments(['--build-id', BUILD_ID, ...flags]), BUILD_ID);
+  assert.deepEqual(custodialCodemagicAdmissionForwardArguments(flags), flags);
+  for (const extra of [flags.slice(0, -2), [...flags, '--forward-role', 'candidate'], [...flags.slice(0, -1), 'invalid'], ['--forward-source-input', 'relative.json', ...flags.slice(2)]]) assert.throws(() => custodialCodemagicAdmissionForwardArguments(extra), /Usage|canonical/);
+  const { calls, spawn } = makeSpawn();
+  const stdout = captureStream(); const stderr = captureStream();
+  const before = bootstrapDirectories();
+  const exitCode = await runCustodialCodemagicAdmissionBootstrap({
+    ...testPrivateTreeHooks,
+    args: ['--build-id', BUILD_ID, ...flags],
+    sourceEnvironment: { CODEMAGIC_API_TOKEN: TOKEN },
+    stdout, stderr, ...fakeHostDependencies(), spawn,
+    fetchImpl: async () => fakeGithubResponse(),
+    exportAdmission() {},
+  });
+  assert.equal(exitCode, 0);
+  const child = calls.find((call) => call.file === PINNED_NODE && call.args[0] !== NPM_CLI);
+  assert.deepEqual(child.args.slice(1), ['--build-id', BUILD_ID, ...flags]);
+  assert.deepEqual(bootstrapDirectories(), before);
+  assert.equal(activeTestRoots.size, 0);
+  process.stdout.write('SYNTHETIC_SOURCE_ONLY: forward bootstrap grammar and actual child-dispatch arguments passed; no real Git/network/artifact admission executed.\n');
+} else {
 assert.equal(
   parseCustodialCodemagicAdmissionBootstrapArguments(['--build-id', BUILD_ID]),
   BUILD_ID,
@@ -782,9 +1001,61 @@ for (const [label, fixtureOptions, pattern] of [
 }
 
 assert.equal(realpathSync(process.execPath), PINNED_NODE);
+
+// The generated-runtime sanitizer is an executable admission dependency outside
+// mobile/scripts. Missing enumeration or a post-install/post-admission change
+// must fail without export; only disposable synthetic checkout bytes are edited.
+const sanitationPolicyPath = 'scripts/lib/runtime-sanitation-policy.mjs';
+{
+  const { calls, spawn: baseSpawn } = makeSpawn();
+  const beforeDirectories = bootstrapDirectories();
+  await assert.rejects(runCustodialCodemagicAdmissionBootstrap({
+    ...testPrivateTreeHooks,
+    args: ['--build-id', BUILD_ID], sourceEnvironment: { CODEMAGIC_API_TOKEN: TOKEN },
+    ...fakeHostDependencies(), fetchImpl: async () => fakeGithubResponse(),
+    spawn(file, args, options) {
+      if (file === GIT && args.includes('ls-files')) {
+        assert.ok(args.includes(sanitationPolicyPath), 'policy has an exact snapshot pathspec');
+        return result(`${SNAPSHOT_PATHS.filter(path => path !== sanitationPolicyPath).join('\0')}\0`);
+      }
+      return baseSpawn(file, args, options);
+    },
+  }), /Reviewed-source snapshot omits scripts\/lib\/runtime-sanitation-policy\.mjs/);
+  assert.equal(calls.some(call => call.file === PINNED_NODE), false);
+  assert.deepEqual(bootstrapDirectories(), beforeDirectories);
+}
+for (const stage of ['install', 'admission']) {
+  const { calls, spawn: baseSpawn } = makeSpawn();
+  const beforeDirectories = bootstrapDirectories();
+  const stdout = captureStream(), stderr = captureStream();
+  let exported = false;
+  await assert.rejects(runCustodialCodemagicAdmissionBootstrap({
+    ...testPrivateTreeHooks,
+    args: ['--build-id', BUILD_ID], sourceEnvironment: { CODEMAGIC_API_TOKEN: TOKEN },
+    stdout, stderr, ...fakeHostDependencies(), fetchImpl: async () => fakeGithubResponse(),
+    spawn(file, args, options) {
+      const response = baseSpawn(file, args, options);
+      const mutate = file === PINNED_NODE && (stage === 'install' ? args[0] === NPM_CLI
+        : args[0].endsWith('/mobile/scripts/admit-custodial-codemagic-build.mjs'));
+      if (mutate) {
+        const path = join(options.cwd, sanitationPolicyPath);
+        writeFileSync(path, `${readFileSync(path, 'utf8')}\n// synthetic changed policy\n`);
+      }
+      return response;
+    },
+    exportAdmission() { exported = true; },
+  }), /reviewed source/i);
+  assert.equal(exported, false);
+  if (stage === 'install') assert.equal(calls.some(call => call.file === PINNED_NODE
+    && call.args[0].endsWith('/mobile/scripts/admit-custodial-codemagic-build.mjs')), false);
+  assert.equal(stdout.text().includes(TOKEN) || stderr.text().includes(TOKEN), false);
+  assert.deepEqual(bootstrapDirectories(), beforeDirectories);
+}
+assert.equal(activeTestRoots.size, 0, 'all synthetic private trees are disposed');
 assert.equal(
   custodialCodemagicAdmissionBootstrapInternals.repositoryRoot,
   resolve(fileURLToPath(new URL('../..', import.meta.url))),
 );
 
 process.stdout.write('Custodial Codemagic admission bootstrap tests passed.\n');
+}

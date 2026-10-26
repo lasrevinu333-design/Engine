@@ -1,0 +1,4023 @@
+{
+  "schema_version": 2,
+  "scripts": [
+    {
+      "path": "scripts/accepted-map-large-asset-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/accepted-map-large-asset-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/active-gps-bridge-lifecycle-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/active-gps-bridge-lifecycle-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/active-gps-build-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/active-gps-build-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/active-gps-lifecycle-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/active-gps-lifecycle-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/active-gps-reliability-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/active-gps-reliability-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/annie-origin-return-link-tests.mjs",
+      "role": "superseded-contract",
+      "reason": "Superseded by moxie-decommission-tests and runtime-sanitation-source-tests; positively requires removed Annie origin navigation."
+    },
+    {
+      "path": "scripts/assigned-activation-receiver-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/assigned-activation-receiver-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/audit5-feedback-guest-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/audit5-feedback-guest-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/audit6-coverall-security-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/audit6-coverall-security-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/batch-0a-baseline-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/batch-0a-baseline-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/batch-0b-shell-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/batch-0b-shell-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/batch-1-employee-notification-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/batch-1-employee-notification-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/batch-2-event-messenger-cutover-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/batch-2-event-messenger-cutover-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/build-batch-0b-browser-fixtures.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "producer invoked explicitly before generated-output consumers"
+    },
+    {
+      "path": "scripts/canonical-temporary-fixture-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/canonical-temporary-fixture-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/canonical-temporary-fixture.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/ci-toolchain-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/ci-toolchain-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/cleaning-indexeddb-browser-fixture.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "interactive bounded server, invoked only by its browser proof owner"
+    },
+    {
+      "path": "scripts/cleaning-provider-isolation-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/cleaning-provider-isolation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/cleaning-session-lock-browser-fixture.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "interactive bounded server, invoked only by its browser proof owner"
+    },
+    {
+      "path": "scripts/completion-taxonomy-client-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/completion-taxonomy-client-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/coverall-shared-back-integration-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/coverall-shared-back-integration-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-android-manifest-security-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-android-manifest-security-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-assigned-startup-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-assigned-startup-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-complete-system-build-scope-preflight.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "explicit complete-system scope preflight; not the narrowed cleaning-first test scope"
+    },
+    {
+      "path": "scripts/custodial-completion-draft-recovery-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-completion-draft-recovery-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-core-release-gate-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-core-release-gate-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-core-release-gate.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "explicit fixed source/synthetic gate with its own contract tests"
+    },
+    {
+      "path": "scripts/custodial-dex-semantic-verifier-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-dex-semantic-verifier-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-employee-experience-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-employee-experience-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-generated-runtime-sanitation-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-generated-runtime-sanitation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-home-authenticated-restore-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-home-authenticated-restore-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-home-facts-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-home-facts-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-home-ready-profile-order-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-home-ready-profile-order-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-hourly-keyboard-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-hourly-keyboard-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-initial-release-scope-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-initial-release-scope-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-lunch-notification-receipt-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-lunch-notification-receipt-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-navigation-assets-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-navigation-assets-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-original-home-dom-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-original-home-dom-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-owner-home-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-owner-home-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-principal-cache-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-principal-cache-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-readiness-bridge-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-readiness-bridge-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-readiness-browser-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-readiness-browser-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-readiness-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-readiness-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-repair-frontend-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-repair-frontend-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-runtime-source-verifier-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-runtime-source-verifier-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-scan-recovery-classification-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-scan-recovery-classification-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodian-five-area-release-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/custodian-five-area-release-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/dashboard-map-connection-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/dashboard-map-connection-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/dashboard-map-page-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/dashboard-map-page-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/dashboard-map-renderer-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/dashboard-map-renderer-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/dashboard-map-staging-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/dashboard-map-staging-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/dashboard-map-web-fit-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/dashboard-map-web-fit-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/dashboard-not-cleaned-compact-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/dashboard-not-cleaned-compact-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/dashboard-recent-activity-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/dashboard-recent-activity-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/dashboard-verified-scan-readback-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/dashboard-verified-scan-readback-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/device-credential-foundation-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/device-credential-foundation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/device-identity-foundation-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/device-identity-foundation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/device-location-wording-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/device-location-wording-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/device-reminder-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/device-reminder-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/employee-hub-kiosk-lock-screen-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/employee-hub-kiosk-lock-screen-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/employee-schedule-application-receipt-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/employee-schedule-application-receipt-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/employee-schedule-cache-resilience-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/employee-schedule-cache-resilience-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/employee-schedule-convergence-race-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/employee-schedule-convergence-race-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/employee-schedule-recurring-delivery-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/employee-schedule-recurring-delivery-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/employee-schedule-section-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/employee-schedule-section-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/events-admin-import-ui-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/events-admin-import-ui-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/events-admin-parser-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/events-admin-parser-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/events-admin-source-evidence-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/events-admin-source-evidence-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/feedback-authority-frontend-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/feedback-authority-frontend-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/feedback-delivery-status-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/feedback-delivery-status-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/feedback-image-preview-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/feedback-image-preview-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/feedback-outbox-binding-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/feedback-outbox-binding-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/first-audit-held-correction-page-composition-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/first-audit-held-correction-page-composition-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/frontend-contract-inventory.mjs",
+      "role": "inventory-cli",
+      "reason": "validates the complete explicit top-level script role inventory and prints only standalone contracts"
+    },
+    {
+      "path": "scripts/gemini-console-source-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/gemini-console-source-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/gps-calibration-integrity-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/gps-calibration-integrity-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/gps-map-lane-geographic-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/gps-map-lane-geographic-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/gps-map-lane-sensitivity-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/gps-map-lane-sensitivity-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/gps-native-history-renderer-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/gps-native-history-renderer-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-recurring-convergence-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-recurring-convergence-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v10-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v10-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v11-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v11-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v12-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v12-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v13-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v13-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v14-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v14-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v15-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v15-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v16-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v16-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v17-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v17-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v18-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v18-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v4-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v4-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v5-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v5-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v6-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v6-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v7-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v7-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v8-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v8-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-schedule-v9-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/home-schedule-v9-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/immutable-file-snapshot-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/immutable-file-snapshot-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/in-app-camera-image-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/in-app-camera-image-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/in-app-camera-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/in-app-camera-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/independent-audit-correction-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/independent-audit-correction-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/index-kiosk-lock-screen-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/index-kiosk-lock-screen-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/integration-boundary-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/integration-boundary-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/kiosk-lockscreen-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/kiosk-lockscreen-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/location-cue-wording-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/lunch-schedule-expiry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/lunch-schedule-expiry-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-held-review-page-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-held-review-page-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-held-review-source-integration-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-held-review-source-integration-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-home-owner-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-home-owner-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-home-refresh-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-home-refresh-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-initial-selection-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-initial-selection-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-map-session-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-map-session-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-open-auth-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-open-auth-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-passwordless-access-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-passwordless-access-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-scheduler-browser-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-scheduler-browser-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-scheduler-client-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-scheduler-client-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "test-fixtures/ci/current-backend/SOURCE_TEST_CONTEXT.json",
+            "test-fixtures/ci/current-backend/config/custodial-component-weight-authority-v1.json",
+            "test-fixtures/ci/current-backend/config/custodial-full-nine-family-owners-20260926.json",
+            "test-fixtures/ci/current-backend/config/custodial-owner-workdays.json",
+            "test-fixtures/ci/current-backend/config/custodial-recurring-schedule-20260924.json",
+            "test-fixtures/ci/current-backend/config/custodial-six-person-static-20260926.json",
+            "test-fixtures/ci/current-backend/config/custodial-six-person-static-20261005.json",
+            "test-fixtures/ci/current-backend/package-lock.json",
+            "test-fixtures/ci/current-backend/package.json",
+            "test-fixtures/ci/current-backend/release/frontend-release-manifest.json",
+            "test-fixtures/ci/current-backend/release/integrated-backend-authority-evidence.json",
+            "test-fixtures/ci/current-backend/release/schema-alignment-input.json",
+            "test-fixtures/ci/current-backend/scripts/verified-visit-completion-integration-tests.mjs",
+            "test-fixtures/ci/current-backend/src/app-version.js",
+            "test-fixtures/ci/current-backend/src/auth/map-manager-identity.js",
+            "test-fixtures/ci/current-backend/src/auth/shared-access-auth.js",
+            "test-fixtures/ci/current-backend/src/completion-selection-read-boundary.js",
+            "test-fixtures/ci/current-backend/src/coverall-advisory-order.js",
+            "test-fixtures/ci/current-backend/src/events-api.js",
+            "test-fixtures/ci/current-backend/src/index.js",
+            "test-fixtures/ci/current-backend/src/release-contract.js",
+            "test-fixtures/ci/current-backend/src/release-manifest.js",
+            "test-fixtures/ci/current-backend/src/restore-mutation-gate.js",
+            "test-fixtures/ci/current-backend/src/schedule-component-weight-authority.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-approved-initial-request.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-control-plane-runtime.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-control-plane.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-coverall-print.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-lunch-authority-adapter.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-lunch-coverage.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-lunch-derivation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-lunch-publication.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-manager-operation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-morning-planning-authority.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-opening-coverage-report.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-owner-eligibility.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-owner-workdays.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-dependency-result.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-morning-solver.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-phase-authority.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-preview.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-repair-basis.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-staffing-adaptation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-week-commitment.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler-runtime.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler-worker.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-database-adapter.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-model.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-program.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-runtime-policy.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-solver-worker.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-solver.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-verifier.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-shift-end-coverage.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-shift-end-derivation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-staffing-candidates.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-staffing-command.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-staffing-preparation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-staffing-preview.js",
+            "test-fixtures/ci/current-backend/supabase/canonical/schema-fingerprint.txt",
+            "test-fixtures/ci/task8-confirmed-join/task8-join-prepared.json",
+            "test-fixtures/ci/task8-confirmed-join/task8-join-result.json",
+            "test-fixtures/ci/task8-confirmed-join/task8-setup-ready.json",
+            "test-fixtures/ci/task8-current-join/task8-compiler-04-result.json",
+            "test-fixtures/ci/task8-current-join/task8-join-prepared.json"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-ticket-actor-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/manager-ticket-actor-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/memphis-home-entry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/memphis-home-entry-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/message-legacy-profile-owner-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/message-legacy-profile-owner-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/message-native-profile-owner-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/message-native-profile-owner-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/message-send-receipt-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/message-send-receipt-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/messenger-leadership-title-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/messenger-leadership-title-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/messenger-read-retirement-cas-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/messenger-read-retirement-cas-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/moxie-decommission-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/moxie-decommission-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/moxie-hub-integration-tests.mjs",
+      "role": "superseded-contract",
+      "reason": "Superseded by moxie-decommission-tests and runtime-sanitation-source-tests; positively requires removed Moxie manager runtime."
+    },
+    {
+      "path": "scripts/native-actual-sql-fixtures-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-actual-sql-fixtures-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-actual-sql-fixtures.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "mode-requiring SQL fixture CLI, invoked with explicit modes by native SQL workflow"
+    },
+    {
+      "path": "scripts/native-audio-sequence-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-audio-sequence-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-audio-sequence-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-browser-completion-census-composition-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-browser-completion-census-composition-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-browser-semantic-composition-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-browser-semantic-composition-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-custodial-navigation-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-custodial-navigation-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-first-audio-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-first-audio-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-first-audio-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-integration-browser-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-integration-browser-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-manager-home-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-manager-home-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-manager-ui-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-manager-ui-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-mobile-build-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-mobile-build-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-notification-arrival-boundary-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-original-feedback-ipc.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-original-feedback-journey-consumer.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-original-feedback-runtime.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-original-hold-metadata-data-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-original-hold-metadata-data-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-readiness-observation-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-readiness-observation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-readiness-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-recurring-callback-hold-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-callback-hold-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-recurring-normal-callback-writer-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-normal-callback-writer-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-recurring-normal-expected-plan-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-normal-expected-plan-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-recurring-ordinary-bridge-flight-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-ordinary-bridge-flight-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-recurring-ordinary-frame-data-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-ordinary-frame-data-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-recurring-ordinary-owner-data-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-ordinary-owner-data-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-recurring-ordinary-release-protocol-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-ordinary-release-protocol-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-recurring-private-render-copy-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-private-render-copy-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-recurring-typed-render-data-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-recurring-typed-render-data-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-removal-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-removal-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-removal-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-schedule-mirror-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-schedule-mirror-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-schedule-qualification-empty-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-schedule-qualification-empty-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-schedule-wire-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-schedule-wire-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-schedule-wire-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-source-baselines.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/native-status-release-attestation-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/native-status-release-attestation-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/nonemployee-capacity-headcount-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/nonemployee-capacity-headcount-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-accepted-start-lifecycle-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-accepted-start-lifecycle-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-action-recheck-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-action-recheck-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-browser-authority-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-browser-authority-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-integration-v2-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-integration-v2-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-integration-v3-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-integration-v3-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-outbox-race-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-outbox-race-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-ownership-principal-settlement-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-ownership-principal-settlement-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-page-error-fence-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-page-error-fence-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-persistent-lifecycle-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-persistent-lifecycle-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-principal-transition-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-principal-transition-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-reentrant-security-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-reentrant-security-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-response-fence-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-response-fence-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-schedule-authority-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-schedule-authority-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-schedule-cache-authority-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-schedule-cache-authority-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/notification-schedule-ownership-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/notification-schedule-ownership-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/oc24-completion-form-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/oc24-completion-form-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/oc24-coverall-download-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/oc24-coverall-download-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/oc24-legacy-completion-recovery-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/oc24-legacy-completion-recovery-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/operational-insights-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/operational-insights-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/operational-service-date-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/operational-service-date-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/operations-dashboard-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/operations-dashboard-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "dashboard-map-page.js",
+            "test-fixtures/ci/current-backend/SOURCE_TEST_CONTEXT.json",
+            "test-fixtures/ci/current-backend/config/custodial-component-weight-authority-v1.json",
+            "test-fixtures/ci/current-backend/config/custodial-full-nine-family-owners-20260926.json",
+            "test-fixtures/ci/current-backend/config/custodial-owner-workdays.json",
+            "test-fixtures/ci/current-backend/config/custodial-recurring-schedule-20260924.json",
+            "test-fixtures/ci/current-backend/config/custodial-six-person-static-20260926.json",
+            "test-fixtures/ci/current-backend/config/custodial-six-person-static-20261005.json",
+            "test-fixtures/ci/current-backend/package-lock.json",
+            "test-fixtures/ci/current-backend/package.json",
+            "test-fixtures/ci/current-backend/release/frontend-release-manifest.json",
+            "test-fixtures/ci/current-backend/release/integrated-backend-authority-evidence.json",
+            "test-fixtures/ci/current-backend/release/schema-alignment-input.json",
+            "test-fixtures/ci/current-backend/scripts/verified-visit-completion-integration-tests.mjs",
+            "test-fixtures/ci/current-backend/src/app-version.js",
+            "test-fixtures/ci/current-backend/src/auth/map-manager-identity.js",
+            "test-fixtures/ci/current-backend/src/auth/shared-access-auth.js",
+            "test-fixtures/ci/current-backend/src/completion-selection-read-boundary.js",
+            "test-fixtures/ci/current-backend/src/coverall-advisory-order.js",
+            "test-fixtures/ci/current-backend/src/events-api.js",
+            "test-fixtures/ci/current-backend/src/index.js",
+            "test-fixtures/ci/current-backend/src/release-contract.js",
+            "test-fixtures/ci/current-backend/src/release-manifest.js",
+            "test-fixtures/ci/current-backend/src/restore-mutation-gate.js",
+            "test-fixtures/ci/current-backend/src/schedule-component-weight-authority.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-approved-initial-request.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-control-plane-runtime.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-control-plane.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-coverall-print.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-lunch-authority-adapter.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-lunch-coverage.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-lunch-derivation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-lunch-publication.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-manager-operation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-morning-planning-authority.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-opening-coverage-report.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-owner-eligibility.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-owner-workdays.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-dependency-result.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-morning-solver.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-phase-authority.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-preview.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-repair-basis.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-staffing-adaptation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-recurring-week-commitment.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler-runtime.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler-worker.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-database-adapter.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-model.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-program.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-runtime-policy.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-solver-worker.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-solver.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-schedule-verifier.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-shift-end-coverage.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-shift-end-derivation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-staffing-candidates.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-staffing-command.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-staffing-preparation.js",
+            "test-fixtures/ci/current-backend/src/static-weekly-staffing-preview.js",
+            "test-fixtures/ci/current-backend/supabase/canonical/schema-fingerprint.txt"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/original-inventory-separation-client-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Zero-argument entry asserts all20 fixed existing groups are present, then executes each once; selectors are for explicitly scoped local work only",
+      "invocations": [
+        {
+          "entry": "scripts/original-inventory-separation-client-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/owner-accepted-overall-map-fit-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/owner-accepted-overall-map-fit-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/owner-access-client-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/owner-access-client-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/paired-audio-registry-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/phone-activation-ui-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/phone-activation-ui-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/protected-browser-admission-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/protected-browser-admission-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "test-fixtures/ci/legacy-feedback-producer/feedback-outbox.js"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/protected-browser-census-capability-limit-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/protected-browser-census-capability-limit-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/protected-browser-completion-census-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/protected-browser-completion-census-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/protected-browser-completion-value-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/protected-browser-completion-value-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/protected-browser-inventory-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/protected-browser-inventory-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-audio-release-policy-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-classification-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-classification-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-classification-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-clock-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-clock-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-clock-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-component-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-component-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-composition-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-composition-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-composition-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-event-decision-current219-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-event-decision-current219-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-event-decision-current219-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-event-decision-wire-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-event-decision-wire-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-event-decision-wire-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-event-decisions-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-event-decisions-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-event-decisions-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-interval-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-local-owner-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-local-owner-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-local-owner-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-maintenance-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-maintenance-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-maintenance-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-mirror-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-mirror-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-mirror-lifecycle-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-mirror-lifecycle-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-mirror-renderer-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-mirror-renderer-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-mirror-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-no-wake-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-no-wake-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-no-wake-renderer-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-no-wake-renderer-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-no-wake-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-registration-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-registration-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-release-admission-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-release-admission-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-release-admission-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-required-kind-integration-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-required-kind-integration-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-required-kind-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-retained-schedule-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-retained-schedule-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-retained-schedule-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/provider-runtime-construction-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-runtime-construction-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-sdk-registration-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/provider-sdk-registration-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-sdk-registration-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/public-event-privacy-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/public-event-privacy-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/qualified-provider-schema-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/qualified-provider-schema-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/qualified-provider-schema-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/quiet-offline-staff-ui-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/quiet-offline-staff-ui-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/refresh-frontend-release-manifest.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "manifest CLI; --check is invoked by maintained release owners"
+    },
+    {
+      "path": "scripts/release-canary-manager-controls-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/release-canary-manager-controls-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/retained-native-bridge-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/retained-native-bridge-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/retained-native-bridge-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/run-native-original-feedback-journey.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "explicit feedback journey runner with separate owner lifecycle"
+    },
+    {
+      "path": "scripts/runtime-manifest-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/runtime-manifest-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/runtime-sanitation-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/runtime-sanitation-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/same-original-recovery-client-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared original historical source-fixture contract with preserved exact pins; no current native/store/runtime authority",
+      "invocations": [
+        {
+          "entry": "scripts/same-original-recovery-client-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "test-fixtures/ci/legacy-client/backend/package.json",
+            "test-fixtures/ci/legacy-client/backend/src/native-provider-json.js",
+            "test-fixtures/ci/legacy-client/backend/src/same-original-recovery-wire.js",
+            "test-fixtures/ci/legacy-client/frontend/package.json"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/same-original-recovery-original-store-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared original historical source-fixture contract with preserved exact pins; no current native/store/runtime authority",
+      "invocations": [
+        {
+          "entry": "scripts/same-original-recovery-original-store-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "test-fixtures/ci/legacy-store/backend/package.json",
+            "test-fixtures/ci/legacy-store/backend/src/native-provider-json.js",
+            "test-fixtures/ci/legacy-store/backend/src/same-original-recovery-wire.js",
+            "test-fixtures/ci/legacy-store/frontend/mobile/src/custodial/protected-browser-admission.js",
+            "test-fixtures/ci/legacy-store/frontend/mobile/src/custodial/protected-browser-inventory.js",
+            "test-fixtures/ci/legacy-store/frontend/package.json",
+            "test-fixtures/ci/legacy-store/frontend/same-original-recovery-client.js"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/same-original-recovery-page-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared original historical source-fixture contract with preserved exact pins; no current native/store/runtime authority",
+      "invocations": [
+        {
+          "entry": "scripts/same-original-recovery-page-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "test-fixtures/ci/legacy-page/backend/package.json",
+            "test-fixtures/ci/legacy-page/backend/src/native-provider-json.js",
+            "test-fixtures/ci/legacy-page/backend/src/same-original-recovery-wire.js",
+            "test-fixtures/ci/legacy-page/frontend/device-security.html",
+            "test-fixtures/ci/legacy-page/frontend/mobile/src/custodial/protected-browser-admission.js",
+            "test-fixtures/ci/legacy-page/frontend/mobile/src/custodial/protected-browser-inventory.js",
+            "test-fixtures/ci/legacy-page/frontend/mobile/src/custodial/storage-firewall.js",
+            "test-fixtures/ci/legacy-page/frontend/package.json",
+            "test-fixtures/ci/legacy-page/frontend/same-original-recovery-client.js",
+            "test-fixtures/ci/legacy-page/frontend/same-original-recovery-original-store.js",
+            "test-fixtures/ci/legacy-page/frontend/same-original-recovery-page.js",
+            "test-fixtures/ci/legacy-page/frontend/same-original-recovery-panel.js"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/same-original-recovery-panel-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared original historical source-fixture contract with preserved exact pins; no current native/store/runtime authority",
+      "invocations": [
+        {
+          "entry": "scripts/same-original-recovery-panel-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "test-fixtures/ci/legacy-panel/backend/package.json",
+            "test-fixtures/ci/legacy-panel/backend/src/manager-original-recovery-approval.js",
+            "test-fixtures/ci/legacy-panel/backend/src/native-provider-json.js",
+            "test-fixtures/ci/legacy-panel/backend/src/same-original-recovery-wire.js",
+            "test-fixtures/ci/legacy-panel/frontend/mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeSameOriginalRecoveryPreparationWire.java",
+            "test-fixtures/ci/legacy-panel/frontend/package.json",
+            "test-fixtures/ci/legacy-panel/frontend/same-original-recovery-client.js"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/scan-device-employee-default-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/scan-device-employee-default-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/scan-outage-retry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/scan-outage-retry-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/scan-outage-storage-fence-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/scan-outage-storage-fence-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/scan-owner-vm-context.mjs",
+      "role": "imported-support",
+      "reason": "actual owner VM closure imported by its classified scan contracts; not a standalone test"
+    },
+    {
+      "path": "scripts/scan-retry-after-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/scan-retry-after-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/scan-retry-migration-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/scan-retry-migration-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/schedule-advanced-live-schedule-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/schedule-advanced-live-schedule-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/schedule-day-change-retry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/schedule-day-change-retry-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/schedule-employee-day-section-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/schedule-employee-day-section-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/schedule-manager-refresh-browser-fixture.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "interactive bounded server, invoked only by its browser proof owner"
+    },
+    {
+      "path": "scripts/schedule-manager-refresh-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/schedule-manager-refresh-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/schedule-refresh-coordination-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/schedule-refresh-coordination-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/schedule-simple-midday-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/schedule-simple-midday-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/schedule-vacancy-fill-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/schedule-vacancy-fill-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/schedule-weekly-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/schedule-weekly-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/scheduler-alerts-gps-foundation-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/scheduler-alerts-gps-foundation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/shared-events-view-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/shared-events-view-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/staffing-command-browser-coordinator-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/staffing-command-browser-coordinator-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/staffing-manager-ui-binding-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/staffing-manager-ui-binding-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/start-page-ops-kiosk-lock-screen-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/start-page-ops-kiosk-lock-screen-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/static-browser-security-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/static-browser-security-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/supply-local-placeholder-current-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current eight-group Supplies source contract for current Home,35 selected compatibility files,119-asset manifest and preserved native navigation controls",
+      "invocations": [
+        {
+          "entry": "scripts/supply-local-placeholder-current-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "supply-coming-soon.html",
+            "assets/supply_request_icon.svg",
+            "mobile/src/custodial/index.html",
+            "mobile/scripts/build.mjs",
+            "frontend-release-manifest.json"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/supply-local-placeholder-source-tests.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "Retained byte-literal historical eight-group98-to100 asset comparison requires genuine AFTER/BEFORE fixture and explicit BASE; current Supplies source has its own zero-argument counterpart"
+    },
+    {
+      "path": "scripts/synthetic-schedule-locks.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/thread-send-ux-regression-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/thread-send-ux-regression-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/ticket-actions-client-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/ticket-actions-client-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/unity-polish-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/unity-polish-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/verified-check-completion-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/verified-check-completion-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/verify-native-status-release-attestation.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "argument-requiring attestation CLI"
+    },
+    {
+      "path": "scripts/whole-system-test-plan-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/whole-system-test-plan-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/with-custodial-runtime-fixture.mjs",
+      "role": "imported-support",
+      "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/work-position-authority-boundary-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "invocations": [
+        {
+          "entry": "scripts/work-position-authority-boundary-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    }
+  ],
+  "fixture_inputs": [
+    {
+      "path": "test-fixtures/ci/current-backend/SOURCE_TEST_CONTEXT.json",
+      "sha256": "dc292e1c93b0486fb53e88447477a78bdcbf9a618831aff3e3bf280d553e8375",
+      "bytes": 27659,
+      "purpose": "Portable explicit selected Source-test-code and historical-artifact provenance roles; no current acceptance claim"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-component-weight-authority-v1.json",
+      "sha256": "7e843c3eb6df72f1f5d7bf10702c25d7f155c952e693202ba66495b2bbd2c794",
+      "bytes": 10505,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-full-nine-family-owners-20260926.json",
+      "sha256": "f2dbf647910b140ee13af91fd949f5b5127da733b6234b1d572ee4b3ac1cd4e9",
+      "bytes": 11710,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-owner-workdays.json",
+      "sha256": "34455f7594dbe36a985ad8ae0f4fdd3c12ea44b0bc0d76ec893a4be28d48bb02",
+      "bytes": 612,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-recurring-schedule-20260924.json",
+      "sha256": "38704b761ff474ac6448610ba09fe7b840999352ab78e8ec15c21610dc31461a",
+      "bytes": 12364,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-six-person-static-20260926.json",
+      "sha256": "8b8e9d9aa4c775d08feb4daa2057d484b5f6fd8805ede9a5148bafe1619b5c96",
+      "bytes": 18117,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/config/custodial-six-person-static-20261005.json",
+      "sha256": "40da4e1d4cce52b2361b5403b7e5e4477ca00def0fd3649a1d76dacb48422f30",
+      "bytes": 23221,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/package-lock.json",
+      "sha256": "ad1352fdd9867022c6404a2bf1ae3ebc516fd74ff5e52c7f4bdd4a417bf0d139",
+      "bytes": 83047,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/package.json",
+      "sha256": "ccbab61c3c4ff9170b5bc3cb7e9a1348160f662e7bca7280ddce1168097f233a",
+      "bytes": 21103,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/release/frontend-release-manifest.json",
+      "sha256": "8042c42c6c3e8bf4efca5f3a6509b4313e289ccd1922e246b55e2c35b4e8956d",
+      "bytes": 1714,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/release/integrated-backend-authority-evidence.json",
+      "sha256": "8b78b6612ce459016e10e5122c6cd32a0844c08af466867b6c792ecb640c0e18",
+      "bytes": 240570,
+      "purpose": "EXACT historical1043 generated artifact snapshot ONLY; not current scheduler/TEST/final release authority"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/release/schema-alignment-input.json",
+      "sha256": "ac9f0ea4466b6715eaba7c5adeec41518a5c20b3d88819a9c9f4885d80bea689",
+      "bytes": 1537,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/scripts/verified-visit-completion-integration-tests.mjs",
+      "sha256": "8dfd6a918920a6500088a92f9bcc595001096deca0725ea68647c50af8b079a3",
+      "bytes": 37173,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/app-version.js",
+      "sha256": "e7cb06d61a7e07c50d072d3cd7011dd357f7a65060c861a1a25bc0cdb1a6b970",
+      "bytes": 285,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/auth/map-manager-identity.js",
+      "sha256": "fff733fce8e6c5e06e6a2fded0b00b86c9d4716718d86a628533a3314cc4f0ec",
+      "bytes": 4181,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/auth/shared-access-auth.js",
+      "sha256": "bd51c68e017627852b261de83d9c1c6667a1b99367a7e93f6f88d13e613fc672",
+      "bytes": 122223,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/completion-selection-read-boundary.js",
+      "sha256": "80ab309ec90ef0751b519f044538a75bb3da9cb617db7cdc9c649293702ff62c",
+      "bytes": 1770,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/coverall-advisory-order.js",
+      "sha256": "2044caadd2b998b712330e43fe1468340a12e19f875d40407ffcd240c659241f",
+      "bytes": 3321,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/events-api.js",
+      "sha256": "08d7c52236ac0c444642b9de0a589321762cab0df354f53b9460c7210f251c3e",
+      "bytes": 44466,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/index.js",
+      "sha256": "e45ea758b0c40f6491fc8042d142ccc0cd98531e41d85d3a87f530c577bc2468",
+      "bytes": 162333,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/release-contract.js",
+      "sha256": "82bbfd995e5e488d7a0d33fa8f438c1f8ad6ba7b6397eee55544d51c957fd001",
+      "bytes": 6234,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/release-manifest.js",
+      "sha256": "5dc230875764dd0f1654d89fdcba4b8674d7a29ee8e9152765531e6de455e510",
+      "bytes": 6653,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/restore-mutation-gate.js",
+      "sha256": "0d19264405e08b25588a07a83221e42712d7b6a9fc8b98a1096a039237de4304",
+      "bytes": 14693,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/schedule-component-weight-authority.js",
+      "sha256": "23a30cbd627909ddd4d9bccea6f24efb43d3ef78fc83ed06f61e4251c36e30ed",
+      "bytes": 9715,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-approved-initial-request.js",
+      "sha256": "739831e22ea0cafd7ebaaed0a1a0d1cb4adf83a1357ede9bf6c4b16e2c8ce726",
+      "bytes": 2247,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-control-plane-runtime.js",
+      "sha256": "5bb0c2407a70fa7c37eab62fb355ecbabbfd9828b22e80561f55f6cd656c4e71",
+      "bytes": 28840,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-control-plane.js",
+      "sha256": "7d1865425c93be7ab524eef94c93dcb3d65a0bb58e926586019bb170e672f823",
+      "bytes": 110515,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-coverall-print.js",
+      "sha256": "2b664634fe9a334c785815d7544c900ac74e4adef4d2df955bdecd3c5bd9d98b",
+      "bytes": 20527,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-lunch-authority-adapter.js",
+      "sha256": "b8d7461215bf0444ed4d462cb9989d6dec9d795ec156f7f31c3d73601c001999",
+      "bytes": 7539,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-lunch-coverage.js",
+      "sha256": "9072d2fbeeaebc7b64c794a8a941a9554760c9869698a13610db9bab7d456fcb",
+      "bytes": 1863,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-lunch-derivation.js",
+      "sha256": "42eb82ce146867bc69215430644b841ab7aeab39baf95b8c9cda101ea41b4324",
+      "bytes": 14380,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-lunch-publication.js",
+      "sha256": "f9538bc5df3ed1546b412a0a4371a659c9d358a2fba58bafd9d38fed6a0e608c",
+      "bytes": 2486,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-manager-operation.js",
+      "sha256": "ae546852ebde937d1b75f2cb6db35cdfcdc8aea3bc44e5da400076e995e8a32f",
+      "bytes": 2382,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-morning-planning-authority.js",
+      "sha256": "c9d5f27fb779a6ae3e03ba5d2221ac85b2cde64a86b06c7d69cae3e8f755f717",
+      "bytes": 15155,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-opening-coverage-report.js",
+      "sha256": "ddd755b8851ef45cf7d1d7ddb5b27ce53aa454e93ab51e46457c09f9bfb61bc0",
+      "bytes": 15272,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-owner-eligibility.js",
+      "sha256": "402b6333f68994b9a5889b1098449f39b26a28c4de6b7b085240dfab51d48720",
+      "bytes": 5023,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-owner-workdays.js",
+      "sha256": "6c6cbd2a837955927c41777ed884f0b9f4e73be515ec0aeea2275b344daa5946",
+      "bytes": 4306,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-dependency-result.js",
+      "sha256": "f12d93675f045acbfcfdf84511398ecee83798ea726e999cf7b1e55c58b82419",
+      "bytes": 2116,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-morning-solver.js",
+      "sha256": "1fd0fdbeb825fce89dcbf0aaa050a3981bdb527f171ffa247ba4d20a98c65510",
+      "bytes": 31746,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-phase-authority.js",
+      "sha256": "3ba4bccdf09d1e2c2775df7c9e96ae6c8c85bbdab75c57aeeb746910e7d84ec8",
+      "bytes": 58048,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-preview.js",
+      "sha256": "c1e90303d5a8b38bb74730b11533262d21b5387c797b90a9d3da9600b66e909f",
+      "bytes": 10745,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-repair-basis.js",
+      "sha256": "b809ba7935f457a820cae1cb5dcf0db73d52a31b3429e2b18ba839e10a970aed",
+      "bytes": 4524,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-staffing-adaptation.js",
+      "sha256": "977104f45b0eaee1b904371998f61734d79308895a78581238706856c9477894",
+      "bytes": 190983,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-recurring-week-commitment.js",
+      "sha256": "d5c4315bd446352517f064a7d2b365aad2ed7c96c7fdaf84baf8dd7aa0ec657b",
+      "bytes": 39035,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler-runtime.js",
+      "sha256": "a8bbfd711630cacbbefeac57221acac78cf98694e9dfabbaeece59fa30e777ff",
+      "bytes": 32123,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler-worker.js",
+      "sha256": "1462d1fa17d79be9cdbb42d997745f13eb8857ce326ced6cd438e4d408d47606",
+      "bytes": 23843,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-compiler.js",
+      "sha256": "593893e4daac566fa665bb987af17ce803414c92ebd59abf6e8a24aed2361f1a",
+      "bytes": 35699,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-database-adapter.js",
+      "sha256": "4b69e88ccc6686fd11f4989c81d0e99e5ee202fcba56f67be9dd20a22e7246b9",
+      "bytes": 35180,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-model.js",
+      "sha256": "23fd769ded7a126c6dc61c0421a7a2bb96e0073cbae048440910de192d16738e",
+      "bytes": 35558,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-program.js",
+      "sha256": "1a5ef78107964d823f1a1eaf617b9d5e439339122730ac4691bd671199a4da52",
+      "bytes": 126444,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-runtime-policy.js",
+      "sha256": "1bf452fd4a26cb3eac891aade69b41ec60394f871beb4ee929870bcf23c415c5",
+      "bytes": 389,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-solver-worker.js",
+      "sha256": "dca0b0d627ec41e173e23f440dbd58423d3acb063135e7de63edebe6d503f044",
+      "bytes": 21996,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-solver.js",
+      "sha256": "b4142894fdf9b730160455a81d0c22ca342d732c182b239f5884dca1f903add0",
+      "bytes": 19374,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-schedule-verifier.js",
+      "sha256": "1700488fafa6e7683aed9ba11e1d6b0eb9800ed4a19d2713410a987417bfcabf",
+      "bytes": 80133,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-shift-end-coverage.js",
+      "sha256": "b3ba0ad5cccfd0c0d6a7440ac7da80beed8a167a6f398763657bceadccfd017f",
+      "bytes": 12020,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-shift-end-derivation.js",
+      "sha256": "582dd466c11527710375c1ea1296ee38b948fc4c24045e6c2422113ebe35e5c8",
+      "bytes": 54627,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-staffing-candidates.js",
+      "sha256": "8515380725b73d6fe0fa8ce372e688944125b0f11324e1e3dbed473ddf3603f0",
+      "bytes": 4229,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-staffing-command.js",
+      "sha256": "ff04ba2ece26db2b1e8282d139b02059f7b201750a9cf76220d69b754d4a1e49",
+      "bytes": 4076,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-staffing-preparation.js",
+      "sha256": "98700ec72482221b90d902395ac9a0b42a184f79e6f9ebea4c2c3c84c18a3314",
+      "bytes": 4527,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/src/static-weekly-staffing-preview.js",
+      "sha256": "42f71c0990a65c5a8553131ca6eece422c25f7e6fb111c29ef92c4a949fa3c00",
+      "bytes": 20562,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/current-backend/supabase/canonical/schema-fingerprint.txt",
+      "sha256": "df80418f04f887c33650b5fe5a62041d2fe048ae97b38c226e9f65be28b09c91",
+      "bytes": 65,
+      "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-client/backend/package.json",
+      "sha256": "c5f2b5a74dfd0b9a87c6ff7457d112b24a2c371f46e9396f618329a8cbc18928",
+      "bytes": 22730,
+      "purpose": "Exact preserved historical client source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-client/backend/src/native-provider-json.js",
+      "sha256": "8599daf5faec77242649dd6a863731e32ba4193872efe546029777c87f785294",
+      "bytes": 2452,
+      "purpose": "Exact preserved historical client source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-client/backend/src/same-original-recovery-wire.js",
+      "sha256": "dc79e4f3a7f137c5ea159b1f2b909e864378497c67259f862c27cc9e233335cb",
+      "bytes": 8836,
+      "purpose": "Exact preserved historical client source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-client/frontend/package.json",
+      "sha256": "e6831e7a6992f22d515a3e605a44474e6ff46e1697a5a8e1f2e64a5a50798892",
+      "bytes": 6263,
+      "purpose": "Exact preserved historical client source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-feedback-producer/feedback-outbox.js",
+      "sha256": "4f3908c66e29c262f3654bac104a622f05089828e473641f07f072fcb0b58dd3",
+      "bytes": 10743,
+      "purpose": "Exact preserved historical Mail v2 producer fixture; no delivery authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/backend/package.json",
+      "sha256": "c5f2b5a74dfd0b9a87c6ff7457d112b24a2c371f46e9396f618329a8cbc18928",
+      "bytes": 22730,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/backend/src/native-provider-json.js",
+      "sha256": "8599daf5faec77242649dd6a863731e32ba4193872efe546029777c87f785294",
+      "bytes": 2452,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/backend/src/same-original-recovery-wire.js",
+      "sha256": "bc99757cce04e17ac0010169047498d35e71308dad2412aee2e885292bad62e7",
+      "bytes": 9915,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/device-security.html",
+      "sha256": "6c1657bfe626acc6513fe0466dac375cb3f9d1b64daeb7a9d34031d347703f39",
+      "bytes": 39857,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/mobile/src/custodial/protected-browser-admission.js",
+      "sha256": "171fd162a1b0f9d0a7971bf4351defab67614eef0adbca0c8dc9c78a480caa6b",
+      "bytes": 10620,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/mobile/src/custodial/protected-browser-inventory.js",
+      "sha256": "56d4917ee6e04b96dcf891f7c4d1c42d3cbeed17d060ac31471af35984fde826",
+      "bytes": 62075,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/mobile/src/custodial/storage-firewall.js",
+      "sha256": "961a4b0750906c19974c44d2ce395ad25f5920002c55044c190860be46436b2c",
+      "bytes": 11956,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/package.json",
+      "sha256": "e6831e7a6992f22d515a3e605a44474e6ff46e1697a5a8e1f2e64a5a50798892",
+      "bytes": 6263,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/same-original-recovery-client.js",
+      "sha256": "4258f569d9417a6b3a4b0e1153b753409ee2b387499c5dcd4bf9491a187270dc",
+      "bytes": 13346,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/same-original-recovery-original-store.js",
+      "sha256": "75e256a0a8f8e50f301b1523d06555647a80ae0d51ed9af7ba82b4493ff3a6bb",
+      "bytes": 9253,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/same-original-recovery-page.js",
+      "sha256": "92dbf9570bab05eb7d7033dda0742e5459541df0ce977198275b482c95139520",
+      "bytes": 6545,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-page/frontend/same-original-recovery-panel.js",
+      "sha256": "f1c9d26178ad9272fc767fbaa32d00fcf80c8f560b2bfcf61edc45d597fca3cf",
+      "bytes": 7810,
+      "purpose": "Exact preserved historical page source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-panel/backend/package.json",
+      "sha256": "c5f2b5a74dfd0b9a87c6ff7457d112b24a2c371f46e9396f618329a8cbc18928",
+      "bytes": 22730,
+      "purpose": "Exact preserved historical panel source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-panel/backend/src/manager-original-recovery-approval.js",
+      "sha256": "622571d4ac00dc850b3aaac86d815fcaf00fbd2fe3967869a2cdeab1deec115d",
+      "bytes": 10083,
+      "purpose": "Exact preserved historical panel source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-panel/backend/src/native-provider-json.js",
+      "sha256": "8599daf5faec77242649dd6a863731e32ba4193872efe546029777c87f785294",
+      "bytes": 2452,
+      "purpose": "Exact preserved historical panel source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-panel/backend/src/same-original-recovery-wire.js",
+      "sha256": "dc79e4f3a7f137c5ea159b1f2b909e864378497c67259f862c27cc9e233335cb",
+      "bytes": 8836,
+      "purpose": "Exact preserved historical panel source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-panel/frontend/mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeSameOriginalRecoveryPreparationWire.java",
+      "sha256": "b11134e9f35ad1c7a10f4d00a53e2416879617d296e0055530d9de2cd5bf1daa",
+      "bytes": 14516,
+      "purpose": "Exact preserved historical panel source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-panel/frontend/package.json",
+      "sha256": "e6831e7a6992f22d515a3e605a44474e6ff46e1697a5a8e1f2e64a5a50798892",
+      "bytes": 6263,
+      "purpose": "Exact preserved historical panel source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-panel/frontend/same-original-recovery-client.js",
+      "sha256": "4258f569d9417a6b3a4b0e1153b753409ee2b387499c5dcd4bf9491a187270dc",
+      "bytes": 13346,
+      "purpose": "Exact preserved historical panel source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-store/backend/package.json",
+      "sha256": "c5f2b5a74dfd0b9a87c6ff7457d112b24a2c371f46e9396f618329a8cbc18928",
+      "bytes": 22730,
+      "purpose": "Exact preserved historical store source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-store/backend/src/native-provider-json.js",
+      "sha256": "8599daf5faec77242649dd6a863731e32ba4193872efe546029777c87f785294",
+      "bytes": 2452,
+      "purpose": "Exact preserved historical store source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-store/backend/src/same-original-recovery-wire.js",
+      "sha256": "dc79e4f3a7f137c5ea159b1f2b909e864378497c67259f862c27cc9e233335cb",
+      "bytes": 8836,
+      "purpose": "Exact preserved historical store source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-store/frontend/mobile/src/custodial/protected-browser-admission.js",
+      "sha256": "ebfbbf615880151f4a620f814e1d07ff4bbe6186c1ad3161a81fedd946ce45df",
+      "bytes": 7473,
+      "purpose": "Exact preserved historical store source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-store/frontend/mobile/src/custodial/protected-browser-inventory.js",
+      "sha256": "090a2b4416cdd9f71859e8d5b423873739aca1852194900734117aab55c0ab7f",
+      "bytes": 49439,
+      "purpose": "Exact preserved historical store source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-store/frontend/package.json",
+      "sha256": "e6831e7a6992f22d515a3e605a44474e6ff46e1697a5a8e1f2e64a5a50798892",
+      "bytes": 6263,
+      "purpose": "Exact preserved historical store source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/legacy-store/frontend/same-original-recovery-client.js",
+      "sha256": "4258f569d9417a6b3a4b0e1153b753409ee2b387499c5dcd4bf9491a187270dc",
+      "bytes": 13346,
+      "purpose": "Exact preserved historical store source context; no current product/runtime authority"
+    },
+    {
+      "path": "test-fixtures/ci/task8-confirmed-join/task8-join-prepared.json",
+      "sha256": "4a3683a9a86dac920252c9b6049a9cd70fc697c6d0ea6ecae899e312d6b5343a",
+      "bytes": 64481,
+      "purpose": "Exact retained nonproduction synthetic Task8 capture; existing pinned test DATA only, not current SQL/manager/phone authority"
+    },
+    {
+      "path": "test-fixtures/ci/task8-confirmed-join/task8-join-result.json",
+      "sha256": "d94202cae24a58ec2fe332423c73695edad3b79d9f3e340607ed96b902e28065",
+      "bytes": 116395,
+      "purpose": "Exact retained nonproduction synthetic Task8 capture; existing pinned test DATA only, not current SQL/manager/phone authority"
+    },
+    {
+      "path": "test-fixtures/ci/task8-confirmed-join/task8-setup-ready.json",
+      "sha256": "d2a04cdf024358b1dc814b55a2b3a187dec7e80df0063f8ec7e5165307bab8a0",
+      "bytes": 5677153,
+      "purpose": "Exact retained nonproduction synthetic Task8 capture; existing pinned test DATA only, not current SQL/manager/phone authority"
+    },
+    {
+      "path": "test-fixtures/ci/task8-current-join/task8-compiler-04-result.json",
+      "sha256": "5cafeac4df36001827bc668d1e7a23eee1779b8f77a0dcf9778829cf14ce1dbc",
+      "bytes": 1654063,
+      "purpose": "Exact retained nonproduction synthetic Task8 capture; existing pinned test DATA only, not current SQL/manager/phone authority"
+    },
+    {
+      "path": "test-fixtures/ci/task8-current-join/task8-join-prepared.json",
+      "sha256": "f07ac563074274ba2a87d2f67acd15c65c7315f3788f2ae361a4ef5150b1b062",
+      "bytes": 23703,
+      "purpose": "Exact retained nonproduction synthetic Task8 capture; existing pinned test DATA only, not current SQL/manager/phone authority"
+    }
+  ],
+  "generated_inputs": [
+    "build/batch-0b-shell-browser/manager/index.html",
+    "build/batch-0b-shell-browser/custodial/index.html",
+    "build/batch-0b-shell-browser/viewer/index.html",
+    "build/batch-0b-shell-browser/custodial/memphis-custodial-bridge.js",
+    "build/batch-0b-shell-browser/custodial/memphis-gps.js",
+    "build/batch-0b-shell-browser/custodial/scan.html"
+  ],
+  "external_packages": [
+    {
+      "name": "express",
+      "from": "test-fixtures/ci/current-backend/package.json"
+    },
+    {
+      "name": "@supabase/supabase-js",
+      "from": "test-fixtures/ci/current-backend/package.json"
+    },
+    {
+      "name": "dotenv",
+      "from": "test-fixtures/ci/current-backend/package.json"
+    },
+    {
+      "name": "pg",
+      "from": "test-fixtures/ci/current-backend/package.json"
+    },
+    {
+      "name": "pdf-lib",
+      "from": "test-fixtures/ci/current-backend/package.json"
+    },
+    {
+      "name": "highs",
+      "from": "test-fixtures/ci/current-backend/package.json"
+    },
+    {
+      "name": "typescript",
+      "from": "package.json"
+    },
+    {
+      "name": "@playwright/test",
+      "from": "package.json"
+    }
+  ]
+}

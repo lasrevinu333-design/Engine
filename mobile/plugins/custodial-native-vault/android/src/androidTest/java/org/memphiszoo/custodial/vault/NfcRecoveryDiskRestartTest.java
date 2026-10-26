@@ -90,10 +90,12 @@ public final class NfcRecoveryDiskRestartTest {
                     "{restart-fixture-unreadable"
                 ).commit()
             );
-            handoffId = NativeNfcScanHandoff.recordPhysicalRead(
+            NativeNfcScanHandoff.ReadResult read = NativeNfcScanHandoff.recordPhysicalRead(
                 context,
                 "memphiszoo://scan?code=NOCX"
             );
+            assertTrue("The physical read was not durably stored", read.durable);
+            handoffId = read.handoffId;
             assertFalse(handoffId.isEmpty());
             assertTrue(
                 fixture.edit()

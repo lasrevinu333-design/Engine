@@ -119,7 +119,7 @@
     {
       "id": "events",
       "risk": "high",
-      "patterns": ["events.html", "events-admin.html", "Event_Icon*.webp"],
+      "patterns": ["events.html", "events-view.js", "events-view.css", "operations-dashboard*.js", "Event_Icon*.webp"],
       "depends_on": ["notifications", "schedule", "shared-design-navigation"],
       "required_suites": ["source-contracts", "events-browser", "unity-browser", "backend-contracts", "property-model", "api-fuzz", "visual-regression", "accessibility-web", "manual-field"],
       "invariants": ["event-history-preserved", "date-range-valid", "notification-kind-valid", "manager-input-public-board-consistent", "delete-safe-with-history"]

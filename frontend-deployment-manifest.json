@@ -6,7 +6,7 @@ layout: null
   "frontend_commit_sha": "{{ site.github.build_revision }}",
   "deployment_source": "github-pages-jekyll-build",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb",
+  "schema_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
   "api_contract_versions": {
     "scan": "scan.v4.snapshot-bound-authority",
     "dashboard": "dashboard.v1",
@@ -21,19 +21,32 @@ layout: null
     "feedback": "feedback.v3.enrolled-authority"
   },
   "queue_compatibility_versions": {
-    "scan": ["legacy-local-storage", "indexeddb-v1", "indexeddb-v2", "indexeddb-v3", "indexeddb-v4", "indexeddb-v6-offline-authority"],
-    "native_notification_actions": ["local-storage-outbox-v1"],
-    "messaging": ["local-storage-outbox-v1"],
-    "gemini_console": ["indexeddb-outbox-v1"]
+    "scan": [
+      "legacy-local-storage",
+      "indexeddb-v1",
+      "indexeddb-v2",
+      "indexeddb-v3",
+      "indexeddb-v4",
+      "indexeddb-v6-offline-authority"
+    ],
+    "native_notification_actions": [
+      "local-storage-outbox-v1"
+    ],
+    "messaging": [
+      "local-storage-outbox-v1"
+    ],
+    "gemini_console": [
+      "indexeddb-outbox-v1"
+    ]
   },
   "minimum_supported": {
     "frontend_version": "release-2026.07.19.custodial-v3.12",
     "backend_version": "release-2026.07.19.custodial-v3.12"
   },
   "schema_transition": {
-    "transition_id": "custodial-verified-visits-20260922",
-    "from_fingerprint": "750e7f040519f6d4555836cbd4d172a22f98911d5bab9918fa370238fff3f822",
-    "to_fingerprint": "3ded1de715a3d114f3098a2818904b3c5b0d0cdde17dcbef77cc7af76c3b7deb",
-    "expires_at": "2026-10-02T23:59:59Z"
+    "transition_id": "custodial-post293-test-20261025",
+    "from_fingerprint": "b496c72630100da8173006aa34886c7868b3ead5bea43e056135df64cf53b4ce",
+    "to_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
+    "expires_at": "2026-11-01T15:12:05Z"
   }
 }

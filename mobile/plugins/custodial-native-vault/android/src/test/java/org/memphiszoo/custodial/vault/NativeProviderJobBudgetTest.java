@@ -31,7 +31,7 @@ public final class NativeProviderJobBudgetTest {
         NativeProviderJobBudget budget = new NativeProviderJobBudget(clock); NativeProviderHttp.Attempt attempt = new NativeProviderHttp.Attempt(budget);
         NativeProviderHttp http = new NativeProviderHttp(url -> {
             f.opened++; f.connection = new NativeProviderHttpTest.Connection(url, new byte[0]); f.connection.timeout = true; return f.connection;
-        }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID);
+        }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID, NativeProviderHttpTest.readings());
         for (int i = 0; i < 32; i++) ProviderRecordStoreTest.failure("custodial_provider_network_unavailable", () ->
             f.engine.registerNativeProvider(f.prepared, f.principalJournal, f.legacyJournal, f.provider.journal(), http, attempt, false));
         ProviderRecordStoreTest.failure(LIMIT, () -> f.engine.registerNativeProvider(f.prepared, f.principalJournal, f.legacyJournal, f.provider.journal(), http, attempt, false));
@@ -42,7 +42,7 @@ public final class NativeProviderJobBudgetTest {
         NativeProviderJobBudget budget = new NativeProviderJobBudget(clock); NativeProviderHttp.Attempt attempt = new NativeProviderHttp.Attempt(budget);
         NativeProviderHttp http = new NativeProviderHttp(url -> {
             f.opened++; f.connection = new NativeProviderHttpTest.Connection(url, new byte[262144]); return f.connection;
-        }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID);
+        }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID, NativeProviderHttpTest.readings());
         for (int i = 0; i < 8; i++) ProviderRecordStoreTest.failure("custodial_provider_wire_json_invalid", () ->
             f.engine.registerNativeProvider(f.prepared, f.principalJournal, f.legacyJournal, f.provider.journal(), http, attempt, false));
         assertEquals(2 * 1024 * 1024, budget.bytes());
@@ -55,7 +55,7 @@ public final class NativeProviderJobBudgetTest {
         NativeProviderHttp.Attempt attempt = new NativeProviderHttp.Attempt(budget); byte[] response = f.response();
         NativeProviderHttp http = new NativeProviderHttp(url -> {
             f.connection = new NativeProviderHttpTest.Connection(url, response); f.connection.onResponse = () -> clock.time += 1000; return f.connection;
-        }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID);
+        }, () -> NativeProviderHttpTest.NOW, () -> NativeProviderHttpTest.RID, NativeProviderHttpTest.readings());
         ProviderRecordStoreTest.failure(LIMIT, () -> f.engine.registerNativeProvider(f.prepared, f.principalJournal, f.legacyJournal, f.provider.journal(), http, attempt, false));
         assertEquals(1000, f.connection.getConnectTimeout()); assertEquals(1000, f.connection.getReadTimeout()); assertTrue(f.connection.disconnects > 0);
         assertFalse(f.provider.journal().prepareRegistration(f.principal, NativeProviderJournalTest.app()).confirmed);

@@ -17,9 +17,20 @@ final class NativeProviderRegistrationReceipt {
     private final String encoded, expectedEncoded;
     final String generationId, registrationId, activatedAt, priorGenerationId, priorRetiredAt;
     private NativeProviderRegistrationReceipt(JSONObject value, NativeProviderJournal.Prepared expected) throws Exception {
+        JSONObject original = expected.json();
+        requireAdmission(value, original, false);
+        generationId = value.getString("generation_id"); registrationId = value.getString("registration_id");
+        activatedAt = value.getString("activated_at");
+        priorGenerationId = value.get("prior_generation_id") == JSONObject.NULL ? null : value.getString("prior_generation_id");
+        priorRetiredAt = value.get("prior_dispatch_retired_at") == JSONObject.NULL ? null : value.getString("prior_dispatch_retired_at");
+        encoded = value.toString(); expectedEncoded = original.toString();
+    }
+    private static void requireAdmission(JSONObject value, JSONObject original, boolean retainedOnly) throws Exception {
         exact(value, FIELDS);
-        JSONObject original = expected.json(), principal = original.getJSONObject("principal");
-        if (!"PREPARED_QUARANTINE".equals(original.get("state"))) throw invalid();
+        JSONObject principal = original.getJSONObject("principal");
+        Object state = original.get("state");
+        if (retainedOnly ? !("CONFIRMED".equals(state) || "DISPATCH_RETIRED_ARRIVAL_DRAINING".equals(state))
+            : !("PREPARED_QUARANTINE".equals(state) || "CONFIRMED".equals(state))) throw invalid();
         if (!SCHEMA.equals(value.get("schema")) || !"ACTIVE".equals(value.get("admitted_state"))
             || !(value.get("replayed") instanceof Boolean)) throw invalid();
         for (String field : new String[]{"operation_id", "generation_id", "principal_digest", "token_digest"})
@@ -30,19 +41,35 @@ final class NativeProviderRegistrationReceipt {
         JSONObject app = value.getJSONObject("native_app");
         exact(app, "package_name", "version_name", "version_code", "build_id"); integer(app.get("version_code"));
         if (!NativeLegacyLineageJournal.same(app, original.getJSONObject("native_app"))) throw invalid();
-        generationId = value.getString("generation_id"); registrationId = uuid(value.get("registration_id"));
-        activatedAt = timestamp(value.get("activated_at")); String serverNow = timestamp(value.get("server_now"));
+        String generationId = value.getString("generation_id"); uuid(value.get("registration_id"));
+        String activatedAt = timestamp(value.get("activated_at")); String serverNow = timestamp(value.get("server_now"));
         if (Instant.parse(activatedAt).isAfter(Instant.parse(serverNow))) throw invalid();
         if (value.get("prior_generation_id") == JSONObject.NULL) {
             if (value.get("prior_dispatch_retired_at") != JSONObject.NULL) throw invalid();
-            priorGenerationId = null; priorRetiredAt = null;
         } else {
-            priorGenerationId = uuid(value.get("prior_generation_id")); priorRetiredAt = timestamp(value.get("prior_dispatch_retired_at"));
+            String priorGenerationId = uuid(value.get("prior_generation_id")), priorRetiredAt = timestamp(value.get("prior_dispatch_retired_at"));
             if (generationId.equals(priorGenerationId) || !activatedAt.equals(priorRetiredAt)) throw invalid();
         }
-        encoded = value.toString(); expectedEncoded = original.toString();
+    }
+    /** Validation-only persisted admission seam. It returns NO receipt or
+     * confirmation capability, fabricates NO HTTPS response, and cannot register
+     * a prepared generation. The journal independently validates record shape. */
+    static void requireStoredAdmission(JSONObject generation) throws VaultFailure {
+        try {
+            if (generation == null) throw invalid();
+            // Preserve Prepared's existing capture-sequence read without
+            // constructing its retained serialization or an admission receipt.
+            generation.getLong("capture_sequence");
+            JSONObject admission = generation.getJSONObject("admission");
+            requireAdmission(admission, generation, true);
+            if (!admission.getString("registration_id").equals(generation.get("registration_id"))
+                || !admission.getString("activated_at").equals(generation.get("activated_at"))) throw invalid();
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure("custodial_provider_registration_receipt_invalid", error); }
     }
     static NativeProviderRegistrationReceipt validateResponse(NativeProviderJournal.Prepared expected, AuthorizedResponse response) throws VaultFailure {
+        // Admission-only pure-journal test seam. Live typed HTTP MUST use validateExchange;
+        // this method cannot produce a clock candidate or accept the clock wire envelope.
         try {
             if (expected == null || response == null || response.status < 200 || response.status >= 300) throw invalid();
             String contentType = ""; int contentTypes = 0;
@@ -52,6 +79,27 @@ final class NativeProviderRegistrationReceipt {
             JSONObject envelope = ProviderWireJson.object(response.body, 262144); exact(envelope, "ok", "data");
             if (!Boolean.TRUE.equals(envelope.get("ok"))) throw invalid();
             return new NativeProviderRegistrationReceipt(envelope.getJSONObject("data"), expected);
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure("custodial_provider_registration_receipt_invalid", error); }
+    }
+    static final class CheckedExchange {
+        final NativeProviderRegistrationReceipt receipt;
+        final NativeProviderClockExchange.Unqualified clock;
+        CheckedExchange(NativeProviderRegistrationReceipt receipt, NativeProviderClockExchange.Unqualified clock) { this.receipt = receipt; this.clock = clock; }
+    }
+    static CheckedExchange validateExchange(NativeProviderJournal.Prepared expected, NativeProviderClockExchange exchange) throws VaultFailure {
+        try {
+            if (exchange == null) throw invalid();
+            AuthorizedResponse response = exchange.response;
+            JSONObject envelope = ProviderWireJson.object(response.body, 262144); exact(envelope, "ok", "data", "clock");
+            NativeProviderClockExchange.Unqualified clock = exchange.validateClock(envelope.getJSONObject("clock"));
+            // Reuse the exact content type/status/admission validator, not a permissive
+            // fallback: the actual wire MUST have the strict separate clock block above.
+            JSONObject admission = new JSONObject().put("ok", envelope.get("ok")).put("data", envelope.get("data"));
+            NativeProviderRegistrationReceipt receipt = validateResponse(expected, new AuthorizedResponse(response.status, response.headers,
+                admission.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            if (NativeProviderClockExchange.micros(receipt.json().get("server_now")) > clock.serverMicros) throw invalid();
+            return new CheckedExchange(receipt, clock);
         } catch (VaultFailure error) { throw error; }
         catch (Exception error) { throw new VaultFailure("custodial_provider_registration_receipt_invalid", error); }
     }

@@ -1,0 +1,634 @@
+package org.memphiszoo.custodial.vault;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+/** HTTPS adapter. Credential-management routes are reachable only through the
+ * typed state-machine methods, never through generic authorized transport. */
+final class HttpsEnrollmentTransport implements EnrollmentTransport {
+    private static final String API_BASE = "https://memphis-zoo-mcp.onrender.com";
+    private static final String NATIVE_ORIGIN = "https://localhost";
+    private static final String EDITION = "custodial";
+    private static final int MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+    // Resource cancellation ceiling strictly below the protocol's 45 seconds.
+    // System.nanoTime here is NOT a qualified provider clock or ACK authority.
+    private static final long MAX_EXCHANGE_NANOS = 44_999_000_000L;
+    private static final Set<String> SAFE_RESPONSE_HEADERS = VaultCollections.setOf(
+        "cache-control",
+        "content-language",
+        "content-type",
+        "etag",
+        "expires",
+        "last-modified",
+        "retry-after",
+        "x-correlation-id",
+        "x-request-id"
+    );
+    private static final Set<String> DEVICE_AUTH_POLICY_MODES = VaultCollections.setOf(
+        "observe",
+        "enroll",
+        "enforce-ready",
+        "enforce"
+    );
+    private final VaultClock clock;
+    private final RequestIdGenerator requestIds;
+
+    HttpsEnrollmentTransport() {
+        this(System::currentTimeMillis, () -> UUID.randomUUID().toString());
+    }
+
+    HttpsEnrollmentTransport(VaultClock clock, RequestIdGenerator requestIds) {
+        this.clock = clock;
+        this.requestIds = requestIds;
+    }
+
+    @Override
+    public EnrollmentResult enroll(EnrollmentRequest request, char[] enrollmentCode) throws VaultFailure {
+        String code = new String(enrollmentCode);
+        try {
+            JSONObject body = enrollmentBody(request, code);
+            String endpoint = request.flow.equals("recovery")
+                ? "/custodial-device-auth/recover"
+                : "/custodial-device-auth/enroll";
+            HttpResult response = execute(
+                endpoint,
+                "POST",
+                VaultCollections.mapOf("Idempotency-Key", request.operationId, "Content-Type", "application/json"),
+                body.toString().getBytes(StandardCharsets.UTF_8),
+                null,
+                request.deviceId
+            );
+            return parseEnrollmentResult(requireSuccessData(response, "custodial_native_enrollment_failed"));
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_enrollment_failed", error);
+        } finally {
+            // Java Strings are unavoidable at the HTTP/JSON boundary; do not
+            // retain the value in fields, logs, errors, or returned objects.
+            code = "";
+        }
+    }
+
+
+    static JSONObject enrollmentBody(EnrollmentRequest request, String suppliedSecret) throws VaultFailure {
+        String secret = WebViewInputPolicy.activationSecret(suppliedSecret);
+        JSONObject body = new JSONObject();
+        try {
+            body.put("operation_id", request.operationId);
+            body.put("flow", request.flow);
+            body.put("device_id", request.deviceId);
+            if (secret.matches("^[0-9]{8}$")) body.put("enrollment_code", secret);
+            else body.put("activation_token", secret);
+            body.put("device_label", request.deviceId + " Memphis Zoo Custodial");
+            return body;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_invalid_enrollment", error);
+        }
+    }
+
+    static EnrollmentResult parseEnrollmentResult(JSONObject data) throws VaultFailure {
+        JSONObject employee = data.optJSONObject("employee");
+        char[] credential = data.optString("device_credential", "").toCharArray();
+        try {
+            return new EnrollmentResult(
+                data.optString("operation_id", ""),
+                data.optString("device_id", ""),
+                data.optString("flow", ""),
+                credential,
+                new EnrollmentMetadata(
+                    data.optString("credential_id", ""),
+                    data.optString("credential_expires_at", ""),
+                    data.optString("resume_expires_at", ""),
+                    data.optString("device_name", ""),
+                    employee == null ? "" : employee.optString("id", ""),
+                    employee == null ? "" : employee.optString(
+                        "name",
+                        employee.optString("display_name", "")
+                    ),
+                    data.optString("recovery_id", "")
+                ),
+                data.optBoolean("replayed", false)
+            );
+        } finally {
+            VaultValidation.wipe(credential);
+        }
+    }
+
+    @Override
+    public TerminalResult confirm(String operationId, String deviceId, char[] credential) throws VaultFailure {
+        return terminal(
+            "/custodial-device-auth/enrollment-operations/" + operationId + "/confirm",
+            operationId,
+            deviceId,
+            credential
+        );
+    }
+
+    @Override
+    public TerminalResult cancel(String operationId, String deviceId, char[] credential) throws VaultFailure {
+        return terminal(
+            "/custodial-device-auth/enrollment-operations/" + operationId + "/cancel",
+            operationId,
+            deviceId,
+            credential
+        );
+    }
+
+    @Override
+    public TerminalResult remove(String operationId, String deviceId, char[] credential) throws VaultFailure {
+        return terminal("/custodial-device-auth/remove", operationId, deviceId, credential);
+    }
+
+    @Override
+    public String verifyLegacyIdentity(String candidateDeviceId, char[] credential) throws VaultFailure {
+        String candidate = VaultValidation.deviceId(candidateDeviceId);
+        HttpResult response = execute(
+            "/device-auth/status?device_id=" + candidate,
+            "GET",
+            VaultCollections.mapOf(),
+            new byte[0],
+            credential,
+            candidate
+        );
+        JSONObject data = requireSuccessData(response, "custodial_native_legacy_identity_unverified");
+        if (!data.optBoolean("authenticated", false)) {
+            throw new VaultFailure("custodial_native_legacy_identity_unverified", 401);
+        }
+        String verified = VaultValidation.deviceId(data.optString("canonical_device_id", ""));
+        if (!candidate.equals(verified)) throw new VaultFailure("custodial_native_legacy_binding_mismatch");
+        return verified;
+    }
+
+    @Override
+    public ActiveCredentialStatus verifyActiveCredential(
+        String deviceId,
+        String expectedCredentialId,
+        char[] credential
+    ) throws VaultFailure {
+        String candidate = VaultValidation.deviceId(deviceId);
+        String expectedCredential = VaultValidation.safeText(
+            expectedCredentialId,
+            160,
+            "custodial_native_credential_revalidation_refused"
+        );
+        if (expectedCredential.isEmpty()) {
+            throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        }
+        HttpResult response = execute(
+            "/device-auth/status?device_id=" + candidate,
+            "GET",
+            VaultCollections.mapOf(),
+            new byte[0],
+            credential,
+            candidate
+        );
+        return classifyActiveCredentialStatus(response, candidate, expectedCredential);
+    }
+
+    static ActiveCredentialStatus classifyActiveCredentialStatus(
+        HttpResult response,
+        String expectedDeviceId,
+        String expectedCredentialId
+    ) throws VaultFailure {
+        JSONObject data = requireSuccessData(response, "custodial_native_credential_revalidation_failed");
+        Object authenticatedValue = data.opt("authenticated");
+        Object enrollmentRequiredValue = data.opt("enrollment_required");
+        Object recoveryRequiredValue = data.opt("recovery_required");
+        Object policyModeValue = data.opt("policy_mode");
+        Object canonicalDeviceValue = data.opt("canonical_device_id");
+        Object credentialIdValue = data.opt("credential_id");
+        if (
+            !(authenticatedValue instanceof Boolean)
+            || !(enrollmentRequiredValue instanceof Boolean)
+            || !(recoveryRequiredValue instanceof Boolean)
+            || !(policyModeValue instanceof String)
+            || !(canonicalDeviceValue instanceof String)
+            || !(credentialIdValue == null || credentialIdValue == JSONObject.NULL || credentialIdValue instanceof String)
+        ) throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        String verified = VaultValidation.deviceId((String) canonicalDeviceValue);
+        if (!expectedDeviceId.equals(verified)) {
+            throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        }
+        boolean authenticated = (Boolean) authenticatedValue;
+        boolean enrollmentRequired = (Boolean) enrollmentRequiredValue;
+        boolean recoveryRequired = (Boolean) recoveryRequiredValue;
+        String policyMode = ((String) policyModeValue).trim().toLowerCase(Locale.ROOT);
+        if (!DEVICE_AUTH_POLICY_MODES.contains(policyMode)) {
+            throw new VaultFailure("custodial_native_credential_revalidation_refused");
+        }
+        String credentialId = credentialIdValue == null || credentialIdValue == JSONObject.NULL
+            ? ""
+            : ((String) credentialIdValue).trim();
+        if (authenticated) {
+            if (enrollmentRequired || recoveryRequired || !expectedCredentialId.equals(credentialId)) {
+                throw new VaultFailure("custodial_native_credential_revalidation_refused");
+            }
+            return ActiveCredentialStatus.ACCEPTED;
+        }
+        // Fleet policy and per-credential recovery are independent authority
+        // facts. The server identifies this exact device's unusable credential
+        // across every supported mode. A generic enrollment requirement for an
+        // unknown/wrong-device credential is not that proof, even in enforce.
+        // The manager code remains separate replacement authority.
+        if (
+            enrollmentRequired
+            && credentialId.isEmpty()
+            && recoveryRequired
+        ) {
+            return ActiveCredentialStatus.ENROLLMENT_REQUIRED;
+        }
+        throw new VaultFailure("custodial_native_credential_revalidation_refused");
+    }
+
+    @Override
+    public AuthorizedResponse authorized(AuthorizedRequest request, String deviceId, char[] credential) throws VaultFailure {
+        Map<String, String> nativeHeaders = new LinkedHashMap<>(request.headers);
+        nativeHeaders.putAll(NativeAttestation.requestHeaders(
+            request,
+            deviceId,
+            credential,
+            requestIds.next(),
+            clock.nowMillis()
+        ));
+        HttpResult response = execute(request.path, request.method, nativeHeaders, request.body, credential, deviceId);
+        return authorizedResponse(request, response, credential);
+    }
+
+    static AuthorizedResponse authorizedResponse(AuthorizedRequest request, HttpResult response, char[] credential) throws VaultFailure {
+        if (request == null || response == null) throw new VaultFailure("custodial_native_invalid_response");
+        Map<String, String> headers = safeResponseHeaders(response.headers);
+        boolean strictAuthorityRoute = "GET".equals(request.method)
+            && (NativeActivePrincipalStatus.PATH.equals(request.path) || NativeSeparationContext.PATH.equals(request.path));
+        if (strictAuthorityRoute && response.status >= 200 && response.status < 300) {
+            Object parsed = ProviderWireJson.parse(response.body, MAX_RESPONSE_BYTES);
+            if (SecretScrubber.containsSecret(parsed, credential)) {
+                throw new VaultFailure("custodial_native_secret_response_refused");
+            }
+            return new AuthorizedResponse(response.status, headers, response.body.clone());
+        }
+        byte[] safeBody = scrubResponseBody(response.body, headers.getOrDefault("content-type", ""), credential);
+        return new AuthorizedResponse(response.status, headers, safeBody);
+    }
+
+    @Override
+    public String reportAssignedActivation(String operationId, String deviceId, char[] credential,
+        Map<String,Object> receipt) throws VaultFailure {
+        String operation=VaultValidation.operationId(operationId),device=VaultValidation.deviceId(deviceId);
+        JSONObject body=new JSONObject(receipt);
+        HttpResult response=execute("/custodial-device-auth/assigned-activation-operations/"+operation+"/native-result",
+            "POST",VaultCollections.mapOf("Content-Type","application/json","Idempotency-Key",operation),
+            body.toString().getBytes(StandardCharsets.UTF_8),credential,device);
+        return classifyAssignedActivationResponse(response,operation,device,body);
+    }
+
+    static String classifyAssignedActivationResponse(HttpResult response,String operation,String device,JSONObject receipt) throws VaultFailure {
+        try {
+            JSONObject data=requireSuccessData(response,"custodial_assigned_activation_receipt_failed");
+            JSONObject accepted=data.optJSONObject("native_receipt");
+            String expected=receipt.getBoolean("changed")?"native_active":"not_required";
+            if (!operation.equals(data.optString("operation_id")) || !device.equals(data.optString("device_id"))
+                || !expected.equals(data.optString("state")) || accepted==null || accepted.length()!=receipt.length())
+                throw new VaultFailure("custodial_assigned_activation_receipt_invalid");
+            for(java.util.Iterator<String> keys=receipt.keys();keys.hasNext();){
+                String k=keys.next(); if(!receipt.get(k).equals(accepted.opt(k)))
+                    throw new VaultFailure("custodial_assigned_activation_receipt_invalid");
+            }
+            return expected;
+        } catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure("custodial_assigned_activation_receipt_invalid",e);}
+    }
+
+    @Override public NativeLegacyLineageJournal.Binding resolveLegacyLineage(NativeLegacyLineageJournal.Context context,
+        char[] credential) throws VaultFailure {
+        return new NativeLegacyLineageJournal.Binding(legacyPost(context,"legacy-lineage-binding",context.request(),credential),context);
+    }
+    @Override public NativeLegacyLineageJournal.Terminal reportLegacyActivation(NativeLegacyLineageJournal.Context context,
+        NativeLegacyLineageJournal.Binding binding,JSONObject receipt,char[] credential) throws VaultFailure {
+        return new NativeLegacyLineageJournal.Terminal(legacyPost(context,"native-legacy-result",receipt,credential),context,binding,receipt);
+    }
+    private JSONObject legacyPost(NativeLegacyLineageJournal.Context context,String suffix,JSONObject body,
+        char[] credential) throws VaultFailure {
+        NativeAttestation.requireStoredCredentialId(credential,context.credential);
+        String path="/custodial-device-auth/assigned-activation-operations/"+context.operation+"/"+suffix;
+        byte[] bytes=body.toString().getBytes(StandardCharsets.UTF_8);
+        if(bytes.length>2048)throw NativeLegacyLineageJournal.invalid();
+        AuthorizedRequest request=new AuthorizedRequest(path,"POST",
+            VaultCollections.mapOf("Content-Type","application/json","Idempotency-Key",context.operation),bytes);
+        Map<String,String> headers=new LinkedHashMap<>(request.headers);
+        headers.putAll(NativeAttestation.requestHeaders(request,context.device,credential,requestIds.next(),clock.nowMillis()));
+        return requireSuccessData(execute(path,"POST",headers,bytes,credential,context.device),NativeLegacyLineageJournal.FAILURE);
+    }
+
+    private TerminalResult terminal(
+        String path,
+        String operationId,
+        String deviceId,
+        char[] credential
+    ) throws VaultFailure {
+        try {
+            JSONObject body = new JSONObject();
+            body.put("operation_id", operationId);
+            body.put("device_id", deviceId);
+            HttpResult response = execute(
+                path,
+                "POST",
+                VaultCollections.mapOf("Idempotency-Key", operationId, "Content-Type", "application/json"),
+                body.toString().getBytes(StandardCharsets.UTF_8),
+                credential,
+                deviceId
+            );
+            JSONObject data = requireSuccessData(response, "custodial_native_terminal_request_failed");
+            return new TerminalResult(data.optString("operation_id", ""), data.optBoolean("replayed", false));
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_terminal_request_failed", error);
+        }
+    }
+
+    static JSONObject requireSuccessData(HttpResult response, String code) throws VaultFailure {
+        if (response.status < 200 || response.status >= 300) {
+            String remoteReason = "";
+            try {
+                Object errorPayload = strictJson(response.body);
+                if (errorPayload instanceof JSONObject object) {
+                    String candidate = object.optString("code", "").trim().toLowerCase(Locale.ROOT);
+                    if (candidate.matches("^[a-z][a-z0-9_:-]{0,95}$")) remoteReason = candidate;
+                }
+            } catch (VaultFailure ignored) {}
+            throw new VaultFailure(code, response.status, remoteReason);
+        }
+        try {
+            Object parsed = strictJson(response.body);
+            if (!(parsed instanceof JSONObject payload) || !payload.optBoolean("ok", false)) {
+                throw new VaultFailure(code);
+            }
+            JSONObject data = payload.optJSONObject("data");
+            if (data == null) throw new VaultFailure(code);
+            return data;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        }
+    }
+
+    private static HttpResult execute(
+        String path,
+        String method,
+        Map<String, String> suppliedHeaders,
+        byte[] body,
+        char[] credential,
+        String deviceId
+    ) throws VaultFailure {
+        return execute(path, method, suppliedHeaders, body, credential, deviceId, MAX_EXCHANGE_NANOS);
+    }
+
+    // Private finite-budget seam for owning connection tests; never caller input.
+    private static HttpResult execute(String path, String method, Map<String, String> suppliedHeaders,
+        byte[] body, char[] credential, String deviceId, long budgetNanos) throws VaultFailure {
+        final long started = System.nanoTime();
+        HttpURLConnection connection = null;
+        ExchangeLifetime lifetime = null;
+        byte[] received = null;
+        HttpResult result;
+        String credentialHeader = credential == null ? null : new String(credential);
+        try {
+            connection = (HttpURLConnection) new URL(API_BASE + path).openConnection();
+            lifetime = new ExchangeLifetime(connection, started, budgetNanos);
+            connection.setInstanceFollowRedirects(false);
+            connection.setConnectTimeout(lifetime.timeoutMillis(15_000));
+            connection.setReadTimeout(lifetime.timeoutMillis(35_000));
+            connection.setUseCaches(false);
+            connection.setRequestMethod(method);
+            for (Map.Entry<String, String> entry : suppliedHeaders.entrySet()) {
+                connection.setRequestProperty(entry.getKey(), entry.getValue());
+            }
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("Origin", NATIVE_ORIGIN);
+            connection.setRequestProperty("X-Memphis-App-Edition", EDITION);
+            connection.setRequestProperty("X-Device-Id", deviceId);
+            if (credentialHeader != null) {
+                connection.setRequestProperty("Authorization", "Device " + credentialHeader);
+                connection.setRequestProperty("X-Device-Credential", credentialHeader);
+                connection.setRequestProperty("X-Memphis-Device-Credential", credentialHeader);
+            }
+            lifetime.check();
+            if (body.length > 0) {
+                connection.setDoOutput(true);
+                // Keep IO in the original caller. Never return a timed-out
+                // future while a writer still owns its request/credential.
+                try (OutputStream output = connection.getOutputStream()) {
+                    lifetime.check();
+                    output.write(body);
+                    lifetime.check();
+                }
+            }
+            lifetime.check();
+            connection.setReadTimeout(lifetime.timeoutMillis(35_000));
+            int status = connection.getResponseCode();
+            lifetime.check();
+            InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
+            received = readBounded(stream, MAX_RESPONSE_BYTES, connection, lifetime);
+            lifetime.check();
+            Map<String, List<String>> headers = connection.getHeaderFields();
+            lifetime.check();
+            result = new HttpResult(status, headers, received);
+        } catch (VaultFailure error) {
+            if (received != null) Arrays.fill(received, (byte) 0);
+            throw error;
+        } catch (Exception error) {
+            if (received != null) Arrays.fill(received, (byte) 0);
+            throw new VaultFailure("custodial_native_network_unavailable", error);
+        } finally {
+            credentialHeader = null;
+            // Cancel a not-yet-fired watchdog, or join an already executing
+            // disconnect. No caller/restore/key lease is released early even
+            // if the platform cannot settle its disconnect/IO promptly.
+            if (lifetime != null) lifetime.finish();
+            else if (connection != null) connection.disconnect();
+        }
+        try {
+            lifetime.check(); // Cleanup/interrupt/late EOF cannot mint late 2xx.
+            return result;
+        } catch (VaultFailure error) {
+            Arrays.fill(result.body, (byte) 0);
+            throw error;
+        }
+    }
+
+    private static byte[] readBounded(InputStream stream, int maximum,
+        HttpURLConnection connection, ExchangeLifetime lifetime) throws VaultFailure {
+        lifetime.check();
+        if (stream == null) return new byte[0];
+        byte[] buffer = new byte[16_384];
+        try (InputStream input = stream; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            int total = 0;
+            int count;
+            while (true) {
+                lifetime.check();
+                connection.setReadTimeout(lifetime.timeoutMillis(35_000));
+                count = input.read(buffer);
+                lifetime.check();
+                if (count == -1) break;
+                total += count;
+                if (total > maximum) throw new VaultFailure("custodial_native_response_too_large");
+                output.write(buffer, 0, count);
+            }
+            return output.toByteArray();
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_network_unavailable", error);
+        } finally {
+            Arrays.fill(buffer, (byte) 0);
+        }
+    }
+
+    /** One original connection only. Disconnect is a best-effort platform
+     * signal, not proof that blocked write/read/close has settled. The IO stays
+     * synchronous, and finish waits for this watchdog before the caller exits. */
+    private static final class ExchangeLifetime {
+        private final HttpURLConnection connection;
+        private final long started, budget;
+        private final Thread watchdog;
+        private boolean finished, expired;
+        ExchangeLifetime(HttpURLConnection connection, long started, long budget) {
+            if (connection == null || budget <= 0 || budget > MAX_EXCHANGE_NANOS)
+                throw new IllegalArgumentException("native_http_lifetime_required");
+            this.connection = connection; this.started = started; this.budget = budget;
+            watchdog = new Thread(this::watch, "custodial-native-http-lifetime");
+            watchdog.start();
+        }
+        private long remaining() { return budget - (System.nanoTime() - started); }
+        synchronized void check() throws VaultFailure {
+            if (expired || remaining() <= 0 || Thread.currentThread().isInterrupted())
+                throw new VaultFailure("custodial_native_network_unavailable");
+        }
+        synchronized int timeoutMillis(int maximum) throws VaultFailure {
+            check();
+            long nanos = remaining();
+            if (nanos <= 0) throw new VaultFailure("custodial_native_network_unavailable");
+            return (int) Math.min(maximum, (nanos + 999_999L) / 1_000_000L);
+        }
+        private void watch() {
+            synchronized (this) {
+                while (!finished) {
+                    long nanos = remaining();
+                    if (nanos <= 0) { expired = true; break; }
+                    try { wait(nanos / 1_000_000L, (int) (nanos % 1_000_000L)); }
+                    catch (InterruptedException interrupted) { expired = true; break; }
+                }
+                if (finished) return;
+            }
+            try { connection.disconnect(); } catch (Exception ignored) {
+                // Expiry stays UNKNOWN even if the platform cancellation failed.
+            }
+        }
+        void finish() throws VaultFailure {
+            synchronized (this) { finished = true; notifyAll(); }
+            boolean interrupted = false;
+            for (;;) {
+                try { watchdog.join(); break; }
+                catch (InterruptedException pending) { interrupted = true; }
+            }
+            if (interrupted) Thread.currentThread().interrupt();
+            try { connection.disconnect(); }
+            catch (Exception failure) { throw new VaultFailure("custodial_native_network_unavailable", failure); }
+        }
+    }
+
+    private static Map<String, String> safeResponseHeaders(Map<String, List<String>> raw) {
+        Map<String, String> safe = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : raw.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null) continue;
+            String normalized = entry.getKey().toLowerCase(Locale.ROOT);
+            if (!SAFE_RESPONSE_HEADERS.contains(normalized) || SecretScrubber.secretKey(normalized)) continue;
+            String value = joinHeaderValues(entry.getValue());
+            if (value == null) continue;
+            if (value.length() <= 8192 && !value.contains("\r") && !value.contains("\n")) safe.put(normalized, value);
+        }
+        return VaultCollections.copyMap(safe);
+    }
+
+    static byte[] scrubResponseBody(byte[] raw, String contentType, char[] credential) throws VaultFailure {
+        if (raw.length == 0) return raw;
+        String source = new String(raw, StandardCharsets.UTF_8);
+        String trimmed = source.trim();
+        boolean json = contentType.toLowerCase(Locale.ROOT).contains("json")
+            || trimmed.startsWith("{")
+            || trimmed.startsWith("[");
+        if (!json) {
+            if (credential != null && source.contains(new String(credential))) {
+                throw new VaultFailure("custodial_native_secret_response_refused");
+            }
+            return raw.clone();
+        }
+        Object parsed = strictJson(raw);
+        Object scrubbed = SecretScrubber.scrub(parsed, credential);
+        String encoded;
+        if (scrubbed instanceof Map<?, ?> map) encoded = new JSONObject(map).toString();
+        else if (scrubbed instanceof List<?> list) encoded = new JSONArray(list).toString();
+        else if (scrubbed == null) encoded = "null";
+        else if (scrubbed instanceof String) encoded = JSONObject.quote((String) scrubbed);
+        else if (scrubbed instanceof Number || scrubbed instanceof Boolean) encoded = String.valueOf(scrubbed);
+        else throw new VaultFailure("custodial_native_invalid_response");
+        return encoded.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String joinHeaderValues(List<String> values) {
+        StringBuilder joined = new StringBuilder();
+        for (String value : values) {
+            if (value == null) return null;
+            if (joined.length() > 0) joined.append(", ");
+            joined.append(value);
+            if (joined.length() > 8192) return joined.toString();
+        }
+        return joined.toString();
+    }
+
+    private static Object strictJson(byte[] raw) throws VaultFailure {
+        try {
+            String source = new String(raw, StandardCharsets.UTF_8);
+            JSONTokener tokener = new JSONTokener(source);
+            Object parsed = tokener.nextValue();
+            if (tokener.nextClean() != 0) throw new VaultFailure("custodial_native_invalid_response");
+            return parsed;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_invalid_response", error);
+        }
+    }
+
+    static final class HttpResult {
+        final int status;
+        final Map<String, List<String>> headers;
+        final byte[] body;
+
+        HttpResult(int status, Map<String, List<String>> headers, byte[] body) {
+            this.status = status;
+            this.headers = headers;
+            this.body = body;
+        }
+    }
+
+    @FunctionalInterface
+    interface RequestIdGenerator {
+        String next();
+    }
+}

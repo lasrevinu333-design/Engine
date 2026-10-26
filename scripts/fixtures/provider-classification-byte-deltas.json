@@ -1,0 +1,445 @@
+{
+  "schema": "custodial.provider-classification-byte-deltas.v1",
+  "base": "ea95155b8ba43354d4cfeea8a37b3d58799236e3",
+  "files": [
+    {
+      "name": "NativeProviderClaims.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderClaims.java",
+      "prior_sha256": "1973550f116bfb65372945ffa2ad9242ec41735b026f9f511d12e61ac3a2f49b",
+      "current_sha256": "06867ec6f14621a22cb4c52d99a3598a9b66d2726da9c0b9a6da527fc48229f0",
+      "hunks": [
+        {
+          "old_start": 11,
+          "old_count": 0,
+          "new_start": 12,
+          "new_count": 14,
+          "before": [],
+          "after": [
+            "    enum Freshness { CURRENT, HISTORICAL_EXPIRED, FRESHNESS_UNAVAILABLE, RETIRED }",
+            "    private static Freshness freshness(NativeProviderPayload payload, NativeProviderJournal.Observation observation) throws VaultFailure {",
+            "        if (observation == null || observation.bounds == null) return Freshness.FRESHNESS_UNAVAILABLE;",
+            "        if (NativeProviderTime.live(observation.bounds, payload.reservedAt, payload.validUntil)) return Freshness.CURRENT;",
+            "        return NativeProviderTime.reached(observation.bounds, payload.validUntil)",
+            "            ? Freshness.HISTORICAL_EXPIRED : Freshness.FRESHNESS_UNAVAILABLE;",
+            "    }",
+            "    /** No content/authority is returned; caller has already proved the exact old",
+            "     * capability and a definitive existing native principal/removal fence. */",
+            "    static JSONObject retiredState() throws VaultFailure {",
+            "        try { return new JSONObject().put(\"current\",false).put(\"freshness\",Freshness.RETIRED.name())",
+            "            .put(\"retire_visual\",true).put(\"stop_audio\",true).put(\"navigation_pending\",false); }",
+            "        catch(Exception invalid){throw new VaultFailure(\"custodial_provider_claim_invalid\",invalid);}",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 83,
+          "old_count": 1,
+          "new_start": 97,
+          "new_count": 4,
+          "before": [
+            "    synchronized JSONObject state(Object owner,NativeProviderPrincipal current,String id) throws VaultFailure {"
+          ],
+          "after": [
+            "    synchronized void requireClaim(Object owner,String id) throws VaultFailure {",
+            "        requireAttachment(owner);if(!claims.containsKey(id))throw invalid();",
+            "    }",
+            "    synchronized JSONObject state(Object owner,NativeProviderPrincipal current,String id,NativeProviderJournal.Observation observation) throws VaultFailure {"
+          ]
+        },
+        {
+          "old_start": 89,
+          "old_count": 1,
+          "new_start": 106,
+          "new_count": 2,
+          "before": [
+            "            return new JSONObject().put(\"current\",true).put(\"retire_visual\",claim.visuallyRetired||record.getBoolean(\"card_dismissed\")||acknowledged)"
+          ],
+          "after": [
+            "            return new JSONObject().put(\"current\",true).put(\"freshness\",freshness(claim.presentation.payload,observation).name())",
+            "                .put(\"retire_visual\",claim.visuallyRetired||record.getBoolean(\"card_dismissed\")||acknowledged)"
+          ]
+        }
+      ],
+      "origin": {
+        "kind": "visible_card_classification",
+        "base": "ea95155b8ba43354d4cfeea8a37b3d58799236e3"
+      }
+    },
+    {
+      "name": "NativeProviderRuntimeOwner.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "prior_sha256": "77306009289e5142fd5b384995330b0397057cda60f88a452abcc3ffc82c78af",
+      "current_sha256": "f1bf536871077e0f3040956f649fc76a1225ffee714f9e5245a00a7ba739c284",
+      "hunks": [
+        {
+          "old_start": 113,
+          "old_count": 1,
+          "new_start": 113,
+          "new_count": 11,
+          "before": [
+            "        synchronized(engine){synchronized(coordinator){return claims.state(requireMirror(plugin,id).claimsOwner,currentLocked().principal,claim);}}"
+          ],
+          "after": [
+            "        synchronized(engine){synchronized(coordinator){",
+            "            NativeProviderMirrorAttachment attached=requireMirror(plugin,id);claims.requireClaim(attached.claimsOwner,claim);",
+            "            requireDelivery();NativeProviderAuthority.Current current=reconcileLocked();",
+            "            if(current.principal==null){",
+            "                if(\"EMPTY\".equals(current.phase)||\"REMOVAL_REQUESTED\".equals(current.phase)||\"REMOVAL_TOMBSTONE\".equals(current.phase))",
+            "                    return NativeProviderClaims.retiredState();",
+            "                throw new VaultFailure(\"custodial_provider_waiting_native_principal\");",
+            "            }",
+            "            if(mirror!=attached)return NativeProviderClaims.retiredState(); // Existing exact native principal/revision fence.",
+            "            return claims.state(attached.claimsOwner,current.principal,claim,clock.observe());",
+            "        }}"
+          ]
+        }
+      ],
+      "origin": {
+        "kind": "visible_card_classification",
+        "base": "ea95155b8ba43354d4cfeea8a37b3d58799236e3"
+      }
+    },
+    {
+      "name": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+      "path": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+      "prior_sha256": "2445c82267828445f812f69b55376ebb48bc20775a487cfc6536bea845d76fe6",
+      "current_sha256": "7dbb8604be8eff53d2a15ff8ba2b630707224ee41e1ae43aa8e884930d6b646b",
+      "hunks": [
+        {
+          "old_start": 61,
+          "old_count": 1,
+          "new_start": 61,
+          "new_count": 1,
+          "before": [
+            "  providerClaimState(options:{attachment_id:string;claim_id:string}): Promise<{current:true;retire_visual:boolean;stop_audio:boolean;navigation_pending:boolean}>;"
+          ],
+          "after": [
+            "  providerClaimState(options:{attachment_id:string;claim_id:string}): Promise<{current:boolean;freshness:'CURRENT'|'HISTORICAL_EXPIRED'|'FRESHNESS_UNAVAILABLE'|'RETIRED';retire_visual:boolean;stop_audio:boolean;navigation_pending:boolean}>;"
+          ]
+        }
+      ],
+      "origin": {
+        "kind": "visible_card_classification",
+        "base": "ea95155b8ba43354d4cfeea8a37b3d58799236e3"
+      }
+    },
+    {
+      "name": "mobile/src/custodial/provider-mirror.js",
+      "path": "mobile/src/custodial/provider-mirror.js",
+      "prior_sha256": "240e3fc7175147c4c4ad8fafa535a4ef523c851038cb7dd5f4527d1ee84279d4",
+      "current_sha256": "7585860b04cdcba3d21f09bc3b10083743f5aaa042cea076fe7f608e54d93439",
+      "hunks": [
+        {
+          "old_start": 24,
+          "old_count": 1,
+          "new_start": 24,
+          "new_count": 2,
+          "before": [
+            "    const entry={value,alive:true,rendered:false,visualRetired:false,audioStarting:false,audioStarted:false,audioDone:!value.play_audio,remove:null,open:null};"
+          ],
+          "after": [
+            "    const entry={value,alive:true,rendered:false,visualRetired:false,audioStarting:false,audioStarted:false,audioDone:!value.play_audio,remove:null,open:null,",
+            "      status:{freshness:'FRESHNESS_UNAVAILABLE',navigation_pending:false,stop_audio:false},updateState:null};"
+          ]
+        },
+        {
+          "old_start": 29,
+          "old_count": 1,
+          "new_start": 30,
+          "new_count": 9,
+          "before": [
+            "      try{await bridge.apply(id,value.claim_id,kind);return live();}catch{return false;}"
+          ],
+          "after": [
+            "      // UI eligibility never grants an action: native Journal rechecks fresh",
+            "      // authority, or returns the exact already-durable original event.",
+            "      if(kind==='opened'&&entry.status.freshness!=='CURRENT'&&!entry.status.navigation_pending)return false;",
+            "      if(kind==='acknowledged'&&entry.status.freshness!=='CURRENT'&&!entry.status.stop_audio)return false;",
+            "      try{await bridge.apply(id,value.claim_id,kind);if(!live())return false;",
+            "        if(kind==='opened')entry.status={...entry.status,navigation_pending:true};",
+            "        if(kind==='acknowledged')entry.status={...entry.status,stop_audio:true};",
+            "        entry.updateState?.(action.presentationState());return true;",
+            "      }catch{return false;}"
+          ]
+        },
+        {
+          "old_start": 32,
+          "old_count": 0,
+          "new_start": 42,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "    action.presentationState=()=>Object.freeze({freshness:entry.status.freshness,navigation_pending:entry.status.navigation_pending});",
+            "    action.onState=update=>{if(typeof update!=='function')throw new Error('Exact mirror state observer required.');entry.updateState=update;update(action.presentationState());};"
+          ]
+        },
+        {
+          "old_start": 67,
+          "old_count": 0,
+          "new_start": 79,
+          "new_count": 5,
+          "before": [],
+          "after": [
+            "    entry.status=status;entry.updateState?.(entry.action.presentationState());",
+            "    if(status.freshness==='RETIRED'){",
+            "      entry.alive=false;entry.remove?.({stopAudio:true});await renderer.stopAndReadback(entry.action);",
+            "      entries.delete(value.claim_id);throw new Error('Native claim definitively retired.');",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 82,
+          "old_count": 0,
+          "new_start": 99,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "      // Reclassification is not a new historical restoration exception. Only",
+            "      // accepted original pending navigation survives absent fresh authority.",
+            "      if(status.freshness!=='CURRENT'&&!status.navigation_pending)return false;"
+          ]
+        },
+        {
+          "old_start": 86,
+          "old_count": 1,
+          "new_start": 105,
+          "new_count": 1,
+          "before": [
+            "      try{if(!value.historical)await bridge.apply(id,value.claim_id,'displayed');entry.resolveDisplay(true);}"
+          ],
+          "after": [
+            "      try{if(!value.historical&&status.freshness==='CURRENT')await bridge.apply(id,value.claim_id,'displayed');entry.resolveDisplay(true);}"
+          ]
+        }
+      ],
+      "origin": {
+        "kind": "visible_card_classification",
+        "base": "ea95155b8ba43354d4cfeea8a37b3d58799236e3"
+      }
+    },
+    {
+      "name": "mobile/src/custodial/provider-mirror-bridge.js",
+      "path": "mobile/src/custodial/provider-mirror-bridge.js",
+      "prior_sha256": "be0a742e1b74cb87532435af48a17aaea4d01ae8c8a40050acb92e32511711e2",
+      "current_sha256": "13aec5acb97791fd0b714f379616197c4dba9ee856c228822e8a4310c41c2bde",
+      "hunks": [
+        {
+          "old_start": 43,
+          "old_count": 2,
+          "new_start": 43,
+          "new_count": 4,
+          "before": [
+            "      if(!exact(value,['current','retire_visual','stop_audio','navigation_pending'])||value.current!==true",
+            "        ||['retire_visual','stop_audio','navigation_pending'].some(field=>typeof value[field]!=='boolean'))throw failure();return Object.freeze({...value});"
+          ],
+          "after": [
+            "      if(!exact(value,['current','freshness','retire_visual','stop_audio','navigation_pending'])",
+            "        ||!['CURRENT','HISTORICAL_EXPIRED','FRESHNESS_UNAVAILABLE','RETIRED'].includes(value.freshness)",
+            "        ||['current','retire_visual','stop_audio','navigation_pending'].some(field=>typeof value[field]!=='boolean')",
+            "        ||(value.freshness==='RETIRED'?value.current||!value.retire_visual||!value.stop_audio||value.navigation_pending:!value.current))throw failure();return Object.freeze({...value});"
+          ]
+        }
+      ],
+      "origin": {
+        "kind": "visible_card_classification",
+        "base": "ea95155b8ba43354d4cfeea8a37b3d58799236e3"
+      }
+    },
+    {
+      "name": "memphis-device-reminders.js",
+      "path": "memphis-device-reminders.js",
+      "prior_sha256": "236740c16319866242539da3d663606c4d62a365c0d4f14a966140f81ff999c9",
+      "current_sha256": "4f12d3a7cc7e158fe10dad5364c6d447c0f333ffd5d770b079dcf884531fe1df",
+      "hunks": [
+        {
+          "old_start": 994,
+          "old_count": 0,
+          "new_start": 995,
+          "new_count": 17,
+          "before": [],
+          "after": [
+            "    let providerOpening=false,providerDismissing=false,providerAcknowledging=false,providerAcknowledge=null;",
+            "    function refreshProviderView(){",
+            "      if(alert.boundReceiptAction?.providerMirror!==true||state.activeAlert!==alert)return;",
+            "      const observed=alert.boundReceiptAction.presentationState();",
+            "      const prefix=observed.freshness==='CURRENT'?'':observed.freshness==='HISTORICAL_EXPIRED'",
+            "        ?'Expired notice — current responsibility is not confirmed. '",
+            "        :'Notice freshness unavailable — current responsibility is not confirmed. ';",
+            "      // Relabel this existing visual only. Immutable speech text, audio episode,",
+            "      // displayed receipt and original notification identity are untouched.",
+            "      backdrop.querySelector('.mz-reminder-body').textContent=prefix+safeText(alert.body,'You have a new Memphis notification.');",
+            "      backdrop.setAttribute('data-native-freshness',observed.freshness);",
+            "      const busy=providerOpening||providerDismissing||providerAcknowledging;",
+            "      backdrop.querySelector('.mz-reminder-open').disabled=busy||!(observed.freshness==='CURRENT'||observed.navigation_pending);",
+            "      backdrop.querySelector('.mz-reminder-dismiss').disabled=busy;",
+            "      if(providerAcknowledge)providerAcknowledge.disabled=busy||observed.freshness!=='CURRENT';",
+            "    }",
+            ""
+          ]
+        },
+        {
+          "old_start": 1000,
+          "old_count": 0,
+          "new_start": 1018,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      providerOpening=true;"
+          ]
+        },
+        {
+          "old_start": 1008,
+          "old_count": 1,
+          "new_start": 1026,
+          "new_count": 1,
+          "before": [
+            "        else { if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false; }"
+          ],
+          "after": [
+            "        else { providerOpening=false;if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false;refreshProviderView(); }"
+          ]
+        },
+        {
+          "old_start": 1014,
+          "old_count": 1,
+          "new_start": 1032,
+          "new_count": 1,
+          "before": [
+            "        else { if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false; }"
+          ],
+          "after": [
+            "        else { providerOpening=false;if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');} if(dismissButton)dismissButton.disabled=false;refreshProviderView(); }"
+          ]
+        },
+        {
+          "old_start": 1037,
+          "old_count": 0,
+          "new_start": 1056,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      providerDismissing=true;"
+          ]
+        },
+        {
+          "old_start": 1044,
+          "old_count": 0,
+          "new_start": 1064,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        providerDismissing=false;"
+          ]
+        },
+        {
+          "old_start": 1046,
+          "old_count": 0,
+          "new_start": 1067,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        refreshProviderView();"
+          ]
+        },
+        {
+          "old_start": 1065,
+          "old_count": 0,
+          "new_start": 1087,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      providerAcknowledge=acknowledge;"
+          ]
+        },
+        {
+          "old_start": 1067,
+          "old_count": 1,
+          "new_start": 1089,
+          "new_count": 1,
+          "before": [
+            "        if(acknowledge.disabled||state.activeAlert!==alert||!alertCurrent(alert))return;acknowledge.disabled=true;"
+          ],
+          "after": [
+            "        if(acknowledge.disabled||state.activeAlert!==alert||!alertCurrent(alert))return;providerAcknowledging=true;acknowledge.disabled=true;"
+          ]
+        },
+        {
+          "old_start": 1070,
+          "old_count": 1,
+          "new_start": 1092,
+          "new_count": 1,
+          "before": [
+            "        if(saved===true)closeActiveAlert({stopSpeech:true});else acknowledge.disabled=false;"
+          ],
+          "after": [
+            "        if(saved===true)closeActiveAlert({stopSpeech:true});else{providerAcknowledging=false;acknowledge.disabled=false;refreshProviderView();}"
+          ]
+        },
+        {
+          "old_start": 1072,
+          "old_count": 0,
+          "new_start": 1095,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      alert.boundReceiptAction.onState(refreshProviderView);"
+          ]
+        },
+        {
+          "old_start": 1083,
+          "old_count": 2,
+          "new_start": 1106,
+          "new_count": 1,
+          "before": [
+            "    const body=(boundReceiptAction?.providerMirror===true&&boundReceiptAction.historical===true?'Earlier admitted notice — current responsibility is not confirmed. ':'')",
+            "      +safeText(notification.body,'Please check your schedule.');"
+          ],
+          "after": [
+            "    const body=safeText(notification.body,'Please check your schedule.');"
+          ]
+        }
+      ],
+      "origin": {
+        "kind": "visible_card_classification",
+        "base": "ea95155b8ba43354d4cfeea8a37b3d58799236e3"
+      }
+    },
+    {
+      "name": "mobile/src/custodial/bridge.js",
+      "path": "mobile/src/custodial/bridge.js",
+      "prior_sha256": "429c336d07a481b9b548cf432e6fd1917ec24715d15b76fb9d1c9d8770b680f3",
+      "current_sha256": "04195aaf8c725da5fba681e3e1604bf1b3941e256c4f30dd831a5218b1179188",
+      "hunks": [
+        {
+          "old_start": 2186,
+          "old_count": 0,
+          "new_start": 2187,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "    // Invoking a Capacitor proxy can construct its web implementation before",
+            "    // the awaited method settles. Never instantiate native notification plugins",
+            "    // on an incapable platform; retain the shared browser recovery below.",
+            "    if (notificationPresentation.snapshot().capable) {"
+          ]
+        },
+        {
+          "old_start": 2212,
+          "old_count": 0,
+          "new_start": 2217,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    }"
+          ]
+        }
+      ],
+      "origin": {
+        "kind": "inherited_capability_d743",
+        "base": "5749155796d4348368bf6608f39cba39de3ffb01",
+        "commit": "d743857db917f881f2e80523320c3bc02358144e",
+        "no_product_edit_in_classification": true
+      }
+    }
+  ]
+}

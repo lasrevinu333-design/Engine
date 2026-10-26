@@ -2,6 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import {
   access,
   copyFile,
@@ -9,14 +10,21 @@ import {
   mkdir,
   readFile,
   readdir,
+  realpath,
   writeFile,
 } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   inspectCustodialCapacitorRuntime,
+  parseDeterministicJson,
 } from './custodial-capacitor-runtime-policy.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import {readReviewedProviderRelease,configureProviderManifest} from './custodial-provider-release-policy.mjs';
+import {readCustodialBuildScope,isCleaningScope,prepareNewProducerScopeSources,configureCleaningScopeManifest,scopeBuildRecord} from './custodial-new-producer-scope-policy.mjs';
+import { inspectForwardTransitionSourceAdmission } from './custodial-forward-transition-admission-adapter.mjs';
+import {resolveCustodialForwardEvidenceFiles} from './provision-custodial-forward-build-inputs.mjs';
+import {prepareCustodialNotificationWriterSources,injectCustodialNotificationWriterOverlay} from './custodial-local-notification-writers.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const mobileRoot = resolve(dirname(scriptPath), '..');
@@ -44,7 +52,7 @@ const editions = {
     appIdentifier: 'org.memphiszoo.ops',
     androidVerificationMetadataSha256: '8c6aef56d60cadd1f20b094f4a383f8c81e2b6100529f8bacd0beb1d918c0d7d',
     swiftPins: {
-      'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
+      'capacitor-swift-pm': ['8.4.3', '89e0d8ec2321025f549ddb19259a717467943b97'],
       'firebase-ios-sdk': ['12.7.0', '45210bd1ea695779e6de016ab00fea8c0b7eb2ef'],
       googledatatransport: ['10.1.0', '617af071af9aa1d6a091d59a202910ac482128f9'],
       googleutilities: ['8.1.0', '60da361632d0de02786f709bdc0c4df340f7613e'],
@@ -61,7 +69,7 @@ const editions = {
     appIdentifier: 'org.memphiszoo.viewer',
     androidVerificationMetadataSha256: '01ee0a4e6d388e9f3abc34ff92be969c8891baa6def3b9666481de6933c10044',
     swiftPins: {
-      'capacitor-swift-pm': ['8.4.2', '9b9fb0af76b2b653f6e9b999f658adc132b9ab4c'],
+      'capacitor-swift-pm': ['8.4.3', '89e0d8ec2321025f549ddb19259a717467943b97'],
     },
   },
 };
@@ -271,6 +279,96 @@ export function loadCustodialRollbackBaseline(policy, baselineBytes = null) {
 }
 
 export const CUSTODIAL_ANDROID_RELEASE_POLICY = loadCustodialAndroidReleasePolicy();
+
+// The digest is supplied separately by the release owner, never read from the
+// input record. This is explicit build preparation, not device/fleet admission.
+const reviewedForwardBuilds = new WeakSet();
+const forwardFlagNames = ['--forward-source-input', '--forward-trusted-pins', '--forward-trusted-pins-sha256', '--forward-role'];
+
+export function parseForwardBuildArguments(args) {
+  if (!args.length) return null;
+  const flags = {};
+  for (let i = 0; i < args.length; i += 2) {
+    const name = args[i]; const value = args[i + 1];
+    if (!forwardFlagNames.includes(name) || !value || value.startsWith('--') || Object.hasOwn(flags, name)) throw new Error(`Unknown, repeated or incomplete forward build argument: ${name}`);
+    flags[name] = value;
+  }
+  if (forwardFlagNames.some((name) => !Object.hasOwn(flags, name))) throw new Error('Forward build requires source input, trusted pins, an independently reviewed SHA-256, and candidate/recovery role');
+  if (!/^[a-f0-9]{64}$/.test(flags['--forward-trusted-pins-sha256'])) throw new Error('Forward trusted-pins SHA-256 is invalid');
+  if (!['candidate', 'recovery'].includes(flags['--forward-role'])) throw new Error('Forward build role must be candidate or recovery');
+  return flags;
+}
+
+function freezeForwardBuild(value) {
+  if (value && typeof value === 'object') { for (const child of Object.values(value)) freezeForwardBuild(child); Object.freeze(value); }
+  return value;
+}
+
+async function readReviewedForwardBuildInputs(flags, { buildNumber } = {}) {
+  if (!flags) return null;
+  // Validate callers of the exported loader just as strictly as CLI callers.
+  flags = parseForwardBuildArguments(Object.entries(flags).flat());
+  const inputPath = flags['--forward-source-input']; const pinsPath = flags['--forward-trusted-pins'];
+  if (inputPath === pinsPath) throw new Error('Forward source input and reviewed pins must be distinct');
+  const pinsEnvelope = parseDeterministicJson(await readForwardSourceBytes(pinsPath, 'Reviewed forward pins', flags['--forward-trusted-pins-sha256']), 'Reviewed forward pins');
+  const inputEnvelope = parseDeterministicJson(await readForwardSourceBytes(inputPath, 'Forward build source input'), 'Forward build source input');
+  if (Object.keys(inputEnvelope).sort().join(',') !== ['schema_version','kind','source_only','activation','adapter_input'].sort().join(',') || inputEnvelope.schema_version !== 1 || inputEnvelope.kind !== 'custodial.forward-source-admission-input.v1' || inputEnvelope.source_only !== true || inputEnvelope.activation !== false) throw new Error('Forward build input must use the inactive G30 envelope');
+  if (Object.keys(pinsEnvelope).sort().join(',') !== ['schema_version','kind','external_trusted_pins','evidence_files'].sort().join(',') || pinsEnvelope.schema_version !== 1 || pinsEnvelope.kind !== 'custodial.forward-build-reviewed-pins.v1') throw new Error('Forward build requires the reviewed G30 build pins envelope');
+  const input = inputEnvelope.adapter_input; const pins = pinsEnvelope.external_trusted_pins;
+  const inspection = inspectForwardTransitionSourceAdmission(input, pins);
+  if (!inspection.accepted || input.purpose !== 'build_preparation') throw new Error(`Forward build contract rejected: ${inspection.reason}`);
+  if (pins.package_name !== CUSTODIAL_ANDROID_RELEASE_POLICY.package_name || pins.signer_certificate_sha256 !== CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_signer_sha256 || pins.signer_public_key_sha256 !== CUSTODIAL_ANDROID_RELEASE_POLICY.fleet_signer_public_key_sha256) throw new Error('Forward build signer/package differs from the public fleet pins');
+  for (const key of ['highest_fleet_version_code','minimum_next_version_code','maximum_candidate_version_code_for_staged_recovery']) if (pins.legacy_policy[key] !== CUSTODIAL_ANDROID_RELEASE_POLICY[key]) throw new Error('Forward build cannot replace the legacy fleet policy');
+  const evidence = pinsEnvelope.evidence_files;
+  const stores = ['enrollment', 'protected_pending', 'history', 'crypto'];
+  if (!evidence || Object.keys(evidence).sort().join(',') !== [...Object.keys(pins.evidence_refs), ...stores].sort().join(',')) throw new Error('Forward build requires all reviewed baseline/source/retained-plan and per-store evidence files');
+  const evidencePaths = resolveCustodialForwardEvidenceFiles(pinsPath, evidence);
+  for (const [name, path] of Object.entries(evidencePaths)) {
+    const expectedHash = pins.evidence_refs[name] ?? pins.retained_store_compatibility[name].provenance_sha256;
+    const bytes = await readForwardSourceBytes(path, name, expectedHash);
+    if (name === 'retained_data_plan_sha256' && JSON.stringify(parseDeterministicJson(bytes, 'Reviewed retained-data plan')) !== JSON.stringify(pins.retained_store_compatibility)) throw new Error('Retained-data plan bytes differ from the exact reviewed compatibility record');
+  }
+  const role = flags['--forward-role']; const descriptor = pins[role];
+  if (buildNumber !== undefined && buildNumber !== descriptor.version_code) throw new Error('Forward build number differs from the exact reviewed role');
+  if (pins.candidate.source.ref !== 'refs/heads/main' || pins.recovery.source.ref === pins.candidate.source.ref || !pins.recovery.source.ref.startsWith('refs/heads/')) throw new Error('Forward candidate must use protected main and recovery a distinct reviewed branch');
+  if (pins.retained_store_compatibility.source_pair.frontend_commit !== pins.candidate.source.commit || pins.retained_store_compatibility.source_pair.frontend_tree !== pins.candidate.source.tree) throw new Error('Retained-data compatibility plan is bound to another candidate source');
+  return freezeForwardBuild({ input, pins, role, descriptor, trusted_pins_sha256: flags['--forward-trusted-pins-sha256'] });
+}
+
+// Source selection is not an acceptance context. It supplies only the exact
+// independently hash-pinned ref to the normal private checkout preparation;
+// the existing loader must subsequently observe that checkout and mint its
+// private brand before any verifier may use it.
+export async function readReviewedForwardBuildSourceSelection(flags) {
+  const declared = await readReviewedForwardBuildInputs(flags);
+  if (declared === null) return null;
+  return freezeForwardBuild({ ...declared.descriptor.source, version_code: declared.descriptor.version_code, artifact_sha256: declared.descriptor.artifact_sha256, runtime_sha256: declared.descriptor.runtime_sha256 });
+}
+
+export async function loadReviewedForwardBuild(flags, { buildNumber, repositoryDirectory = repositoryRoot } = {}) {
+  if (!flags) return null;
+  const context = await readReviewedForwardBuildInputs(flags, { buildNumber });
+  const { input, pins, role, descriptor } = context;
+  if (buildNumber !== descriptor.version_code) throw new Error('Forward build number differs from the exact reviewed role');
+  const git = (args) => { const result = spawnSync('git', ['-C', repositoryDirectory, ...args], { encoding: 'utf8', timeout: 10000, maxBuffer: 1024 * 1024 }); if (result.status !== 0 || result.error) throw new Error(`Unable to inspect forward build source: ${result.error?.code ?? String(result.stderr).trim()}`); return result.stdout.trim(); };
+  const commit = git(['rev-parse','HEAD']); const tree = git(['rev-parse','HEAD^{tree}']); const ref = git(['symbolic-ref','HEAD']);
+  if (commit !== descriptor.source.commit || tree !== descriptor.source.tree || ref !== descriptor.source.ref || git(['status','--porcelain=v1','--untracked-files=all'])) throw new Error('Forward build requires the exact clean reviewed source commit/tree/ref');
+  if (sha256(await readFile(join(repositoryDirectory,'mobile/scripts/custodial-android-release-acceptance.schema.json'))) !== descriptor.schema_sha256 || custodialNativeVaultSourceDigest(join(repositoryDirectory,'mobile/plugins/custodial-native-vault')) !== descriptor.native_sha256) throw new Error('Forward build schema or native source differs from reviewed pins');
+  reviewedForwardBuilds.add(context);
+  return context;
+}
+
+export function assertReviewedForwardBuild(context, { buildNumber, sourceCommit, sourceTree, sourceRef } = {}) {
+  if (!reviewedForwardBuilds.has(context)) throw new Error('Forward build context was not loaded from independently pinned reviewed bytes');
+  const d = context.descriptor;
+  if (buildNumber !== d.version_code || (sourceCommit !== undefined && sourceCommit !== d.source.commit) || (sourceTree !== undefined && sourceTree !== d.source.tree) || (sourceRef !== undefined && sourceRef !== d.source.ref)) throw new Error('Forward build facts differ from the reviewed role/source');
+  return d;
+}
+
+export function forwardBuildProvenance(context) {
+  assertReviewedForwardBuild(context, { buildNumber: context.descriptor.version_code });
+  return { target_id: context.input.target_id, policy_generation: context.input.policy_generation, trusted_pins_sha256: context.trusted_pins_sha256, role: context.role, installed_version_code: context.pins.installed_target.version_code, candidate_version_code: context.pins.candidate.version_code, recovery_version_code: context.pins.recovery.version_code, source_ref: context.descriptor.source.ref, fleet_promotion: false, installation_admitted: false, physical_verified: false };
+}
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -707,7 +805,12 @@ async function configureAndroid({
   releaseVersion,
   environment,
   signing,
+  forwardBuild = null,
 }) {
+  if (forwardBuild) {
+    if (edition !== 'custodial') throw new Error('Forward build is restricted to Custodial Android');
+    assertReviewedForwardBuild(forwardBuild, { buildNumber: build.numeric });
+  }
   if (signing) {
     for (const name of [
       'CM_KEYSTORE_PATH',
@@ -729,12 +832,20 @@ async function configureAndroid({
     1,
     'Android application identifier',
   );
-  const configured = injectAndroidOverlay(source, { includeSigning: signing });
+  const ordinaryConfigured = injectAndroidOverlay(source, { includeSigning: signing });
+  const newProducerScope=edition==='custodial'?readCustodialBuildScope(mobileRoot):null;
+  if(edition==='custodial'&&isCleaningScope(newProducerScope)&&signing!==true)throw Error('Cleaning-first scope requires signed configuration');
+  const scopeSource=edition==='custodial'?await prepareNewProducerScopeSources({repositoryRoot,mobileRoot,ticket:newProducerScope}):null;
+  const notificationWriterSource = edition === 'custodial'
+    ? await prepareCustodialNotificationWriterSources({repositoryRoot,mobileRoot,scopeTicket:newProducerScope}) : null;
+  const configured = edition === 'custodial'
+    ? injectCustodialNotificationWriterOverlay(ordinaryConfigured) : ordinaryConfigured;
   await writeFile(buildGradlePath, configured);
   const wrapper = await configureAndroidWrapper(edition);
   const keystoreDigest = signing ? sha256(await readFile(environment.CM_KEYSTORE_PATH)) : null;
   const embeddedBuild = JSON.parse(await readFile(join(mobileRoot, 'mobile-dist', 'build.json'), 'utf8'));
   const expectedSourceCommit = String(environment.CM_COMMIT || environment.MZ_SOURCE_COMMIT || '').trim().toLowerCase();
+  if (forwardBuild) assertReviewedForwardBuild(forwardBuild, { buildNumber: build.numeric, sourceCommit: embeddedBuild.source_commit, sourceTree: embeddedBuild.source_tree });
   if (edition === 'custodial' && signing && (
     embeddedBuild.source_commit_exact !== true
     || !expectedSourceCommit
@@ -767,6 +878,25 @@ async function configureAndroid({
       pluginManifestBytes: generatedPluginsBytes,
       capacitorConfigBytes: generatedConfigBytes,
     });
+    // No environment activation switch: both compiled Java and this branch use
+    // the exact reviewed source record. Empty inputs preserve debug ownership,
+    // while a qualified signed release refuses absent qualification.
+    const appManifestPath = join(mobileRoot,'android','app','src','main','AndroidManifest.xml');
+    const appManifest = await readFile(appManifestPath,'utf8');
+    let providerManifest;
+    if(isCleaningScope(newProducerScope)){
+      if(signing!==true)throw Error('Cleaning-first scope requires signed configuration');
+      if(JSON.stringify(embeddedBuild.cleaning_first_scope)!==JSON.stringify(scopeBuildRecord(newProducerScope,await readFile(join(mobileRoot,'mobile-dist','memphis-custodial-bridge.js')))))throw Error('Embedded JS scope differs from current Source');
+      if(/minifyEnabled\s+(?:true|=\s*true)/.test(source))throw Error('Scoped DEX proof requires non-shrunk exact modules');
+      providerManifest=configureCleaningScopeManifest(appManifest,newProducerScope);
+    }else{
+      if(appManifest.includes('org.memphiszoo.custodial.NEW_PRODUCER_SCOPE'))throw Error('Full-system manifest cannot retain a cleaning scope marker');
+      const providerRelease = readReviewedProviderRelease(join(mobileRoot,'plugins','custodial-native-vault'), {
+        versionCode: build.numeric, versionName: releaseVersion, required: signing,
+      });
+      providerManifest=configureProviderManifest(appManifest,providerRelease);
+    }
+    if (providerManifest !== appManifest) await writeFile(appManifestPath,providerManifest);
   }
   await writeProvenance(edition, 'android', {
     schema_version: 1,
@@ -779,9 +909,12 @@ async function configureAndroid({
     source_commit: embeddedBuild.source_commit || null,
     source_tree: embeddedBuild.source_tree || null,
     source_commit_exact: embeddedBuild.source_commit_exact === true,
+    ...(forwardBuild ? { forward_transition: forwardBuildProvenance(forwardBuild) } : {}),
     signing_configured: signing,
     signing_keystore_sha256: keystoreDigest,
     generated_build_gradle_sha256: sha256(configured),
+    custodial_notification_writer_source: notificationWriterSource,
+    custodial_new_producer_scope_source: scopeSource,
     version_overlay_sha256: sha256(await readFile(join(mobileRoot, 'scripts', 'native-version.gradle'))),
     release_overlay_sha256: sha256(await readFile(join(mobileRoot, 'scripts', 'codemagic-release.gradle'))),
     gradle_wrapper_properties_sha256: sha256(wrapper.bytes),
@@ -862,14 +995,93 @@ async function configureIos({ edition, definition, build, releaseVersion, enviro
   });
 }
 
+function exactObjectKeys(value, keys, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  const unknown = Object.keys(value).filter((key) => !keys.includes(key));
+  if (unknown.length) throw new Error(`${label} contains unsupported field ${unknown[0]}`);
+}
+
+export function parseForwardSourceArguments(args) {
+  if (args.length !== 4 || args[0] !== '--source-input' || args[2] !== '--trusted-pins') {
+    throw new Error(
+      'Usage: node scripts/configure-native-release.mjs forward-source --source-input <absolute-json> --trusted-pins <absolute-json>',
+    );
+  }
+  for (const [index, path] of [[1, args[1]], [3, args[3]]]) {
+    if (!path || !path.startsWith('/') || resolve(path) !== path) {
+      throw new Error(`Forward source input ${index === 1 ? 'source' : 'trusted-pins'} path must be canonical absolute`);
+    }
+  }
+  if (args[1] === args[3]) throw new Error('Forward source input and trusted-pins files must be distinct');
+  return { sourceInputPath: args[1], trustedPinsPath: args[3] };
+}
+
+async function readForwardSourceBytes(path, label, expectedHash = null) {
+  if (typeof path !== 'string' || !path.startsWith('/') || resolve(path) !== path) throw new Error(`${label} must be a canonical absolute file`);
+  const metadata = await lstat(path).catch(() => null);
+  if (!metadata || !metadata.isFile() || metadata.isSymbolicLink()) {
+    throw new Error(`${label} must be an existing regular non-symlink file`);
+  }
+  if (await realpath(path) !== path) throw new Error(`${label} must resolve to itself without symlink indirection`);
+  if (metadata.size > 4 * 1024 * 1024) throw new Error(`${label} exceeds the bounded reviewed input size`);
+  const bytes = await readFile(path);
+  if (expectedHash !== null && sha256(bytes) !== expectedHash) throw new Error(`${label} bytes differ from the independent reviewed pin`);
+  return bytes;
+}
+
+async function readForwardSourceJson(path, label, expectedHash = null) {
+  return JSON.parse(await readForwardSourceBytes(path, label, expectedHash));
+}
+
+export async function runForwardSourceAdmission(args) {
+  const { sourceInputPath, trustedPinsPath } = parseForwardSourceArguments(args);
+  const sourceEnvelope = await readForwardSourceJson(sourceInputPath, 'Forward source input');
+  const trustedEnvelope = await readForwardSourceJson(trustedPinsPath, 'Forward trusted-pins input');
+  exactObjectKeys(sourceEnvelope, ['schema_version', 'kind', 'source_only', 'activation', 'adapter_input'], 'Forward source input');
+  exactObjectKeys(trustedEnvelope, ['schema_version', 'kind', 'external_trusted_pins'], 'Forward trusted-pins input');
+  if (
+    sourceEnvelope.schema_version !== 1
+    || sourceEnvelope.kind !== 'custodial.forward-source-admission-input.v1'
+    || sourceEnvelope.source_only !== true
+    || sourceEnvelope.activation !== false
+  ) throw new Error('Forward source input must be the exact inactive source-only envelope');
+  if (
+    trustedEnvelope.schema_version !== 1
+    || trustedEnvelope.kind !== 'custodial.forward-source-trusted-pins.v1'
+  ) throw new Error('Forward trusted-pins input must be the exact trusted-pins envelope');
+  const adapter = await import('./custodial-forward-transition-admission-adapter.mjs');
+  const result = adapter.inspectForwardTransitionSourceAdmission(
+    sourceEnvelope.adapter_input,
+    trustedEnvelope.external_trusted_pins,
+  );
+  console.log(JSON.stringify({
+    entrypoint: adapter.FORWARD_TRANSITION_ADMISSION_ENTRYPOINT_CONTRACT,
+    source_input_path: sourceInputPath,
+    trusted_pins_path: trustedPinsPath,
+    result,
+  }, null, 2));
+  if (!result.accepted) process.exitCode = 1;
+}
+
 async function main() {
   const platform = String(process.argv[2] || '').trim().toLowerCase();
+  // G30 SOURCE-ONLY BRANCH START: this must remain before edition, build,
+  // signing, environment, policy activation, and every write-capable path.
+  if (platform === 'forward-source') {
+    await runForwardSourceAdmission(process.argv.slice(3));
+    return;
+  }
+  // G30 SOURCE-ONLY BRANCH END
   if (!['android', 'android-version', 'android-wrapper', 'ios'].includes(platform)) {
     throw new Error('Usage: node scripts/configure-native-release.mjs <android|android-version|android-wrapper|ios>');
   }
   const edition = String(process.env.MZ_APP_EDITION || '').trim().toLowerCase();
   const definition = editions[edition];
   if (!definition) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  const forwardFlags = parseForwardBuildArguments(process.argv.slice(3));
+  if (forwardFlags && (edition !== 'custodial' || !['android','android-version'].includes(platform))) throw new Error('Forward build context is restricted to Custodial Android');
   if (platform === 'ios' && edition === 'custodial') {
     throw new Error('Custodial is Android-only and cannot be configured for iOS');
   }
@@ -879,9 +1091,10 @@ async function main() {
     return;
   }
   const build = resolveBuildNumber(process.env);
+  const forwardBuild = await loadReviewedForwardBuild(forwardFlags, { buildNumber: build.numeric });
   assertEditionBuildFloor(edition, build.numeric);
   const releaseVersion = resolveReleaseVersion(process.env);
-  const options = { edition, definition, build, releaseVersion, environment: process.env };
+  const options = { edition, definition, build, releaseVersion, environment: process.env, forwardBuild };
   if (platform === 'android') await configureAndroid({ ...options, signing: true });
   else if (platform === 'android-version') await configureAndroid({ ...options, signing: false });
   else await configureIos(options);

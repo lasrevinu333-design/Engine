@@ -4,6 +4,18 @@
   "title": "Memphis Zoo Custodial Codemagic artifact admission",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [{
+    "if": { "properties": { "forward_transition": {} }, "required": ["forward_transition"] },
+    "then": { "properties": { "artifact_source_tree": { "$ref": "#/$defs/commit" } }, "required": ["artifact_source_tree"] },
+    "else": {
+      "properties": {
+        "branch": { "const": "release/custodial-build29-recovery-v56-implementation-20260929" },
+        "commit": { "const": "8979c72d0d4fe98ff46e2d3831bf897165f6cf37" },
+        "version_code": { "const": 56 },
+        "artifact_source_tree": false
+      }
+    }
+  }],
   "required": [
     "schema_id",
     "schema_version",
@@ -44,8 +56,8 @@
     "build_id": { "$ref": "#/$defs/codemagicId" },
     "workflow": { "const": "custodial-android" },
     "status": { "const": "finished" },
-    "branch": { "const": "release/custodial-build29-recovery-v53-implementation-20260918" },
-    "commit": { "const": "6fae503111ef21c40a309913965c3b963043aa01" },
+    "branch": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$" },
+    "commit": { "$ref": "#/$defs/commit" },
     "control_source": {
       "type": "object",
       "additionalProperties": false,
@@ -59,7 +71,25 @@
     "artifact_source_policy_sha256": { "$ref": "#/$defs/sha256" },
     "platform_index": { "type": "integer", "minimum": 23 },
     "finished_at": { "type": "string", "format": "date-time" },
-    "version_code": { "const": 53 },
+    "version_code": { "type": "integer", "minimum": 1, "maximum": 2100000000 },
+    "artifact_source_tree": { "$ref": "#/$defs/commit" },
+    "forward_transition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["target_id", "policy_generation", "trusted_pins_sha256", "role", "installed_version_code", "candidate_version_code", "recovery_version_code", "source_ref", "fleet_promotion", "installation_admitted", "physical_verified"],
+      "properties": {
+        "target_id": { "type": "string", "minLength": 1 },
+        "policy_generation": { "type": "string", "minLength": 1 },
+        "trusted_pins_sha256": { "$ref": "#/$defs/sha256" },
+        "role": { "enum": ["candidate", "recovery"] },
+        "installed_version_code": { "type": "integer", "minimum": 1, "maximum": 2100000000 },
+        "candidate_version_code": { "type": "integer", "minimum": 1, "maximum": 2100000000 },
+        "recovery_version_code": { "type": "integer", "minimum": 1, "maximum": 2100000000 },
+        "source_ref": { "type": "string", "pattern": "^refs/heads/[A-Za-z0-9._/-]+$" },
+        "fleet_promotion": { "const": false },
+        "installation_admitted": { "const": false },
+        "physical_verified": { "const": false }
+      }
+    },
     "apk": {
       "type": "object",
       "additionalProperties": false,

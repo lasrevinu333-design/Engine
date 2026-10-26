@@ -15,7 +15,7 @@ import static org.junit.Assert.*;
 public final class NativeProviderIngressTest {
     static final String NOW = "2026-09-24T17:00:00.123457Z", RETIRE = "2026-09-24T17:00:00.123456Z";
     static NativeProviderJournal.Observation observation(String time, long elapsed, int boot) throws Exception {
-        return new NativeProviderJournal.Observation(time == null ? null : Instant.parse(time), elapsed, boot);
+        return NativeProviderTimeTest.observation(time == null ? null : Instant.parse(time), elapsed, boot);
     }
     static NativeProviderPayload payload(NativeProviderJournal.Prepared prepared) throws Exception {
         return NativeProviderPayloadTest.accept(NativeProviderPayloadTest.lunch(prepared));
