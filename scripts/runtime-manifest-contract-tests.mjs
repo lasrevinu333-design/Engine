@@ -51,15 +51,43 @@ assert.equal(schemaCapture.schema_fingerprint,'b849658718b36165fba18c67855933b4e
 assert.equal(schemaCapture.source_query_sections,26);
 assert.equal(schemaCapture.counts.tables,274);
 assert.equal(schemaCapture.counts.functions,963);
-const CANONICAL_SCHEMA_FINGERPRINT = schemaCapture.schema_fingerprint;
-const PREVIOUS_SCHEMA_FINGERPRINT = 'b496c72630100da8173006aa34886c7868b3ead5bea43e056135df64cf53b4ce';
-const ACTIVE_SCHEMA_TRANSITION = {
+const HISTORICAL_CAPTURE_SCHEMA_FINGERPRINT = schemaCapture.schema_fingerprint;
+const PREVIOUS_SCHEMA_FINGERPRINT = HISTORICAL_CAPTURE_SCHEMA_FINGERPRINT;
+const HISTORICAL_CAPTURE_TRANSITION = {
   "transition_id": "custodial-post293-test-20261025",
   "from_fingerprint": "b496c72630100da8173006aa34886c7868b3ead5bea43e056135df64cf53b4ce",
   "to_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
   "expires_at": "2026-11-01T15:12:05Z"
 };
-assert.deepEqual(schemaCapture.schema_transition,ACTIVE_SCHEMA_TRANSITION);
+assert.deepEqual(schemaCapture.schema_transition,HISTORICAL_CAPTURE_TRANSITION);
+// Current294 TEST evidence is separate from the immutable historical293 capture.
+const currentSchemaCaptureBytes=readFileSync(resolve(root,'scripts/fixtures/current294-schema-capture-binding.json'));
+assert.equal(createHash('sha256').update(currentSchemaCaptureBytes).digest('hex'),'00d5f8dc9e3ff97c366ebe3bd9fadf22bc954550a606c9d995d0d9b22449d586');
+const currentSchemaCapture=JSON.parse(currentSchemaCaptureBytes);
+assert.equal(currentSchemaCapture.schema,'custodial.isolated-test-current294-source-binding.v1');
+assert.equal(currentSchemaCapture.scope,'SAME_EXCLUSIVE_POST294_DATA_TEST_ONLY');
+for(const flag of ['production','production_observation','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(currentSchemaCapture[flag],false);
+assert.equal(currentSchemaCapture.historical293_binding_fixture_preserved_unchanged,true);
+assert.equal(currentSchemaCapture.canonical_migration_count,294);
+assert.equal(currentSchemaCapture.normalized.sha256,'e62f09aca1f4f3c87648c0568695f99325569d8c3681ee22055e867728178bf0');
+assert.equal(currentSchemaCapture.normalized.bytes,6739806);
+assert.equal(currentSchemaCapture.whole_current294_fresh_rebuild_and_committed_CHECK_pass.sha256,'d7396a89cc1e5319e9c204b3d81ed87d48779779b7bdeeca8926604ce633c5e3');
+assert.equal(currentSchemaCapture.forward294_SQL.sha256,'ca79547cd57ef3f8b3436e846bd4ed57581ea17be2d57701c72d1e45646591db');
+assert.equal(currentSchemaCapture.schema_fingerprint,'91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944');
+assert.equal(currentSchemaCapture.counts.tables,274);
+assert.equal(currentSchemaCapture.counts.functions,963);
+const CANONICAL_SCHEMA_FINGERPRINT = currentSchemaCapture.schema_fingerprint;
+const ACTIVE_SCHEMA_TRANSITION = {
+  "transition_id": "custodial-post294-test-20261026",
+  "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+  "to_fingerprint": "91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944",
+  "expires_at": "2026-11-01T15:12:05Z"
+};
+assert.deepEqual(currentSchemaCapture.schema_transition,ACTIVE_SCHEMA_TRANSITION);
+assert.equal(currentSchemaCapture.catalog_generation_preimage_fingerprint,HISTORICAL_CAPTURE_SCHEMA_FINGERPRINT);
+assert.equal(currentSchemaCapture.release_transition_source_declaration.backend_logical_path,'release/target-capture-source/declaration.json');
+assert.equal(currentSchemaCapture.release_transition_source_declaration.full_source.sha256,'94a02df2b422d6e26e999407e9ae7ff1bb369495bffa7a8d0bd6ba8a0ec3fb19');
+assert.equal(currentSchemaCapture.release_transition_source_declaration.observed_catalog_fingerprint,ACTIVE_SCHEMA_TRANSITION.from_fingerprint);
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 
 function createFrontendGitFixture({

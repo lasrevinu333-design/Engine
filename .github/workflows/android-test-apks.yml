@@ -505,7 +505,7 @@ jobs:
         env:
           RELEASE_ATTESTATION_JSON: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_JSON }}
           RELEASE_ATTESTATION_PUBLIC_KEY: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY }}
-          RELEASE_ATTESTATION_KEY_ID: 'memphis-release-recovery-20260928-v1'
+          RELEASE_ATTESTATION_KEY_ID: 'memphis-zoo-release-2026-08-13'
         run: |
           set -euo pipefail
           node scripts/verify-native-status-release-attestation.mjs --resolve
@@ -519,7 +519,7 @@ jobs:
         env:
           RELEASE_ATTESTATION_JSON: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_JSON }}
           RELEASE_ATTESTATION_PUBLIC_KEY: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY }}
-          RELEASE_ATTESTATION_KEY_ID: 'memphis-release-recovery-20260928-v1'
+          RELEASE_ATTESTATION_KEY_ID: 'memphis-zoo-release-2026-08-13'
         run: |
           set -euo pipefail
           node scripts/verify-native-status-release-attestation.mjs --verify-checkout .custodial-backend-status-source

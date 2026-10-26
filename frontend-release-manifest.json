@@ -3,11 +3,11 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "exact-release-pair-input-and-github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
+  "schema_fingerprint": "91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944",
   "schema_transition": {
-    "transition_id": "custodial-post293-test-20261025",
-    "from_fingerprint": "b496c72630100da8173006aa34886c7868b3ead5bea43e056135df64cf53b4ce",
-    "to_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
+    "transition_id": "custodial-post294-test-20261026",
+    "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "to_fingerprint": "91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944",
     "expires_at": "2026-11-01T15:12:05Z"
   },
   "api_contract_versions": {
@@ -96,7 +96,7 @@
     "guest-qr.html": "dedba2bb25d1cc0fee3c374f7615ac8effc80e093a9f41321b236f0b89798f16",
     "guest-report-config.js": "1b1f7668366ea1cffa7eed9c13a381f7cca96ab351c7fb04aa322a78b93e10a4",
     "guest-report.html": "824d313b8664d3c10128af5b7b2a0147c18c7fe68e8f2d3992db9be5f7a65335",
-    "index.html": "1964a1383de90d45e7b04b80bc1800b101625a76965033ab4a0d92a21551ae64",
+    "index.html": "915631b1f5a760e61167f876131cd84a6b64c3da0412e3681380470d818a341d",
     "manager-access.html": "2481f02b84d6d9165b5c4db8bf261c2c013e933b6f9a110cd172da8db5a4d4d7",
     "manager-held-event-correction.mjs": "3aef07faf12bf5582134dfd010ce223d34dc07156d9b8cad8119bc098586c5d1",
     "manager-held-review-display.mjs": "443e5b83a8761d6c65397ffeee84c7f35adb20ebb5ce9d5786eea574ec94924c",
@@ -115,7 +115,7 @@
     "memphis-device-reminders.js": "9d8860ea357db8fe813fc94fb3dd3f73e568dd1b4eca327ff196c72f0afea221",
     "memphis-gps.js": "647c95427c9f507f70d0954d935d24a22a5fff6f2508c6da6e933251aa1d5352",
     "memphis-recurring-schedule-target.js": "c4911c2e825a7e333cf2e80d4b3d453a1965668de011ff1536b503b37bef054d",
-    "memphis-scan-sync.js": "0707e0c629e4719f9b951bdaa5a87f30630edf8c3e2631d4e419d250fd419368",
+    "memphis-scan-sync.js": "fea7759cc00deb8defe40487dd75b1194dbb337b4a6b9c27b046fcb3c46cf5ae",
     "memphis-scheduler-actions.js": "356ec7d6b2e4fdd6a556c0598e9305046a1fcf3a017bafd0b95e6580e960b5b2",
     "memphis-ticket-actions.js": "05ed0cc4509feadbe779afd5c6c22ee70c23a00801aee6b55f20ded8041c6c12",
     "memphis-ui.css": "dce51f36c6a051dcb4e474821bce0f49d53de106f75902ad05eccfff339580ae",

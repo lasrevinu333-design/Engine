@@ -1,0 +1,93 @@
+{
+  "schema": "custodial.isolated-test-current294-source-binding.v1",
+  "scope": "SAME_EXCLUSIVE_POST294_DATA_TEST_ONLY",
+  "schema_fingerprint": "91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944",
+  "canonical_migration_count": 294,
+  "capture_method": "GENUINE_FULL293_BASELINE_THEN_EXACT_FORWARD294_MAINTAINED_CATALOG_PRODUCER_AND_CHECK",
+  "whole_current294_fresh_rebuild_and_committed_CHECK_pass": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/atomic-finalization/Source27-full294-selected-suite-empty-database-rebuild-check-233bcbe03c934b46897827595e88bab8/RESULT.json",
+    "sha256": "d7396a89cc1e5319e9c204b3d81ed87d48779779b7bdeeca8926604ce633c5e3",
+    "bytes": 4791
+  },
+  "Root_complete_fresh_rebuild_readback": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-first-test-renewed-hour-20261025T022330Z/ROOT_CURRENT1102_DEFAULT294_PASS_AND_ONE_NO_AUTO_SUITE_ADMISSION_20261026.json",
+    "sha256": "59cd50e64f3278e1c68d04b016b767360635f7d41dc185b7e2a973a8cb4c8858",
+    "bytes": 1430
+  },
+  "genuine_two_phase_original_result": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/atomic-finalization/Source27-append294-two-phase-catalog-ba67a3afe12d4af1840abe497ee575e5/RESULT.json",
+    "sha256": "4a0a3d8f7d0a28b332ce05909f457033631a1d53f674a8abb1cdf5aebb7cd428",
+    "bytes": 60944
+  },
+  "Root_genuine_catalog_complete_readback": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-first-test-renewed-hour-20261025T022330Z/ROOT_APPEND294_ACTUAL_CAUSAL_PASS_GENUINE_CATALOG_COMPLETE_READBACK_20261026.json",
+    "sha256": "7f1f5243a6810c2804407c6c78ee518e21dea515f73e67649969434a4c30feb4",
+    "bytes": 2741
+  },
+  "normalized": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/atomic-finalization/Source27-append294-two-phase-catalog-ba67a3afe12d4af1840abe497ee575e5/source/supabase/canonical/schema-fingerprint-input.json",
+    "sha256": "e62f09aca1f4f3c87648c0568695f99325569d8c3681ee22055e867728178bf0",
+    "bytes": 6739806
+  },
+  "fingerprint_file": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/atomic-finalization/Source27-append294-two-phase-catalog-ba67a3afe12d4af1840abe497ee575e5/source/supabase/canonical/schema-fingerprint.txt",
+    "sha256": "98b475577833e5b7fb04bfcbd3eabd7fede07d4417141d2340e9c640fd95eac8",
+    "bytes": 65
+  },
+  "forward294_SQL": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/atomic-finalization/Source27-appended294-location-scan-state-qualified-lookup-source01/final02-preserve-current-ALWAYS-inventory-guard/after/supabase/migrations/20261026065000_location_scan_state_qualified_lookup.sql",
+    "sha256": "ca79547cd57ef3f8b3436e846bd4ed57581ea17be2d57701c72d1e45646591db",
+    "bytes": 3443
+  },
+  "counts": {
+    "column_grants": 43,
+    "columns": 2997,
+    "constraints": 1884,
+    "cron_jobs": 9,
+    "default_privileges": 12,
+    "extensions": 8,
+    "functions": 963,
+    "indexes": 917,
+    "owned_scheduler_role_memberships": 3,
+    "owned_scheduler_roles": 3,
+    "policies": 50,
+    "privilege_bearing_roles": 4,
+    "recovery_schema_owners": 1,
+    "role_memberships": 10,
+    "routine_grants": 587,
+    "schema_grants": 11,
+    "sequence_grants": 0,
+    "sequences": 0,
+    "table_grants": 1531,
+    "tables": 274,
+    "triggers": 608,
+    "type_grants": 0,
+    "types": 0,
+    "views": 33
+  },
+  "historical293_binding_fixture_preserved_unchanged": true,
+  "production": false,
+  "production_observation": false,
+  "production_applicability": false,
+  "independent_review": false,
+  "release_admission": false,
+  "frontend_pair_admission": false,
+  "full_program_or_physical_acceptance": false,
+  "schema_transition": {
+    "transition_id": "custodial-post294-test-20261026",
+    "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "to_fingerprint": "91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944",
+    "expires_at": "2026-11-01T15:12:05Z"
+  },
+  "catalog_generation_preimage_fingerprint": "b849658718b36165fba18c67855933b4e131f9cee76cee8d9b3fe91208831548",
+  "release_transition_source_declaration": {
+    "backend_logical_path": "release/target-capture-source/declaration.json",
+    "full_source": {
+      "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-first-test-renewed-hour-20261025T022330Z/current-backend-final-FE-main-pair-749ee9f0706346088992d5a93030e209/private-Source-stage/release/target-capture-source/declaration.json",
+      "sha256": "94a02df2b422d6e26e999407e9ae7ff1bb369495bffa7a8d0bd6ba8a0ec3fb19",
+      "bytes": 2130
+    },
+    "observed_catalog_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "meaning": "Existing source-declared populated production transition origin; not inferred from the fresh293-to294 catalog generation and not a new production observation or target capture."
+  }
+}

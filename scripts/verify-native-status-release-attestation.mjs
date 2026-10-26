@@ -16,6 +16,12 @@ const RELEASE_ATTESTATION_TRUST_ROOT=Object.freeze({
   publicKeySpkiSha256:'a0af17f2aabc006af0a5ea3d80e2ccbab0650c1689f7ed828ec7aeb1075c5190',
 });
 
+const RELEASE_ATTESTATION_TRUST_ROOTS = Object.freeze([
+  RELEASE_ATTESTATION_TRUST_ROOT,
+  Object.freeze({keyId: "memphis-zoo-release-2026-08-13",
+    publicKeySpkiSha256: "094b591c0da0d16549c82210b02285dbe88f80ad5a6305b53285ddb8893b54b7"}),
+]);
+
 function required(name,env=process.env){
   const value=String(env[name]||'').trim();
   assert.ok(value,`${name} is required`);
@@ -26,7 +32,7 @@ function payload(attestation){
   return Object.fromEntries(SIGNED_KEYS.map((key)=>[key,attestation?.[key]]));
 }
 
-export function verifyReleaseAttestation(env=process.env,trustRoot=RELEASE_ATTESTATION_TRUST_ROOT){
+export function verifyReleaseAttestation(env=process.env,trustRoot){
   const attestation=JSON.parse(required('RELEASE_ATTESTATION_JSON',env));
   assert.ok(attestation&&typeof attestation==='object'&&!Array.isArray(attestation),'release attestation must be an object');
   assert.deepEqual(Object.keys(attestation).sort(),ATTESTATION_KEYS,'release attestation has an unexpected shape');
@@ -40,6 +46,8 @@ export function verifyReleaseAttestation(env=process.env,trustRoot=RELEASE_ATTES
   assert.match(String(attestation.schema_fingerprint||''),DIGEST);
   assert.deepEqual(Object.keys(attestation.signature||{}).sort(),['algorithm','key_id','value_base64']);
   assert.equal(attestation.signature.algorithm,'ed25519');
+  if(trustRoot===undefined)trustRoot=RELEASE_ATTESTATION_TRUST_ROOTS.find(root=>root.keyId===attestation.signature.key_id);
+  assert.ok(trustRoot,'release attestation key identity is not a source-pinned trust root');
   assert.equal(required('RELEASE_ATTESTATION_KEY_ID',env),trustRoot.keyId,'configured release attestation key identity is not the source-pinned trust root');
   assert.equal(attestation.signature.key_id,trustRoot.keyId,'release attestation signing key identity is wrong');
   assert.match(String(attestation.signature.value_base64||''),/^[A-Za-z0-9+/]+={0,2}$/);
