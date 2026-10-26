@@ -23,12 +23,12 @@
   "locked_inputs": [
     {
       "path": "package.json",
-      "sha256": "e6831e7a6992f22d515a3e605a44474e6ff46e1697a5a8e1f2e64a5a50798892",
+      "sha256": "3281286c301a1d48abd56e976479760b73499bcb9c756bd6647cf53e465e3e22",
       "bytes": 6263
     },
     {
       "path": "package-lock.json",
-      "sha256": "7d1113d44b8369355b062635c2a3a019b864e728f0bea0aa4ab53ae1355bc4b5",
+      "sha256": "43b684a457387186a05f30c6ebd316b7dc78ead72ad371f634690b4c6974fbee",
       "bytes": 155385
     },
     {

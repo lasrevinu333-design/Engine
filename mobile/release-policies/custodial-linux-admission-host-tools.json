@@ -13,7 +13,7 @@
     "mode_octal": "0755",
     "path": "/usr/bin/git",
     "resolved_path": "/usr/bin/git",
-    "sha256": "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668",
+    "sha256": "eb54b535467e0975c1284d4c4d08eea779aeb248a5d34b02e2ee171382e22201",
     "size_bytes": 4066232,
     "uid": 0,
     "version_stdout": "git version 2.43.0"

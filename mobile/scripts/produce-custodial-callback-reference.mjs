@@ -10,7 +10,7 @@ import {readCustodialBuildScope} from './custodial-new-producer-scope-policy.mjs
 import {resolveCustodialAndroidTools,parseApksignerVerification,parseAaptBadgingPackage} from './verify-custodial-android-release.mjs';
 import {parseDeterministicJson} from './custodial-capacitor-runtime-policy.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
-const POLICY_SHA='6a18ff6ad75c77d1f02c284ef550e2277cfb23171727d85da9d2794f1df6b80b';
+const POLICY_SHA='e95b41af4b132fe21d34744bd4e3f9874eed8f937ca7981d4c4a6fd1d12f9b8f';
 const BOUNDARY_SHA='55e49c6d0003592daf05e405b5eaf4ce4921207dfdabc30bb686f89cc71f514a';
 const hash=b=>createHash('sha256').update(b).digest('hex');
 function die(x){throw new Error('Callback reference producer: '+x);}

@@ -50,7 +50,7 @@ const TEMPORARY_PARENT = '/home/eric/.cache';
 const TEMPORARY_PREFIX = 'memphis-zoo-custodial-admission-bootstrap-';
 const BOOTSTRAP_MARKER_NAME = 'MZ_CUSTODIAL_CODEMAGIC_ADMISSION_BOOTSTRAP';
 const EXPECTED_HOST_TOOLS_MODULE_SHA256 = '1216835897f7a9f5135a813c12443ecfe4e7f092311520f48c84832809d39c95';
-const EXPECTED_HOST_TOOLS_POLICY_SHA256 = '4f39115dc63e66c279c8df59e648e341585c7f414fd7b0052d6704e96c2a46ff';
+const EXPECTED_HOST_TOOLS_POLICY_SHA256 = '3acedc6fc529cfaa871a5b889e2bf340bada6faf3402c823a094e4d0c1c2f83b';
 const snapshotPathspecs = Object.freeze([
   'codemagic.yaml',
   'package.json',
