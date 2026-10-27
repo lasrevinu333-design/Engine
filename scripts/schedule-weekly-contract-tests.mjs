@@ -30,7 +30,8 @@ assert.match(script,/requireSchedulerPermission\('owner'\)/,'permanent roster an
 assert.match(script,/requireSchedulerPermission\('absences'\)/);assert.match(script,/requireSchedulerPermission\('coverall'\)/);assert.match(script,/requireSchedulerPermission\('routes'\)/);
 assert.match(script,/operation:'cover_all'/,'only published contractor capacity is selected');
 assert.match(script,/breakChoice='NONE'/,'no-break arrangement is explicitly selected');
-assert.match(script,/actual one-hour CoverAll lunch/,'no invented contractor lunch');
+assert.match(script,/actual CoverAll lunch start and end/,'actual contractor lunch endpoints are required');
+assert.doesNotMatch(script,/One-hour lunch|minutes\(end\)-minutes\(start\)!==60/,'CoverAll duration is not forced to one hour');
 assert.match(script,/departed_named_absent/,'departed slots remain visible, not deleted');
 assert.match(script,/activeExceptionSlots/,'accepted dated overlays prevent duplicate controls');
 assert.match(script,/exception_type:'reverse'/,'dated changes are reversibly removable');
@@ -56,3 +57,25 @@ const build=read('mobile/scripts/build.mjs');
 for(const file of ['schedule-weekly.html','schedule-weekly.js','memphis-approved-schedule.js','memphis-scheduler-actions.js','memphis-ticket-actions.js'])assert.ok(build.slice(build.indexOf('const custodialProhibitedFiles')).includes(`'${file}'`),file+' must stay out of employee edition');
 assert.match(read('schedule-simple.html'),/<title>/,'historical rollback asset preserved');
 console.log('weekly manager workspace and approved/durable permission contracts: PASS');
+
+// Actual selected normal UI producer: retain actual endpoints, no duration buckets.
+const actualLunchProducer=script.slice(script.indexOf('function dayChangeSelection(){'),script.indexOf('async function applyDayChanges(){'));
+assert.ok(actualLunchProducer.startsWith('function dayChangeSelection(){'));
+let actualLunchChecks=0;
+function selectActualLunch(start,end,choice='SCHEDULED'){
+ const slot='20000000-0000-4000-8000-000000000011',values={'[data-shift-start]':'07:00','[data-shift-end]':'16:00','[data-break-choice]':choice,'[data-lunch-start]':start,'[data-lunch-end]':end};
+ const input={dataset:{contractorSlot:slot},closest:()=>({querySelector:selector=>({value:values[selector]})})};
+ const context={requireSchedulerPermission:()=>{},selectedServiceDate:()=>'2026-10-05',els:{absence_type:{value:'daily_absence'}},
+  document:{querySelectorAll:selector=>selector.startsWith('[data-contractor-slot]')?[input]:[],getElementById:()=>({value:'2026-10-05'})},window:{MemphisSchedulerActions:{staffingWeeks(){}}}};
+ vm.runInNewContext(actualLunchProducer,context);return JSON.parse(JSON.stringify(context.dayChangeSelection()));
+}
+for(const [start,end]of[['11:00','11:01'],['11:00','11:15'],['11:00','11:30'],['11:00','11:37'],['11:00','12:00'],['11:00','12:38'],['11:00','14:39']]){
+ const value=selectActualLunch(start,end);assert.equal(value.operations.length,2);assert.equal(value.operations[0].operation,'cover_all');
+ assert.equal(value.operations[1].starts_at,start);assert.equal(value.operations[1].ends_at,end);assert.equal(value.operations[1].payload.slotId,value.operations[0].slot_id);actualLunchChecks++;
+}
+for(const [start,end]of[['',''],['11:00',''],['','12:00'],['11:00','11:00'],['12:00','11:00'],['06:59','07:30'],['15:30','16:01'],['24:00','25:00'],['11:60','12:30'],['junk','12:00']]){
+ assert.throws(()=>selectActualLunch(start,end),/actual CoverAll lunch start and end/);actualLunchChecks++;
+}
+const noBreak=selectActualLunch('','','NONE');assert.equal(noBreak.operations.length,1);assert.equal(noBreak.operations[0].breakChoice,'NONE');actualLunchChecks++;
+assert.throws(()=>selectActualLunch('11:00','12:00',''),/Choose the actual CoverAll break arrangement/);actualLunchChecks++;
+console.log(JSON.stringify({scope:'ACTUAL_NORMAL_UI_COVERALL_LUNCH_ENDPOINT_PRODUCER',checks:actualLunchChecks,arbitrary_duration_limit:false,SQL:false,browser:false}));

@@ -98,7 +98,11 @@ assert.equal(existsSync(resolve(root, 'employee-schedule-mockup.html')), false, 
 const printController=read('coverall-print.js');
 assert.match(printController,/auth\.requireOpsManagerSession\(\{interactive:false,redirect:true,throwOnFailure:true\}\)/);
 assert.match(printController,/auth\.opsManagerAuthHeaders\(\)/);assert.match(printController,/actions\.same\(owner,actions\.principal\(auth\)\)/);
-assert.match(printController,/method:'GET'/);assert.doesNotMatch(printController,/method:'(?:POST|PUT|PATCH|DELETE)'/);
+assert.match(printController,/method:'GET'/);assert.doesNotMatch(printController,/method:'(?:PUT|PATCH|DELETE)'/);
+assert.equal((printController.match(/method:'POST'/g)||[]).length,1,'only the canonical link transport may POST');
+assert.match(printController,/if\(!\['\/static-weekly\/coverall-links','\/static-weekly\/coverall-links\/revoke'\]\.includes\(path\)\)throw/,'canonical link transport rejects other mutation paths');
+assert.deepEqual([...printController.matchAll(/await postLink\('([^']+)'/g)].map(match=>match[1]).sort(),
+ ['/static-weekly/coverall-links','/static-weekly/coverall-links/revoke'],'only selected capacity issue and exact saved revoke are admitted');
 assert.match(printController,/request\('\/static-weekly\/manager-snapshot\?week_start='\+encodeURIComponent\(week\)\)/,'print uses the actual owning named-manager snapshot');
 assert.match(printController,/\/static-weekly\/coverall-print/);assert.match(printController,/expected_revision:String\(expected\.revision\),projection_id:expected\.projectionId/);
 assert.match(printController,/file\.sha256/);assert.match(printController,/URL\.revokeObjectURL/);

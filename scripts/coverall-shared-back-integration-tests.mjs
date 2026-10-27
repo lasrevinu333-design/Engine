@@ -116,9 +116,9 @@ async function printUntil(predicate){
   for(let i=0;i<500;i++){if(predicate())return;await printTurn();}
   assert.fail('Print lifetime fixture did not reach the selected boundary');
 }
-function printLifetime({pause=null}={}){
+function printLifetime({pause=null,storage=new Map()}={}){
   const trace=[],requests=[],intervals=new Map(),timers=new Map(),windowEvents=new Map(),created=[],revoked=[],hits=[];
-  let nextTimer=0,headers=0,snapshots=0,digests=0,release,releaseError;
+  let nextTimer=0,headers=0,snapshots=0,digests=0,release,releaseError,linkMode='success',nonce=0;
   const pending=new Promise((resolvePending,rejectPending)=>{release=resolvePending;releaseError=rejectPending;});
   let pausedValue;
   async function boundary(stage,value){hits.push(stage);if(stage===pause){pausedValue=value;return pending;}return value;}
@@ -129,8 +129,9 @@ function printLifetime({pause=null}={}){
     replaceChildren(){trace.push(['clear',this.id]);this.children=[];}
     append(value){trace.push(['append',this.id]);this.children.push(value);}
   }
-  const ids=['prepare','date','back','status','downloads','copy-section','copy-text'];
+  const ids=['prepare','date','back','status','downloads','copy-section','copy-text','link-controls','capacity-select','link-hours','create-link','revoke-link','link-status','secure-links'];
   const elements=Object.fromEntries(ids.map(id=>[id,new Element(id)]));
+  elements['link-hours'].value='24';
   const session={role:'ops_manager',manager_id:'98000000-0000-4000-8000-000000000009',
     credential_id:'synthetic-credential',device_id:'synthetic-device',token:'synthetic-not-a-credential',
     expires_at:'2099-01-01T00:00:00.000Z',read_only:false,
@@ -143,7 +144,7 @@ function printLifetime({pause=null}={}){
   const pair={schema:'custodial.coverall-pdf-pair.v1',document:{serviceDate:'2026-10-12',authorityRevision:7,
     projectionId:snapshot.latest_projection.projection_id,publicationId:snapshot.current_publication.publication_id,
     replayDigest:snapshot.latest_projection.replay_digest,managerContact:{managerId:session.manager_id},
-    documentDigest:'a'.repeat(64),contractors:[{name:'Synthetic route'}]},
+    documentDigest:'a'.repeat(64),contractors:[{slotId:'98000000-0000-4000-8000-000000000010',name:'Synthetic route'}]},
     files:['en','es'].map(language=>{const bytes=Buffer.from('%PDF synthetic '+language);return{language,filename:'CoverAll_2026-10-12_r7_'+language+'.pdf',sha256:hash(bytes),base64:bytes.toString('base64')};}),
     texts:[{language:'en-es',documentDigest:'a'.repeat(64),text:texts,sha256:hash(texts)}]};
   const both=Buffer.from('%PDF synthetic en-es');pair.bilingualFile={language:'en-es',filename:'CoverAll_2026-10-12_r7_en-es.pdf',sha256:hash(both),base64:both.toString('base64')};
@@ -152,6 +153,7 @@ function printLifetime({pause=null}={}){
     static revokeObjectURL(url){revoked.push(url);}
   }
   const context=vm.createContext({
+    localStorage:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)},
     document:{getElementById:id=>elements[id],createElement:tag=>new Element(tag)},
     location:{search:'?date=2026-10-12&expected_revision=7&projection_id='+snapshot.latest_projection.projection_id},
     MemphisAuth:{readSession:()=>session,requireOpsManagerSession:()=>boundary('auth',undefined),
@@ -166,10 +168,19 @@ function printLifetime({pause=null}={}){
         value={ok:true,data:snapshot};stage='snapshot-'+(++snapshots);
       }else if(url.startsWith('https://synthetic-service.onrender.com/static-weekly/coverall-print?')){
         value={ok:true,data:pair};stage='files';
+      }else if(url==='https://synthetic-service.onrender.com/static-weekly/coverall-links'){
+        const body=JSON.parse(options.body);if(linkMode==='lost')throw Error('Synthetic original link response lost');
+        value={ok:true,data:{schema:'custodial.coverall-canonical-link.v1',link_id:body.request_id,
+          capacity_id:linkMode==='stale'?'98000000-0000-4000-8000-000000000099':body.capacity_id,
+          service_date:body.service_date,authority_revision:body.expected_revision,projection_id:body.projection_id,
+          expires_at:new Date(Date.now()+body.ttl_hours*3600000-1000).toISOString(),
+          assignment_path:'/static-weekly/coverall-links/assignment?lang=both#access_token='+('A'.repeat(43))}};stage='link-create';
+      }else if(url==='https://synthetic-service.onrender.com/static-weekly/coverall-links/revoke'){
+        const body=JSON.parse(options.body);value={ok:true,data:{link_id:linkMode==='wrong-revoke'?'98000000-0000-4000-8000-000000000099':body.link_id,revoked:true}};stage='link-revoke';
       }else throw Error('Unexpected fixture URL: '+url);
       return boundary(stage,{ok:true,status:200,json:()=>boundary(stage+'-json',value)});
     },
-    crypto:{subtle:{digest:async(algorithm,bytes)=>boundary('digest-'+(++digests),await webcrypto.subtle.digest(algorithm,bytes))}},
+    crypto:{randomUUID:()=> '98000000-0000-4000-8000-'+String(30+(++nonce)).padStart(12,'0'),subtle:{digest:async(algorithm,bytes)=>boundary('digest-'+(++digests),await webcrypto.subtle.digest(algorithm,bytes))}},
     atob:value=>Buffer.from(value,'base64').toString('binary'),URL:FixtureURL,URLSearchParams,TextEncoder,Uint8Array,Blob,AbortSignal,AbortController,
     setInterval:callback=>{const id=++nextTimer;trace.push(['interval',id]);intervals.set(id,callback);return id;},
     clearInterval:id=>intervals.delete(id),
@@ -179,7 +190,8 @@ function printLifetime({pause=null}={}){
   });
   vm.runInContext(read('memphis-scheduler-actions.js'),context,{filename:'memphis-scheduler-actions.js'});
   vm.runInContext(read('coverall-print.js'),context,{filename:'coverall-print.js'});
-  return{trace,requests,intervals,timers,elements,created,revoked,hits,session,pair,snapshot,
+  return{trace,requests,intervals,timers,elements,created,revoked,hits,session,pair,snapshot,storage,
+    setLinkMode:value=>{linkMode=value;},context,
     resume:()=>release(pausedValue),reject:()=>releaseError(Error('Synthetic late authentication failure')),
     retire:()=>{windowEvents.get('pagehide')();windowEvents.delete('pagehide');},
     click:()=>elements.prepare.listeners.get('click')?.(),
@@ -239,4 +251,46 @@ test('NEW print lifetime healthy current owner verifies EN ES bilingual bytes an
   changed.session.credential_id='different-synthetic-credential';changed.resume();
   await printUntil(()=>changed.elements.status.textContent.startsWith('Manager access changed'));
   assert.equal(changed.requests.length,1);assert.equal(changed.created.length,0);assert.equal(changed.elements.prepare.disabled,true);changed.retire();
+});
+
+// New canonical capability uses only the accepted document's explicit slot UUID.
+const linkRequests=h=>h.requests.filter(r=>r.url.endsWith('/static-weekly/coverall-links'));
+const revokeRequests=h=>h.requests.filter(r=>r.url.endsWith('/static-weekly/coverall-links/revoke'));
+async function preparedCapacity(h){await h.ready();h.click();await printUntil(()=>h.elements.downloads.hidden===false);h.elements['capacity-select'].value=h.pair.document.contractors[0].slotId;h.elements['capacity-select'].listeners.get('change')();}
+test('canonical selected-capacity link issues once, binds exact body, keeps token out of recovery storage and preserves PDFs',async()=>{
+ const h=printLifetime();await preparedCapacity(h);assert.equal(h.created.length,3);
+ h.elements['create-link'].listeners.get('click')();await printUntil(()=>h.elements['secure-links'].children.length===3);
+ assert.equal(linkRequests(h).length,1);const body=JSON.parse(linkRequests(h)[0].options.body);
+ assert.deepEqual(Object.keys(body).sort(),['request_id','week_start','service_date','expected_revision','projection_id','capacity_id','ttl_hours'].sort());
+ assert.equal(body.capacity_id,h.pair.document.contractors[0].slotId);assert.equal(body.expected_revision,7);assert.equal(body.ttl_hours,24);
+ assert.equal(body.capacity_id.includes('COVERALL_'),false);assert.equal(h.created.length,3);
+ for(const a of h.elements['secure-links'].children){const u=new URL(a.href);assert.equal(u.origin,'https://synthetic-service.onrender.com');assert.equal(u.pathname,'/static-weekly/coverall-links/assignment');assert.deepEqual([...u.searchParams.keys()],['lang']);assert.match(u.hash,/^#access_token=/);assert.equal(a.rel,'noreferrer noopener');}
+ assert.equal([...h.storage.values()].some(value=>value.includes('access_token')||value.includes('A'.repeat(43))),false);
+ h.elements['create-link'].listeners.get('click')();await printTurn();assert.equal(linkRequests(h).length,1,'saved request is never blindly reminted');
+ h.elements['revoke-link'].listeners.get('click')();await printUntil(()=>h.storage.size===0);assert.deepEqual(JSON.parse(revokeRequests(h)[0].options.body),{link_id:body.request_id});assert.equal(h.elements['secure-links'].children.length,0);h.retire();
+});
+test('unknown link response persists original request, reload never recreates token, exact revoke permits a fresh explicit identity',async()=>{
+ const h=printLifetime();await preparedCapacity(h);h.setLinkMode('lost');h.elements['create-link'].listeners.get('click')();await printUntil(()=>h.elements['revoke-link'].disabled===false);
+ const body=JSON.parse(linkRequests(h)[0].options.body);assert.equal(h.storage.size,1);assert.equal(h.elements['secure-links'].children.length,0);
+ h.elements['create-link'].listeners.get('click')();await printTurn();assert.equal(linkRequests(h).length,1);h.retire();
+ const resumed=printLifetime({storage:h.storage});await resumed.ready();assert.equal(linkRequests(resumed).length,0);assert.equal(resumed.elements['revoke-link'].disabled,false);
+ resumed.elements['revoke-link'].listeners.get('click')();await printUntil(()=>resumed.storage.size===0);assert.equal(JSON.parse(revokeRequests(resumed)[0].options.body).link_id,body.request_id);resumed.retire();
+});
+test('missing/legacy/unaccepted capacity never invokes issuance',async()=>{
+ for(const capacity of ['', 'COVERALL_01','98000000-0000-4000-8000-000000000099']){
+  const h=printLifetime();await preparedCapacity(h);h.elements['capacity-select'].value=capacity;h.elements['create-link'].listeners.get('click')();await printTurn();await printTurn();assert.equal(linkRequests(h).length,0);assert.equal(h.storage.size,0);h.retire();
+ }
+});
+test('mismatched capacity response is never displayed and wrong revoke ACK cannot erase original request',async()=>{
+ const h=printLifetime();await preparedCapacity(h);h.setLinkMode('stale');h.elements['create-link'].listeners.get('click')();await printUntil(()=>h.elements['revoke-link'].disabled===false);
+ assert.equal(h.elements['secure-links'].children.length,0);assert.equal(h.storage.size,1);h.setLinkMode('wrong-revoke');h.elements['revoke-link'].listeners.get('click')();await printUntil(()=>h.elements['revoke-link'].disabled===false);assert.equal(h.storage.size,1);h.retire();
+});
+test('pure link validator rejects unaccepted identities, expiry, foreign URL and query token',()=>{
+ const ctx={module:{exports:{}},URL,Date};vm.runInNewContext(read('coverall-print.js'),ctx);const api=ctx.module.exports;
+ assert.throws(()=>api.acceptedCapacities({contractors:[{slotId:'COVERALL_01',name:'Legacy'}]}));
+ const capacity='98000000-0000-4000-8000-000000000010',request='98000000-0000-4000-8000-000000000030',projection='98000000-0000-4000-8000-000000000003';
+ const expected={date:'2026-10-12',revision:7,projectionId:projection},options={expected,capacityId:capacity,requestId:request,base:'https://synthetic-service.onrender.com',ttlHours:24};
+ const good={schema:'custodial.coverall-canonical-link.v1',link_id:request,capacity_id:capacity,service_date:expected.date,authority_revision:7,projection_id:projection,expires_at:new Date(Date.now()+3600000).toISOString(),assignment_path:'/static-weekly/coverall-links/assignment?lang=both#access_token='+('A'.repeat(43))};
+ assert.equal(api.validateCanonicalLink(good,options).length,3);
+ for(const patch of [{capacity_id:request},{link_id:capacity},{authority_revision:8},{projection_id:request},{expires_at:new Date(Date.now()-1).toISOString()},{assignment_path:'https://foreign.invalid/?lang=both#access_token='+('A'.repeat(43))},{assignment_path:'/static-weekly/coverall-links/assignment?lang=both&access_token='+('A'.repeat(43))},{assignment_path:'/static-weekly/coverall-links/assignment?lang=both#access_token=short'}])assert.throws(()=>api.validateCanonicalLink({...good,...patch},options));
 });
