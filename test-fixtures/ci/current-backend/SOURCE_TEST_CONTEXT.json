@@ -65,17 +65,17 @@
     },
     {
       "path": "test-fixtures/ci/current-backend/package-lock.json",
-      "sha256": "ad1352fdd9867022c6404a2bf1ae3ebc516fd74ff5e52c7f4bdd4a417bf0d139",
+      "sha256": "712cbdf47ce9920d45d10c87cf658e0f3ea7c321e7f933647efa4dbb030bb5bb",
       "bytes": 83047,
-      "git_blob_sha1": "f8cf990ee4b4d879cb1df201824f544ee1cb4c3e",
+      "git_blob_sha1": "e08608e2987b589e25002eef7212ed23d3ffa92f",
       "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
       "original_logical_path": "package-lock.json"
     },
     {
       "path": "test-fixtures/ci/current-backend/package.json",
-      "sha256": "ccbab61c3c4ff9170b5bc3cb7e9a1348160f662e7bca7280ddce1168097f233a",
+      "sha256": "d0338487e0dede546f5ef9b27f165bdb5f99739d7ed61aee32e82b453300e630",
       "bytes": 21103,
-      "git_blob_sha1": "04dce09a94a0abb085ccb1c9914a2d9a5e9559b1",
+      "git_blob_sha1": "0a0dac1792813902a8949a5e5caacf49bedde5ac",
       "role": "SELECTED_SCHEDULER_OR_SHARED_CALLABLE_SOURCE",
       "original_logical_path": "package.json"
     },

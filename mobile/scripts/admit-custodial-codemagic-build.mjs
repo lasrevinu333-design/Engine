@@ -187,7 +187,7 @@ function admissionVerifierSourceDigest() {
     if(!['vault','local','firebase'].includes(row.family)||typeof row.name!=='string'||!/^([A-Za-z0-9_$]+\/)*[A-Za-z0-9_$]+\.java$/.test(row.name)||!SHA256.test(row.sha256)||!Number.isSafeInteger(row.bytes)||row.bytes<1)throw new Error('Frozen callback Source role shape differs');
     const logical='mobile/callback-reference-source/'+row.family+'/'+row.name;
     if(frozenNames.has(logical))throw new Error('Duplicate frozen callback Source');frozenNames.add(logical);
-    const path=join(repositoryRoot,logical),bytes=cleaningSourceBytes(path);
+    const path=join(repositoryRoot,logical),bytes=frozenCallbackSourceBytes(path,row,referenceBoundary);
     if(bytes.length!==row.bytes||sha256(bytes)!==row.sha256)throw new Error('Frozen callback Source bytes differ');
     sources.push([logical,path]);
   }
@@ -1216,6 +1216,21 @@ function cleaningSourceBytes(path) {
     return bytes.subarray(0,n);
   }finally{closeSync(fd);}
 }
+function frozenCallbackSourceBytes(path,row,authority) {
+  // Only rows from the caller's SHA-pinned, complete fixed202 authority enter.
+  if(authority.source_files.length!==202||!authority.source_files.includes(row)||!['vault','local','firebase'].includes(row.family)||!/^([A-Za-z0-9_$]+\/)*[A-Za-z0-9_$]+\.java$/.test(row.name)||!SHA256.test(row.sha256)||!Number.isSafeInteger(row.bytes)||row.bytes<1||row.bytes>2*1024*1024||path!==join(repositoryRoot,'mobile/callback-reference-source',row.family,row.name))throw new Error('Frozen callback Source row is not one authenticated fixed reference');
+  const before=lstatSync(path,{bigint:true});
+  if(!before.isFile()||before.isSymbolicLink()||realpathSync(path)!==path||before.size!==BigInt(row.bytes)||(before.mode&0o777n)!==0o644n)throw new Error('Frozen callback Source path/mode/size differs before full read');
+  const same=(a,b)=>['dev','ino','mode','uid','gid','nlink','size','mtimeNs','ctimeNs'].every(k=>a[k]===b[k]);
+  const fd=openSync(path,constants.O_RDONLY|constants.O_NOFOLLOW);
+  try{
+    if(!same(before,fstatSync(fd,{bigint:true})))throw new Error('Frozen callback Source changed before open');
+    const bytes=Buffer.alloc(row.bytes+1);let n=0;
+    while(n<bytes.length){const got=readSync(fd,bytes,n,bytes.length-n,n);if(got===0)break;n+=got;}
+    if(n!==row.bytes||!same(before,fstatSync(fd,{bigint:true}))||!same(before,lstatSync(path,{bigint:true})))throw new Error('Frozen callback Source changed during complete read');
+    const complete=bytes.subarray(0,n);if(sha256(complete)!==row.sha256)throw new Error('Frozen callback Source exact hash differs');return complete;
+  }finally{closeSync(fd);}
+}
 function sameCleaningValue(a,b) {
   const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;
   return JSON.stringify(stable(a))===JSON.stringify(stable(b));
@@ -1333,7 +1348,7 @@ function assertBundleProvenanceRecords({ evidence, acceptance, metadata, commit,
     || build.custodial_native_vault_source_sha256 !== acceptance.embedded_provenance.custodial_native_vault_source_sha256
     || build.native_build_number !== versionCode
     || build.messenger !== 'chatscope'
-    || build.node !== 'v22.23.1'
+    || build.node !== 'v22.23.4'
     || build.npm !== '11.17.0'
     || build.dependency_install_policy !== 'npm-ci-ignore-scripts-v1'
     || build.firebase_util_postinstall_sha256 !== '56e40adf04426e6b07df5d1ca7d4142a5b2c91ea9df5800589e357f9a2433252'

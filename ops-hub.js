@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API = 'https://memphis-zoo-mcp.onrender.com';
+  const API = window.MemphisAuth?.backendOrigin || 'https://memphis-zoo-mcp.onrender.com';
   const APP_VERSION = 'release-2026.07.19.custodial-v3.12';
   const ZONE = 'America/Chicago';
   const numeric = value => (typeof value === 'number' || typeof value === 'string' && value.trim()) && Number.isFinite(Number(value)) ? Number(value) : null;

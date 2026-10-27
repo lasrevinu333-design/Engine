@@ -1,7 +1,16 @@
 (function(){
   'use strict';
 
-  const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
+  function backendOriginForCurrentDocument(){
+    const location=window.location;
+    // A local qualification namespace only; native localhost root and every
+    // normal website keep the production origin. No caller-supplied API URL.
+    const preview=location?.protocol==='http:'
+      && ['127.0.0.1','localhost','custodian-g12-manager.localhost','custodian-g12-employee.localhost'].includes(location.hostname)
+      && String(location.pathname||'').startsWith('/__custodial-preview__/');
+    return preview?location.origin:'https://memphis-zoo-mcp.onrender.com';
+  }
+  const BACKEND_ORIGIN=backendOriginForCurrentDocument();
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
   const OPS_SESSION_URL=`${AUTH_URL}/session`;
   const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;

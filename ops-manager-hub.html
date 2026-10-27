@@ -48,7 +48,7 @@
   <script>
     (function(){
       'use strict';
-      const API='https://memphis-zoo-mcp.onrender.com';
+      const API=window.MemphisAuth?.backendOrigin||'https://memphis-zoo-mcp.onrender.com';
       const form=document.getElementById('enroll-form');
       const intro=document.getElementById('intro');
       const code=document.getElementById('manager-code');

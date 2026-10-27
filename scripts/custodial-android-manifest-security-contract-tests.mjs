@@ -574,7 +574,33 @@ for (const [label, mutate, expected] of activationMutations) {
   assert.throws(mutated(mutate), expected, `assigned activation must reject ${label}`);
 }
 const acceptanceSchema = JSON.parse(readFileSync(new URL('../mobile/scripts/custodial-android-release-acceptance.schema.json', import.meta.url), 'utf8'));
-const manifestSchema = acceptanceSchema.properties.android_manifest_security.properties;
+function exactCurrentManifestBranches(value) {
+  assert.ok(Array.isArray(value.oneOf));
+  assert.equal(value.oneOf.length, 2, 'Only the two current named manifest profiles are selectable');
+  const names = value.oneOf.map(branch => branch.properties?.policy?.const);
+  assert.deepEqual([...names].sort(), ['exact-custodial-android-manifest-v12-qualified-provider-private-audio',
+    'exact-custodial-android-manifest-v13-cleaning-first-retained-continuity'].sort());
+  return Object.fromEntries(value.oneOf.map(branch => [branch.properties.policy.const, branch.properties]));
+}
+const manifestBranches = exactCurrentManifestBranches(acceptanceSchema.properties.android_manifest_security);
+const manifestSchema = manifestBranches['exact-custodial-android-manifest-v12-qualified-provider-private-audio'];
+const cleaningManifestSchema = manifestBranches['exact-custodial-android-manifest-v13-cleaning-first-retained-continuity'];
+assert.throws(() => exactCurrentManifestBranches({ oneOf: acceptanceSchema.properties.android_manifest_security.oneOf.slice(0, 1) }));
+assert.throws(() => exactCurrentManifestBranches({ oneOf: [acceptanceSchema.properties.android_manifest_security.oneOf[0], acceptanceSchema.properties.android_manifest_security.oneOf[0]] }));
+assert.equal(cleaningManifestSchema.verifier_version.const, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
+assert.deepEqual(cleaningManifestSchema.permissions, manifestSchema.permissions);
+for (const name of ['custom_permission', 'main_activity_intent_filters_verified', 'uses_cleartext_traffic',
+  'extract_native_libs', 'shared_user_id_absent', 'legacy_external_storage_absent', 'network_security', 'file_provider', 'component_graph_semantic_sha256']) {
+  assert.deepEqual(cleaningManifestSchema[name], manifestSchema[name], `Both manifest profiles retain the exact common security contract: ${name}`);
+}
+for (const kind of ['activities', 'services', 'providers', 'receivers', 'uses_libraries']) {
+  const expected = [...(kind === 'uses_libraries' ? CUSTODIAL_ANDROID_USES_LIBRARIES : CUSTODIAL_ANDROID_COMPONENTS[kind])].sort();
+  const current = cleaningManifestSchema.components.properties[kind];
+  assert.deepEqual((current.prefixItems || []).map(item => item.const), expected);
+  assert.equal(current.minItems, expected.length); assert.equal(current.maxItems, expected.length);
+  assert.equal(current.items, false);
+}
+
 assert.equal(manifestSchema.verifier_version.const, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
 assert.equal(manifestSchema.policy.const, qualifiedProof.policy);
 assert.deepEqual(manifestSchema.permissions.prefixItems.map(x=>x.const),qualifiedProof.permissions);

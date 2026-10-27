@@ -922,7 +922,7 @@ assert.equal(
 );
 assert.equal(parsedCustodialReleasePolicy.minimum_next_version_code, 30);
 assert.equal(JSON.parse(custodialToolchainPolicy).archive.size_bytes, 76857925);
-assert.equal(CUSTODIAL_NODE_VERSION, 'v22.23.1', 'Custodial acceptance must use the repository-pinned Node runtime');
+assert.equal(CUSTODIAL_NODE_VERSION, 'v22.23.4', 'Custodial acceptance must use the repository-pinned Node runtime');
 assert.equal(CUSTODIAL_CODEMAGIC_WORKFLOW, 'custodial-android', 'Custodial acceptance must bind the literal Codemagic workflow key');
 assert.equal(CUSTODIAL_TARGET_SDK_VERSION, 36, 'Custodial acceptance must pin the reviewed target SDK');
 assert.match(codemagic, /MZ_API_BASE: https:\/\/memphis-zoo-mcp\.onrender\.com/);
@@ -949,9 +949,19 @@ assert.match(codemagic, /-disableAutomaticPackageResolution/);
 assert.match(codemagic, /-onlyUsePackageVersionsFromResolvedFile/);
 assert.match(codemagic, /cmp "\$lock" "\$resolved"/);
 assert.match(codemagic, /PROJECT_BUILD_NUMBER/);
+const callbackReferenceWorkflow = codemagic.match(/^  custodial-callback-reference:\n(?:(?: {4,}.*|\s*)\n)*/m)?.[0] || '';
+assert.equal((codemagic.match(/^  custodial-callback-reference:$/gm) || []).length, 1);
+const referencePolicy = JSON.parse(await readFile(new URL('../mobile/release-policies/custodial-callback-reference.json', import.meta.url), 'utf8'));
+assert.equal(referencePolicy.evidence_only, true); assert.equal(referencePolicy.installable, false); assert.equal(referencePolicy.release_admission, false);
+assert.match(callbackReferenceWorkflow, /produce-custodial-callback-reference\.mjs/);
+assert.doesNotMatch(callbackReferenceWorkflow, /publishing:|google_play:|bundleRelease|\.aab/);
+const releaseWorkflowSource = codemagic.replace(callbackReferenceWorkflow, '');
+assert.equal([...callbackReferenceWorkflow.matchAll(/MZ_RELEASE_VERSION: 1\.0\.0/g)].length, 1);
+assert.equal([...callbackReferenceWorkflow.matchAll(/xcode: '26\.2'/g)].length, 1);
+
 assert.doesNotMatch(codemagic, /CM_BUILD_NUMBER/, 'Codemagic exports PROJECT_BUILD_NUMBER and BUILD_NUMBER, not CM_BUILD_NUMBER');
 assert.equal(
-  [...codemagic.matchAll(/MZ_RELEASE_VERSION: 1\.0\.0/g)].length,
+  [...releaseWorkflowSource.matchAll(/MZ_RELEASE_VERSION: 1\.0\.0/g)].length,
   5,
   'every native release workflow must declare the same user-facing version',
 );
@@ -972,7 +982,7 @@ assert.match(codemagic, /custodial-android-release-acceptance\.json/);
 assert.match(codemagic, /custodial-android-toolchain\.json/);
 assert.match(codemagic, /codemagic_xcode_image: '26\.2'/);
 assert.equal(
-  [...codemagic.matchAll(/xcode: '26\.2'/g)].length,
+  [...releaseWorkflowSource.matchAll(/xcode: '26\.2'/g)].length,
   3,
   'every Android workflow must pin the reviewed Codemagic image',
 );
@@ -1007,8 +1017,17 @@ assert.doesNotMatch(codemagic, /^  custodial-ios:$/m, 'Custodial must not be dis
 const custodialAndroid = codemagic.match(/^  custodial-android:\n(?:(?: {4,}.*|\s*)\n)*/m)?.[0] || '';
 assert.doesNotMatch(custodialAndroid, /google_play_credentials|bundleRelease|\.aab|publishing:|google_play:/, 'Custodial must remain a private signed APK, never a store bundle');
 assert.match(custodialAndroid, /MZ_SHELL_START: '1'/, 'Custodial Android must build the required local role shell start path');
-assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '56'/, 'Custodial recovery source must pin the protected Build 56 package');
-assert.equal(CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE, Number(custodialAndroid.match(/PROJECT_BUILD_NUMBER: '(\d+)'/)[1]), 'artifact acceptance must require the same exact version as the cloud producer');
+assert.match(custodialAndroid, /PROJECT_BUILD_NUMBER: '53'/, 'The exact old v53 fallback remains a historical source route, not current installed56 admission');
+assert.match(codemagic, /recovery_branch='release\/custodial-build29-recovery-v53-implementation-20260918'/);
+assert.ok(codemagic.includes('test "${CM_BRANCH:-}" = "$recovery_branch"'), 'Blank review inputs remain restricted to the exact historical v53 branch');
+assert.equal(CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE, 56, 'The current exact recovery56 consumer policy remains protected');
+assert.ok(custodialReleaseVerifier.includes('const recoveryBuild = !forwardBuild && ref === CUSTODIAL_FORWARD_RECOVERY_REF;'));
+assert.ok(custodialReleaseVerifier.includes('if (recoveryBuild && number !== CUSTODIAL_FORWARD_RECOVERY_VERSION_CODE)'));
+assert.ok(codemagic.includes('export PROJECT_BUILD_NUMBER="$custodial_reviewed_build_number"'));
+assert.ok(codemagic.includes('readReviewedForwardBuildSourceSelection(parseForwardBuildArguments(process.argv.slice(2)))'));
+assert.ok(codemagic.includes('const context = await loadReviewedForwardBuild(flags, { buildNumber: build.numeric });'));
+assert.ok(codemagic.includes("printf 'PROJECT_BUILD_NUMBER=%s\\n' \"$PROJECT_BUILD_NUMBER\" >> \"$CM_ENV\""));
+
 assert.equal(
   [...codemagic.matchAll(/gradle_temp_root="\$\(cd "\$\{TMPDIR:-\/tmp\}" && pwd -P\)"/g)].length,
   3,
@@ -1079,7 +1098,7 @@ assert.match(capacitorConfig, /custodial \? \{\} : \{[\s\S]*ios:/, 'Custodial mu
 assert.match(capacitorConfig, /viewer \|\| custodial \? \{\} : \{[\s\S]*experimental:/, 'Custodial and viewer must omit manager-only iOS package options');
 assert.doesNotMatch(capacitorConfig, /\bcordova\s*:/, 'Custodial config must not add a Cordova bridge policy');
 assert.match(mobilePackage, /build:custodial/);
-assert.match(mobilePackage, /"@capacitor\/android": "8\.4\.2"/);
+assert.match(mobilePackage, /"@capacitor\/android": "8\.4\.3"/);
 assert.doesNotMatch(mobilePackage, /@capacitor\/barcode-scanner/);
 const variablesFixture = 'ext {\n    minSdkVersion = 24\n}\n';
 assert.equal(

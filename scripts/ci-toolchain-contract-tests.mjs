@@ -42,7 +42,7 @@ assert.match(
 for (const scriptName of ['test:admission-host:custodial', 'admit:codemagic:custodial']) {
   assert.match(
     mobilePackage.scripts[scriptName],
-    /^\/home\/eric\/\.cache\/codex-toolchains\/node-v22\.23\.1\/bin\/node /,
+    /^\/home\/eric\/\.cache\/codex-toolchains\/node-v22\.23\.4\/bin\/node /,
     `${scriptName} must start under the pinned local admission Node`,
   );
 }
@@ -428,7 +428,7 @@ const prebuildRequiredRunSteps = [
     commands: [
       'set -euo pipefail',
       'npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund',
-      `test "$(node --version)" = 'v22.23.1'`,
+      `test "$(node --version)" = 'v22.23.4'`,
       `test "$(npm --version)" = '11.17.0'`,
     ],
   },
@@ -819,8 +819,8 @@ for (const [name, source] of Object.entries(workflows)) {
     assert.ok(declarations.length > 0, `${name} setup-node step must declare a version`);
     assert.deepEqual(
       [...new Set(declarations)],
-      ['22.23.1'],
-      `${name} setup-node steps must use Node 22.23.1 exactly`,
+      ['22.23.4'],
+      `${name} setup-node steps must use Node 22.23.4 exactly`,
     );
     assert.match(
       source,
@@ -1731,9 +1731,9 @@ assert.deepEqual(
 );
 assert.match(codemagic, /test "\$\(npm --version\)" = "11\.17\.0"/, 'Codemagic must verify npm 11.17.0');
 assert.equal(
-  [...codemagic.matchAll(/^\s+node:\s*['"]22\.23\.1['"]\s*$/gm)].length,
+  [...codemagic.matchAll(/^\s+node:\s*['"]22\.23\.4['"]\s*$/gm)].length,
   6,
-  'All five release workflows and the callback reference must use Node 22.23.1 exactly',
+  'All five release workflows and the callback reference must use Node 22.23.4 exactly',
 );
 assert.equal(
   [...codemagic.matchAll(/^\s+instance_type:\s*mac_mini_m2\s*$/gm)].length,
@@ -2029,7 +2029,7 @@ assert.equal(existsSync(resolve(root, 'mobile', 'package-lock.json')), false, 'T
 console.log(JSON.stringify({
   ok: true,
   workflows_checked: workflowNames.length,
-  node: '22.23.1',
+  node: '22.23.4',
   npm: '11.17.0',
   root_lockfile: 'package-lock.json',
   browser: 'playwright-managed-chromium',

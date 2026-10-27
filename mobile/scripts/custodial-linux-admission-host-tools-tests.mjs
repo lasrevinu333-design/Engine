@@ -24,7 +24,7 @@ import {
 } from './custodial-linux-admission-host-tools.mjs';
 import { CUSTODIAL_CODEMAGIC_EXPECTED_HOST_PROOF } from './admit-custodial-codemagic-build.mjs';
 
-const nodePath = '/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node';
+const nodePath = '/home/eric/.cache/codex-toolchains/node-v22.23.4/bin/node';
 const secureTemporaryParent = '/home/eric/.cache/codex-toolchains';
 const helperPath = custodialLinuxAdmissionHostToolInternals.policyPath.replace(
   '/release-policies/custodial-linux-admission-host-tools.json',

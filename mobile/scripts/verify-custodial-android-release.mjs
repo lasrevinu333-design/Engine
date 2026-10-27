@@ -99,7 +99,7 @@ export const CUSTODIAL_VERSION_NAME = '1.0.0';
 export const CUSTODIAL_MIN_SDK_VERSION = 26;
 export const CUSTODIAL_TARGET_SDK_VERSION = 36;
 export const CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION = PINNED_CUSTODIAL_ANDROID_BUILD_TOOLS_VERSION;
-export const CUSTODIAL_NODE_VERSION = 'v22.23.1';
+export const CUSTODIAL_NODE_VERSION = 'v22.23.4';
 export const CUSTODIAL_CODEMAGIC_WORKFLOW = 'custodial-android';
 export const CUSTODIAL_FORWARD_RECOVERY_BRANCH =
   'release/custodial-build29-recovery-v56-implementation-20260929';

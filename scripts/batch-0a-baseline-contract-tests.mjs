@@ -60,7 +60,7 @@ async function validateArchitectureBaseline() {
 
   assert.deepEqual(
     { node: architecture.toolchain?.node, npm: architecture.toolchain?.npm },
-    { node: "22.23.1", npm: "11.17.0" },
+    { node: "22.23.4", npm: "11.17.0" },
     "Node and npm must remain pinned to the approved Batch 0A toolchain",
   );
   assert.deepEqual(
@@ -108,7 +108,7 @@ async function validateArchitectureBaseline() {
   const packageJson = await readJson("package.json");
   const mobilePackage = await readJson("mobile/package.json");
   assert.equal(packageJson.packageManager, "npm@11.17.0");
-  assert.deepEqual(packageJson.engines, { node: "22.23.1", npm: "11.17.0" });
+  assert.deepEqual(packageJson.engines, { node: "22.23.4", npm: "11.17.0" });
   assert.deepEqual(packageJson.allowScripts, {
     "@firebase/util@1.15.1": true,
     "esbuild@0.25.12": true,

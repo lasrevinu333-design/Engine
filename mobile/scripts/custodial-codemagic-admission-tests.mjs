@@ -24,6 +24,7 @@ import {
 } from './admit-custodial-codemagic-build.mjs';
 import { parseForwardBuildArguments, readReviewedForwardBuildSourceSelection, loadReviewedForwardBuild, assertReviewedForwardBuild, forwardBuildProvenance } from './configure-native-release.mjs';
 import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import { scopeModule } from './custodial-new-producer-scope-policy.mjs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
@@ -604,6 +605,12 @@ function schemaFixture(node) {
     for (const part of path) referenced = referenced[part];
     return schemaFixture(referenced);
   }
+  if (Array.isArray(node.oneOf)) {
+    const fullSystem = node.oneOf.filter((branch) => branch.properties?.policy?.const
+      === 'exact-custodial-android-manifest-v12-qualified-provider-private-audio');
+    assert.equal(fullSystem.length, 1, 'The legacy full-system fixture selects only its exact current manifest branch');
+    return schemaFixture(fullSystem[0]);
+  }
   if (Array.isArray(node.allOf)) {
     if (node.properties && node.required && node.allOf.some((part) => part.if?.required?.includes('forward_transition'))) {
       const fixture = schemaFixture({ ...node, allOf: undefined });
@@ -659,7 +666,7 @@ function platformToolEvidence(policy, prefix) {
     source_properties: tool('source.properties', 'Pkg.Revision=35.0.1'),
     zipalign: tool('zipalign', 'Android Build Tools 35.0.1'),
     unzip: { path: '/usr/bin/unzip', version: 'UnZip 6.00', sha256: HASH },
-    node: { path: `${prefix}/node`, version: 'v22.23.1', sha256: HASH },
+    node: { path: `${prefix}/node`, version: 'v22.23.4', sha256: HASH },
   };
 }
 
@@ -775,7 +782,7 @@ function realisticProducerBundleFixture(
       acceptance.embedded_provenance.custodial_native_vault_source_sha256,
     native_build_number: VERSION_CODE,
     messenger: 'chatscope',
-    node: 'v22.23.1',
+    node: 'v22.23.4',
     npm: '11.17.0',
     dependency_install_policy: 'npm-ci-ignore-scripts-v1',
     firebase_util_postinstall_sha256:
@@ -892,7 +899,7 @@ function validBuildResponse() {
         },
       ],
       branch: 'main',
-      build_inputs: { environment: { variables: { secret: `${SENSITIVE_CONFIG}:${API_TOKEN}` } } },
+      build_inputs: { custodial_forward_review_pins_sha256: '', custodial_forward_review_role: '', custodial_callback_reference_build_id: '' },
       commit: {
         author_email: 'builder@example.invalid',
         author_name: 'Release Builder',
@@ -983,6 +990,17 @@ async function errorText(action) {
     return error.message;
   }
 }
+
+test('current positive build fixture keeps exact primitive workflow inputs and rejects retired arbitrary environment inputs', () => {
+  const current = validBuildResponse();
+  assert.deepEqual(current.data.build_inputs, { custodial_forward_review_pins_sha256: '',
+    custodial_forward_review_role: '', custodial_callback_reference_build_id: '' });
+  const malformed = validBuildResponse();
+  malformed.data.build_inputs = { environment: { variables: { secret: `${SENSITIVE_CONFIG}:${API_TOKEN}` } } };
+  assert.throws(() => inspect(malformed), /Current Custodial workflow inputs fields/);
+  assert.throws(() => schemaFixture({ oneOf: [{ type: 'object', properties: { policy: { const: 'counterfeit' } } }] }),
+    /exact current manifest branch/);
+});
 
 test('accepts the exact reviewed Codemagic v3 build shape and emits sanitized evidence', () => {
   const first = inspect();
@@ -1205,12 +1223,19 @@ test(
     const apkBytes = Buffer.from('synthetic-signed-custodial-apk-fixture');
     const fixture = realisticProducerBundleFixture(apkBytes);
     const temporary = mkdtempSync(join(tmpdir(), 'custodial-provenance-bundle-test-'));
+    const fixtureSourceRoot = join(temporary, 'full-system-artifact-source');
+    const scopeDirectory = join(fixtureSourceRoot, 'mobile/src/custodial');
+    mkdirSync(scopeDirectory, { recursive: true });
+    writeFileSync(join(scopeDirectory, 'new-producer-scope.profile.json'),
+      '{"schema":"custodial.new-producer-scope.v1","profile":"full-system"}\n');
+    writeFileSync(join(scopeDirectory, 'new-producer-scope.js'), scopeModule('full-system'));
     try {
       const bundlePath = join(temporary, `Engine_${VERSION_CODE}_artifacts.zip`);
-      const verifyFixture = (candidate) => {
+      const verifyFixture = (candidate, artifactSourceRoot = fixtureSourceRoot) => {
         writeFileSync(bundlePath, zipFixture({ contents: candidate.contents }));
         return verifyCodemagicProvenanceBundle({
           bundlePath,
+          artifactSourceRoot,
           apkBytes,
           metadata: inspect().metadata,
           expectedCommit: COMMIT,
@@ -1225,6 +1250,14 @@ test(
       assert.equal(proof.apk_sha256, digest(apkBytes));
       assert.equal(proof.web_ledger.size, fixture.runtime.size);
       assert.equal(proof.acceptance_sha256, digest(canonicalJsonBytes(fixture.acceptance)));
+      writeFileSync(join(scopeDirectory, 'new-producer-scope.profile.json'),
+        '{"schema":"custodial.new-producer-scope.v1","profile":"cleaning-first-retained-continuity-v1"}\n');
+      writeFileSync(join(scopeDirectory, 'new-producer-scope.js'), scopeModule('cleaning-first-retained-continuity-v1'));
+      assert.throws(() => verifyFixture(fixture), /Producer scope differs from exact artifact Source profile/);
+      writeFileSync(join(scopeDirectory, 'new-producer-scope.profile.json'),
+        '{"schema":"custodial.new-producer-scope.v1","profile":"full-system"}\n');
+      writeFileSync(join(scopeDirectory, 'new-producer-scope.js'), scopeModule('full-system'));
+
 
       const recoveryFixture = realisticProducerBundleFixture(apkBytes, {
         mutateAcceptance: (acceptance) => {
@@ -1237,6 +1270,7 @@ test(
       writeFileSync(bundlePath, zipFixture({ contents: recoveryFixture.contents }));
       const recoveryProof = verifyCodemagicProvenanceBundle({
         bundlePath,
+        artifactSourceRoot: fixtureSourceRoot,
         apkBytes,
         metadata: inspect().metadata,
         expectedCommit: COMMIT,

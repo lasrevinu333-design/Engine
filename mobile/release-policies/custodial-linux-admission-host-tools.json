@@ -41,16 +41,16 @@
   "node": {
     "gid": 1000,
     "mode_octal": "0755",
-    "path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node",
-    "resolved_path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node",
-    "sha256": "93956de2e59480474a7b46571da1651180b1a050cdf32641ebec4ce6e478e068",
-    "size_bytes": 124835376,
+    "path": "/home/eric/.cache/codex-toolchains/node-v22.23.4/bin/node",
+    "resolved_path": "/home/eric/.cache/codex-toolchains/node-v22.23.4/bin/node",
+    "sha256": "94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90",
+    "size_bytes": 124902584,
     "uid": 1000,
-    "version_stdout": "v22.23.1"
+    "version_stdout": "v22.23.4"
   },
   "npm": {
-    "cli_path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/lib/node_modules/npm/bin/npm-cli.js",
-    "root_path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/lib/node_modules/npm",
+    "cli_path": "/home/eric/.cache/codex-toolchains/node-v22.23.4/lib/node_modules/npm/bin/npm-cli.js",
+    "root_path": "/home/eric/.cache/codex-toolchains/node-v22.23.4/lib/node_modules/npm",
     "tree": {
       "algorithm": "memphis-zoo-custodial-npm-installation-tree-v1",
       "content_bytes": 12097665,
@@ -64,7 +64,7 @@
   },
   "platform": "linux",
   "schema_version": 1,
-  "trusted_path": "/home/eric/.cache/codex-toolchains/node-v22.23.1/bin:/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin",
+  "trusted_path": "/home/eric/.cache/codex-toolchains/node-v22.23.4/bin:/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin",
   "unzip": {
     "gid": 0,
     "mode_octal": "0755",

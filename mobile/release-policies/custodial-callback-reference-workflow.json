@@ -16,7 +16,7 @@
   "instance_type": "mac_mini_m2",
   "environment": {
     "xcode": "26.2",
-    "node": "22.23.1",
+    "node": "22.23.4",
     "java": 21,
     "vars": {
       "MZ_APP_EDITION": "custodial",
@@ -38,11 +38,11 @@
     },
     {
       "name": "Install and verify root workspace",
-      "script": "#!/usr/bin/env bash\nset -euo pipefail\nnpm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund\ntest \"$(node --version)\" = \"v22.23.1\"\ntest \"$(npm --version)\" = \"11.17.0\"\nnpm ci --ignore-scripts --no-audit --no-fund\nnpx --no-install playwright install chromium\nnpm run --silent build:chatscope\ngit diff --exit-code -- chatscope-messenger.js chatscope-messenger.css\nnpm run --silent test:mobile\nnpm run --silent test:batch-0a\nnode scripts/native-mobile-build-contract-tests.mjs\nnpm run --silent test:immutable-snapshot-failure-ownership\nnpm run --silent test:custodial-protected-queue-schema\nnode scripts/runtime-manifest-contract-tests.mjs\nnode scripts/ci-toolchain-contract-tests.mjs\nnpm run --silent release:manifest:check\n"
+      "script": "#!/usr/bin/env bash\nset -euo pipefail\nnpm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund\ntest \"$(node --version)\" = \"v22.23.4\"\ntest \"$(npm --version)\" = \"11.17.0\"\nnpm ci --ignore-scripts --no-audit --no-fund\nnpx --no-install playwright install chromium\nnpm run --silent build:chatscope\ngit diff --exit-code -- chatscope-messenger.js chatscope-messenger.css\nnpm run --silent test:mobile\nnpm run --silent test:batch-0a\nnode scripts/native-mobile-build-contract-tests.mjs\nnpm run --silent test:immutable-snapshot-failure-ownership\nnpm run --silent test:custodial-protected-queue-schema\nnode scripts/runtime-manifest-contract-tests.mjs\nnode scripts/ci-toolchain-contract-tests.mjs\nnpm run --silent release:manifest:check\n"
     },
     {
       "name": "Verify reviewed Custodial Android toolchain",
-      "script": "#!/usr/bin/env bash\nset -euo pipefail\ntest \"$(node --version)\" = 'v22.23.1'\nBUILD_TOOLS_DIRECTORY=\"$ANDROID_SDK_ROOT/build-tools/35.0.1\" node --input-type=module <<'NODE'\nimport { createHash } from 'node:crypto';\nimport { mkdirSync, readFileSync, writeFileSync } from 'node:fs';\nimport {\n  CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,\n  resolveCustodialAndroidTools,\n} from './mobile/scripts/verify-custodial-android-release.mjs';\nconst sha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');\nconst tools = resolveCustodialAndroidTools(process.env.BUILD_TOOLS_DIRECTORY);\nconst record = {\n  schema_version: 1,\n  codemagic_xcode_image: '26.2',\n  android_build_tools_version: tools.version,\n  toolchain_policy_sha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,\n  files_sha256: {\n    aapt2: sha256(tools.aapt2),\n    apksigner: sha256(tools.apksigner),\n    'lib/apksigner.jar': sha256(tools.apksignerJar),\n    'source.properties': sha256(tools.sourceProperties),\n    zipalign: sha256(tools.zipalign),\n  },\n};\nmkdirSync('build/provenance', { recursive: true });\nwriteFileSync(\n  'build/provenance/custodial-android-toolchain.json',\n  `${JSON.stringify(record, null, 2)}\\n`,\n  { flag: 'wx' },\n);\nNODE\n"
+      "script": "#!/usr/bin/env bash\nset -euo pipefail\ntest \"$(node --version)\" = 'v22.23.4'\nBUILD_TOOLS_DIRECTORY=\"$ANDROID_SDK_ROOT/build-tools/35.0.1\" node --input-type=module <<'NODE'\nimport { createHash } from 'node:crypto';\nimport { mkdirSync, readFileSync, writeFileSync } from 'node:fs';\nimport {\n  CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,\n  resolveCustodialAndroidTools,\n} from './mobile/scripts/verify-custodial-android-release.mjs';\nconst sha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');\nconst tools = resolveCustodialAndroidTools(process.env.BUILD_TOOLS_DIRECTORY);\nconst record = {\n  schema_version: 1,\n  codemagic_xcode_image: '26.2',\n  android_build_tools_version: tools.version,\n  toolchain_policy_sha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,\n  files_sha256: {\n    aapt2: sha256(tools.aapt2),\n    apksigner: sha256(tools.apksigner),\n    'lib/apksigner.jar': sha256(tools.apksignerJar),\n    'source.properties': sha256(tools.sourceProperties),\n    zipalign: sha256(tools.zipalign),\n  },\n};\nmkdirSync('build/provenance', { recursive: true });\nwriteFileSync(\n  'build/provenance/custodial-android-toolchain.json',\n  `${JSON.stringify(record, null, 2)}\\n`,\n  { flag: 'wx' },\n);\nNODE\n"
     },
     {
       "name": "Build exact candidate web Source for reference compilation only",

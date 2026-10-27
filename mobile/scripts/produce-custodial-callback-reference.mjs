@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Evidence-only compiler route. Never calls release acceptance or produces installation authority.
 import {createHash,randomBytes} from 'node:crypto';
-import {constants,closeSync,copyFileSync,fstatSync,lstatSync,mkdirSync,openSync,readSync,readdirSync,writeFileSync} from 'node:fs';
+import {constants,closeSync,copyFileSync,fstatSync,lstatSync,mkdirSync,openSync,readSync,readdirSync,realpathSync,writeFileSync} from 'node:fs';
 import {dirname,join,resolve,relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
@@ -10,7 +10,7 @@ import {readCustodialBuildScope} from './custodial-new-producer-scope-policy.mjs
 import {resolveCustodialAndroidTools,parseApksignerVerification,parseAaptBadgingPackage} from './verify-custodial-android-release.mjs';
 import {parseDeterministicJson} from './custodial-capacitor-runtime-policy.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
-const POLICY_SHA='e95b41af4b132fe21d34744bd4e3f9874eed8f937ca7981d4c4a6fd1d12f9b8f';
+const POLICY_SHA='a3ecf7e0828942c75460586de5156e72980c24cc5c23bd4597a05f52edeeedc2';
 const BOUNDARY_SHA='55e49c6d0003592daf05e405b5eaf4ce4921207dfdabc30bb686f89cc71f514a';
 const hash=b=>createHash('sha256').update(b).digest('hex');
 function die(x){throw new Error('Callback reference producer: '+x);}
@@ -23,10 +23,15 @@ function read(path,max=1048576,expected=null){
 function run(file,args,options={}){const r=spawnSync(file,args,{cwd:root,encoding:'utf8',timeout:options.timeout??10000,maxBuffer:options.maxBuffer??1048576,env:options.env??process.env,...options});if(r.error||r.signal||r.status!==0)die('owned command failed: '+file);return r.stdout;}
 function json(path,sha=null){return parseDeterministicJson(read(path,1048576,sha),'Reference Source JSON');}
 function output(path,b){mkdirSync(dirname(path),{recursive:true,mode:0o700});writeFileSync(path,b,{flag:'wx',mode:0o600});}
+function frozenReferenceSourceBytes(path,row,authority,base,mode) {
+ if(authority.source_files.length!==202||!authority.source_files.includes(row)||!['vault','local','firebase'].includes(row.family)||!/^([A-Za-z0-9_$]+\/)*[A-Za-z0-9_$]+\.java$/.test(row.name)||!/^[a-f0-9]{64}$/.test(row.sha256)||!Number.isSafeInteger(row.bytes)||row.bytes<1||row.bytes>2*1024*1024||path!==join(base,row.family,row.name))die('fixed202 frozen Source row/path');
+ const before=lstatSync(path,{bigint:true});if(!before.isFile()||before.isSymbolicLink()||realpathSync(path)!==path||before.size!==BigInt(row.bytes)||(before.mode&0o777n)!==BigInt(mode))die('frozen Source mode/size before full read');
+ const bytes=read(path,2*1024*1024,row.sha256);if(bytes.length!==row.bytes||!same(id(before),id(lstatSync(path,{bigint:true})) ))die('frozen Source fullread identity/size');return bytes;
+}
 function checkFiles(authority,sources){
  const expected=new Map(authority.source_files.map(x=>[join(sources,x.family,x.name),x]));const actual=[];
  function walk(p){for(const name of readdirSync(p).sort()){const q=join(p,name),s=lstatSync(q);if(s.isSymbolicLink())die('source symlink');if(s.isDirectory())walk(q);else if(s.isFile())actual.push(q);else die('source special');}}
- walk(sources);if(actual.length!==expected.size)die('source count');for(const p of actual){const e=expected.get(p);if(!e)die('source namespace');const b=read(p,1048576,e.sha256);if(b.length!==e.bytes)die('source bytes');}
+ walk(sources);if(actual.length!==expected.size)die('source count');for(const p of actual){const e=expected.get(p);if(!e)die('source namespace');const b=frozenReferenceSourceBytes(p,e,authority,sources,0o600);if(b.length!==e.bytes)die('source bytes');}
 }
 const flags=parseForwardBuildArguments(process.argv.slice(2));const number=resolveBuildNumber(process.env).numeric;
 const forward=await loadReviewedForwardBuild(flags,{buildNumber:number,repositoryDirectory:root});
@@ -38,7 +43,7 @@ for(const e of policy.locked_inputs){if(read(join(root,e.path),16*1024*1024,e.sh
 const scope=readCustodialBuildScope(join(root,'mobile'));
 const work=join(root,'build','callback-reference-private-'+randomBytes(16).toString('hex'));mkdirSync(work,{mode:0o700});
 const sources=join(work,'sources');mkdirSync(sources,{mode:0o700});
-for(const e of authority.source_files){if(!['vault','local','firebase'].includes(e.family)||!/^[A-Za-z0-9_$/.-]+\.java$/.test(e.name)||e.name.split('/').some(x=>x==='..'||x==='.'||!x))die('frozen Source name');const b=read(join(root,'mobile/callback-reference-source',e.family,e.name),1048576,e.sha256);if(b.length!==e.bytes)die('frozen Source size');output(join(sources,e.family,e.name),b);}
+for(const e of authority.source_files){if(!['vault','local','firebase'].includes(e.family)||!/^[A-Za-z0-9_$/.-]+\.java$/.test(e.name)||e.name.split('/').some(x=>x==='..'||x==='.'||!x))die('frozen Source name');const b=frozenReferenceSourceBytes(join(root,'mobile/callback-reference-source',e.family,e.name),e,authority,join(root,'mobile/callback-reference-source'),0o644);if(b.length!==e.bytes)die('frozen Source size');output(join(sources,e.family,e.name),b);}
 checkFiles(authority,sources);
 const projects={':custodial-native-vault':'vault',':capacitor-local-notifications':'local',':capacitor-firebase-messaging':'firebase'};
 // All output projects are redirected before evaluation. Source replacement is last, after normal Source configuration.

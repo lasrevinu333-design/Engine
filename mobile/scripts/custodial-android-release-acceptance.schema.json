@@ -1517,7 +1517,7 @@
               "type": "object",
               "properties": {
                 "version": {
-                  "const": "v22.23.1"
+                  "const": "v22.23.4"
                 }
               }
             }
@@ -1901,7 +1901,7 @@
           "$ref": "#/$defs/sha256"
         },
         "reference_policy_sha256": {
-          "const": "e95b41af4b132fe21d34744bd4e3f9874eed8f937ca7981d4c4a6fd1d12f9b8f"
+          "const": "a3ecf7e0828942c75460586de5156e72980c24cc5c23bd4597a05f52edeeedc2"
         },
         "source_boundary_sha256": {
           "const": "55e49c6d0003592daf05e405b5eaf4ce4921207dfdabc30bb686f89cc71f514a"
@@ -2105,7 +2105,7 @@
           }
         },
         "provider_configuration_source_sha256": {
-          "const": "870d09e2ef09fd5c1201784e2755cc10b0e54efe2adff78060048d07df9870ec"
+          "const": "5518512605b7d9508d09a844aaf90fe9013115065cfd954469a95ca4048b91b9"
         },
         "metadata_before_sha256": {
           "$ref": "#/$defs/sha256"

@@ -3,7 +3,7 @@ import { createHeldEventCorrectionController } from './manager-held-event-correc
 
 // The shared Events feed remains separate. This manager-only view reads one
 // fixed review route and uses fixed correction routes; it never imports mail.
-export const MANAGER_HELD_REVIEW_URL = 'https://memphis-zoo-mcp.onrender.com/dashboard-api/held-event-reviews';
+export const MANAGER_HELD_REVIEW_URL = `${globalThis.window?.MemphisAuth?.backendOrigin || 'https://memphis-zoo-mcp.onrender.com'}/dashboard-api/held-event-reviews`;
 const CORRECTION_PLACES_URL = `${MANAGER_HELD_REVIEW_URL}/corrections/places`;
 const CORRECTION_PREVIEW_URL = `${MANAGER_HELD_REVIEW_URL}/corrections/preview`;
 const CORRECTION_CONFIRM_URL = `${MANAGER_HELD_REVIEW_URL}/corrections/confirm`;

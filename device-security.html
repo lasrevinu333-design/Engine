@@ -81,8 +81,8 @@
   <script>
   (async function(){
     'use strict';
-    const API='https://memphis-zoo-mcp.onrender.com/admin-api/device-auth';
-    const SECURITY_API='https://memphis-zoo-mcp.onrender.com/admin-api/device-security';
+    const API=`${window.MemphisAuth?.backendOrigin||'https://memphis-zoo-mcp.onrender.com'}/admin-api/device-auth`;
+    const SECURITY_API=`${window.MemphisAuth?.backendOrigin||'https://memphis-zoo-mcp.onrender.com'}/admin-api/device-security`;
     const els={unlockCard:document.getElementById('unlock-card'),app:document.getElementById('app'),password:document.getElementById('password'),unlock:document.getElementById('unlock'),unlockStatus:document.getElementById('unlock-status'),modeRow:document.getElementById('mode-row'),summary:document.getElementById('summary'),status:document.getElementById('status'),devices:document.getElementById('devices'),codeBox:document.getElementById('code-box'),codeTitle:document.getElementById('code-title'),code:document.getElementById('code'),codeMeta:document.getElementById('code-meta'),copyCode:document.getElementById('copy-code'),revokeCode:document.getElementById('revoke-code'),lock:document.getElementById('lock'),revokeSecuritySessions:document.getElementById('revoke-security-sessions')};
     let current=null;let lastCode=null;let managerSession=null;let managerSessionPins=null;let actionGeneration=0;let codeRequestGeneration=0;
     // Manager preparation is local intent only. None of these ports represents

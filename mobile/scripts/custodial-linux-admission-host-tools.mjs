@@ -67,10 +67,10 @@ const expectedIdentity = Object.freeze({
   schema_version: 1,
   platform: 'linux',
   architecture: 'x64',
-  nodePath: '/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node',
-  nodeVersion: 'v22.23.1',
-  npmRoot: '/home/eric/.cache/codex-toolchains/node-v22.23.1/lib/node_modules/npm',
-  npmCli: '/home/eric/.cache/codex-toolchains/node-v22.23.1/lib/node_modules/npm/bin/npm-cli.js',
+  nodePath: '/home/eric/.cache/codex-toolchains/node-v22.23.4/bin/node',
+  nodeVersion: 'v22.23.4',
+  npmRoot: '/home/eric/.cache/codex-toolchains/node-v22.23.4/lib/node_modules/npm',
+  npmCli: '/home/eric/.cache/codex-toolchains/node-v22.23.4/lib/node_modules/npm/bin/npm-cli.js',
   npmVersion: '11.17.0',
   javaHome: '/usr/lib/jvm/java-21-openjdk-amd64',
   javaPath: '/usr/lib/jvm/java-21-openjdk-amd64/bin/java',
@@ -85,7 +85,7 @@ const expectedIdentity = Object.freeze({
   gitVersion: 'git version 2.43.0',
   unzipPath: '/usr/bin/unzip',
   unzipVersion: 'UnZip 6.00 of 20 April 2009, by Debian. Original by Info-ZIP.',
-  path: '/home/eric/.cache/codex-toolchains/node-v22.23.1/bin:/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin',
+  path: '/home/eric/.cache/codex-toolchains/node-v22.23.4/bin:/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin',
 });
 
 function hasExactKeys(value, keys) {

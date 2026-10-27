@@ -71,7 +71,7 @@ test('normal verifier source-only branch consumes pinned adapter DTO without adm
 test('normal verifier rejects source/trusted binding mismatch and incomplete evidence',async()=>{const bad=structuredClone(input()); bad.candidate.source.commit='d'.repeat(40); const r=await invoke(bad); assert.equal(r.result.accepted,false); assert.match(r.result.reason,/candidate_trusted_binding_mismatch/); const missing=structuredClone(trusted); delete missing.evidence_refs.recovery_source_receipt_sha256; const q=await invoke(input(),missing); assert.equal(q.result.accepted,false);});
 test('installed56 cannot ordinary-upgrade to 30 and false promotion is mandatory',async()=>{const bad=structuredClone(input()); bad.candidate.version_code=30; bad.candidate.source=source('refs/heads/candidate-source'); const pins=structuredClone(trusted); pins.candidate.version_code=30; pins.candidate.source=source('refs/heads/candidate-source'); const r=await invoke(bad,pins); assert.equal(r.result.accepted,false); assert.match(r.result.reason,/candidate_not_forward_of_observed_installed/); const promoted=structuredClone(input()); promoted.fleet_promotion=true; const p=await invoke(promoted); assert.equal(p.result.accepted,false); assert.match(p.result.reason,/fleet_promotion/);});
 test('missing adapter evidence cannot be masked by accepted or activation fields',async()=>{const bad=structuredClone(input()); bad.activation=true; delete bad.evidence_refs.retained_data_plan_sha256; const r=await invoke(bad); assert.equal(r.result.accepted,false); assert.equal(r.result.admitted,false);});
-test('legacy configure tail is unchanged and normal verifier branch is guarded before APK parsing',async()=>{const configure=await readFile(new URL('./configure-native-release.mjs',import.meta.url),'utf8'); const marker="  if (!['android', 'android-version', 'android-wrapper', 'ios'].includes(platform))"; assert.equal(createHash('sha256').update(configure.slice(configure.indexOf(marker))).digest('hex'),'9e5abdd1f10cc1a06c213662cec05446cc451a453def3e1058946c88d31eb552'); const verifier=await readFile(new URL('./verify-custodial-android-release.mjs',import.meta.url),'utf8'); assert.ok(verifier.indexOf("if (process.argv[2] === 'forward-source')") < verifier.indexOf('const args = parseArguments(process.argv.slice(2));'));});
+test('reviewed current configure body and tail remain exact and normal verifier branch is guarded before APK parsing',async()=>{const configure=await readFile(new URL('./configure-native-release.mjs',import.meta.url),'utf8'); const marker="  if (!['android', 'android-version', 'android-wrapper', 'ios'].includes(platform))"; assert.equal(createHash('sha256').update(configure).digest('hex'),'4786be0d05233ba7a4d0f15ad31e9ab052a9145ee8b979f7a5f75ba6a79e80cb'); assert.equal(createHash('sha256').update(configure.slice(configure.indexOf(marker))).digest('hex'),'d34f69fcb997e61dfed5eb0cd8dc8fc346fb7a733332f65a4e4fc6f6bd256026'); const verifier=await readFile(new URL('./verify-custodial-android-release.mjs',import.meta.url),'utf8'); const sourceBranch=verifier.indexOf("if (process.argv[2] === 'forward-source')"); const artifactParser=verifier.indexOf('const args = parseCustodialArtifactArguments(process.argv.slice(2));'); assert.ok(sourceBranch>=0 && artifactParser>sourceBranch);});
 test('source-only verifier result never claims artifact, install, recovery, or physical readiness',async()=>{const r=await invoke(); assert.equal(r.result.qualified_artifact,false); assert.equal(r.result.operationally_qualified,false); assert.equal(r.result.admitted,false); assert.equal(r.result.install_ready,false); assert.equal(r.result.physical_recovery_proven,false);});
 
 test('public synchronous acceptance-schema export uses locked AJV for invalid and valid fixtures',async()=>{
@@ -82,7 +82,9 @@ test('public synchronous acceptance-schema export uses locked AJV for invalid an
   fixture.backup.data_extraction_resource.logical_name = 'xml/memphis_zoo_data_extraction_rules';
   fixture.native_security.webview_executable_sha256 = { 'assets/public/index.html': H };
   fixture.native_security.dex_sha256 = { 'classes.dex': H };
-  fixture.tools.node.version = 'v22.23.1';
+  fixture.tools.node.version = 'v22.23.4';
+  fixture.source.ref = schema.$defs.legacySourceRef.enum.find(value => value === 'refs/heads/main');
+  assert.equal(fixture.source.ref, 'refs/heads/main');
   assert.equal(assertCustodialAcceptanceSchema(fixture), true);
 });
 
@@ -151,7 +153,7 @@ async function syntheticCreatorInput(context) {
   f.artifact.file_name = 'synthetic-not-a-real-build.apk';
   f.native_security.webview_executable_sha256 = { 'assets/public/index.html': H };
   f.native_security.dex_sha256 = { 'classes.dex': H };
-  f.tools.node.version = 'v22.23.1'; f.tools.android_build_tools_platform = CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform;
+  f.tools.node.version = 'v22.23.4'; f.tools.android_build_tools_platform = CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.platform;
   for (const [name, path] of Object.entries({ aapt2: 'aapt2', apksigner: 'apksigner', apksigner_jar: 'lib/apksigner.jar', source_properties: 'source.properties', zipalign: 'zipalign' })) f.tools[name].sha256 = CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.installed_files_sha256[path];
   f.verifier.release_policy_sha256 = CUSTODIAL_ANDROID_RELEASE_POLICY.sha256;
   f.verifier.toolchain_policy_sha256 = CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256;

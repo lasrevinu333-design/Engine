@@ -3397,7 +3397,7 @@
   "fixture_inputs": [
     {
       "path": "test-fixtures/ci/current-backend/SOURCE_TEST_CONTEXT.json",
-      "sha256": "dc292e1c93b0486fb53e88447477a78bdcbf9a618831aff3e3bf280d553e8375",
+      "sha256": "c6e01d587fde67cf863558782b2412f814a4142410c6941d244dbfe06c6333c6",
       "bytes": 27659,
       "purpose": "Portable explicit selected Source-test-code and historical-artifact provenance roles; no current acceptance claim"
     },
@@ -3439,13 +3439,13 @@
     },
     {
       "path": "test-fixtures/ci/current-backend/package-lock.json",
-      "sha256": "ad1352fdd9867022c6404a2bf1ae3ebc516fd74ff5e52c7f4bdd4a417bf0d139",
+      "sha256": "712cbdf47ce9920d45d10c87cf658e0f3ea7c321e7f933647efa4dbb030bb5bb",
       "bytes": 83047,
       "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
     },
     {
       "path": "test-fixtures/ci/current-backend/package.json",
-      "sha256": "ccbab61c3c4ff9170b5bc3cb7e9a1348160f662e7bca7280ddce1168097f233a",
+      "sha256": "d0338487e0dede546f5ef9b27f165bdb5f99739d7ed61aee32e82b453300e630",
       "bytes": 21103,
       "purpose": "Exact selected scheduler/runtime/shared callable Source test context plus TEST metadata; not whole-current1061 evidence or deployment"
     },

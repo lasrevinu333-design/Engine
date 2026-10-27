@@ -7,8 +7,8 @@ import {assertReviewedForwardBuild} from './configure-native-release.mjs';
 import {parseDeterministicJson} from './custodial-capacitor-runtime-policy.mjs';
 import {custodialAndroidToolchainPolicyForPlatform} from './custodial-android-toolchain-policy.mjs';
 
-const POLICY_SHA='e95b41af4b132fe21d34744bd4e3f9874eed8f937ca7981d4c4a6fd1d12f9b8f';
-const CONFIG_SHA='870d09e2ef09fd5c1201784e2755cc10b0e54efe2adff78060048d07df9870ec';
+const POLICY_SHA='a3ecf7e0828942c75460586de5156e72980c24cc5c23bd4597a05f52edeeedc2';
+const CONFIG_SHA='5518512605b7d9508d09a844aaf90fe9013115065cfd954469a95ca4048b91b9';
 const configPath=fileURLToPath(new URL('../release-policies/custodial-callback-reference-workflow.json',import.meta.url));
 const BOUNDARY_SHA='55e49c6d0003592daf05e405b5eaf4ce4921207dfdabc30bb686f89cc71f514a';
 const policyPath=fileURLToPath(new URL('../release-policies/custodial-callback-reference.json',import.meta.url));

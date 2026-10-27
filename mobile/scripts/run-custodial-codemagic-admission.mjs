@@ -1,4 +1,4 @@
-#!/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node
+#!/home/eric/.cache/codex-toolchains/node-v22.23.4/bin/node
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -49,8 +49,8 @@ const GITHUB_TIMEOUT_MS = 30_000;
 const TEMPORARY_PARENT = '/home/eric/.cache';
 const TEMPORARY_PREFIX = 'memphis-zoo-custodial-admission-bootstrap-';
 const BOOTSTRAP_MARKER_NAME = 'MZ_CUSTODIAL_CODEMAGIC_ADMISSION_BOOTSTRAP';
-const EXPECTED_HOST_TOOLS_MODULE_SHA256 = '1216835897f7a9f5135a813c12443ecfe4e7f092311520f48c84832809d39c95';
-const EXPECTED_HOST_TOOLS_POLICY_SHA256 = '3acedc6fc529cfaa871a5b889e2bf340bada6faf3402c823a094e4d0c1c2f83b';
+const EXPECTED_HOST_TOOLS_MODULE_SHA256 = 'd57ced2c1754061a4e11765c5477a665bafb45ddf6c6cac6cb41216328ba67f6';
+const EXPECTED_HOST_TOOLS_POLICY_SHA256 = 'acf83a599532078fa7eacf23a7d8ad1e0f017592a49e70ac175547c34ffb34ee';
 const snapshotPathspecs = Object.freeze([
   'codemagic.yaml',
   'package.json',

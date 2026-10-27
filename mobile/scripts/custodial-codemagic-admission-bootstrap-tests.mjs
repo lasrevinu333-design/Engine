@@ -1,4 +1,4 @@
-#!/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node
+#!/home/eric/.cache/codex-toolchains/node-v22.23.4/bin/node
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -32,7 +32,7 @@ const BUILD_ID = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const COMMIT = '68bf6d7d9863376ad41b27ec4eb99071d48b6864';
 const HOST_POLICY_SHA256 = 'b'.repeat(64);
 const TOKEN = 'test-token-never-print-0123456789';
-const PRODUCTION_PINNED_NODE = '/home/eric/.cache/codex-toolchains/node-v22.23.1/bin/node';
+const PRODUCTION_PINNED_NODE = '/home/eric/.cache/codex-toolchains/node-v22.23.4/bin/node';
 const PINNED_NODE = realpathSync(process.execPath);
 const SDK_ROOT = realpathSync(custodialCodemagicAdmissionBootstrapInternals.repositoryRoot);
 const JAVA_HOME = dirname(PINNED_NODE);

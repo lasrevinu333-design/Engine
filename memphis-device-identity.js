@@ -2,7 +2,7 @@
   'use strict';
 
   const RELEASE='release-2026.07.19.custodial-v3.12';
-  const BACKEND_ORIGIN='https://memphis-zoo-mcp.onrender.com';
+  const BACKEND_ORIGIN=window.MemphisAuth?.backendOrigin||'https://memphis-zoo-mcp.onrender.com';
   const STATUS_URL=`${BACKEND_ORIGIN}/device-auth/status`;
   const ENROLL_URL=`${BACKEND_ORIGIN}/device-auth/enroll`;
   const STORAGE_KEYS=['mz_scan_device_id','mz_employee_hub_device_id','memphisAssignedDeviceId'];

@@ -140,7 +140,7 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -euo pipefail
-        test "$(node --version)" = 'v22.23.1'
+        test "$(node --version)" = 'v22.23.4'
         BUILD_TOOLS_DIRECTORY="$ANDROID_SDK_ROOT/build-tools/35.0.1" node --input-type=module <<'NODE'
         import { createHash } from 'node:crypto';
         import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -176,7 +176,7 @@ definitions:
         #!/usr/bin/env bash
         set -euo pipefail
         npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
-        test "$(node --version)" = "v22.23.1"
+        test "$(node --version)" = "v22.23.4"
         test "$(npm --version)" = "11.17.0"
         npm ci --ignore-scripts --no-audit --no-fund
         npx --no-install playwright install chromium
@@ -599,7 +599,7 @@ workflows:
     integrations:
       app_store_connect: memphis_zoo_app_store_connect
     environment:
-      node: '22.23.1'
+      node: '22.23.4'
       xcode: '26.4'
       groups:
         - app_store_credentials
@@ -644,7 +644,7 @@ workflows:
     integrations:
       app_store_connect: memphis_zoo_app_store_connect
     environment:
-      node: '22.23.1'
+      node: '22.23.4'
       xcode: '26.4'
       groups:
         - app_store_credentials
@@ -686,7 +686,7 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       xcode: '26.2'
-      node: '22.23.1'
+      node: '22.23.4'
       java: 21
       groups:
         - google_play_credentials
@@ -767,7 +767,7 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       xcode: '26.2'
-      node: '22.23.1'
+      node: '22.23.4'
       java: 21
       vars:
         MZ_APP_EDITION: custodial
@@ -842,7 +842,7 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       xcode: '26.2'
-      node: '22.23.1'
+      node: '22.23.4'
       java: 21
       vars:
         MZ_APP_EDITION: custodial
@@ -889,7 +889,7 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       xcode: '26.2'
-      node: '22.23.1'
+      node: '22.23.4'
       java: 21
       groups:
         - google_play_credentials
