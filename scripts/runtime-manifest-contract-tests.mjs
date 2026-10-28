@@ -228,8 +228,6 @@ const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
     .replace(/^---\r?\nlayout: null\r?\n---\r?\n/, ''),
 );
-assert.equal(frontendManifest.frontend_commit_state,'final_rebind_required');
-assert.equal(frontendDeploymentManifest.frontend_commit_state,'final_rebind_required');
 assert.equal(frontendDeploymentManifest.frontend_commit_sha,'{{ site.github.build_revision }}');
 const scanPageSource = readFileSync(resolve(root, 'index.html'), 'utf8');
 const scanWorkerSource = readFileSync(resolve(root, 'memphis-scan-sync.js'), 'utf8');

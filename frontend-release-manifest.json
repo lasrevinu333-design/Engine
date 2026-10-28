@@ -168,6 +168,5 @@
     "thread.html": "7c6fdec31709d46d5a0d8840c33bfd541be1a8fcbab23cf7f4b905d92d1e7ded"
   },
   "permission_policy_schema": "custodial.manager-permissions.v1",
-  "source_base_commit_sha": "6fae503111ef21c40a309913965c3b963043aa01",
-  "frontend_commit_state": "final_rebind_required"
+  "source_base_commit_sha": "6fae503111ef21c40a309913965c3b963043aa01"
 }
