@@ -234,6 +234,16 @@ export function installEmployeeSchedule(options) {
     function timeSeconds(value){if(String(value||'').trim().toLowerCase()==='close')return 86400;const match=String(value||'').trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);if(!match)return null;let h=Number(match[1]);const m=Number(match[2]),sec=Number(match[3]||0),mer=match[4]?.toUpperCase();if(m>59||sec>59||h>(mer?12:23)||(mer&&h<1))return null;if(mer)h=h%12+(mer==='PM'?12:0);return h*3600+m*60+sec;}
     function isLunch(item){return String(item?.coverage_purpose||item?.purpose||'').trim().toLowerCase()==='lunch_coverage';}
     function publishedItems(data){return data?.full_day===true&&Array.isArray(data.raw_items)?data.raw_items:Array.isArray(data?.current_items)?data.current_items:[];}
+    function zooWideWindow(data){
+      const value=data?.zoo_wide_coverage;
+      if(value?.schema!=='employee-zoo-wide-coverage.v1'||data.projection_status!=='current'
+        ||value.service_date!==data.service_date||value.employee_id!==data.employee_id
+        ||!data.projection_id||value.projection_id!==data.projection_id
+        ||!data.publication_id||value.publication_id!==data.publication_id)return null;
+      const start=timeSeconds(value.start),end=timeSeconds(value.end);
+      return start!==null&&end!==null&&start<end?{start,end}:null;
+    }
+    function zooWideNow(data){const window=zooWideWindow(data),now=zooNow();return Boolean(window&&data.service_date===now.date&&window.start<=now.seconds&&now.seconds<window.end);}
     function currentItems(data){const clock=zooNow();if(data?.service_date!==clock.date||(data.projection_status&&data.projection_status!=='current'))return [];return publishedItems(data).map((item,index)=>({item,index})).filter(({item})=>{const start=timeSeconds(item.coverage_start),end=timeSeconds(item.coverage_end);if(isLunch(item)&&(!/^[a-f0-9]{64}$/.test(item.loan_id||'')||!data.employee_id||item.coverer_person_id!==data.employee_id||item.service_date!==data.service_date||!data.projection_id||item.projection_id!==data.projection_id))return false;return start!==null&&end!==null&&start<end&&start<=clock.seconds&&clock.seconds<end;}).sort((left,right)=>Number(isRestroom(right.item))-Number(isRestroom(left.item))||name(left.item).localeCompare(name(right.item),'en',{sensitivity:'base',numeric:true})||left.index-right.index).map(entry=>entry.item);}
     function name(item){return String(item?.name||item?.location_name||item?.group_name||item?.group_code||'Assigned area').trim();}
     function details(item){const values=[];const locations=Array.isArray(item?.included_locations)?item.included_locations.map(String).filter(Boolean):[];if(locations.length)values.push(locations.join(', '));const purpose=String(item?.coverage_purpose||item?.purpose||'').toLowerCase();if(purpose==='lunch_coverage'){const start=timeSeconds(item.coverage_start),end=timeSeconds(item.coverage_end);values.push(start!==null&&end!==null&&start<end?`On call: ${friendlyTime(item.coverage_start)}–${friendlyTime(item.coverage_end)}`:'Lunch coverage');}else if(item.coverage_end)values.push(`Until ${friendlyTime(item.coverage_end)}`);return values.join(' · ');}
@@ -317,7 +327,7 @@ export function installEmployeeSchedule(options) {
         // Typed view has no stale field. Only transport/cache state supplied by
         // this consumer determines its offline or unconfirmed presentation.
         data={service_date:data.service_date,employee_id:data.employee_id,...(blocked?{}:{projection_id:data.projection_id}),employee_name:blocked?'Employee':data.employee_name,projection_status:data.projection_status,
-          raw_items:data.raw_items,full_day:true,shift:data.shift,stale:false,schedule_status:data.shift===null&&data.raw_items.length===0?'off':'on'};
+          raw_items:data.raw_items,full_day:true,shift:data.shift,publication_id:data.publication_id,zoo_wide_coverage:data.zoo_wide_coverage,stale:false,schedule_status:data.shift===null&&data.raw_items.length===0?'off':'on'};
       }
       lastView={data,offline,cacheWarning};
       if(data?.projection_status==='blocked_recurring_authority'){
@@ -331,13 +341,13 @@ export function installEmployeeSchedule(options) {
       const rows=list=>list.map(item=>`<li class="area"><div class="areaName">${esc(name(item))}</div>${details(item)?`<div class="areaDetail">${esc(details(item))}</div>`:''}</li>`).join('');
       els.employee.textContent=String(data?.employee_name||data?.employee?.display_name||'Employee');els.date.textContent=date(data?.service_date);
       els.notice.textContent=!offline&&sameDay?String(data?.notice||''):'';els.notice.hidden=!els.notice.textContent;els.content.hidden=false;
-      els.areas.innerHTML=regular.length?rows(regular):`<li class="area"><div class="areaName">${!sameDay?'Today’s schedule is unavailable.':offline&&!items.length?'No current areas can be confirmed from the saved schedule.':data?.schedule_status==='off'?'You are not scheduled today.':'No regular areas are active right now.'}</div></li>`;
+      els.areas.innerHTML=regular.length&&zooWideNow(data)?'<li class="area"><div class="areaName">Zoo Wide Coverage</div></li>':regular.length?rows(regular):`<li class="area"><div class="areaName">${!sameDay?'Today’s schedule is unavailable.':offline&&!items.length?'No current areas can be confirmed from the saved schedule.':data?.schedule_status==='off'?'You are not scheduled today.':'No regular areas are active right now.'}</div></li>`;
       els.lunch.hidden=!lunch.length;els.lunchAreas.innerHTML=rows(lunch);
       state(cacheWarning?'Schedule updated, but this phone could not save a copy. Ask a manager for help.':!offline&&data?.stale===true?'Showing the latest saved schedule.':'',cacheWarning);scheduleBoundary(data);
       try{const committed=commitDisplayedBinding(selected,source,{owns:owned,offline,cacheWarning});if(committed===DISPLAY_SUPERSEDED)return null;reconcileAlerts(owned);return owned()?committed:null;
       }catch{if(!owned())return;clearPresentation();state('Schedule changed during display. Updating…',true);return;}
     }
-    function scheduleBoundary(data){clearTimeout(boundary);const clock=zooNow(),times=data?.service_date===clock.date?publishedItems(data).flatMap(item=>[timeSeconds(item.coverage_start),timeSeconds(item.coverage_end)]).filter(value=>value!==null&&value>clock.seconds):[];times.push(86400);const delay=Math.max(1,(Math.min(...times)-clock.seconds)*1000-Date.now()%1000);
+    function scheduleBoundary(data){clearTimeout(boundary);const clock=zooNow(),times=data?.service_date===clock.date?publishedItems(data).flatMap(item=>[timeSeconds(item.coverage_start),timeSeconds(item.coverage_end)]).filter(value=>value!==null&&value>clock.seconds):[];const closing=zooWideWindow(data);if(closing&&data.service_date===clock.date)for(const at of [closing.start,closing.end])if(at>clock.seconds)times.push(at);times.push(86400);const delay=Math.max(1,(Math.min(...times)-clock.seconds)*1000-Date.now()%1000);
       const token=setTimeout(sourceWriter('EMPLOYEE_341',()=>{
         if(paused||boundary!==token)return;
         const generation=securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;

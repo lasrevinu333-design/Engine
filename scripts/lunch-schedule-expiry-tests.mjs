@@ -14,7 +14,7 @@ const context={Date:class extends Date{constructor(...args){super(...(args.lengt
   document:{getElementById:element,addEventListener(){}},window:{MemphisMobile:{deviceId:()=> 'KIOSK_08'},addEventListener(){}},
   localStorage:{getItem:()=>null},fetch:async()=>{throw Error('isolated');},setTimeout:()=>1,clearTimeout(){},setInterval:()=>2,clearInterval(){}};
 vm.createContext(context);
-vm.runInContext(inline.replace("els.retry.addEventListener",'globalThis.scheduleTest={currentItems,details};els.retry.addEventListener'),context);
+vm.runInContext(inline.replace("els.retry.addEventListener",'globalThis.scheduleTest={currentItems,details,zooWideNow};els.retry.addEventListener'),context);
 const names=data=>Array.from(context.scheduleTest.currentItems(data),row=>row.name);
 const day={service_date:'2026-09-21',employee_id:employee,projection_id:projection,current_items:fixtures};
 const checks=[];
@@ -40,6 +40,21 @@ check('RECIPIENT actual 45-minute lunch ends exclusively without erasing overlap
 check('DETAIL on-call labels retain actual published bounds, not a default hour or whole-loan inference',()=>{
  const label=context.scheduleTest.details(lunch());assert.match(label,/11:30 AM/);assert.match(label,/12:15 PM/);assert.match(label,/On call:/);assert.doesNotMatch(label,/60 minutes|one.hour|full lunch/i);
  const partial=context.scheduleTest.details(lunch({coverage_start:'11:45',coverage_end:'12:00'}));assert.match(partial,/11:45 AM/);assert.match(partial,/12:00 PM/);assert.match(partial,/On call:/);
+});
+check('Zoo Wide Coverage starts only in the exact published closing window and retains all alert locations',()=>{
+ const originalNow=now,publication='ad000000-0000-4000-8000-000000000003';
+ const closing={...day,publication_id:publication,projection_status:'current',full_day:true,
+  raw_items:[item('Restroom','09:45','17:00'),item('Exhibit','16:00','17:00')],
+  zoo_wide_coverage:{schema:'employee-zoo-wide-coverage.v1',employee_id:employee,service_date:day.service_date,publication_id:publication,projection_id:projection,start:'16:00',end:'17:00'}};
+ const original=JSON.stringify(closing);
+ try{
+  now=Date.parse('2026-09-21T20:59:59Z');assert.equal(context.scheduleTest.zooWideNow(closing),false);
+  now=Date.parse('2026-09-21T21:00:00Z');assert.equal(context.scheduleTest.zooWideNow(closing),true);
+  assert.deepEqual(names(closing),['Restroom','Exhibit']);assert.equal(JSON.stringify(closing),original);
+  for(const change of [{employee_id:'foreign'},{projection_id:'foreign'},{publication_id:'foreign'},{service_date:'2026-09-20'}])
+   assert.equal(context.scheduleTest.zooWideNow({...closing,zoo_wide_coverage:{...closing.zoo_wide_coverage,...change}}),false);
+  now=Date.parse('2026-09-21T22:00:00Z');assert.equal(context.scheduleTest.zooWideNow(closing),false);
+ }finally{now=originalNow;}
 });
 console.log(JSON.stringify({scope:'Isolated actual schedule-page logic; no live assignments or physical phone',checks},null,2));
 process.exitCode=checks.some(row=>!row.passed)?1:0;
