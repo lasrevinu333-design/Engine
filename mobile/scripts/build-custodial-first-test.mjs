@@ -6,6 +6,8 @@ import {existsSync,readFileSync,writeFileSync,mkdirSync,copyFileSync} from 'node
 import {resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {verifyAndroidApkBackupSecurity} from './verify-android-apk-backup.mjs';
+import {assertCustodialReleaseManifest,resolveCustodialAndroidTools} from './verify-custodial-android-release.mjs';
 import {readCustodialBuildScope} from './custodial-new-producer-scope-policy.mjs';
 const mobile=resolve(fileURLToPath(new URL('..',import.meta.url))),root=resolve(mobile,'..');
 const env={...process.env,MZ_APP_EDITION:'custodial',MZ_SHELL_START:'1'};
@@ -38,7 +40,8 @@ writeFileSync(manifestPath,manifest);
 const stringsPath=join(mobile,'android/app/src/main/res/values/strings.xml');
 writeFileSync(stringsPath,readFileSync(stringsPath,'utf8').replace(/(<string name="(?:app_name|title_activity_main)">)[^<]*(<\/string>)/g,'$1Memphis Zoo Custodial TEST$2'));
 const sdk=env.ANDROID_HOME||env.ANDROID_SDK_ROOT;assert.ok(sdk,'ANDROID_HOME is required');
-const tool=(name)=>join(sdk,'build-tools/35.0.1',name);
+const tools=resolveCustodialAndroidTools(join(sdk,'build-tools/35.0.1'));
+const tool=(name)=>tools[name];
 run(join(mobile,'android/gradlew'),['--no-daemon','--max-workers=2','--dependency-verification=strict',':app:assembleRelease'],join(mobile,'android'));
 const output=join(root,'build/first-test');mkdirSync(output,{recursive:true});
 const unsigned=join(output,`custodial-first-test-${env.MZ_BUILD_NUMBER}-unsigned.apk`);
@@ -67,8 +70,13 @@ for(const name of ['employee-schedule.html','messages.html','events.html','emplo
 }
 const build=JSON.parse(readAsset('build.json'));assert.equal(build.source_commit,sourceCommit);assert.equal(build.source_tree,sourceTree);
 assert.ok(!build.cleaning_first_scope);
+const backup=verifyAndroidApkBackupSecurity(artifact,{aapt2Path:tool('aapt2')});
+// Exercise production refusal independently of the old fleet ceiling.
+// aapt2 badging may omit testOnly; the compiled manifest remains authoritative.
+// This is a negative check only, never a production admission.
+assert.throws(()=>assertCustodialReleaseManifest({manifestDump:xml,badgingDump:badging,expectedBuildNumber:Number(env.MZ_BUILD_NUMBER),enforceStagedRecoveryCeiling:false}),/must not be testOnly|Compiled Android manifest and aapt2 badging metadata differ/);
 const bytes=readFileSync(artifact);
-const receipt={schema:'custodial.owner-first-test-artifact.v1',purpose:'OWNER_TEST_ONLY',production_admission:false,physical_acceptance:false,install_performed:false,source_commit:sourceCommit,source_tree:sourceTree,package_name:'org.memphiszoo.custodial',version_code:Number(env.MZ_BUILD_NUMBER),version_name:env.MZ_RELEASE_VERSION,scope:'full-system',test_only:true,debuggable:false,artifact,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),signer_sha256:signer,retained_data_update_signer_verified:!!signer,clock_audio_qualification:'NOT_CREATED_BY_TEST_BUILD',limitations:['Physical testing is owner work.','Production release admission remains separate.','Native clock/audio qualification is not fabricated by this route.']};
+const receipt={schema:'custodial.owner-first-test-artifact.v1',purpose:'OWNER_TEST_ONLY',production_admission:false,physical_acceptance:false,install_performed:false,source_commit:sourceCommit,source_tree:sourceTree,package_name:'org.memphiszoo.custodial',version_code:Number(env.MZ_BUILD_NUMBER),version_name:env.MZ_RELEASE_VERSION,scope:'full-system',test_only:true,debuggable:false,production_verifier_rejected:true,backup_policy:backup.policy,artifact,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),signer_sha256:signer,retained_data_update_signer_verified:!!signer,clock_audio_qualification:'NOT_CREATED_BY_TEST_BUILD',limitations:['Physical testing is owner work.','Production release admission remains separate.','Native clock/audio qualification is not fabricated by this route.']};
 writeFileSync(join(output,'artifact.json'),JSON.stringify(receipt,null,2)+'\n');
 writeFileSync(join(output,'manifest.txt'),xml);writeFileSync(join(output,'badging.txt'),badging);
 console.log(JSON.stringify(receipt,null,2));
