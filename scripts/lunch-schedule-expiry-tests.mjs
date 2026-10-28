@@ -14,7 +14,7 @@ const context={Date:class extends Date{constructor(...args){super(...(args.lengt
   document:{getElementById:element,addEventListener(){}},window:{MemphisMobile:{deviceId:()=> 'KIOSK_08'},addEventListener(){}},
   localStorage:{getItem:()=>null},fetch:async()=>{throw Error('isolated');},setTimeout:()=>1,clearTimeout(){},setInterval:()=>2,clearInterval(){}};
 vm.createContext(context);
-vm.runInContext(inline.replace("els.retry.addEventListener",'globalThis.scheduleTest={currentItems,details,zooWideNow};els.retry.addEventListener'),context);
+vm.runInContext(inline.replace("els.retry.addEventListener",'globalThis.scheduleTest={currentItems,details,zooWideNow,displayRows};els.retry.addEventListener'),context);
 const names=data=>Array.from(context.scheduleTest.currentItems(data),row=>row.name);
 const day={service_date:'2026-09-21',employee_id:employee,projection_id:projection,current_items:fixtures};
 const checks=[];
@@ -56,5 +56,25 @@ check('Zoo Wide Coverage starts only in the exact published closing window and r
   now=Date.parse('2026-09-21T22:00:00Z');assert.equal(context.scheduleTest.zooWideNow(closing),false);
  }finally{now=originalNow;}
 });
+const nativeSource=readFileSync(new URL('../mobile/src/custodial/employee-schedule-runtime.js',import.meta.url),'utf8');
+const nativeContext={...context,window:{...context.window}};vm.createContext(nativeContext);
+vm.runInContext(nativeSource.replace('export function installEmployeeSchedule','function installEmployeeSchedule')
+ .replace('els.retry.addEventListener','globalThis.scheduleTest={currentItems,details,zooWideNow,displayRows};els.retry.addEventListener')+'\ninstallEmployeeSchedule();',nativeContext);
+for(const [surface,api]of [['web',context.scheduleTest],['native',nativeContext.scheduleTest]]){
+ check(surface+' whole-hour area remains across09:45 and expires at the published end',()=>{
+  const prior=now,area=lunch({name:'Shared restroom',coverage_start:'09:30',coverage_end:'10:30'}),saved=accepted([area]);
+  const before=JSON.stringify(saved);
+  try{for(const [time,count]of [['2026-09-21T14:44:59Z',1],['2026-09-21T14:45:00Z',1],['2026-09-21T15:29:59Z',1],['2026-09-21T15:30:00Z',0]]){
+   now=Date.parse(time);assert.equal(api.currentItems(saved).filter(r=>r.name==='Shared restroom').length,count);
+  }assert.equal(JSON.stringify(saved),before);}finally{now=prior;}
+ });
+ check(surface+' two retained original anchors display once without changing source or merging distinct hours',()=>{
+  const first=lunch({name:'Shared restroom',location_group_id:'same-group',coverage_start:'09:30',coverage_end:'10:30',normal_occurrence_id:'original-morning'});
+  const second={...first,normal_occurrence_id:'original-after0945'},other={...first,coverage_end:'11:00'};
+  const rows=[first,second,other],before=JSON.stringify(rows),shown=api.displayRows(rows);
+  assert.equal(shown.length,2);assert.equal(shown[0],first);assert.equal(shown[1],other);assert.equal(JSON.stringify(rows),before);
+  assert.match(api.details(first),/9:30 AM.*10:30 AM/);
+ });
+}
 console.log(JSON.stringify({scope:'Isolated actual schedule-page logic; no live assignments or physical phone',checks},null,2));
 process.exitCode=checks.some(row=>!row.passed)?1:0;
