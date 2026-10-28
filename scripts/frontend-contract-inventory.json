@@ -856,6 +856,19 @@
       ]
     },
     {
+      "path": "scripts/feedback-backup-reconciliation-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "First full auditor-owned regression for exact original lifecycle and current authority.",
+      "invocations": [
+        {
+          "entry": "scripts/feedback-backup-reconciliation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/feedback-delivery-status-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
@@ -1288,6 +1301,32 @@
       "invocations": [
         {
           "entry": "scripts/lunch-schedule-expiry-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-auth-lifecycle-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "First full auditor-owned regression for exact original lifecycle and current authority.",
+      "invocations": [
+        {
+          "entry": "scripts/manager-auth-lifecycle-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-feedback-original-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "First full auditor-owned regression for exact original lifecycle and current authority.",
+      "invocations": [
+        {
+          "entry": "scripts/manager-feedback-original-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []

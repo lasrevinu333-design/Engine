@@ -8,12 +8,15 @@ const source = readFileSync(process.env.FEEDBACK_SOURCE || new URL('../system-fe
 if (!process.argv.includes('--triage-only')) {
 const submit = source.slice(source.indexOf('async function submit(event)'), source.indexOf("els.form.addEventListener('submit'"));
 
-assert.match(submit, /isNativeCustodialAuthority\(\) && state\.hub === 'employee' && !state\.deviceId/);
-assert.match(submit, /const identityHeaders = state\.hub === 'manager' \? await managerHeaders\(\) : \{\}/);
-assert.match(submit, /credentials: 'include'/);
-assert.match(submit, /\.\.\.identityHeaders/);
-assert.match(submit, /hub_context: state\.hub/);
-assert.match(submit, /device_id: state\.deviceId/);
+const producer=readFileSync(new URL('../manager-feedback-submit.mjs',import.meta.url),'utf8');
+assert.match(source,/import\('\.\/manager-feedback-submit\.mjs'\)/);
+assert.match(source,/credentials:'include'/);
+assert.match(source,/await managerHeaders\(\)/);
+assert.match(producer,/expected_manager_id:owner.manager_id/);
+assert.match(producer,/expected_credential_id:owner.credential_id/);
+assert.match(producer,/hub_context:'manager',device_id:owner.device_id/);
+assert.match(producer,/storage.setItem\(KEY,prior.raw\)/);
+assert.match(submit,/await sender.submit\(draft\)/);
 
 const bridge = readFileSync(new URL('../mobile/src/custodial/bridge.js', import.meta.url), 'utf8');
 assert.match(bridge, /window\.fetch = bridgeFetch/);

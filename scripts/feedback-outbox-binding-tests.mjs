@@ -61,7 +61,7 @@ async function retirementBackupCases(){
   const options={storage,identity:async()=>identity,online:()=>true,onStatus:n=>notices.push(n),mutate:async fn=>{
    const value=await fn({deviceId:identity.deviceId,generation:1});if(postReject&&removals.length){postReject=false;throw Error('Synthetic post-callback withdrawal');}return value;
   },request:async(path,options)=>{
-   requests.push(structuredClone(options));if(kind==='unverified')return {ok:true};
+   requests.push({path,...structuredClone(options)});if(kind==='unverified')return {ok:true};
    const b=options.body;if(!ids.has(b.operation_id))ids.set(b.operation_id,randomUUID());
    return {ok:true,meta:META,data:{item:{...ack({identity},b),id:ids.get(b.operation_id)}}};
   }};
@@ -78,8 +78,8 @@ async function retirementBackupCases(){
    const backupBytes=f.memory.get(backupKey),backup=JSON.parse(backupBytes);same(Object.keys(backup).sort(),['original_encoded','original_key','schema_version']);same(backup.schema_version,'employee-feedback-retirement-backup.v1');same(backup.original_key,key);same(backup.original_encoded,encoded);
    const restarted=f.restart(),pending=await restarted.readPending();same(pending.state,'pending');same(pending.body,JSON.parse(encoded).body);same(pending.originals.length,1);same(f.requests.length,1);
    const before=f.writes.length;f.identity.credentialId='';same(await restarted.readPending(),{state:'unavailable'});same(f.writes.length,before);
-   f.identity.credentialId=pending.body.expected_credential_id;await restarted.save(pending.body);same(f.memory.get(key),encoded);same(f.memory.get(backupKey),backupBytes);
-   same(await restarted.flush(),[b.operation_id]);same(f.memory.get(key),undefined);same(f.memory.get(backupKey),backupBytes);same(f.requests[1],f.requests[0]);
+   f.identity.credentialId=pending.body.expected_credential_id;await restarted.save(pending.body);same(f.memory.get(key),undefined);same(f.memory.get(backupKey),backupBytes);
+   same(await restarted.flush(),[b.operation_id]);same(f.memory.get(key),undefined);same(f.memory.get(backupKey),backupBytes);same(f.requests[1].body,f.requests[0].body);same(f.requests[1].path,'/feedback-api/original-receipt');
   }else{
    same(accepted,[]);same(f.memory.get(key),encoded);same(f.removals.length,0);
    if(kind==='conflict'){same(f.memory.get(backupKey),conflict);same(await f.box.readPending(),{state:'held'});}
@@ -103,10 +103,10 @@ async function retirementBackupCases(){
   runInNewContext(script,{window:{MemphisMobile:mobile,addEventListener(){}},document:{getElementById:id=>elements[id],addEventListener(){}},crypto:{randomUUID},URL:{revokeObjectURL(){}},Promise,Date,Math});return {listeners,elements,saves};
  }
  const drain=async()=>{for(let n=0;n<25;n++)await new Promise(setImmediate);};
- const p=page();await drain();same(p.elements.send.textContent,'Retry Sync');same(p.elements.status.textContent,'Saved on this phone. It will retry automatically.');const requests=f.requests.length;
- await p.listeners['form:submit']({preventDefault(){}});await drain();same(p.saves[0],original);same(p.elements.status.textContent,'Saved in the program.');same(f.requests.length,requests+1);same(f.memory.get(backupKey),backupBytes);
- const reload=page();await drain();same(reload.elements.status.textContent,'Saved on this phone. It will retry automatically.');same(reload.elements.send.textContent,'Retry Sync');same(f.requests.length,requests+1);same(reload.saves.length,0);
- await p.listeners['form:submit']({preventDefault(){}});await drain();assert.notEqual(p.saves[1].operation_id,b.operation_id);checks++;same([...f.memory.keys()].filter(k=>k.startsWith(BACKUP_PREFIX)).length,2);same(f.memory.get(backupKey),backupBytes);cases++;
+ f.box=f.restart();const requests=f.requests.length;
+ const p=page();await drain();same(p.elements.send.textContent,'Send');same(p.elements.status.textContent,'Saved in the program.');same(p.saves.length,0);same(f.requests.length,requests+1);same(f.requests.at(-1).path,'/feedback-api/original-receipt');same(f.memory.get(backupKey),backupBytes);
+ await p.listeners['form:submit']({preventDefault(){}});await drain();assert.notEqual(p.saves[0].operation_id,b.operation_id);checks++;same(p.elements.status.textContent,'Saved in the program.');same([...f.memory.keys()].filter(k=>k.startsWith(BACKUP_PREFIX)).length,2);same(f.memory.get(backupKey),backupBytes);
+ f.box=f.restart();const reload=page();await drain();same(reload.elements.status.textContent,'Saved in the program.');same(reload.elements.send.textContent,'Send');same(reload.saves.length,0);same(f.memory.get(backupKey),backupBytes);cases++;
  console.log(JSON.stringify({status:'FEEDBACK_RETIREMENT_BACKUP_SOURCE_PASS',cases,checks,utc:new Date().toISOString(),callbacks:'synthetic',actualPageScript:true,SQL:false,HTTP:false,provider:false,native:false,backupAcceptance:false,retentionCleanupQualified:false}));
 }
 if(process.argv.includes('--retirement-backup-only')){await retirementBackupCases();process.exit(0);}

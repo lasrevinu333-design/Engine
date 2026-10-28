@@ -22,6 +22,7 @@
   const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
   let opsSession=null;
   let opsSessionRequest=null;
+  let opsSessionGeneration=0;
   let deviceSecurityCsrfToken='';
   const RETIRED_CLIENT_KEYS=Object.freeze([
     'memphisOpsManagerSession.v2','memphisOpsManagerOpenSession.v1','memphisOpsAccessKey.v1',
@@ -206,15 +207,19 @@
     return null;
   }
 
-  function clearSessionRecord(){opsSession=null;}
+  function clearSessionRecord(){opsSessionGeneration++;opsSession=null;opsSessionRequest=null;}
+  function requireSessionGeneration(generation){
+    if(generation!==opsSessionGeneration)throw Object.assign(new Error('Manager session request is no longer current.'),{code:'STALE_MANAGER_SESSION_REQUEST'});
+  }
   function isOpsManager(session){return Boolean(session&&session.role==='ops_manager'&&session.token);}
   function isReadOnlySession(session=readSession()){return Boolean(session&&(session.read_only===true||session.access_level==='read_only'));}
   function canMutateOpsManagerSurface(session=readSession()){return Boolean(isOpsManager(session)&&!isReadOnlySession(session));}
   function hasRole(role,session=readSession()){const wanted=String(role||'').toUpperCase();return Boolean(session&&Array.isArray(session.roles)&&session.roles.map((r)=>String(r).toUpperCase()).includes(wanted));}
   function sessionAccessLevel(session){return isReadOnlySession(session)?'read_only':'full_access';}
 
-  async function parseSessionResponse(response){
+  async function parseSessionResponse(response,generation){
     const payload=await response.json().catch(()=>null);
+    requireSessionGeneration(generation);
     if(!response.ok||!payload||!payload.ok||!payload.data?.session?.token){
       const error=new Error((payload&&payload.error)||`Ops Manager authentication failed: HTTP ${response.status}`);
       error.status=response.status;
@@ -228,12 +233,13 @@
   }
 
   async function requestTrustedOpsSession(accessLevel='full_access'){
+    const generation=++opsSessionGeneration;
     const normalized=normalizeAccessLevel(accessLevel);
     const url=new URL(OPS_SESSION_URL);
     url.searchParams.set('access_level',normalized);
-    return parseSessionResponse(await fetch(url.toString(),{
+    try{return await parseSessionResponse(await fetch(url.toString(),{
       method:'GET',cache:'no-store',credentials:'include',signal:AbortSignal.timeout(10000),headers:{'X-Device-Id':getDeviceId()}
-    }));
+    }),generation);}catch(error){requireSessionGeneration(generation);throw error;}
   }
 
   function hasPermission(action,session=window.MemphisAuth?.readSession?.()){
@@ -241,8 +247,10 @@
     return p?.schema==='custodial.manager-permissions.v1'&&p.read===true&&p[action]===true;
   }
   async function signInWithMap(email,password){
+    const generation=++opsSessionGeneration;
     const configResponse=await fetch(`${AUTH_URL}/map-config`,{cache:'no-store',signal:AbortSignal.timeout(15000)});
     const config=await configResponse.json();
+    requireSessionGeneration(generation);
     if(!configResponse.ok||!config?.ok||config.data?.url!=='https://dwzdqekusvivjbxsapdu.supabase.co'||!String(config.data?.publishable_key||'').startsWith('sb_publishable_'))throw new Error('Map sign-in is unavailable.');
     // Password goes directly to the same Map identity provider. Never store it,
     // the provider refresh token, or a Custodial bearer in browser storage.
@@ -252,11 +260,12 @@
       body:JSON.stringify({email:String(email||'').trim(),password:String(password||'')})
     });
     const login=await loginResponse.json().catch(()=>null);
+    requireSessionGeneration(generation);
     if(!loginResponse.ok||!login?.access_token)throw new Error('The Map email or password was not accepted.');
     const response=await fetch(`${AUTH_URL}/map-session`,{method:'POST',credentials:'include',cache:'no-store',
       signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId()},
       body:JSON.stringify({access_token:login.access_token})});
-    return parseSessionResponse(response);
+    return parseSessionResponse(response,generation);
   }
   async function ownerCoverage(change=null){
     const response=await fetch(`${BACKEND_ORIGIN}/admin-api/access/coverage`,{
@@ -348,6 +357,7 @@
 
   async function verifyStoredOpsSession(accessLevel='full_access'){
     try{return await requestTrustedOpsSession(accessLevel);}catch(error){
+      if(error?.code==='STALE_MANAGER_SESSION_REQUEST')return null;
       clearSessionRecord();
       if(Number(error?.status)===401)return null;
       throw error;
@@ -370,11 +380,12 @@
     if(options.forceRefresh!==true&&existing&&(sessionAccessLevel(existing)===requested||existing.permissions?.schema==='custodial.manager-permissions.v1'))return existing;
 
     if(!opsSessionRequest){
-      opsSessionRequest=(async()=>{
+      const request=(async()=>{
         const refreshed=await verifyStoredOpsSession(requested);
         if(refreshed)return refreshed;
         return null;
-      })().finally(()=>{opsSessionRequest=null;});
+      })().finally(()=>{if(opsSessionRequest===request)opsSessionRequest=null;});
+      opsSessionRequest=request;
     }
 
     try{

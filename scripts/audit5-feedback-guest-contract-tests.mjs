@@ -23,13 +23,13 @@ assert.match(opsHub, /data\?\.enabled===true/);
 assert.doesNotMatch(guestIssues, /Marketing approve|data-action="approve"|data-action="reject"/);
 assert.match(guestIssues, /data-action="resolve"/);
 
-assert.match(feedback, /image_attachment\s*=\s*\{/);
-assert.match(feedback, /data_url:\s*state\.image\.dataUrl/);
+assert.doesNotMatch(feedback, /<input[^>]+type=["']file|capture=|FileReader|jpegDataUrl/);
+assert.match(feedback, /metadata_json\?\.image_attachment/, 'historical attachments remain readable');
 assert.match(feedback, /'Content-Type':\s*'application\/json'/);
 assert.doesNotMatch(feedback, /new FormData|multipart\/form-data/i);
 assert.match(feedback, /id="feedback-inbox"/);
 assert.match(feedback, /dashboard-api\/system-feedback/);
-assert.match(feedback, /data-action="acknowledged"/);
-assert.match(feedback, /data-action="resolved"/);
+assert.match(feedback, /\['acknowledged','Acknowledge'\]/);
+assert.match(feedback, /\['resolved','Resolve'\]/);
 
 console.log('audit 5 feedback and guest frontend contract tests passed');
