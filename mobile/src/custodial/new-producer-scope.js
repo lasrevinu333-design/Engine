@@ -1,5 +1,5 @@
 // Immutable Source-owned release scope; no caller, URL, preference or environment switch.
-export const CUSTODIAL_NEW_PRODUCER_SCOPE = "cleaning-first-retained-continuity-v1";
+export const CUSTODIAL_NEW_PRODUCER_SCOPE = "full-system";
 export function custodialNewProducerAdmissionsEnabled() {
   return CUSTODIAL_NEW_PRODUCER_SCOPE === 'full-system';
 }
