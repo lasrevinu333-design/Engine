@@ -60,34 +60,138 @@ const HISTORICAL_CAPTURE_TRANSITION = {
   "expires_at": "2026-11-01T15:12:05Z"
 };
 assert.deepEqual(schemaCapture.schema_transition,HISTORICAL_CAPTURE_TRANSITION);
-// Current294 TEST evidence is separate from the immutable historical293 capture.
-const currentSchemaCaptureBytes=readFileSync(resolve(root,'scripts/fixtures/current294-schema-capture-binding.json'));
-assert.equal(createHash('sha256').update(currentSchemaCaptureBytes).digest('hex'),'00d5f8dc9e3ff97c366ebe3bd9fadf22bc954550a606c9d995d0d9b22449d586');
-const currentSchemaCapture=JSON.parse(currentSchemaCaptureBytes);
-assert.equal(currentSchemaCapture.schema,'custodial.isolated-test-current294-source-binding.v1');
-assert.equal(currentSchemaCapture.scope,'SAME_EXCLUSIVE_POST294_DATA_TEST_ONLY');
-for(const flag of ['production','production_observation','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(currentSchemaCapture[flag],false);
-assert.equal(currentSchemaCapture.historical293_binding_fixture_preserved_unchanged,true);
-assert.equal(currentSchemaCapture.canonical_migration_count,294);
-assert.equal(currentSchemaCapture.normalized.sha256,'e62f09aca1f4f3c87648c0568695f99325569d8c3681ee22055e867728178bf0');
-assert.equal(currentSchemaCapture.normalized.bytes,6739806);
-assert.equal(currentSchemaCapture.whole_current294_fresh_rebuild_and_committed_CHECK_pass.sha256,'d7396a89cc1e5319e9c204b3d81ed87d48779779b7bdeeca8926604ce633c5e3');
-assert.equal(currentSchemaCapture.forward294_SQL.sha256,'ca79547cd57ef3f8b3436e846bd4ed57581ea17be2d57701c72d1e45646591db');
-assert.equal(currentSchemaCapture.schema_fingerprint,'91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944');
-assert.equal(currentSchemaCapture.counts.tables,274);
-assert.equal(currentSchemaCapture.counts.functions,963);
-const CANONICAL_SCHEMA_FINGERPRINT = currentSchemaCapture.schema_fingerprint;
-const ACTIVE_SCHEMA_TRANSITION = {
+// Historical294 TEST evidence is separate from the immutable historical293 capture.
+const prior294SchemaCaptureBytes=readFileSync(resolve(root,'scripts/fixtures/current294-schema-capture-binding.json'));
+assert.equal(createHash('sha256').update(prior294SchemaCaptureBytes).digest('hex'),'00d5f8dc9e3ff97c366ebe3bd9fadf22bc954550a606c9d995d0d9b22449d586');
+const prior294SchemaCapture=JSON.parse(prior294SchemaCaptureBytes);
+assert.equal(prior294SchemaCapture.schema,'custodial.isolated-test-current294-source-binding.v1');
+assert.equal(prior294SchemaCapture.scope,'SAME_EXCLUSIVE_POST294_DATA_TEST_ONLY');
+for(const flag of ['production','production_observation','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(prior294SchemaCapture[flag],false);
+assert.equal(prior294SchemaCapture.historical293_binding_fixture_preserved_unchanged,true);
+assert.equal(prior294SchemaCapture.canonical_migration_count,294);
+assert.equal(prior294SchemaCapture.normalized.sha256,'e62f09aca1f4f3c87648c0568695f99325569d8c3681ee22055e867728178bf0');
+assert.equal(prior294SchemaCapture.normalized.bytes,6739806);
+assert.equal(prior294SchemaCapture.whole_current294_fresh_rebuild_and_committed_CHECK_pass.sha256,'d7396a89cc1e5319e9c204b3d81ed87d48779779b7bdeeca8926604ce633c5e3');
+assert.equal(prior294SchemaCapture.forward294_SQL.sha256,'ca79547cd57ef3f8b3436e846bd4ed57581ea17be2d57701c72d1e45646591db');
+assert.equal(prior294SchemaCapture.schema_fingerprint,'91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944');
+assert.equal(prior294SchemaCapture.counts.tables,274);
+assert.equal(prior294SchemaCapture.counts.functions,963);
+const PRIOR294_SCHEMA_TRANSITION = {
   "transition_id": "custodial-post294-test-20261026",
   "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
   "to_fingerprint": "91eb02974fd180586869fb3d4b905da7e9bded0ac518d83b6ee03a570cd1f944",
   "expires_at": "2026-11-01T15:12:05Z"
 };
-assert.deepEqual(currentSchemaCapture.schema_transition,ACTIVE_SCHEMA_TRANSITION);
-assert.equal(currentSchemaCapture.catalog_generation_preimage_fingerprint,HISTORICAL_CAPTURE_SCHEMA_FINGERPRINT);
-assert.equal(currentSchemaCapture.release_transition_source_declaration.backend_logical_path,'release/target-capture-source/declaration.json');
-assert.equal(currentSchemaCapture.release_transition_source_declaration.full_source.sha256,'94a02df2b422d6e26e999407e9ae7ff1bb369495bffa7a8d0bd6ba8a0ec3fb19');
-assert.equal(currentSchemaCapture.release_transition_source_declaration.observed_catalog_fingerprint,ACTIVE_SCHEMA_TRANSITION.from_fingerprint);
+assert.deepEqual(prior294SchemaCapture.schema_transition,PRIOR294_SCHEMA_TRANSITION);
+assert.equal(prior294SchemaCapture.catalog_generation_preimage_fingerprint,HISTORICAL_CAPTURE_SCHEMA_FINGERPRINT);
+assert.equal(prior294SchemaCapture.release_transition_source_declaration.backend_logical_path,'release/target-capture-source/declaration.json');
+assert.equal(prior294SchemaCapture.release_transition_source_declaration.full_source.sha256,'94a02df2b422d6e26e999407e9ae7ff1bb369495bffa7a8d0bd6ba8a0ec3fb19');
+assert.equal(prior294SchemaCapture.release_transition_source_declaration.observed_catalog_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
+// Current297 binding is distinct from both immutable historical JSON captures.
+// Actual canonical source and actual populated rollback target are separate facts;
+// this data grants no release, production, physical or frontend-pair admission.
+const currentSchemaCapture = {
+  "schema": "custodial.isolated-test-current297-source-binding.v1",
+  "scope": "FRESH297_CANONICAL_AND_GENUINE_ROLLBACK_TARGET_TEST_ONLY",
+  "canonical_migration_count": 297,
+  "schema_fingerprint": "a54f3660584b15a3129f7a448ba12cd43b572c3ede6ca64a23cbceb8b37f2187",
+  "normalized": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/manager-access/G12-source-C-current-authenticated-disposition-successor-source37/repo/supabase/canonical/schema-fingerprint-input.json",
+    "sha256": "496186e59f634de372e934629659c61f6a8f4d63e210bd003249891a3780c004",
+    "bytes": 6785862
+  },
+  "fingerprint_file": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/manager-access/G12-source-C-current-authenticated-disposition-successor-source37/repo/supabase/canonical/schema-fingerprint.txt",
+    "sha256": "fdfe6d4a283485808860c252ce379b7830469724fac13bee73ead2d149ad7559",
+    "bytes": 65
+  },
+  "genuine_fresh297_SQL89_and_catalog_closed": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/combined297-actual-source01/RESULT.ACTUAL_SQL_89_AND_MEASURED_SCHEMA_CLOSED.json",
+    "sha256": "d11efcb772109ce333239739398f1147ed513b936745797e9abf6e5d7f23cf2f",
+    "bytes": 1560
+  },
+  "normal_formatter_capture": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/combined297-actual-source01/ORIGINAL_EXECUTION_CLOSED/ACTUAL_NORMAL_FORMATTER_COPY_ONLY_CAPTURE.json",
+    "sha256": "fccca0a3fe09939dde65b40b2e11b2969e93b225c18e4cf58963dfa705e62fa8",
+    "bytes": 1139
+  },
+  "genuine_reviewed_rollback_report": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/actual-reviewed-rollback40615635335/extracted/production-migration-target-capture.json",
+    "sha256": "8042bc5e3a1bd141442fddb2b52b532b9eb67bdec6d0588bc5b87d951920a37e",
+    "bytes": 18533770
+  },
+  "rollback_scope": {
+    "run_id": 40615635335,
+    "backup_run_id": 40614220219,
+    "candidate_commit": "935a72971f29754c824c4048463503671d5f425f",
+    "committed": false,
+    "rollback_verified": true,
+    "canonical_source_count": 297,
+    "target_ledger_count": 398,
+    "target_catalog_fingerprint": "6ee1d9e694bef75bfdfd07e7426d864e3c3b7cb2e1603fdcb1bd6bebf7fc0d0a",
+    "source_ledger_count": 235,
+    "source_catalog_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2"
+  },
+  "counts": {
+    "column_grants": 43,
+    "columns": 3024,
+    "constraints": 1907,
+    "cron_jobs": 9,
+    "default_privileges": 12,
+    "extensions": 8,
+    "functions": 972,
+    "indexes": 921,
+    "owned_scheduler_role_memberships": 3,
+    "owned_scheduler_roles": 3,
+    "policies": 50,
+    "privilege_bearing_roles": 4,
+    "recovery_schema_owners": 1,
+    "role_memberships": 10,
+    "routine_grants": 595,
+    "schema_grants": 11,
+    "sequence_grants": 0,
+    "sequences": 0,
+    "table_grants": 1536,
+    "tables": 277,
+    "triggers": 611,
+    "type_grants": 0,
+    "types": 0,
+    "views": 33
+  },
+  "historical293_and294_fixtures_preserved": true,
+  "schema_transition": {
+    "transition_id": "custodial-post297-test-20261027",
+    "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "to_fingerprint": "a54f3660584b15a3129f7a448ba12cd43b572c3ede6ca64a23cbceb8b37f2187",
+    "expires_at": "2026-11-01T15:12:05Z"
+  },
+  "frontend_commit_state": "final_rebind_required",
+  "production": false,
+  "production_observation": false,
+  "production_applicability": false,
+  "independent_review": false,
+  "release_admission": false,
+  "frontend_pair_admission": false,
+  "full_program_or_physical_acceptance": false
+};
+assert.equal(currentSchemaCapture.schema,'custodial.isolated-test-current297-source-binding.v1');
+assert.equal(currentSchemaCapture.canonical_migration_count,297);
+assert.equal(currentSchemaCapture.normalized.sha256,'496186e59f634de372e934629659c61f6a8f4d63e210bd003249891a3780c004');
+assert.equal(currentSchemaCapture.normalized.bytes,6785862);
+assert.equal(currentSchemaCapture.schema_fingerprint,'a54f3660584b15a3129f7a448ba12cd43b572c3ede6ca64a23cbceb8b37f2187');
+assert.equal(currentSchemaCapture.rollback_scope.rollback_verified,true);
+assert.equal(currentSchemaCapture.rollback_scope.committed,false);
+assert.equal(currentSchemaCapture.rollback_scope.target_ledger_count,398);
+assert.equal(currentSchemaCapture.rollback_scope.source_ledger_count,235);
+assert.equal(currentSchemaCapture.rollback_scope.source_catalog_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
+assert.notEqual(currentSchemaCapture.rollback_scope.target_catalog_fingerprint,currentSchemaCapture.schema_fingerprint);
+assert.equal(currentSchemaCapture.counts.tables,277);assert.equal(currentSchemaCapture.counts.functions,972);
+for(const flag of ['production','production_observation','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(currentSchemaCapture[flag],false);
+assert.equal(currentSchemaCapture.frontend_commit_state,'final_rebind_required');
+const CANONICAL_SCHEMA_FINGERPRINT = currentSchemaCapture.schema_fingerprint;
+const ACTIVE_SCHEMA_TRANSITION = currentSchemaCapture.schema_transition;
+assert.equal(ACTIVE_SCHEMA_TRANSITION.from_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
+assert.equal(ACTIVE_SCHEMA_TRANSITION.expires_at,PRIOR294_SCHEMA_TRANSITION.expires_at);
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 
 function createFrontendGitFixture({
@@ -124,6 +228,9 @@ const frontendDeploymentManifest = JSON.parse(
   readFileSync(resolve(root, FRONTEND_DEPLOYMENT_MANIFEST_NAME), 'utf8')
     .replace(/^---\r?\nlayout: null\r?\n---\r?\n/, ''),
 );
+assert.equal(frontendManifest.frontend_commit_state,'final_rebind_required');
+assert.equal(frontendDeploymentManifest.frontend_commit_state,'final_rebind_required');
+assert.equal(frontendDeploymentManifest.frontend_commit_sha,'{{ site.github.build_revision }}');
 const scanPageSource = readFileSync(resolve(root, 'index.html'), 'utf8');
 const scanWorkerSource = readFileSync(resolve(root, 'memphis-scan-sync.js'), 'utf8');
 
