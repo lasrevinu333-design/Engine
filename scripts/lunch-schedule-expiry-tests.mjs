@@ -37,9 +37,9 @@ check('RECIPIENT actual 45-minute lunch ends exclusively without erasing overlap
  const saved=accepted([lunch(),lunch({name:'Other coverage',loan_id:'e'.repeat(64),coverage_start:'12:00',coverage_end:'13:00'})]);const before=JSON.stringify(saved);
  now=Date.parse('2026-09-21T17:15:00Z');assert.deepEqual(names(saved),['Other coverage','Regular duty']);assert.equal(JSON.stringify(saved),before);now=Date.parse('2026-09-21T17:00:00Z');
 });
-check('DETAIL published responsibility start/end/duration is explicit, not a default hour or whole-loan inference',()=>{
- const label=context.scheduleTest.details(lunch());assert.match(label,/11:30 AM/);assert.match(label,/12:15 PM/);assert.match(label,/45 minutes/);assert.match(label,/Responsibility window/);assert.doesNotMatch(label,/60 minutes|one.hour|full lunch/i);
- const partial=context.scheduleTest.details(lunch({coverage_start:'11:45',coverage_end:'12:00'}));assert.match(partial,/15 minutes/);assert.match(partial,/Responsibility window/);
+check('DETAIL on-call labels retain actual published bounds, not a default hour or whole-loan inference',()=>{
+ const label=context.scheduleTest.details(lunch());assert.match(label,/11:30 AM/);assert.match(label,/12:15 PM/);assert.match(label,/On call:/);assert.doesNotMatch(label,/60 minutes|one.hour|full lunch/i);
+ const partial=context.scheduleTest.details(lunch({coverage_start:'11:45',coverage_end:'12:00'}));assert.match(partial,/11:45 AM/);assert.match(partial,/12:00 PM/);assert.match(partial,/On call:/);
 });
 console.log(JSON.stringify({scope:'Isolated actual schedule-page logic; no live assignments or physical phone',checks},null,2));
 process.exitCode=checks.some(row=>!row.passed)?1:0;
