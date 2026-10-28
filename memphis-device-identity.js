@@ -412,11 +412,21 @@
     return true;
   }
 
+  function optionalEnrollment(status){
+    // A successful status for an active assigned employee kiosk may offer
+    // enrollment without changing observe mode or granting employee authority.
+    return Boolean(status&&status.authenticated===false&&status.status_unavailable!==true
+      &&status.policy_mode==='observe'&&status.enrollment_required!==true
+      &&isEmployeeKiosk(status.canonical_device_id)
+      &&status.canonical_device_id===currentDeviceId());
+  }
+
   function updateBanner(){
     ready(()=>{
       installUi();
       if(!banner)return;
-      const enrollmentNeeded=Boolean(credentialStatus&&credentialStatus.enrollment_required&&!credentialStatus.authenticated);
+      const enrollmentNeeded=Boolean(credentialStatus&&!credentialStatus.authenticated
+        &&(credentialStatus.enrollment_required||optionalEnrollment(credentialStatus)));
       banner.hidden=!enrollmentNeeded;
       if(!enrollmentNeeded&&overlay){
         overlay.hidden=true;
@@ -447,7 +457,7 @@
             updateBanner();
             return credentialStatus;
           }
-          return null;
+          credentialStatus=null;updateBanner();return null;
         }
         credentialStatus=payload.data||null;
         updateBanner();
@@ -543,7 +553,7 @@
       const status=await refreshCredentialStatus({force});
       if(!status)return false;
       if(status.authenticated)return true;
-      if(!status.enrollment_required)return false;
+      if(!status.enrollment_required&&!optionalEnrollment(status))return false;
       if(!interactive&&status.policy_mode!=='enforce')return false;
       return showEnrollmentDialog(status);
     })();

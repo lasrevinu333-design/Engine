@@ -4,7 +4,9 @@ import vm from 'node:vm';
 
 const identity = readFileSync(new URL(process.argv.includes('--browser-device-identity-old-source')
   ? '../../baseline/memphis-device-identity.js':'../memphis-device-identity.js', import.meta.url), 'utf8');
-if (process.argv.includes('--page-local-device-identity-writer-only')) {
+if (process.argv.includes('--optional-device-enrollment-only')) {
+  await optionalEnrollmentCases();
+} else if (process.argv.includes('--page-local-device-identity-writer-only')) {
   await browserDeviceIdentityWriterCases();
 } else if (process.argv.includes('--browser-device-identity-writer-only')) {
   await browserDeviceIdentityWriterCases();
@@ -442,4 +444,43 @@ async function browserDeviceIdentityWriterCases() {
   assert.ok(done.length,'Unknown/empty browser identity selector');
   console.log(JSON.stringify({status:'BROWSER_DEVICE_IDENTITY_WRITER_SOURCE_VM_PASS',groups:done.length,cases:done,
     real_requests:0,native:false,browser:false,SQL:false}));
+}
+
+async function optionalEnrollmentCases(){
+  // Execute the owning UI admission functions, with recording status/dialog
+  // ports only. No browser identity, enrollment code, request or policy change.
+  const block=(a,b)=>identity.slice(identity.indexOf(a),identity.indexOf(b,identity.indexOf(a)));
+  const code=block('  function optionalEnrollment(status){','  async function refreshCredentialStatus(')
+    +block('  async function ensureCredential(','  if(hasDom&&hasNativeFetch');
+  const cases=[
+    ['observe optional',{authenticated:false,enrollment_required:false,policy_mode:'observe',canonical_device_id:'KIOSK_02'},true,true],
+    ['required enroll',{authenticated:false,enrollment_required:true,policy_mode:'enroll',canonical_device_id:'KIOSK_02'},true,true],
+    ['required enforce',{authenticated:false,enrollment_required:true,policy_mode:'enforce',canonical_device_id:'KIOSK_02'},true,true],
+    ['unassigned status unavailable',null,false,false],
+    ['authenticated',{authenticated:true,enrollment_required:false,policy_mode:'observe',canonical_device_id:'KIOSK_02'},false,false],
+    ['manager device',{authenticated:false,enrollment_required:false,policy_mode:'observe',canonical_device_id:'KIOSK_01'},false,false],
+    ['foreign current device',{authenticated:false,enrollment_required:false,policy_mode:'observe',canonical_device_id:'KIOSK_03'},false,false],
+    ['failed status',{authenticated:false,enrollment_required:false,policy_mode:'observe',canonical_device_id:'KIOSK_02',status_unavailable:true},false,false],
+    ['unknown policy',{authenticated:false,enrollment_required:false,policy_mode:'unknown',canonical_device_id:'KIOSK_02'},false,false],
+    ['unverified auth field',{enrollment_required:false,policy_mode:'observe',canonical_device_id:'KIOSK_02'},false,false],
+  ];let checks=0;
+  for(const [name,status,visible,dialog]of cases){
+    const banner={hidden:true,textContent:''},overlay={hidden:true,querySelector:()=>null},shown=[],refreshes=[];
+    const context={credentialStatus:status,banner,overlay,enrollmentPromise:null,
+      isEmployeeKiosk:x=>/^KIOSK_(0[2-9]|10)$/.test(x||''),currentDeviceId:()=> 'KIOSK_02',
+      ready:fn=>fn(),installUi:()=>true,isNativeCustodialSecurity:()=>false,
+      refreshCredentialStatus:async options=>{refreshes.push(options);return status;},
+      showEnrollmentDialog:async value=>{shown.push(value);return true;}};
+    vm.runInNewContext(code+';globalThis.ui={updateBanner,ensureCredential};',context);
+    context.ui.updateBanner();assert.equal(!banner.hidden,visible,name+' visible ordinary control');checks++;
+    await context.ui.ensureCredential({interactive:true,force:true});assert.equal(shown.length,dialog?1:0,name+' normal dialog admission');checks++;
+    assert.equal(refreshes.length,1,name+' revalidates normal status');checks++;
+  }
+  for(const mode of ['observe','enforce']){
+    const status={authenticated:false,enrollment_required:mode==='enforce',policy_mode:mode,canonical_device_id:'KIOSK_02'},shown=[];
+    const c={credentialStatus:status,banner:{},overlay:{},enrollmentPromise:null,isEmployeeKiosk:()=>true,currentDeviceId:()=> 'KIOSK_02',ready:f=>f(),installUi:()=>true,isNativeCustodialSecurity:()=>false,refreshCredentialStatus:async()=>status,showEnrollmentDialog:async()=>{shown.push(true);return true;}};
+    vm.runInNewContext(code+';globalThis.run=ensureCredential;',c);await c.run({interactive:false,force:true});assert.equal(shown.length,mode==='enforce'?1:0,'optional enrollment requires user action; enforce retains automatic path');checks++;
+  }
+  assert.match(identity,/credentialStatus=null;updateBanner\(\);return null;/,'failed or unassigned status clears stale optional UI');checks++;
+  console.log(JSON.stringify({result:'OPTIONAL_OBSERVE_DEVICE_ENROLLMENT_OWNING_UI_PASS',checks,scope:'Recording synthetic status/dialog ports only; no browser, enrollment code, network, SQL or policy change'}));
 }
