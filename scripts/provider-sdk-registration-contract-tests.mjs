@@ -81,7 +81,7 @@ const configure=read('mobile/scripts/configure-native-release.mjs'),verify=read(
 assert.match(configure,/readReviewedProviderRelease[\s\S]*required: signing/);checks++;
 assert.match(configure,/configureProviderManifest\(appManifest,providerRelease\)/);checks++;
 assert.match(verify,/versionCode: application.version_code, versionName: application.version_name, required: true/);checks++;
-assert.match(verify,/verifyCustodialAndroidManifestSecurity\(apk, \{ aapt2Path: tools.aapt2, providerRelease \}\)/);checks++;
+assert.match(verify,/verifyCustodialAndroidManifestSecurity\(apk, \{ aapt2Path: tools.aapt2, providerRelease, cleaningScope \}\)/);checks++;
 assert.doesNotMatch(read('mobile/scripts/custodial-provider-release-policy.mjs'),/process.env|execSync|spawn|writeFile/);checks++;
 const nativeManifest=read(plugin+'android/src/main/AndroidManifest.xml');
 assert.doesNotMatch(nativeManifest,/MESSAGING_EVENT/);checks++;
