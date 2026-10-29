@@ -90,7 +90,7 @@ assert.equal(prior294SchemaCapture.release_transition_source_declaration.observe
 // Current297 binding is distinct from both immutable historical JSON captures.
 // Actual canonical source and actual populated rollback target are separate facts;
 // this data grants no release, production, physical or frontend-pair admission.
-const currentSchemaCapture = {
+const prior297SchemaCapture = {
   "schema": "custodial.isolated-test-current297-source-binding.v1",
   "scope": "FRESH297_CANONICAL_AND_GENUINE_ROLLBACK_TARGET_TEST_ONLY",
   "canonical_migration_count": 297,
@@ -174,20 +174,35 @@ const currentSchemaCapture = {
   "frontend_pair_admission": false,
   "full_program_or_physical_acceptance": false
 };
-assert.equal(currentSchemaCapture.schema,'custodial.isolated-test-current297-source-binding.v1');
-assert.equal(currentSchemaCapture.canonical_migration_count,297);
-assert.equal(currentSchemaCapture.normalized.sha256,'496186e59f634de372e934629659c61f6a8f4d63e210bd003249891a3780c004');
-assert.equal(currentSchemaCapture.normalized.bytes,6785862);
-assert.equal(currentSchemaCapture.schema_fingerprint,'a54f3660584b15a3129f7a448ba12cd43b572c3ede6ca64a23cbceb8b37f2187');
-assert.equal(currentSchemaCapture.rollback_scope.rollback_verified,true);
-assert.equal(currentSchemaCapture.rollback_scope.committed,false);
-assert.equal(currentSchemaCapture.rollback_scope.target_ledger_count,398);
-assert.equal(currentSchemaCapture.rollback_scope.source_ledger_count,235);
-assert.equal(currentSchemaCapture.rollback_scope.source_catalog_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
-assert.notEqual(currentSchemaCapture.rollback_scope.target_catalog_fingerprint,currentSchemaCapture.schema_fingerprint);
-assert.equal(currentSchemaCapture.counts.tables,277);assert.equal(currentSchemaCapture.counts.functions,972);
+assert.equal(prior297SchemaCapture.schema,'custodial.isolated-test-current297-source-binding.v1');
+assert.equal(prior297SchemaCapture.canonical_migration_count,297);
+assert.equal(prior297SchemaCapture.normalized.sha256,'496186e59f634de372e934629659c61f6a8f4d63e210bd003249891a3780c004');
+assert.equal(prior297SchemaCapture.normalized.bytes,6785862);
+assert.equal(prior297SchemaCapture.schema_fingerprint,'a54f3660584b15a3129f7a448ba12cd43b572c3ede6ca64a23cbceb8b37f2187');
+assert.equal(prior297SchemaCapture.rollback_scope.rollback_verified,true);
+assert.equal(prior297SchemaCapture.rollback_scope.committed,false);
+assert.equal(prior297SchemaCapture.rollback_scope.target_ledger_count,398);
+assert.equal(prior297SchemaCapture.rollback_scope.source_ledger_count,235);
+assert.equal(prior297SchemaCapture.rollback_scope.source_catalog_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
+assert.notEqual(prior297SchemaCapture.rollback_scope.target_catalog_fingerprint,prior297SchemaCapture.schema_fingerprint);
+assert.equal(prior297SchemaCapture.counts.tables,277);assert.equal(prior297SchemaCapture.counts.functions,972);
+for(const flag of ['production','production_observation','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(prior297SchemaCapture[flag],false);
+assert.equal(prior297SchemaCapture.frontend_commit_state,'final_rebind_required');
+// Current298 is the measured empty-source successor only. The historical
+// populated297 proof above does not grant it rollback or pair admission.
+const current298Bytes=readFileSync(resolve(root,'scripts/fixtures/current298-schema-capture-binding.json'));
+assert.equal(createHash('sha256').update(current298Bytes).digest('hex'),'0899aba1952a1b7b648be1ffdc2427efc6e0ece87ce3a821defaa4551ed62cd8');
+const currentSchemaCapture=JSON.parse(current298Bytes);
+assert.equal(currentSchemaCapture.schema,'custodial.isolated-test-current298-source-binding.v1');
+assert.equal(currentSchemaCapture.scope,'FRESH298_EMPTY_CANONICAL_SOURCE_ONLY');
+assert.equal(currentSchemaCapture.canonical_migration_count,298);
+assert.equal(currentSchemaCapture.schema_fingerprint,'432052a95830b4a8550cd6478d766bacc2bbbb4b2dd21d44544b238c70c5f001');
+assert.equal(currentSchemaCapture.migration_sha256,'a47387ddf244a04df646c9bb2d60eef86a769b96baf9106759f1c2a703248514');
+assert.equal(currentSchemaCapture.changed_functions.length,11);
+assert.equal(currentSchemaCapture.all_other_catalog_sections_unchanged,true);
+assert.equal(currentSchemaCapture.rollback_scope,null);
+assert.equal(currentSchemaCapture.populated_target_capture,false);
 for(const flag of ['production','production_observation','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(currentSchemaCapture[flag],false);
-assert.equal(currentSchemaCapture.frontend_commit_state,'final_rebind_required');
 const CANONICAL_SCHEMA_FINGERPRINT = currentSchemaCapture.schema_fingerprint;
 const ACTIVE_SCHEMA_TRANSITION = currentSchemaCapture.schema_transition;
 assert.equal(ACTIVE_SCHEMA_TRANSITION.from_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);

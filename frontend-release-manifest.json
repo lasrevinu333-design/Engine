@@ -3,11 +3,11 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "exact-release-pair-input-and-github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "a54f3660584b15a3129f7a448ba12cd43b572c3ede6ca64a23cbceb8b37f2187",
+  "schema_fingerprint": "432052a95830b4a8550cd6478d766bacc2bbbb4b2dd21d44544b238c70c5f001",
   "schema_transition": {
-    "transition_id": "custodial-post297-test-20261027",
+    "transition_id": "custodial-full-hour-test-20261029",
     "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
-    "to_fingerprint": "a54f3660584b15a3129f7a448ba12cd43b572c3ede6ca64a23cbceb8b37f2187",
+    "to_fingerprint": "432052a95830b4a8550cd6478d766bacc2bbbb4b2dd21d44544b238c70c5f001",
     "expires_at": "2026-11-01T15:12:05Z"
   },
   "api_contract_versions": {

@@ -1,0 +1,118 @@
+{
+  "schema": "custodial.isolated-test-current298-source-binding.v1",
+  "scope": "FRESH298_EMPTY_CANONICAL_SOURCE_ONLY",
+  "canonical_migration_count": 298,
+  "schema_fingerprint": "432052a95830b4a8550cd6478d766bacc2bbbb4b2dd21d44544b238c70c5f001",
+  "normalized": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/solo-main-return-20261028/CURRENT298_CANONICAL_CATALOG.json",
+    "sha256": "2f4fe8849d505423e02102cc367bddf6ea6521285c3be68941ffed450d27641e",
+    "bytes": 6801787
+  },
+  "source_capture": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/solo-main-return-20261028/CURRENT298_CANONICAL_CAPTURE_RESULT.json",
+    "sha256": "58bc42653bd72e98785410cddec31e027f090a99966396acd0bc1289bc1b1f8d",
+    "bytes": 2984,
+    "status": "PASS"
+  },
+  "migration_sha256": "a47387ddf244a04df646c9bb2d60eef86a769b96baf9106759f1c2a703248514",
+  "changed_functions": [
+    {
+      "schema": "public",
+      "name": "custodial_operational_location_assignments",
+      "identity": "p_service_date date"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_assert_compiler_authority",
+      "identity": "p_authority jsonb, p_receipt jsonb, p_effective_start date, p_require_publishable boolean"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_assert_projection_envelope_attested",
+      "identity": "p_envelope jsonb, p_publication_id uuid, p_week_start date, p_exception_set jsonb"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_v3_create_draft",
+      "identity": "p_effective_start date, p_objective_version text, p_objective jsonb, p_input_provenance jsonb, p_document jsonb, p_expected_revision bigint, p_manager_id uuid, p_idempotency_key text, p_source_id uuid"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_v3_materialize_projection",
+      "identity": "p_publication_id uuid, p_service_date date, p_exception_set_digest text, p_compiler_version text, p_objective jsonb, p_metrics jsonb, p_replay_digest text, p_envelope jsonb, p_expected_revision bigint, p_manager_id uuid, p_idempotency_key text"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_v3_publish_draft",
+      "identity": "p_draft_version_id uuid, p_expected_draft_revision bigint, p_expected_revision bigint, p_manager_id uuid, p_idempotency_key text, p_publication_kind text, p_rollback_of_version_id uuid"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_v3_update_draft",
+      "identity": "p_version_id uuid, p_document jsonb, p_objective jsonb, p_input_provenance jsonb, p_expected_draft_revision bigint, p_expected_revision bigint, p_manager_id uuid, p_idempotency_key text"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_v8_assert_lunch_document",
+      "identity": "p_projection_id uuid, p_document jsonb"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_v8_read_lunch_segments_dated_base",
+      "identity": "p_service_date date"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_v9_assert_shift_end_derivation",
+      "identity": "p_authority jsonb"
+    },
+    {
+      "schema": "public",
+      "name": "static_weekly_version_guard",
+      "identity": ""
+    }
+  ],
+  "all_other_catalog_sections_unchanged": true,
+  "counts": {
+    "column_grants": 43,
+    "columns": 3024,
+    "constraints": 1907,
+    "cron_jobs": 9,
+    "default_privileges": 12,
+    "extensions": 8,
+    "functions": 972,
+    "indexes": 921,
+    "owned_scheduler_role_memberships": 3,
+    "owned_scheduler_roles": 3,
+    "policies": 50,
+    "privilege_bearing_roles": 4,
+    "recovery_schema_owners": 1,
+    "role_memberships": 10,
+    "routine_grants": 595,
+    "schema_grants": 11,
+    "sequence_grants": 0,
+    "sequences": 0,
+    "table_grants": 1536,
+    "tables": 277,
+    "triggers": 611,
+    "type_grants": 0,
+    "types": 0,
+    "views": 33
+  },
+  "schema_transition": {
+    "transition_id": "custodial-full-hour-test-20261029",
+    "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "to_fingerprint": "432052a95830b4a8550cd6478d766bacc2bbbb4b2dd21d44544b238c70c5f001",
+    "expires_at": "2026-11-01T15:12:05Z"
+  },
+  "rollback_scope": null,
+  "populated_target_capture": false,
+  "production": false,
+  "production_observation": false,
+  "production_applicability": false,
+  "independent_review": false,
+  "release_admission": false,
+  "frontend_pair_admission": false,
+  "full_program_or_physical_acceptance": false,
+  "frontend_commit_state": "final_rebind_required"
+}
