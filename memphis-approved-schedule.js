@@ -93,6 +93,20 @@ function validateUnresolvedPreview(value,binding){
 }
 const refusedMessages=new Set(['initial manager snapshot requires one active registered recurring source','initial manager snapshot requires exactly one active registered recurring source']);
 function end(s){return new Date(Date.parse(s+'T12:00:00Z')+6*86400000).toISOString().slice(0,10);}
+function validSnapshotWindow(snapshot,requestedWeek){
+ if(!monday(requestedWeek)||typeof snapshot?.week_start!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(snapshot.week_start))return false;
+ const start=new Date(snapshot.week_start+'T12:00:00Z');
+ if(!Number.isFinite(start.getTime())||start.toISOString().slice(0,10)!==snapshot.week_start||snapshot.week_end!==end(snapshot.week_start))return false;
+ if(snapshot.week_start===requestedWeek)return true;
+ const manual=snapshot.approved_manual_schedule;
+ if(manual?.schema!=='custodial.approved-manual-manager-view.v1'
+  ||manual.manifestSha256!=='fe02bbdebc736d95360b55cc7dfe5b73c5a9eaa76f364f1c0f4420a0afb9950f'
+  ||!UUID.test(manual.publicationId||'')||!UUID.test(manual.projectionId||'')
+  ||manual.publicationId!==snapshot.current_publication?.publication_id||manual.projectionId!==snapshot.latest_projection?.projection_id
+  ||!Array.isArray(manual.days)||manual.days.length!==7)return false;
+ const dates=manual.days.map(d=>d.serviceDate).sort(),expected=Array.from({length:7},(_,n)=>new Date(start.getTime()+n*86400000).toISOString().slice(0,10));
+ return JSON.stringify(dates)===JSON.stringify(expected)&&snapshot.week_start<=end(requestedWeek)&&snapshot.week_end>=requestedWeek;
+}
 async function loadInitialEntry({api,weekStart,owner}){
  if(typeof api!=='function'||!monday(weekStart))throw Error('Invalid week');
  try{return {mode:'snapshot',snapshot:await api('/static-weekly/manager-snapshot?week_start='+encodeURIComponent(weekStart))};}
@@ -221,6 +235,6 @@ function create({api,auth=root.MemphisAuth,managerId,baseUrl,storage=root.localS
    storage.removeItem(key);if(storage.getItem(key)!==null)error('Accepted receipt could not be cleared.');onState(null);return {current:snapshot.authority_revision===receipt.authority_revision,receipt:COPY(receipt)};
   }});
 }
-const api=Object.freeze({create,selectors,validatePreview,validateReceipt,validateUnresolvedPreview,unresolvedReasons,loadInitialEntry,selectInitial,paths});root.MemphisApprovedSchedule=api;
+const api=Object.freeze({create,selectors,validatePreview,validateReceipt,validateUnresolvedPreview,unresolvedReasons,validSnapshotWindow,loadInitialEntry,selectInitial,paths});root.MemphisApprovedSchedule=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
