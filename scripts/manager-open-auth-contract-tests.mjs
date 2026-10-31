@@ -59,7 +59,23 @@ assert.match(managerMobile,/Correct record/);
 assert.doesNotMatch(managerMobile,/dashboard\.html#locations/);
 assert.match(managerMobile,/navLabel">Status</);
 assert.match(custodialMobile,/Memphis Zoo Custodial/);
-for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match(custodialMobile,new RegExp(`>${label}<`));
+// Check actual employee navigation, including nested labels and employee context.
+for (const [destination, label] of [
+  ['./employee-schedule.html?hub=employee', 'My Schedule'],
+  ['./messages.html?hub=employee', 'Memphis Messenger'],
+  ['./events.html?hub=employee', 'Upcoming Events'],
+  ['./employee-feedback.html?hub=employee', 'Program Feedback'],
+]) {
+  const links = [...custodialMobile.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  const link = links.find(([, attributes]) => attributes.includes(`href="${destination}"`));
+  assert.ok(link, `Employee navigation missing: ${destination}`);
+  assert.match(link[1], /class="homeButton"/);
+  assert.doesNotMatch(link[1], /\bhidden\b|aria-disabled="true"/);
+  const labelSpan = link[2].match(/<span\b[^>]*class="homeLabel"[^>]*>([\s\S]*?)<\/span>/);
+  assert.ok(labelSpan, `Employee navigation label missing: ${destination}`);
+  const visibleText = labelSpan[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  assert.equal(visibleText, label);
+}
 assert.doesNotMatch(custodialMobile,/Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialMobile,/>Scanner</);
 
