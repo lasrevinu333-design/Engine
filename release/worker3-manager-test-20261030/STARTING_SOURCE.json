@@ -1,0 +1,36 @@
+{
+  "head": "6dfd5f4cd448f73d0f257e5732e3e2d09c5753f1",
+  "files": [
+    {
+      "path": "schedule-weekly.js",
+      "sha256": "3508cf3159da991e340e7b31cf10ed81bacedae1b87f4c9d21fedafe0f2a7e53",
+      "bytes": 121023
+    },
+    {
+      "path": "memphis-scheduler-actions.js",
+      "sha256": "356ec7d6b2e4fdd6a556c0598e9305046a1fcf3a017bafd0b95e6580e960b5b2",
+      "bytes": 51102
+    },
+    {
+      "path": "schedule-weekly.html",
+      "sha256": "e36efdfb1a1fae708a22a9abccfd37981029da003eeb28ae6be2a94707630364",
+      "bytes": 11883
+    },
+    {
+      "path": "schedule-weekly.css",
+      "sha256": "935e7db770f994ba8afde774ed326366fde719a00d755b2f2c7d5c87230fdb60",
+      "bytes": 7386
+    },
+    {
+      "path": "memphis-approved-schedule.js",
+      "sha256": "9e6e9de95b072ff9abd0d05c2479f25e14000ab8f71d81d55963a0a1b471fdc4",
+      "bytes": 21100
+    },
+    {
+      "path": "frontend-release-manifest.json",
+      "sha256": "87a9afaa0ee9f0dd8cb852763085e325405267e91fb2ae91c18857bdf14b21c9",
+      "bytes": 14028
+    }
+  ],
+  "scope": "Frontend implementation only; no deployed/SQL/device proof"
+}

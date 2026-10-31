@@ -1,0 +1,44 @@
+{
+  "state": "SOURCE_IMPLEMENTED_BROWSER_LIFECYCLE_UNQUALIFIED_PENDING_NATIVE_DTO",
+  "pairs": [
+    {
+      "logical_path": "schedule-weekly.js",
+      "before": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/before/schedule-weekly.js",
+        "sha256": "3508cf3159da991e340e7b31cf10ed81bacedae1b87f4c9d21fedafe0f2a7e53",
+        "bytes": 121023
+      },
+      "after": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/after/schedule-weekly.js",
+        "sha256": "278c8a0b6a149cb95b8c3f12ab9bdea569ca88fd49f902f9e474bfe567652614",
+        "bytes": 122540
+      },
+      "inverse": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/schedule-weekly.js.whole.ndiff",
+        "sha256": "fe21c9902708d01ff24ef6cd78d6bcbd1191f87bfc361db7277693879d44ae0c",
+        "bytes": 131335
+      }
+    },
+    {
+      "logical_path": "memphis-scheduler-actions.js",
+      "before": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/before/memphis-scheduler-actions.js",
+        "sha256": "356ec7d6b2e4fdd6a556c0598e9305046a1fcf3a017bafd0b95e6580e960b5b2",
+        "bytes": 51102
+      },
+      "after": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/after/memphis-scheduler-actions.js",
+        "sha256": "d9219039edba547fd4994df665524f69388c612b7cbb77cb253632acc2540eb8",
+        "bytes": 52331
+      },
+      "inverse": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/memphis-scheduler-actions.js.whole.ndiff",
+        "sha256": "8640753f4688e02bf4bfa852fc41a427f43ee37fd331d64f9267e9aeef4cb9b6",
+        "bytes": 54616
+      }
+    }
+  ],
+  "contract_test": "schedule-contract02.stdout PASS exit0",
+  "backend_or_release_identity_changes": false,
+  "physical_or_genuine_manager": false
+}

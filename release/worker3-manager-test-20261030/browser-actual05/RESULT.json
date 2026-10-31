@@ -1,0 +1,157 @@
+{
+  "scope": "PRIVATE_HEADLESS_FIXTURE_BROWSER_ONLY",
+  "productionWritten": false,
+  "genuineManagerBrowser": false,
+  "SQLExecuted": false,
+  "deviceProof": false,
+  "checks": [
+    "Exact saved native PREPARED response passes actual selected validator",
+    "Bound rolling seven-day frame covers entire requested PTO day",
+    "Overlap alone cannot truncate a longer original request",
+    "Wrong manual projection binding remains refused",
+    "Actual page renders all seven source-aligned civil dates",
+    "Actual saved current view shows Zoo Wide Coverage",
+    "Actual saved current view names full-hour relief duties",
+    "Exact saved revision5 snapshot rendered unchanged",
+    "confirm: complete exact saved native prepared duties rendered",
+    "confirm: preview names relief periods"
+  ],
+  "source_head": "6dfd5f4 plus uncommitted frontend delta",
+  "fixtureTransformations": [
+    "Current revision5 snapshot and native PREPARED cancellation response are exact saved SQL data.",
+    "The real cancellation is PREPARED ONLY. Confirmed revision6 receipt/projection and unknown network outcome are explicitly synthetic browser fixtures, not actual acceptance."
+  ],
+  "sources": {
+    "schedule-weekly.js": {
+      "sha256": "cedd2c94efef984589a18eefcb00b103fede1fa4ee463401676ee70f80a302da",
+      "bytes": 123053
+    },
+    "memphis-scheduler-actions.js": {
+      "sha256": "31f555737b6555490de40a61d716d7e130a638bc564819c93cf9e53e1898f79e",
+      "bytes": 52599
+    },
+    "memphis-approved-schedule.js": {
+      "sha256": "9e6e9de95b072ff9abd0d05c2479f25e14000ab8f71d81d55963a0a1b471fdc4",
+      "bytes": 21100
+    },
+    "schedule-weekly.html": {
+      "sha256": "e36efdfb1a1fae708a22a9abccfd37981029da003eeb28ae6be2a94707630364",
+      "bytes": 11883
+    }
+  },
+  "status": "FAIL",
+  "error": "AssertionError [ERR_ASSERTION]: confirm: accepted current projection readback clears only verified pending control\n    at check (/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/manager-native-fixture-browser.cjs:22:40)\n    at /mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/manager-native-fixture-browser.cjs:98:4",
+  "lastPage": "Back\nWeekly Custodial Schedule\n\nRepeats until a later schedule is published\n\nRefresh\nRegenerate Routes\nPreview Approved Pattern\nPublish Reviewed Pattern\nLoading week of 2026-11-02...\nApproved initial pattern \nUse the currently published approved pattern\nNo approved initial patterns are registered. No replacement is generated.\nWEEK STARTING\nDAY CHANGES FOR\n5\nscheduled staff\n1\nfull-day absent\n0\npartial absence\n1\nvacant slots\n0\nCoverAll capacity\n0\nopen items\n5\nrevision\nEMPLOYEE ROSTER\nKaren Robinson\nNo phone\nStable vacancy\nTammy Miller\nNo phone\nStable vacancy\nKathy Phelps\nNo phone\nStable vacancy\nAlijah Collins\nNo phone\nStable vacancy\nKiltra Horton\nNo phone\nStable vacancy\nJada Rawlings\nNo phone\nStable vacancy\nEmployee 4\nNo phone\nStable vacancy\nXavier Green\nNo phone\nStable vacancy\nDerrick Henderson\nNo phone\nStable vacancy\nBASELINE ABSENCES\nNo baseline absent slots.\nABSENCE / PTO\nREASON\nCall-out / absence\nPTO\nTHROUGH DATE (ONE EMPLOYEE)\nStarts on the selected day. Leave blank for that day only. Review every affected week before confirming.\nKaren Robinson\nWorking in baseline\nTammy Miller\nWorking in baseline\nKathy Phelps\nWorking in baseline\nJada Rawlings\nPTO already applied\nXavier Green\nWorking in baseline\nDerrick Henderson\nWorking in baseline\nCOVERALL COVERAGE\nCoverAll contractor capacity 1\nTemporary CoverAll coverage — no employee account or phone required\nActual start \nActual end \nBreak \nSelect actual arrangement\nScheduled lunch — enter actual start and end\nNo break during this shift\nLunch start \nLunch end \nCoverAll contractor capacity 2\nTemporary CoverAll coverage — no employee account or phone required\nActual start \nActual end \nBreak \nSelect actual arrangement\nScheduled lunch — enter actual start and end\nNo break during this shift\nLunch start \nLunch end \nCoverAll contractor capacity 3\nTemporary CoverAll coverage — no employee account or phone required\nActual start \nActual end \nBreak \nSelect actual arrangement\nScheduled lunch — enter actual start and end\nNo break during this shift\nLunch start \nLunch end \nCoverAll contractor capacity 4\nTemporary CoverAll coverage — no employee account or phone required\nActual start \nActual end \nBreak \nSelect actual arrangement\nScheduled lunch — enter actual start and end\nNo break during this shift\nLunch start \nLunch end \nCoverAll contractor capacity 5\nTemporary CoverAll coverage — no employee account or phone required\nActual start \nActual end \nBreak \nSelect actual arrangement\nScheduled lunch — enter actual start and end\nNo break during this shift\nLunch start \nLunch end \nCoverAll contractor capacity 6\nTemporary CoverAll coverage — no employee account or phone required\nActual start \nActual end \nBreak \nSelect actual arrangement\nScheduled lunch — enter actual start and end\nNo break during this shift\nLunch start \nLunch end \nCoverAll contractor capacity 7\nTemporary CoverAll coverage — no employee account or phone required\nActual start \nActual end \nBreak \nSelect actual arrangement\nScheduled lunch — enter actual start and end\nNo break during this shift\nLunch start \nLunch end \nCoverAll contractor capacity 8\nTemporary CoverAll coverage — no employee account or phone required\nActual start \nActual end \nBreak \nSelect actual arrangement\nScheduled lunch — enter actual start and end\nNo break during this shift\nLunch start \nLunch end \nPreview One Absence / Update Routes\nNov 2, 2026 - Nov 8, 2026\nPublished baseline • 338 work items • revision 5\nWeek\nChanges\nReadiness\nCanonical accepted Pto\nOriginal employee 1318b295-fd70-4e78-8828-62c29302f96f • Original 2026-11-02 through 2026-11-02 • Remaining 2026-11-02 through 2026-11-02. Cancel only the remaining original fact; use the current plan, never reactivate old people.\nCanonical accepted Pto\nOriginal employee d5fecc86-659b-464a-bc99-f0d914385db4 • Original 2026-11-03 through 2026-11-03 • Remaining 2026-11-03 through 2026-11-03. Cancel only the remaining original fact; use the current plan, never reactivate old people.",
+  "lastPending": null,
+  "browserClosed": true,
+  "calls": [
+    {
+      "blockedExternal": "https://unpkg.com"
+    },
+    {
+      "mode": "current",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "current",
+      "path": "/static-weekly/approved-choices",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "blockedExternal": "https://unpkg.com"
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/approved-choices",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands",
+      "method": "POST",
+      "body": "{\"command_kind\":\"cancel_absence\",\"employee_id\":\"1318b295-fd70-4e78-8828-62c29302f96f\",\"start_date\":\"2026-11-02\",\"end_date\":\"2026-11-02\",\"target_absence_id\":\"1333c840-114b-4335-9029-f4fcd07b6ea6\",\"client_prepare_key\":\"691a498c-04ea-48e4-9334-9c2f77d71e0a\",\"expected_revision\":5}"
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/7a07d9cf-2259-45ba-981e-a2da1092c898",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/7a07d9cf-2259-45ba-981e-a2da1092c898/prepare",
+      "method": "POST",
+      "body": "{}"
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/7a07d9cf-2259-45ba-981e-a2da1092c898",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/7a07d9cf-2259-45ba-981e-a2da1092c898",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/7a07d9cf-2259-45ba-981e-a2da1092c898/confirm",
+      "method": "POST",
+      "body": "{\"preview_digest\":\"67f8c63145671a65ec49021b78a66cdbd3c84e7e85d55c6d59f0c97438dad9f8\",\"confirmation_key\":\"c92f16c3-d784-469c-857a-677954d52c79\"}"
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/7a07d9cf-2259-45ba-981e-a2da1092c898",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/approved-choices",
+      "method": "GET",
+      "body": null
+    }
+  ]
+}

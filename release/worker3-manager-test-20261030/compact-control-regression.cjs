@@ -1,0 +1,18 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../..'),dir=path.resolve(root,'../solo-main-return-20261028/OWNED_NATIVE_MANAGER_SAVE_04_20261030');
+const load=n=>JSON.parse(fs.readFileSync(path.join(dir,n+'.json'))),p=load('PREPARED_OR_PRIOR'),s=load('CURRENT_MANAGER_SNAPSHOT'),a=load('ACCEPTED'),w=p.preview.weeks[0];
+const body={command_kind:'absence',employee_id:p.semantic_body.employeeId,start_date:p.semantic_body.startDate,end_date:p.semantic_body.endDate,absence_kind:'pto',client_prepare_key:'10000000-0000-4000-8000-000000000001',expected_revision:p.expected_revision};
+const value={...p,state:'ACCEPTED',accepted_receipt:a,accepted_revision:a.authority_revision,accepted_at:a.recorded_at};
+const r={schema:'custodial.scheduler-pending.v1',base:'http://127.0.0.1:41987',managerId:p.prepared_by_manager_id,path:'/static-weekly/staffing-commands',body,encoded:JSON.stringify(body),state:'ACCEPTED',receipt:{...value,preview:null},error:null,weekStart:w.week_start,publicationId:w.publicationId,versionId:w.versionId,weekBindings:p.publication_vector.weeks,command:{phase:'ACCEPTED',operationId:p.operation_id,confirmationAttempted:true,confirmationKey:'10000000-0000-4000-8000-000000000002',semanticDigest:p.semantic_digest,previewDigest:p.preview_digest,inputDigest:p.input_digest,candidateSetDigest:p.candidate_set_digest,projections:{[w.week_start]:{projectionIdentity:w.database_projection_identity,replayDigest:w.replayDigest}}}};
+const m=new Map(),storage={getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v),removeItem:k=>m.delete(k)},c={URL,TextEncoder};
+for(const f of ['memphis-approved-schedule.js','memphis-scheduler-actions.js'])vm.runInNewContext(fs.readFileSync(path.join(root,f),'utf8'),c);
+const key='mz_scheduler_dated_operation_v1:'+encodeURIComponent(r.base)+':'+r.managerId;
+const auth={readSession:()=>({role:'ops_manager',manager_id:r.managerId,credential_id:'fixture',device_id:'fixture',token:'synthetic',expires_at:'2099-01-01',read_only:false,permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:true}})};
+const helper=c.MemphisSchedulerActions.create({auth,api:async()=>{throw Error('No API permitted in compact-control fixture')},baseUrl:r.base,storage});
+let checks=0;const check=(condition)=>{assert.ok(condition);checks++;};
+check(JSON.stringify({...r,receipt:value}).length>200000);check(JSON.stringify(r).length<200000);
+check(c.MemphisSchedulerActions.validateStaffingPreview(value,r).state==='ACCEPTED');
+m.set(key,JSON.stringify(r));check(helper.pending().encoded===r.encoded);
+const wrong=JSON.parse(JSON.stringify(s));wrong.latest_projection.replay_digest='0'.repeat(64);check(helper.acknowledgeStaffing([wrong])===false);check(m.get(key)===JSON.stringify(r));
+check(helper.acknowledgeStaffing([s])===true);check(!m.has(key));
+console.log(JSON.stringify({status:'PASS',checks,scope:'SYNTHETIC_LOCAL_RECOVERY_CONTROL_USING_SAVED_SQL_DATA',SQLExecuted:false,genuineManager:false,originalEncodedBodyRetained:true,fullReceiptBytes:JSON.stringify({...r,receipt:value}).length,compactControlBytes:JSON.stringify(r).length}));

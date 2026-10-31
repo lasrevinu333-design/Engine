@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://*.onrender.com https://localhost http://localhost:* http://127.0.0.1:* capacitor://localhost; img-src 'self' data:; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Weekly Custodial Schedule</title>
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12">
+  <link rel="stylesheet" href="./schedule-weekly.css?v=2026.08.12.2">
+</head>
+<body data-memphis-context="manager">
+<main class="page">
+  <header class="topbar">
+    <a class="btn mz-back-link" data-mz-back href="./start_page1.html" title="Back" aria-label="Back">Back<span data-lucide="arrow-left" aria-hidden="true"></span></a>
+    <div class="title"><h1>Weekly Custodial Schedule</h1><p id="subtitle">Repeating weekly area ownership</p></div>
+    <div class="toolbar">
+      <button class="btn" id="refresh-btn" type="button"><span data-lucide="refresh-cw"></span>Refresh</button>
+      <button class="btn" id="rebuild-projection-btn" type="button" hidden><span data-lucide="refresh-cw"></span>Regenerate Routes</button>
+      <button class="btn blue" id="generate-btn" type="button"><span data-lucide="wand-sparkles"></span>Preview Approved Pattern</button>
+      <button class="btn primary" id="publish-btn" type="button"><span data-lucide="upload"></span>Publish Reviewed Pattern</button>
+    </div>
+  </header>
+  <div class="status" id="status" role="status" aria-live="polite">Connecting to scheduler...</div>
+  <section id="scheduler-pending-panel" class="status" hidden aria-live="polite"><span id="scheduler-pending-text"></span> <button class="btn" type="button" id="scheduler-retry">Resume saved request</button> <button class="btn" type="button" id="scheduler-dismiss" hidden>Dismiss rejected request</button></section>
+  <section id="approved-source-panel" class="status" hidden><label>Approved initial pattern <select id="approved-source"><option value="">Load an approved pattern</option></select></label><span id="approved-source-state"></span></section>
+  <section id="approved-preview-panel" class="status" hidden><h2>Approved preview — not published</h2><p id="approved-preview-summary"></p><div class="tableWrap" style="max-height:50vh;overflow:auto"><table><thead><tr><th>Date</th><th>Employee</th><th>Location / duty</th><th>Time</th></tr></thead><tbody id="approved-preview-rows"></tbody></table></div><h3>Available time by person and date</h3><p>Available minutes are the source shift less the union of lunch and blocked windows, before assigned work or travel. Duty windows are responsibility windows, and workload points are not elapsed minutes. Remaining free time is unknown without physical work and travel durations.</p><div class="tableWrap" style="max-height:50vh;overflow:auto"><table><thead><tr><th>Date</th><th>Employee</th><th>Shift / available time</th><th>Assigned work / workload</th><th>Own lunch / coverage</th><th>Remaining time</th></tr></thead><tbody id="approved-preview-capacity-rows"></tbody></table></div></section>
+  <section class="workspace">
+    <aside class="sidebar">
+      <div class="field"><label for="week-start">Week starting</label><input id="week-start" type="date"></div>
+      <div class="field" id="day-changes-section"><label for="service-date">Day changes for</label><input id="service-date" type="date"></div>
+      <div class="summary">
+        <div class="metric"><strong id="working-count">0</strong><span>scheduled staff</span></div>
+        <div class="metric"><strong id="absent-count">0</strong><span>full-day absent</span></div>
+        <div class="metric"><strong id="partial-count">0</strong><span>partial absence</span></div>
+        <div class="metric"><strong id="vacancy-count">0</strong><span>vacant slots</span></div>
+        <div class="metric"><strong id="contractor-count">0</strong><span>CoverAll capacity</span></div>
+        <div class="metric"><strong id="open-count">0</strong><span>open items</span></div>
+        <div class="metric"><strong id="revision-count">0</strong><span>revision</span></div>
+      </div>
+      <div class="sidebarSection"><div class="sectionLabel">Employee roster</div><div id="roster-list" class="list"></div></div>
+      <div class="sidebarSection"><div class="sectionLabel">Baseline absences</div><div id="baseline-absences" class="list"></div></div>
+        <div class="sidebarSection" id="absence-section"><div class="sectionLabel">Absence / PTO</div><div class="field"><label for="absence-type">Reason</label><select id="absence-type"><option value="daily_absence">Call-out / absence</option><option value="pto">PTO</option></select></div><div class="field"><label for="absence-end-date">Through date (one employee)</label><input id="absence-end-date" type="date"><small>Starts on the selected day. Leave blank for that day only. Review every affected week before confirming.</small></div><div id="temporary-absences" class="list"></div></div>
+      <div class="sidebarSection" id="coverage-section"><div class="sectionLabel">CoverAll coverage</div><div id="contractor-slots" class="list"></div></div>
+      <div class="sidebarActions actions"><a class="btn" id="coverall-print-link" href="./coverall-print.html">CoverAll Handouts · English / Español</a></div>
+      <div class="sidebarActions actions"><button class="btn blue" id="apply-day-btn" type="button"><span data-lucide="calendar-check"></span>Apply Changes and Update Routes</button></div>
+    </aside>
+    <section class="main">
+      <div class="mainHeader">
+        <div><h2 id="week-title">Current week</h2><div class="weekMeta" id="week-meta">No schedule loaded</div></div>
+        <div class="segmented" role="tablist" aria-label="Schedule view">
+          <button type="button" class="active" data-view="week" role="tab">Week</button>
+          <button type="button" data-view="changes" role="tab">Changes</button>
+          <button type="button" data-view="readiness" role="tab">Readiness</button>
+        </div>
+      </div>
+      <div id="week-panel" class="panel active"><div class="tableWrap"><table><thead id="week-head"></thead><tbody id="week-body"></tbody></table></div></div>
+      <div id="changes-panel" class="panel"><div id="changes-list" class="list"></div></div>
+      <div id="readiness-panel" class="panel"><div id="readiness-list" class="readiness"></div></div>
+    </section>
+  </section>
+</main>
+<dialog id="vacancy-dialog" aria-labelledby="vacancy-title" aria-describedby="vacancy-state">
+  <form id="vacancy-form" class="turnoverForm">
+    <div class="dialogHeader"><div><h2 id="vacancy-title">Stable position vacancy</h2><p id="vacancy-current"></p></div><button class="iconBtn" id="vacancy-close" type="button" title="Close" aria-label="Close stable vacancy"><span data-lucide="x"></span></button></div>
+    <p>A stable vacancy removes the current employee from this position. It is not “employee departed,” a dated absence, or publication of a temporary recurring pattern. Existing people, protected work and history are preserved; no automatic CoverAll is added.</p>
+    <div class="field"><label for="vacancy-source">Registered vacancy source</label><select id="vacancy-source" required><option value="">Select a registered source</option></select></div>
+    <p id="vacancy-source-facts"></p>
+    <p id="vacancy-state" role="status">Select the genuine registered source. Nothing is changed by reviewing it.</p>
+    <section id="vacancy-preview" hidden aria-label="Actual proposed vacancy plan">
+      <p>Proposed post-vacancy work and paired lunch, not accepted or performed. Opening readiness, optimized balance and phone effects are not proven by this preview. No automatic CoverAll is implied.</p>
+      <h4>Dated work in the proposed plan</h4><div class="tableWrap"><table><thead><tr><th>Date</th><th>Duty</th><th>Owner / status</th><th>Window</th></tr></thead><tbody id="vacancy-preview-work"></tbody></table></div>
+      <h4>Individual availability</h4><div class="tableWrap"><table><thead><tr><th>Date</th><th>Person / position</th><th>Availability</th><th>Shift / lunch / productive capacity</th></tr></thead><tbody id="vacancy-preview-availability"></tbody></table></div>
+      <h4>Paired lunch coverage</h4><div class="tableWrap"><table><thead><tr><th>Date</th><th>Owner / coverer</th><th>Coverage window</th><th>Kind</th></tr></thead><tbody id="vacancy-preview-lunch"></tbody></table></div>
+      <h4>Source-planned objective and metrics (not physical or optimal proof)</h4><pre id="vacancy-preview-metrics"></pre>
+    </section>
+    <h3>Currently assigned duties — before vacancy</h3><p>These are the accepted current duties, not a post-vacancy plan preview or proof of completed work.</p>
+    <div class="tableWrap"><table><thead><tr><th>Date</th><th>Current duty</th><th>Window</th></tr></thead><tbody id="vacancy-current-duties"></tbody></table></div>
+    <div class="field"><label for="vacancy-reason">Vacancy reason</label><input id="vacancy-reason" type="text" maxlength="500" required></div>
+    <div class="dialogActions"><button class="btn" id="vacancy-cancel" type="button">Cancel review</button><button class="btn primary" id="vacancy-submit" type="submit" disabled>Review affected vacancy plan</button></div>
+  </form>
+</dialog>
+<dialog id="turnover-dialog" aria-labelledby="turnover-title">
+  <form id="turnover-form" class="turnoverForm">
+    <div class="dialogHeader"><div><h2 id="turnover-title">Employee change</h2><p id="turnover-current"></p></div><button class="iconBtn" id="turnover-close" type="button" title="Close" aria-label="Close"><span data-lucide="x"></span></button></div>
+    <input id="turnover-slot" type="hidden">
+    <input id="turnover-mode" type="hidden">
+    <div class="field" id="replacement-name-field"><label for="replacement-name">New employee name</label><input id="replacement-name" type="text" minlength="2" maxlength="160" autocomplete="off"></div>
+    <div class="field"><label for="turnover-effective-date">Effective today</label><input id="turnover-effective-date" type="date" required readonly></div>
+    <div class="field"><label for="turnover-reason">Reason</label><input id="turnover-reason" type="text" maxlength="500" required></div>
+    <div class="dialogActions"><button class="btn" id="turnover-cancel" type="button">Cancel</button><button class="btn primary" id="turnover-submit" type="submit"><span data-lucide="check"></span><span id="turnover-submit-label">Apply</span></button></div>
+  </form>
+</dialog>
+<dialog id="action-confirm-dialog" aria-labelledby="action-confirm-title" aria-describedby="action-confirm-message">
+  <form method="dialog" class="turnoverForm">
+    <div class="dialogHeader"><div><h2 id="action-confirm-title">Confirm change</h2></div></div>
+    <p id="action-confirm-message" class="confirmMessage"></p>
+    <div class="dialogActions"><button class="btn" id="action-confirm-cancel" type="submit" value="cancel">Cancel</button><button class="btn primary" id="action-confirm-accept" type="submit" value="confirm">Continue</button></div>
+  </form>
+</dialog>
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+<script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+<script src="./memphis-approved-schedule.js?v=2026.10.07.initial-selection"></script>
+<script src="./memphis-scheduler-actions.js"></script>
+<script src="./schedule-weekly.js?v=2026.10.07.initial-selection"></script>
+
+</body>
+</html>

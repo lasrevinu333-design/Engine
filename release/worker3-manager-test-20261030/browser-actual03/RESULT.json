@@ -1,0 +1,138 @@
+{
+  "scope": "PRIVATE_HEADLESS_FIXTURE_BROWSER_ONLY",
+  "productionWritten": false,
+  "genuineManagerBrowser": false,
+  "SQLExecuted": false,
+  "deviceProof": false,
+  "checks": [
+    "Exact saved native PREPARED response passes actual selected validator",
+    "Bound rolling seven-day frame covers entire requested PTO day",
+    "Overlap alone cannot truncate a longer original request",
+    "Wrong manual projection binding remains refused",
+    "Actual page renders all seven source-aligned civil dates",
+    "Actual saved current view shows Zoo Wide Coverage",
+    "Actual saved current view names full-hour relief duties",
+    "Exact saved revision5 snapshot rendered unchanged",
+    "confirm: complete exact saved native prepared duties rendered",
+    "confirm: preview names relief periods"
+  ],
+  "source_head": "6dfd5f4 plus uncommitted frontend delta",
+  "fixtureTransformations": [
+    "Read-only display uses exact saved revision5 CURRENT_MANAGER_SNAPSHOT unchanged.",
+    "PTO lifecycle fixture rewinds only revision metadata to4 and removes second accepted PTO exception/target from revision5 snapshot for entry; this is not an actual pre-accept SQL snapshot.",
+    "PREPARED response is exact saved native response; ACCEPTED GET envelope is assembled from that response and exact accepted receipt. Unknown transport failure is synthetic."
+  ],
+  "sources": {
+    "schedule-weekly.js": {
+      "sha256": "2f6b7e18a8b70022ce226e0d69f602a6da94c4c0dd85c37a9deb7745492939cf",
+      "bytes": 122187
+    },
+    "memphis-scheduler-actions.js": {
+      "sha256": "7ca96a19f16e929f9647ec0932594241025b8314e66a19ae62644329c9f58ec3",
+      "bytes": 52273
+    },
+    "memphis-approved-schedule.js": {
+      "sha256": "9e6e9de95b072ff9abd0d05c2479f25e14000ab8f71d81d55963a0a1b471fdc4",
+      "bytes": 21100
+    },
+    "schedule-weekly.html": {
+      "sha256": "e36efdfb1a1fae708a22a9abccfd37981029da003eeb28ae6be2a94707630364",
+      "bytes": 11883
+    }
+  },
+  "status": "FAIL",
+  "error": "page.waitForFunction: Timeout 6000ms exceeded.\n    at /mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/manager-native-fixture-browser.cjs:93:21",
+  "browserClosed": true,
+  "calls": [
+    {
+      "blockedExternal": "https://unpkg.com"
+    },
+    {
+      "mode": "current",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "current",
+      "path": "/static-weekly/approved-choices",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "blockedExternal": "https://unpkg.com"
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/approved-choices",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands",
+      "method": "POST",
+      "body": "{\"command_kind\":\"absence\",\"employee_id\":\"d5fecc86-659b-464a-bc99-f0d914385db4\",\"start_date\":\"2026-11-03\",\"end_date\":\"2026-11-03\",\"absence_kind\":\"pto\",\"client_prepare_key\":\"3da9c94a-36fc-4e48-b9c5-52711b715e83\",\"expected_revision\":4}"
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/c0a5d1f3-f653-4113-97e6-a39569a16104",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/c0a5d1f3-f653-4113-97e6-a39569a16104/prepare",
+      "method": "POST",
+      "body": "{}"
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/c0a5d1f3-f653-4113-97e6-a39569a16104",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/c0a5d1f3-f653-4113-97e6-a39569a16104",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/c0a5d1f3-f653-4113-97e6-a39569a16104/confirm",
+      "method": "POST",
+      "body": "{\"preview_digest\":\"ffd573f72d1cb5808c996b9276ba82fdc4ccf07606277fb9f851609a72f61d7f\",\"confirmation_key\":\"d6557069-2ecd-497a-93e8-4cebb2451df2\"}"
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/staffing-commands/c0a5d1f3-f653-4113-97e6-a39569a16104",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "mode": "confirm",
+      "path": "/static-weekly/manager-snapshot",
+      "method": "GET",
+      "body": null
+    }
+  ]
+}

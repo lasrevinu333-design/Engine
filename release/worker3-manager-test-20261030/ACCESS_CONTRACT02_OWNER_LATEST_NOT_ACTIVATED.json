@@ -1,0 +1,18 @@
+{
+  "scope": "OWNER_LATEST_PROPOSAL_ONLY_NO_AUTH_CODE_CHANGE",
+  "supersedes": "ACCESS_FEASIBILITY_ONLY.json proposed enrollment policy only",
+  "proposed": {
+    "enrollment": "Open enrollment using one shared four-digit leadership PIN and an approved self-asserted name picker.",
+    "namePickerSource": "Main-provided approved display-name list only. No guessed contact email or inferred identity.",
+    "attribution": "Shared PIN and self-selected name do not authenticate an individual person. Audit labels must identify the asserted name and independent persistent browser/device credential; do not claim verified personal identity.",
+    "persistence": "Opaque per-browser credential stays server-validated and revocable.",
+    "rotation": "Later manually initiated PIN rotation may stop new enrollment without revoking existing browser credentials; exact backend contract required. No automatic schedule or rotation added.",
+    "roles": "Employee roles and separate Map system remain unchanged. Backend controls edit permissions and attempt limits."
+  },
+  "frontendStatus": "No PIN form, credential endpoint, secret, role change or activation implemented. Await Main explicit backend API contract.",
+  "existingViewer": "Link viewer already has no enrollment dependency in current Source; backend public aggregate and public-event response restrictions must remain.",
+  "actualPin": null,
+  "contactEmail": null,
+  "credentialsIssued": false,
+  "productionActivated": false
+}
