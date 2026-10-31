@@ -92,6 +92,18 @@ function staffingBindings(record){
   throw Error('A current publication/version is required for EVERY remaining week; no first-week substitution is allowed.');
  return bindings;
 }
+// A rolling manual frame may straddle two calendar weeks. It must still cover
+// EVERY requested day in this particular publication binding; overlap alone is
+// insufficient and never shortens a multi-week original request.
+function staffingSnapshotCovers(snapshot,week,body){
+ if(!civilDate(week)||!civilDate(body?.start_date)||!civilDate(body?.end_date))return false;
+ const end=new Date(week+'T00:00:00Z');end.setUTCDate(end.getUTCDate()+6);
+ const first=body.start_date>week?body.start_date:week,last=body.end_date<end.toISOString().slice(0,10)?body.end_date:end.toISOString().slice(0,10);
+ if(first>last)return false;
+ const normal=snapshot?.week_start===week&&snapshot.week_end===end.toISOString().slice(0,10);
+ const manual=!normal&&root.MemphisApprovedSchedule?.validSnapshotWindow(snapshot,week)===true;
+ return (normal||manual)&&snapshot.week_start<=first&&snapshot.week_end>=last;
+}
 function preparedProjection(command,week){
  return command.projections?.[week]??{projectionIdentity:command.projectionIdentity,replayDigest:command.replayDigest};
 }
@@ -136,7 +148,8 @@ function validateStaffingPreview(value,record){
  const binding=bindings[index],prior=preparedProjection(command,binding.weekStart);
  if(week.week_start!==binding.weekStart||week.publicationId!==binding.publicationId||week.versionId!==binding.versionId
   ||!HASH.test(week.database_projection_identity||'')||!HASH.test(week.replayDigest||'')||typeof week.compilerVersion!=='string'
-  ||!HASH.test(week.sourceDigest||'')||week.sourceDigestBasis!=='envelope.authority.inputDigest'
+  ||!HASH.test(week.sourceDigest||'')||week.sourceDigestBasis!==(week.compilerVersion==='approved-manual-period-v1'?'envelope.authority.sourceDigest':'envelope.authority.inputDigest')
+  ||week.compilerVersion==='approved-manual-period-v1'&&(week.projectionAvailabilityBasis!=='envelope.authority.projectionAvailability'||!HASH.test(week.projectionAvailabilityDigest||''))
   ||!Array.isArray(week.assignments)||week.assignments.length>1024||!Array.isArray(week.projectionAvailability)
   ||week.projectionAvailability.length>1792||!Array.isArray(week.lunch_loans)||!Array.isArray(week.lunch_responsibilities))
   throw Error('The persisted staffing preview lacks its bound staged facts.');
@@ -313,7 +326,12 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
  async function readCommand(r){
   const value=validateStaffingPreview(await commandCall(r,staffingCommandPath+'/'+r.command.operationId,{method:'GET'}),r);
   const current=read();
-  if(value.state==='ACCEPTED'){save({...current,state:'ACCEPTED',receipt:copy(value),command:{...current.command,phase:'ACCEPTED'}});return value;}
+  if(value.state==='ACCEPTED'){
+   // The full preview was already verified above. Retain its immutable digests
+   // and the exact accepted receipt/vector, not megabytes of duplicated staged
+   // rows inside the bounded recovery control. The original command is unchanged.
+   save({...current,state:'ACCEPTED',receipt:copy({...value,preview:null}),command:{...current.command,phase:'ACCEPTED'}});return value;
+  }
   if(value.state==='PREPARED'){
    const week=value.preview.weeks[0],{preparationIssue,...command}=current.command;save({...current,command:{...command,phase:current.command.confirmationAttempted?'CONFIRMING':'PREPARED',
     previewDigest:value.preview_digest,inputDigest:value.input_digest,candidateSetDigest:value.candidate_set_digest,
@@ -343,7 +361,7 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
   const bindings=staffingBindings(r),receipt=r.receipt.accepted_receipt;
   if(snapshots.length!==bindings.length||bindings.some((binding,index)=>{
    const snapshot=snapshots[index],map=receipt.projections[binding.weekStart],projection=snapshot?.latest_projection;
-   return snapshot?.week_start!==binding.weekStart||snapshot.authority_revision!==receipt.authority_revision||snapshot.projection_status!=='current'
+   return !staffingSnapshotCovers(snapshot,binding.weekStart,r.body)||snapshot.authority_revision!==receipt.authority_revision||snapshot.projection_status!=='current'
     ||snapshot.current_publication?.publication_id!==binding.publicationId||snapshot.current_publication?.version_id!==binding.versionId
     ||projection?.projection_id!==map.projection_id||projection.replay_digest!==preparedProjection(r.command,binding.weekStart).replayDigest;
   }))return false;
@@ -365,7 +383,7 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
     for(const basis of staffingBindings(r)){
      const snapshot=await api('/static-weekly/manager-snapshot?week_start='+encodeURIComponent(basis.weekStart),{method:'GET',expectedManagerId:owner.managerId});
      currentCommand(r);
-     if(snapshot?.week_start!==basis.weekStart||snapshot.authority_revision!==r.body.expected_revision
+     if(!staffingSnapshotCovers(snapshot,basis.weekStart,r.body)||snapshot.authority_revision!==r.body.expected_revision
       ||snapshot.current_publication?.publication_id!==basis.publicationId||snapshot.current_publication?.version_id!==basis.versionId)
       throw Error('The current original staffing publication/version/revision changed. No preparation retry was sent.');
     }
@@ -521,5 +539,5 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
   samePrincipal:()=>same(owner,principal(auth)),principal:copy(owner),
  });
 }
-const api=Object.freeze({create,permissions,principal,same,accepted,receiptProjection,authorized,staffingOperation,staffingRequest,acceptedStaffing,staffingCommandPath,isStaffingCommand,validateStaffingPreview,staffingWeeks,staffingBindings,validateVacancyPreview,textDigest});root.MemphisSchedulerActions=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+const api=Object.freeze({create,permissions,principal,same,accepted,receiptProjection,authorized,staffingOperation,staffingRequest,acceptedStaffing,staffingCommandPath,isStaffingCommand,validateStaffingPreview,staffingWeeks,staffingBindings,staffingSnapshotCovers,validateVacancyPreview,textDigest});root.MemphisSchedulerActions=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
