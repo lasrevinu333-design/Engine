@@ -16,10 +16,9 @@ const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notificati
   readFile('mobile/src/manager/index.html', 'utf8'),
   readFile('mobile/src/custodial/index.html', 'utf8'),
 ]);
-assert.match(eventsAdmin, /object-fit:contain/);
-assert.match(eventsAdmin, /flex:0 0 76px/);
-assert.match(eventsAdmin, /max-width:min\(620px,100%\)/);
-assert.match(eventsAdmin, /overflow-wrap:anywhere/);
+assert.match(eventsAdmin, /href="\.\/events\.html"/);
+assert.match(eventsAdmin, /window\.location\.replace/);
+assert.doesNotMatch(eventsAdmin, /<form|<input|<button|admin-api|fetch\(/);
 assert.match(messages, /chatscope-messenger\.css/);
 assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
 assert.match(messages, /chatscope-messenger\.js/);

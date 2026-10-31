@@ -214,7 +214,7 @@ function dayChangeSelection(){requireSchedulerPermission('absences');const date=
   if(choice==='NONE'){capacity.breakChoice='NONE';operations.push(capacity);}else if(choice==='SCHEDULED'){
    const start=row.querySelector('[data-lunch-start]').value,end=row.querySelector('[data-lunch-end]').value,minutes=t=>Number(t.slice(0,2))*60+Number(t.slice(3));
    const validClock=t=>/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(t);
-   if(!validClock(start)||!validClock(end)||minutes(end)-minutes(start)!==60||start<shift.start||end>shift.end)throw new Error('Enter the actual CoverAll lunch start and end inside its shift.');
+   if(!validClock(start)||!validClock(end)||minutes(end)<=minutes(start)||start<shift.start||end>shift.end)throw new Error('Enter the actual CoverAll lunch start and end inside its shift.');
    operations.push(capacity,{operation:'exception',exception_type:'lunch',starts_at:start,ends_at:end,reason:'Manager recorded actual CoverAll lunch',payload:{slotId:slot}});
   }else throw new Error('Choose the actual CoverAll break arrangement.');
  }

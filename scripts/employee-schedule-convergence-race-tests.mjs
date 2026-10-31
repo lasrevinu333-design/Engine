@@ -26,8 +26,11 @@ function payload(revision,blocked=false,date=day){
   schedule_delivery_mode:blocked?'RECURRING_TERMINAL':'RECURRING_SCHEDULE',recurring_delivery:{intentId:id(revision),target,targetDigest:sha(flat(target)),
    applicationStatus:'PENDING',...(blocked?{replacementCoverageReady:false}:{view,viewJsonText:JSON.stringify(view),viewDigest:target.viewDigest})}};
 }
-function fixture({importModuleDynamically}={}){
- const stored=new Map(),nodes=new Map(),events=new Map(),calls=[];let readFails=false,writeFails=false,after=()=>{},next=payload(19),status={ready:true,available:true,quarantined:false};
+function fixture({importModuleDynamically=async specifier=>{
+ assert.equal(specifier,'./mobile/src/custodial/protected-browser-admission.js');
+ return import('../mobile/src/custodial/protected-browser-admission.js');
+}}={}){
+ const stored=new Map(),nodes=new Map(),events=new Map(),calls=[];let readFails=false,writeFails=false,after=()=>{},next=payload(19),status={ready:true,available:true,quarantined:false,generation:7};
  const node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',innerHTML:'',hidden:false,addEventListener(){}});return nodes.get(id);};
  const now=Date.parse(day+'T17:00:00Z'),FixedDate=class extends Date{constructor(...a){super(...(a.length?a:[now]));}static now(){return now;}};
  const context=vm.createContext({Date:FixedDate,Intl,URL,console,crypto:webcrypto,TextEncoder,AbortController,
@@ -35,8 +38,13 @@ function fixture({importModuleDynamically}={}){
   localStorage:{getItem:k=>{if(readFails)throw Error('unreadable storage');return stored.get(k)??null;},setItem:(k,v)=>{if(writeFails)throw Error('failed storage');stored.set(k,v);}},
   fetch:async()=>{calls.push('GET');return{ok:true,json:async()=>({ok:true,data:structuredClone(next)})};}});
  context.window={navigator:{locks:scheduleLocks},crypto:webcrypto,addEventListener:(name,fn)=>events.set(name,fn),MemphisCustodialSecurity:{native:true,
-  getStatus:()=>({...status,deviceId:'KIOSK_08',principal:{employee_id:id(2),credential_id:id(3),assignment_epoch:7}}),
-  mutateProtectedWork:async fn=>{const result=fn();after();return result;}},
+  getStatus:()=>({...status,deviceId:'KIOSK_08',principal:{schema_version:'custodial-protected-principal.v1',device_id:'KIOSK_08',employee_id:id(2),credential_id:id(3),assignment_epoch:7,credential_operation_id:id(8),installation_seal:'synthetic-original-installation-seal',enrolled_at:'2026-09-28T00:00:00.000Z'}}),
+  mutateProtectedWork:async(fn,options)=>{
+   assert.equal(options.requireEnrollment,true);assert.equal(options.expectedGeneration,status.generation);
+   const generation=status.generation;let active=true;
+   const checkpoint={generation,deviceId:'KIOSK_08',assertCurrent(){assert.ok(active,'closed synthetic native checkpoint');assert.equal(status.generation,generation);assert.equal(status.ready,true);assert.equal(status.quarantined,false);}};
+   try{const result=await fn(checkpoint);after();return result;}finally{active=false;}
+  }},
   MemphisMobile:{ready:Promise.resolve(),deviceId:()=> 'KIOSK_08',principalIdentity:()=> 'race-principal',
    profileMatchesPrincipal:d=>d.employee_id===id(2)&&d.credential_id===id(3)&&d.assignment_epoch===7,
    requestJson:async(path)=>{calls.push(path);return{};}}};

@@ -30,7 +30,7 @@ assert.doesNotMatch(script,/(?<![\w.])(?:window\.)?confirm\(/,'no blocking nativ
 assert.match(html,/id="action-confirm-dialog"/);assert.match(script,/function confirmAction\(/,'one accessible confirmation flow');
 assert.match(script,/\/scheduler-runtime-config/,'configured scheduler origin');
 assert.doesNotMatch(script,/\/schedule-api|supabase\.co|service_role/i,'no legacy schedule or direct database authority');
-assert.match(script,/window\.MemphisApprovedSchedule\.loadInitialEntry\(\{api,weekStart:requestedWeek,owner:schedulerPermissions\(\)\.owner\}\)/,'snapshot is loaded through the current approved-source owner');
+assert.match(script,/window\.MemphisApprovedSchedule\.loadInitialEntry\(\{api,weekStart:requestedWeek,owner:schedulerPermissions\(\)\.management\}\)/,'snapshot is loaded through the current approved-source owner');
 assert.match(approved,/api\('\/static-weekly\/manager-snapshot\?week_start='\+encodeURIComponent\(weekStart\)\)/,'delegated owner must call the actual named-manager snapshot route');
 assert.match(approved,/if\(!owner\|\|error\.status!==409\|\|error\.code!=='23514'\|\|!refusedMessages\.has\(error\.message\)\)throw error/,'only exact unpublished-source failure can enter owner-only source selection');
 for(const route of ['/static-weekly/approved-choices','/static-weekly/day-changes/batch','/static-weekly/employees/departed','/static-weekly/employees/replacements','/static-weekly/rebuild-current-projection'])assert.ok(script.includes(route),route+' must be connected');
@@ -39,7 +39,7 @@ assert.doesNotMatch(script,/\/static-weekly\/drafts\//,'new baseline publication
 assert.match(script,/validatePreview\(kind,result,input,snapshot\)/,'approved preview must be checked against current selection and snapshot');
 assert.match(script,/state\.approved\.confirm\(choice\.kind,choice\.preview,choice\.input\)/,'publish exact reviewed source/digest');
 assert.match(approved,/preview_digest:preview\.previewDigest/);assert.match(approved,/expected_revision/);assert.match(approved,/idempotency_key/);
-assert.match(script,/requireSchedulerPermission\('owner'\)/,'permanent roster and approved baseline publication remain owner only');
+assert.match(script,/requireSchedulerPermission\('management'\)/,'permanent roster and approved baseline publication require current Custodial management authority');
 assert.match(script,/requireSchedulerPermission\('absences'\)/);assert.match(script,/requireSchedulerPermission\('coverall'\)/);assert.match(script,/requireSchedulerPermission\('routes'\)/);
 assert.match(script,/operation:'cover_all'/,'only published contractor capacity is selected');
 assert.match(script,/breakChoice='NONE'/,'no-break arrangement is explicitly selected');
@@ -71,7 +71,10 @@ for(const file of ['schedule-weekly.html','schedule-weekly.js','memphis-approved
 assert.match(read('schedule-simple.html'),/<title>/,'historical rollback asset preserved');
 console.log('weekly manager workspace and approved/durable permission contracts: PASS');
 
-// Actual selected normal UI producer: retain actual endpoints, no duration buckets.
+// Retained compatibility producer: actual endpoints, no duration buckets.
+// The current approved-manual path rejects this contractor batch and uses its distinct 60-minute source-bound choice.
+assert.match(script,/if\(manualScheduleView\(snapshot\)&&selection\.contractorCount\)throw Error/, 'current manual plan cannot enter the compatibility contractor batch');
+const datedContext={};vm.runInNewContext(dated,datedContext);
 const actualLunchProducer=script.slice(script.indexOf('function dayChangeSelection(){'),script.indexOf('async function applyDayChanges(){'));
 assert.ok(actualLunchProducer.startsWith('function dayChangeSelection(){'));
 let actualLunchChecks=0;
@@ -79,7 +82,7 @@ function selectActualLunch(start,end,choice='SCHEDULED'){
  const slot='20000000-0000-4000-8000-000000000011',values={'[data-shift-start]':'07:00','[data-shift-end]':'16:00','[data-break-choice]':choice,'[data-lunch-start]':start,'[data-lunch-end]':end};
  const input={dataset:{contractorSlot:slot},closest:()=>({querySelector:selector=>({value:values[selector]})})};
  const context={requireSchedulerPermission:()=>{},selectedServiceDate:()=>'2026-10-05',els:{absence_type:{value:'daily_absence'}},
-  document:{querySelectorAll:selector=>selector.startsWith('[data-contractor-slot]')?[input]:[],getElementById:()=>({value:'2026-10-05'})},window:{MemphisSchedulerActions:{staffingWeeks(){}}}};
+  document:{querySelectorAll:selector=>selector.startsWith('[data-contractor-slot]')?[input]:[],getElementById:()=>({value:'2026-10-05'})},window:{MemphisSchedulerActions:datedContext.MemphisSchedulerActions}};
  vm.runInNewContext(actualLunchProducer,context);return JSON.parse(JSON.stringify(context.dayChangeSelection()));
 }
 for(const [start,end]of[['11:00','11:01'],['11:00','11:15'],['11:00','11:30'],['11:00','11:37'],['11:00','12:00'],['11:00','12:38'],['11:00','14:39']]){
@@ -91,7 +94,7 @@ for(const [start,end]of[['',''],['11:00',''],['','12:00'],['11:00','11:00'],['12
 }
 const noBreak=selectActualLunch('','','NONE');assert.equal(noBreak.operations.length,1);assert.equal(noBreak.operations[0].breakChoice,'NONE');actualLunchChecks++;
 assert.throws(()=>selectActualLunch('11:00','12:00',''),/Choose the actual CoverAll break arrangement/);actualLunchChecks++;
-console.log(JSON.stringify({scope:'ACTUAL_NORMAL_UI_COVERALL_LUNCH_ENDPOINT_PRODUCER',checks:actualLunchChecks,arbitrary_duration_limit:false,SQL:false,browser:false}));
+console.log(JSON.stringify({scope:'RETAINED_COMPATIBILITY_UI_COVERALL_LUNCH_ENDPOINT_PRODUCER',checks:actualLunchChecks,arbitrary_duration_limit:false,SQL:false,browser:false}));
 
 // Execute the real selected-date guard and renderer with a Friday origin.
 // Labels and owner lookup must follow each civil date, not a Monday index.

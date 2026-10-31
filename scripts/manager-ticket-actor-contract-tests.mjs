@@ -13,8 +13,12 @@ assert.match(adminClose, /close_notes: notes \|\| null/);
 assert.doesNotMatch(adminClose, /closed_by/, "the browser must not assign the maintenance-ticket actor");
 
 const dashboardClose = dashboard.match(/async function closeTicket\(ticketId,button\)\{[\s\S]*?\}\s*function wireCloseButtons/)?.[0] || "";
-assert.match(dashboardClose, /CLOSE_TICKET_URL/);
-assert.match(dashboardClose, /JSON\.stringify\(\{ticket_id:ticketId\}\)/);
+assert.match(dashboardClose, /actions\.close\(ticketId,choice\)/);
+assert.match(dashboardClose, /chooseTicketOutcome\(\)/);
+const ticketActions = await readFile(new URL("../memphis-ticket-actions.js", import.meta.url), "utf8");
+assert.match(ticketActions, /\/dashboard-api\/close-ticket/);
+assert.match(ticketActions, /JSON\.stringify\(\{ticket_id:id,outcome,external_work_order_reference:orderReference\|\|null,close_notes:notes\|\|null\}\)/);
+assert.doesNotMatch(ticketActions, /JSON\.stringify\(\{[^}]*closed_by/);
 assert.doesNotMatch(dashboardClose, /closed_by/, "the dashboard must not assign the maintenance-ticket actor");
 
 console.log("MANAGER_TICKET_ACTOR_FRONTEND_CONTRACT_PASS");

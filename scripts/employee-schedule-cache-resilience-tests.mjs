@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../employee-schedule.html', import.meta.url), 'utf8');
-const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)?.[1] || '';
+const inline = process.argv.includes('--native-runtime')
+  ?readFileSync(new URL('../mobile/src/custodial/employee-schedule-runtime.js',import.meta.url),'utf8').replace(/^export /m,'')+'\ninstallEmployeeSchedule();'
+  :[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)?.[1] || '';
 assert.ok(inline.includes("void load('launch')"), 'schedule page launch loader must remain present');
 
 const fixedNow = Date.parse('2026-09-21T18:00:00Z');
@@ -49,7 +51,8 @@ context.window = {
     profileMatchesPrincipal:()=>true,requestJson:async()=>({}) },
   MemphisCustodialSecurity: {
     native:true,
-    getStatus: () => ({ deviceId: 'KIOSK_08',ready:true,available:true,quarantined:false }),
+    getStatus: () => ({ deviceId: 'KIOSK_08',generation:1,principal:{employee_id:'30000000-0000-4000-8000-000000000099',
+      credential_id:'31000000-0000-4000-8000-000000000099',assignment_epoch:7},ready:true,available:true,quarantined:false }),
     mutateProtectedWork: async () => { mutationCalls++;throw new Error('offline cache unavailable'); },
   },
   addEventListener() {},
@@ -64,8 +67,8 @@ assert.equal(mutationCalls,2,'cacheless read-ahead attempt and response persiste
 assert.equal(element('employee').textContent, 'Fresh Employee', 'fresh server data must render even when optional cache persistence fails');
 assert.equal(element('content').hidden, false, 'fresh schedule content must remain visible');
 assert.match(element('areas').innerHTML, /Fresh Area/, 'fresh assignment must be shown');
-assert.match(element('state-text').textContent, /offline copy/i, 'cache failure must be disclosed without relabeling a successful network read as offline');
-assert.equal(element('retry').hidden, true, 'a cache-only failure must not present the schedule as a failed network request');
+assert.match(element('state-text').textContent, /could not save a copy/i, 'cache failure must be disclosed without relabeling a successful network read as offline');
+assert.equal(element('retry').hidden, false, 'cache failure retains the current manual retry affordance');
 assert.equal(stored.size, 0, 'failed protected cache persistence must not fabricate a saved snapshot');
 
 console.log('EMPLOYEE_SCHEDULE_CACHE_RESILIENCE_PASS');

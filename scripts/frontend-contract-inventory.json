@@ -805,42 +805,18 @@
     },
     {
       "path": "scripts/events-admin-import-ui-tests.mjs",
-      "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
-      "invocations": [
-        {
-          "entry": "scripts/events-admin-import-ui-tests.mjs",
-          "args": [],
-          "cwd": ".",
-          "requires": []
-        }
-      ]
+      "role": "superseded-contract",
+      "reason": "October 5\u20136 owner Events consolidation retired manual Event Input Console and its parser/writer. Historical test bytes retained. Current replacement coverage: retired-events-entry-tests (fixed safe legacy route), shared-events-view-tests (common authorized reader, cancellation, stale/offline), backend shared-events-feed-tests (retired API410 and audience separation), outlook-event-sync-adapter-tests (typed supported source importer). No collector activation or live source acceptance implied."
     },
     {
       "path": "scripts/events-admin-parser-regression-tests.mjs",
-      "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
-      "invocations": [
-        {
-          "entry": "scripts/events-admin-parser-regression-tests.mjs",
-          "args": [],
-          "cwd": ".",
-          "requires": []
-        }
-      ]
+      "role": "superseded-contract",
+      "reason": "October 5\u20136 owner Events consolidation retired manual Event Input Console and its parser/writer. Historical test bytes retained. Current replacement coverage: retired-events-entry-tests (fixed safe legacy route), shared-events-view-tests (common authorized reader, cancellation, stale/offline), backend shared-events-feed-tests (retired API410 and audience separation), outlook-event-sync-adapter-tests (typed supported source importer). No collector activation or live source acceptance implied."
     },
     {
       "path": "scripts/events-admin-source-evidence-tests.mjs",
-      "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
-      "invocations": [
-        {
-          "entry": "scripts/events-admin-source-evidence-tests.mjs",
-          "args": [],
-          "cwd": ".",
-          "requires": []
-        }
-      ]
+      "role": "superseded-contract",
+      "reason": "October 5\u20136 owner Events consolidation retired manual Event Input Console and its parser/writer. Historical test bytes retained. Current replacement coverage: retired-events-entry-tests (fixed safe legacy route), shared-events-view-tests (common authorized reader, cancellation, stale/offline), backend shared-events-feed-tests (retired API410 and audience separation), outlook-event-sync-adapter-tests (typed supported source importer). No collector activation or live source acceptance implied."
     },
     {
       "path": "scripts/feedback-authority-frontend-contract-tests.mjs",
@@ -984,6 +960,19 @@
       "invocations": [
         {
           "entry": "scripts/gps-native-history-renderer-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/guest-approval-entry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Actual guest entry startup honors approval and unavailable state even with legacy demo query; synthetic VM only",
+      "invocations": [
+        {
+          "entry": "scripts/guest-approval-entry-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -1537,6 +1526,19 @@
       "invocations": [
         {
           "entry": "scripts/manager-ticket-actor-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manual-activation-ui-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current canonical manual-activation or third-absence controller contract; source-only synthetic ports, no database/device authority.",
+      "invocations": [
+        {
+          "entry": "scripts/manual-activation-ui-contract-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -2942,6 +2944,19 @@
       ]
     },
     {
+      "path": "scripts/retired-events-entry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current compatibility routes for retired event entrypoints; proves same-origin canonical destination, visible fallback, no query/token carryover or writer/cache controls. Complements shared-events-view-tests and backend retiredEventIntake410 coverage.",
+      "invocations": [
+        {
+          "entry": "scripts/retired-events-entry-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/run-native-original-feedback-journey.mjs",
       "role": "explicit-tool-or-fixture",
       "reason": "explicit feedback journey runner with separate owner lifecycle"
@@ -3122,6 +3137,19 @@
       "invocations": [
         {
           "entry": "scripts/scan-retry-migration-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/scan-source-pair-compatibility-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Actual page and worker refuse obsolete/missing schema and accept exact retained302 declarations in synthetic VM; no build/backend actions",
+      "invocations": [
+        {
+          "entry": "scripts/scan-source-pair-compatibility-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -3343,6 +3371,24 @@
       "path": "scripts/synthetic-schedule-locks.mjs",
       "role": "imported-support",
       "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/synthetic-schedule-security.mjs",
+      "role": "imported-support",
+      "reason": "Synthetic generation/principal security fixture imported by native schedule receipt contracts; not a standalone test."
+    },
+    {
+      "path": "scripts/third-absence-coverall-ui-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current canonical manual-activation or third-absence controller contract; source-only synthetic ports, no database/device authority.",
+      "invocations": [
+        {
+          "entry": "scripts/third-absence-coverall-ui-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
     },
     {
       "path": "scripts/thread-send-ux-regression-tests.mjs",

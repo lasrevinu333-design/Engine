@@ -203,8 +203,22 @@ assert.equal(currentSchemaCapture.all_other_catalog_sections_unchanged,true);
 assert.equal(currentSchemaCapture.rollback_scope,null);
 assert.equal(currentSchemaCapture.populated_target_capture,false);
 for(const flag of ['production','production_observation','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(currentSchemaCapture[flag],false);
-const CANONICAL_SCHEMA_FINGERPRINT = currentSchemaCapture.schema_fingerprint;
-const ACTIVE_SCHEMA_TRANSITION = currentSchemaCapture.schema_transition;
+// Retained302 source metadata supersedes the historical298 compatibility target.
+// This checks exact declarations, not a new catalog observation or release admission.
+const current302Bytes=readFileSync(resolve(root,'scripts/fixtures/current302-schema-source-binding.json'));
+assert.equal(createHash('sha256').update(current302Bytes).digest('hex'),'b29026a877990c5da27d670acd10ef74c9e1db415ab0410b307921d4683adede');
+const current302Source=JSON.parse(current302Bytes);
+assert.equal(current302Source.schema,'custodial.frontend-retained-source302-binding.v1');
+assert.equal(current302Source.scope,'RETAINED_SOURCE_METADATA_AND_COMPATIBILITY_DECLARATIONS_ONLY');
+assert.equal(current302Source.backend_baseline_commit,'89d76f10cec4b92ed3a212b433549c56d4495a4a');
+assert.equal(current302Source.canonical_source_count,302);
+assert.equal(current302Source.schema_fingerprint,'04e4c3d7abaa71cdf36a164a483ee1fa5efef77ab1711b07a201f515b85248d6');
+assert.equal(current302Source.retained_source302_successor.observed_empty_source_fingerprint,current302Source.schema_fingerprint);
+assert.equal(current302Source.retained_source302_successor.full_vendor_NORMAL,false);
+assert.equal(current302Source.retained_source302_successor.expected_fingerprint_authority,null);
+for(const flag of ['new_catalog_observation','production','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(current302Source[flag],false);
+const CANONICAL_SCHEMA_FINGERPRINT = current302Source.schema_fingerprint;
+const ACTIVE_SCHEMA_TRANSITION = current302Source.schema_transition;
 assert.equal(ACTIVE_SCHEMA_TRANSITION.from_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
 assert.equal(ACTIVE_SCHEMA_TRANSITION.expires_at,PRIOR294_SCHEMA_TRANSITION.expires_at);
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
@@ -274,6 +288,11 @@ assert.ok(
     && !scanWorkerSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '${PREVIOUS_SCHEMA_FINGERPRINT}'`),
   'the transition source schema must never remain the runtime target',
 );
+if(process.argv.includes('--source-schema-binding-only')) {
+  assert.deepEqual(frontendDeploymentManifest.api_contract_versions,frontendManifest.api_contract_versions);
+  console.log('PASS_EXACT_RETAINED_SOURCE302_COMPATIBILITY_DECLARATIONS_ONLY; no build, SQL, production or pair admission');
+  process.exit(0);
+}
 const runtimeFiles = discoverRuntimeFiles(root);
 const runtimeSet = new Set(runtimeFiles);
 const requiredRoutesAndAssets = [

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import './synthetic-schedule-locks.mjs';
+import {createSyntheticScheduleSecurity} from './synthetic-schedule-security.mjs';
+import {principalIdentity} from '../mobile/src/custodial/protected-principal.js';
 import {createHash,webcrypto} from 'node:crypto';
 import {installHomeFacts} from '../mobile/src/custodial/home-facts-dom.js';
 import {zooServiceDate} from '../mobile/src/custodial/home-facts.js';
@@ -8,7 +10,8 @@ const id=n=>`94000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const sha=s=>createHash('sha256').update(s).digest('hex');
 const flat=x=>'{'+Object.keys(x).sort((a,b)=>a.length-b.length||(a<b?-1:a>b?1:0)).map(k=>JSON.stringify(k)+': '+JSON.stringify(x[k])).join(', ')+'}';
 const day=zooServiceDate(),principal={deviceId:id(1),employeeId:id(2),credentialId:id(3),assignmentEpoch:7};
-const binding='synthetic-protected-principal',key='mz_employee_schedule_snapshot:'+encodeURIComponent(binding);
+const protectedPrincipal={schema_version:'custodial-protected-principal.v1',device_id:'KIOSK_08',employee_id:id(2),credential_id:id(3),credential_operation_id:id(30),assignment_epoch:7,installation_seal:'synthetic-home-convergence-seal',enrolled_at:'2026-08-01T00:00:00.000Z'};
+const binding=principalIdentity(protectedPrincipal),key='mz_employee_schedule_snapshot:'+encodeURIComponent(binding);
 const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(2),employee_name:'Fixture Custodian',credential_id:id(3),assignment_epoch:7};
 function payload(revision,blocked=false){
  const view={schema:'static-weekly.recurring-render-view.v1',service_date:day,employee_id:id(2),employee_name:profile.employee_name,
@@ -39,8 +42,11 @@ try{
  globalThis.localStorage={getItem:k=>stored.get(k)??null,setItem:(k,v)=>{if(failWrite)throw Error('storage unavailable');stored.set(k,v);}};
  globalThis.setInterval=()=>1;globalThis.clearInterval=()=>{};
  globalThis.fetch=async()=>{throw Error('unrelated informational provider deliberately unavailable');};
+ const security=createSyntheticScheduleSecurity(protectedPrincipal,{before:()=>mutationHook()});
+ security.getStatus=()=>({deviceId:'KIOSK_08',generation:1,principal:protectedPrincipal,...securityStatus});
+ window.MemphisCustodialSecurity=security;
  app=installHomeFacts({getProfile:()=>currentProfile,getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,
-  security:{native:true,getStatus:()=>securityStatus,mutateProtectedWork:async fn=>{mutationHook();return fn();}},
+  security,
   requestJson:async()=>{requestCount++;if(requestHook)return requestHook();if(offline)throw Error('offline');return structuredClone(next);}});
  await app.update(true);
  check(element('home-shift').textContent,'7:00 AM–4:00 PM','current authenticated facts displayed');
@@ -126,13 +132,13 @@ try{
  next=payload(33);await app.update(true);
  check(element('home-shift').textContent,'7:00 AM–4:00 PM','usable hours precede quarantine attack');
  securityStatus={ready:false,available:false,quarantined:true};
- events.get('memphis:custodial-security-state')({detail:securityStatus});
+ events.get('memphis:custodial-security-state')({detail:security.getStatus()});
  events.get('online')();events.get('storage')({key});await app.update(true);
  check(element('home-shift').textContent,'Schedule unavailable','quarantined Home cannot restore cached hours');
  check(element('home-schedule-freshness').dataset.stale,'true','quarantined Home never fresh');
  securityStatus={ready:true,available:true,quarantined:false};
  await app.update(true);check(element('home-shift').textContent,'Schedule unavailable','old invalid event remains latched until positive security event');
- events.get('memphis:custodial-security-state')({detail:securityStatus});next=payload(33);await app.update(true);
+ events.get('memphis:custodial-security-state')({detail:security.getStatus()});next=payload(33);await app.update(true);
  check(element('home-shift').textContent,'7:00 AM–4:00 PM','verified security recovery may read current schedule');
  next={...payload(34),schedule_delivery_mode:'UNAVAILABLE'};await app.update(true);
  check(element('home-shift').textContent,'Schedule unavailable','native UNAVAILABLE suppresses duplicate old facts');

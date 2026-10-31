@@ -106,10 +106,10 @@ check('CURRENT_NATIVE_LOCAL_PAGE_AND_ALIAS_POLICY_RETAINS_ALL_ORIGINAL_FENCES',(
  assertCustodialNavigationAssets(hashes,policy);hashes.delete('supply-coming-soon.html');assert.throws(()=>assertCustodialNavigationAssets(hashes,policy),/absent/);
  for(const file of ['manager-access.html','schedule-weekly.html','events-admin.html','employee-events.html','ops-manager-hub.html'])assert.equal(pages.includes('/'+file),false);
 });
-check('CURRENT119_ASSET_MANIFEST_RETAINS_REAL_GIT_TREE_AND_LOCAL_SUPPLY_DIGESTS',()=>{
+check('CURRENT120_ASSET_MANIFEST_RETAINS_REAL_GIT_TREE_AND_LOCAL_SUPPLY_DIGESTS',()=>{
  // Unchanged maintained verifier requires the real exact Git runtime tree.
  // No executeGit stub, requireExactRuntimeTree:false, or historical100 rebind.
- const result=verifyFrontendReleaseManifest(F);assert.equal(result.ok,true);assert.equal(Object.keys(result.asset_hashes_sha256).length,119);
+ const result=verifyFrontendReleaseManifest(F);assert.equal(result.ok,true);assert.equal(Object.keys(result.asset_hashes_sha256).length,120);
  assert.equal(result.asset_hashes_sha256['assets/supply_request_icon.svg'],sha(Buffer.from(icon)));
  assert.equal(result.asset_hashes_sha256['supply-coming-soon.html'],sha(Buffer.from(html)));
 });
@@ -135,4 +135,4 @@ check('CURRENT_NAVIGATION_AND_ORIGINAL_DATA_OWNERS_ARE_UNCHANGED_SOURCE_ONLY',()
 assert.equal(groups,8);
 console.log(JSON.stringify({status:'CURRENT_SUPPLIES_SOURCE_CONTRACT_PASS',groups,
  historical_original8groups:'retained byte-literal explicit-fixture-only; not replayed by this current entry',
- scope:'Current local page/Home/35selector/119manifest/native navigation Source only; no browser/native APK/install/privatehealth/device/SQL/external destination proof'}));
+ scope:'Current local page/Home/35selector/120manifest/native navigation Source only; no browser/native APK/install/privatehealth/device/SQL/external destination proof'}));

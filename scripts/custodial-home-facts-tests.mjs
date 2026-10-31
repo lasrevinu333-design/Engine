@@ -8,7 +8,7 @@ const day={service_date:'2026-09-18',device_id:'KIOSK_08',canonical_device_id:'K
 const weather={hourly_units:{time:'unixtime',temperature_2m:'°F',precipitation_probability:'%'},hourly:{time:[0,1,2,3].map(n=>NOW/1000+n*3600),temperature_2m:[70,71,72,73],precipitation_probability:[0,25,50,100]}};
 const originalWeather={current_units:{time:'unixtime',temperature_2m:'°F',wind_speed_10m:'mp/h'},current:{time:NOW/1000,temperature_2m:72.1,weather_code:1,wind_speed_10m:2.6},daily_units:{time:'unixtime',temperature_2m_max:'°F',temperature_2m_min:'°F'},daily:{time:[NOW/1000-5*3600],temperature_2m_max:[94.3],temperature_2m_min:[71.7]},hourly_units:{time:'unixtime',precipitation_probability:'%'},hourly:{time:[NOW/1000],precipitation_probability:[0]}};
 const results=[];
-async function check(name,fn){if(process.argv.includes('--main-null-only')&&!name.startsWith('NEW empty'))return;if(process.argv.includes('--weather-alerts-only')&&!/^(referenced Actual Public cancellation|foreign or mismatched cancellation|future cancellation|valid current update)/i.test(name))return;if(process.argv.includes('--home-cache-generation-only')&&!name.startsWith('NEW cache generation'))return;try{await fn();results.push({name,passed:true});}catch(error){results.push({name,passed:false,error:error.message});}}
+async function check(name,fn){if(process.argv.includes('--finalization-only')&&!name.startsWith('NEW finalization'))return;if(process.argv.includes('--main-null-only')&&!name.startsWith('NEW empty'))return;if(process.argv.includes('--weather-alerts-only')&&!/^(referenced Actual Public cancellation|foreign or mismatched cancellation|future cancellation|valid current update)/i.test(name))return;if(process.argv.includes('--home-cache-generation-only')&&!name.startsWith('NEW cache generation'))return;try{await fn();results.push({name,passed:true});}catch(error){results.push({name,passed:false,error:error.message});}}
 await check('canonical shift and lunch use published times',()=>{const v=scheduleFacts(day,identity,stamp,NOW);assert.equal(v.shift,'8:00 AM–5:00 PM');assert.equal(v.lunch,'12:00 PM–1:00 PM');assert.equal(v.stale,false);});
 await check('unpublished lunch is not guessed',()=>{const v=scheduleFacts({...day,shift:{active:true,start:'08:00 AM',end:'05:00 PM'}},identity,stamp,NOW);assert.equal(v.lunch,'Lunch not published');});
 await check('day off is distinct from missing schedule',()=>assert.equal(scheduleFacts({...day,schedule_status:'off'},identity,stamp,NOW).shift,'Not scheduled today'));
@@ -119,6 +119,19 @@ await check('NEW cache generation change prevents a deferred old cache commit',a
   release();await running;
   assert.equal(storage.values.size,0,'old identity generation must not persist facts after its mutation resumes');
  }finally{app.dispose();}
+});
+await check('NEW finalization settles after an optional cache identity callback throws',async()=>{
+ const storage=memory();let throwOnIdentity=false,armed=true,requests=0,timer;
+ const app=createHomeFacts({identity:()=>{if(throwOnIdentity)throw Error('Synthetic identity unavailable during optional cache qualification');return identity;},
+  storage,mutate:async fn=>fn(),now:()=>NOW,kinds:['attendance'],request:async()=>{requests++;return {attendance:12,source_timestamp:stamp};},
+  render:value=>{if(armed&&value.attendance.value==='12'){armed=false;throwOnIdentity=true;}}});
+ const bounded=promise=>Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Home refresh did not settle')),250);})]).finally(()=>clearTimeout(timer));
+ try{
+  await bounded(app.refresh());assert.equal(storage.values.size,0,'failed identity qualification cannot save facts');
+  throwOnIdentity=false;await bounded(app.refresh({force:true}));
+  assert.equal(requests,2,'completed failure does not leave an old flight to join');
+  assert.equal(storage.values.size,1,'later same-owner refresh may persist its own current result');
+ }finally{clearTimeout(timer);app.dispose();}
 });
 console.log(JSON.stringify({scope:'Home support modules; pure and simulated lifecycle tests only; no physical UI or real provider proof',passed:results.filter(r=>r.passed).length,failed:results.filter(r=>!r.passed).length,results},null,2));
 process.exitCode=results.some(result=>!result.passed)?1:0;

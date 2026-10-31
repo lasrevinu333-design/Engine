@@ -85,6 +85,11 @@ function storageFixture(initial = {}, failOnce = null) {
       maybeFail('remove', key, 'after');
     },
     value(key) { return values.get(key); },
+    async withoutInjectedFailures(operation) {
+      const prior=failurePlans.map(plan=>({armed:plan.armed,matchingOperations:plan.matchingOperations}));
+      failurePlans.forEach(plan=>{plan.armed=false;});
+      try{return await operation();}finally{failurePlans.forEach((plan,index)=>Object.assign(plan,prior[index]));}
+    },
   };
   Object.defineProperty(storage, 'length', { get: () => values.size });
   return storage;
@@ -161,12 +166,25 @@ function adapter(storage, flow = 'recovery') {
   return createNativeProtectedStorage({ getState: async () => pendingNativeState(flow) }, storage);
 }
 
+async function assertUnknownEnrollmentPreserved(adapter, storage) {
+  const snapshot=()=>Array.from({length:storage.length},(_,index)=>storage.key(index)).sort()
+    .map(key=>[key,storage.getItem(key)]);
+  const original=snapshot();
+  await assert.rejects(()=>adapter.reconcileLocalState(),{code:'custodial_native_invalid_record'});
+  assert.deepEqual(snapshot(),original,'unknown original bytes cannot authorize any cleanup or identity replacement');
+}
+
 function stateAdapter(storage, state) {
   return createNativeProtectedStorage({ getState: async () => state }, storage);
 }
 
 const removalOperationId = 'abcdef12-3456-4789-8abc-def012345678';
 const enrollmentOperationId = 'fedcba98-7654-4321-8fed-cba987654321';
+
+if (process.argv.includes('--quarantine-removal-contract-only')) {
+  await quarantineRemovalContractCases();
+  process.exit(0);
+}
 
 if (process.argv.includes('--enrollment-original-rollback-only')) {
   const flow = process.argv.includes('--recovery-original-only') ? 'recovery' : 'enrollment';
@@ -1514,6 +1532,50 @@ if (process.argv.includes('--original-retirement-only')) {
 
 // Credential recovery owns a new operation, but the installation belongs to
 // the original enrollment. Native authority must not conflate these identities.
+if(process.argv.includes('--malformed-enrollment-preservation-only')) {
+  const cancelled={schema_version:2,state:'CANCELLED',blocked:false,enrollment_terminal:true,
+    cancelled_operation_id:operationId,cancelled_device_id:deviceId,
+    cancelled_enrollment:{operation_id:operationId,device_id:deviceId,flow:'enrollment',status:'cancelled'}};
+  const results=[];
+  for(const phase of ['CANCELLED','ACTIVE','REMOVAL_TOMBSTONE']) {
+    const original='{unreadable '+phase+' original journal';
+    const storage=storageFixture({[CUSTODIAL_ENROLLMENT_OPERATION_KEY]:original,
+      'session:retained-original':'{ protected original cleaning bytes }'});
+    let adapter,native;
+    if(phase==='REMOVAL_TOMBSTONE') {
+      native=nativeRemovalHarness(storage);
+      await native.remoteComplete({operationId:removalOperationId,deviceId,checkpoint:async()=>{}});
+      adapter=createNativeProtectedStorage(native.plugin,storage);
+    }else adapter=stateAdapter(storage,phase==='ACTIVE'?activeNativeState():cancelled);
+    await assertUnknownEnrollmentPreserved(adapter,storage);
+    assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY),original);
+    if(native)assert.equal(native.state().state,'REMOVAL_TOMBSTONE');
+    results.push('preserve unknown original in '+phase);
+  }
+  // Positive controls use the same real reconciliation adapter and exact native
+  // binding, so the refusal checks cannot pass merely by disabling all writes.
+  const cancelledStorage=storageFixture({[CUSTODIAL_ENROLLMENT_OPERATION_KEY]:
+    pendingRecoveryFixture({flow:'enrollment'})[CUSTODIAL_ENROLLMENT_OPERATION_KEY]});
+  await stateAdapter(cancelledStorage,cancelled).reconcileLocalState();
+  assert.equal(cancelledStorage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY),undefined);
+  results.push('matching cancellation retires exact journal');
+  const activeStorage=storageFixture({[CUSTODIAL_ENROLLMENT_OPERATION_KEY]:JSON.stringify(activeEnrollmentJournal())});
+  await stateAdapter(activeStorage,activeNativeState()).reconcileLocalState();assertActiveBinding(activeStorage);
+  assert.equal(activeStorage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY),undefined);
+  results.push('matching ACTIVE establishes binding and retires exact journal');
+  const removalStorage=storageFixture({[CUSTODIAL_ENROLLMENT_OPERATION_KEY]:JSON.stringify(activeEnrollmentJournal())});
+  const removal=nativeRemovalHarness(removalStorage);
+  await removal.remoteComplete({operationId:removalOperationId,deviceId,checkpoint:async()=>{}});
+  await createNativeProtectedStorage(removal.plugin,removalStorage).reconcileLocalState();
+  assert.equal(removalStorage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY),undefined);
+  assert.equal(JSON.parse(removalStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY)).operation_id,removalOperationId);
+  assert.equal(removal.state().state,'REMOVAL_TOMBSTONE');
+  results.push('matching removal retains revoked native state and exact terminal journal');
+  console.log(JSON.stringify({status:'PASS_MALFORMED_ENROLLMENT_PRESERVATION',cases:results.length,results,
+    limits:'actual JS reconciliation with synthetic native state and storage; no real credentials, native recovery or physical acceptance'}));
+  process.exit(0);
+}
+
 {
   const storage = storageFixture(pendingRecoveryFixture());
   const native = pendingNativeState();
@@ -1705,6 +1767,25 @@ function nativeRemovalLocalFixture({ recovery = false } = {}) {
   const pending = pendingRecoveryFixture();
   delete pending[CUSTODIAL_ENROLLMENT_OPERATION_KEY];
   return { ...local, ...pending };
+}
+
+async function initializeRemovalCaller(store,storage) {
+  // Inject failures only at the removal boundary under test. The maintained
+  // bridge initializes the original owner before it can request removal.
+  const priorQuarantine=storage.getItem(CUSTODIAL_RESTORE_QUARANTINE_KEY);
+  try{await storage.withoutInjectedFailures(()=>store.ensureSecurityState());}
+  catch(error){
+    if(priorQuarantine!==null&&error.code==='custodial_restore_quarantine'){
+      const original=JSON.parse(priorQuarantine);
+      assert.equal(error.reason,original.reason);
+      assert.equal(store.getStatus().recovery.recovery_id,original.recovery_id);
+      assert.equal(store.getStatus().quarantined,true);
+    }else{
+      assert.equal(error.code,'custodial_enrollment_removal_pending');
+      assert.deepEqual(error.operation,store.getRemovalRecord(),'only the observed original removal may resume');
+    }
+  }
+  assert.equal(store.getStatus().initialized,true,'removal captures its initialized original caller');
 }
 
 function nativeRemovalStore(plugin, storage) {
@@ -2007,9 +2088,8 @@ for (const failFirstRetirement of [false, true]) {
     },
   };
   const cancelledAdapter = stateAdapter(storage, cancelled);
-  if (failFirstRetirement) await assert.rejects(() => cancelledAdapter.reconcileLocalState(), /injected/);
-  await cancelledAdapter.reconcileLocalState();
-  assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
+  // A native cancellation does not identify unreadable browser journal bytes.
+  await assertUnknownEnrollmentPreserved(cancelledAdapter,storage);
 }
 
 function activeEnrollmentJournal(overrides = {}) {
@@ -2171,7 +2251,8 @@ for (const mismatch of [
   });
   await assert.rejects(
     () => stateAdapter(storage, activeNativeState()).reconcileLocalState(),
-    (error) => error?.code === 'custodial_native_active_reconciliation_mismatch',
+    (error) => error?.code === (mismatch.status==='cancelled'
+      ?'custodial_native_operation_reconciliation_mismatch':'custodial_native_active_reconciliation_mismatch'),
   );
   for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), undefined);
   assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), undefined);
@@ -2185,10 +2266,8 @@ for (const failFirstRetirement of [false, true]) {
     : null);
   const native = activeNativeState();
   const activeAdapter = stateAdapter(storage, native);
-  if (failFirstRetirement) await assert.rejects(() => activeAdapter.reconcileLocalState(), /injected/);
-  await activeAdapter.reconcileLocalState();
-  assertActiveBinding(storage);
-  assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
+  // Unknown local work is held; native ACTIVE is not authority to erase it.
+  await assertUnknownEnrollmentPreserved(activeAdapter,storage);
 }
 
 // Beginning a new native enrollment retires the prior removal completion ack;
@@ -2237,6 +2316,7 @@ for (const failJournalRetirement of [false, true]) {
     indexedDb: {databases:async()=>[],open(){throw new Error('No absent database should be opened');}},
     cryptoApi: { randomUUID: () => removalOperationId },
   });
+  await initializeRemovalCaller(restarted,storage);
   await restarted.removeEnrollment({ beforeRemove: async () => assert.fail('revoked backend removal must not replay') });
   assert.equal(native.state().state, 'EMPTY');
   assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
@@ -2253,9 +2333,11 @@ for (const mismatch of [
   });
   const native = nativeRemovalHarness(storage);
   await native.remoteComplete({ operationId: removalOperationId, deviceId, checkpoint: async () => {} });
-  await createNativeProtectedStorage(native.plugin, storage).reconcileLocalState();
-  assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
-  assert.equal(JSON.parse(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY)).phase, 'server_logged_out');
+  const original=Array.from({length:storage.length},(_,index)=>storage.key(index)).sort().map(key=>[key,storage.getItem(key)]);
+  await assert.rejects(()=>createNativeProtectedStorage(native.plugin,storage).reconcileLocalState(),
+    {code:mismatch.device_id?'custodial_native_removal_reconciliation_mismatch':'custodial_native_operation_reconciliation_mismatch'});
+  assert.deepEqual(Array.from({length:storage.length},(_,index)=>storage.key(index)).sort().map(key=>[key,storage.getItem(key)]),original);
+  assert.equal(native.state().state,'REMOVAL_TOMBSTONE','unrelated browser journal cannot restore revoked credential');
 }
 
 {
@@ -2265,9 +2347,8 @@ for (const mismatch of [
   });
   const native = nativeRemovalHarness(storage);
   await native.remoteComplete({ operationId: removalOperationId, deviceId, checkpoint: async () => {} });
-  await createNativeProtectedStorage(native.plugin, storage).reconcileLocalState();
-  assert.equal(storage.value(CUSTODIAL_ENROLLMENT_OPERATION_KEY), undefined);
-  assert.equal(JSON.parse(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY)).operation_id, removalOperationId);
+  await assertUnknownEnrollmentPreserved(createNativeProtectedStorage(native.plugin,storage),storage);
+  assert.equal(native.state().state,'REMOVAL_TOMBSTONE','refusal never revives revoked native credentials');
 }
 
 for (const failure of [
@@ -2281,6 +2362,7 @@ for (const failure of [
   const storage = storageFixture(nativeRemovalLocalFixture(), failure);
   const native = nativeRemovalHarness(storage);
   const first = nativeRemovalStore(native.plugin, storage);
+  await initializeRemovalCaller(first,storage);
   await assert.rejects(
     () => first.removeEnrollment({ beforeRemove: native.remoteComplete }),
     (error) => /injected/.test(String(error?.cause?.message || error?.message || '')),
@@ -2291,6 +2373,7 @@ for (const failure of [
   assert.ok(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), `${failure.label}: exact journal must remain restartable`);
 
   const restarted = nativeRemovalStore(native.plugin, storage);
+  await initializeRemovalCaller(restarted,storage);
   await restarted.removeEnrollment({
     beforeRemove: async () => assert.fail(`${failure.label}: restart must not call the backend again`),
   });
@@ -2306,29 +2389,76 @@ for (const failure of [
   assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), undefined);
 }
 
-// Recovery/quarantine reconciliation also completes before the native key is
-// destroyed. Failures at either boundary replay to one resolved recovery row.
-for (const failure of [
-  { operation: 'set', key: CUSTODIAL_RECOVERY_RECORD_KEY, label: 'recovery resolution' },
-  { operation: 'remove', key: CUSTODIAL_RESTORE_QUARANTINE_KEY, label: 'quarantine retirement' },
-]) {
-  const storage = storageFixture(nativeRemovalLocalFixture({ recovery: true }), failure);
-  const native = nativeRemovalHarness(storage);
-  const first = nativeRemovalStore(native.plugin, storage);
-  await assert.rejects(
-    () => first.removeEnrollment({ beforeRemove: native.remoteComplete }),
-    (error) => /injected/.test(String(error?.cause?.message || error?.message || '')),
-    failure.label,
-  );
-  assert.equal(native.state().state, 'REMOVAL_TOMBSTONE');
-  const restarted = nativeRemovalStore(native.plugin, storage);
-  await restarted.removeEnrollment({ beforeRemove: async () => assert.fail('backend replay refused') });
-  const resolved = JSON.parse(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY));
-  assert.equal(resolved.status, 'resolved');
-  assert.equal(resolved.resolution.method, 'explicit_enrollment_removal');
-  assert.equal(storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), undefined);
-  assert.equal(native.state().state, 'EMPTY');
+// This is the credential-store contract, not native removal admission. Current
+// bridge/native preflight refuses removal until the original inventory/manager
+// protocol exists. No synthetic successful revocation or native finalization is
+// used to resolve this quarantine. The absent-credential, zero-work case matches
+// the maintained mobile-contract-tests.mjs recovery-provenance control.
+async function quarantineRemovalContractCases() {
+  const snapshot = storage => Array.from({length:storage.length},(_,index)=>storage.key(index)).sort()
+    .map(key=>[key,storage.getItem(key)]);
+  {
+    const storage = storageFixture(nativeRemovalLocalFixture({ recovery: true }));
+    const native = nativeRemovalHarness(storage);
+    const originalStorage = snapshot(storage), originalNative = native.state();
+    for (const attempt of ['initial', 'restart']) {
+      const owner = nativeRemovalStore(native.plugin, storage);
+      await initializeRemovalCaller(owner, storage);
+      assert.equal(owner.getStatus().quarantined, true);
+      assert.equal(owner.getStatus().deviceId, '');
+      await assert.rejects(() => owner.removeEnrollment({ beforeRemove: native.remoteComplete }),
+        {code:'custodial_security_generation_changed'}, attempt);
+      assert.deepEqual(snapshot(storage), originalStorage, `${attempt}: unknown caller binding preserves every original byte`);
+      assert.deepEqual(native.state(), originalNative, `${attempt}: no protected state transition`);
+      assert.equal(native.remoteCalls(), 0);
+      assert.equal(native.finalizeAttempts(), 0);
+    }
+  }
+  for (const failure of [
+    { operation: 'set', key: CUSTODIAL_RECOVERY_RECORD_KEY, label: 'recovery resolution' },
+    { operation: 'remove', key: CUSTODIAL_RESTORE_QUARANTINE_KEY, label: 'quarantine retirement' },
+  ]) {
+    const storage = storageFixture(nativeRemovalLocalFixture({ recovery: true }), failure);
+    const originalStorage = snapshot(storage);
+    const originalRecovery = JSON.parse(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY));
+    const emptyNative = {schema_version:2,state:'EMPTY',active:false,blocked:false,credential_present:false};
+    const plugin = {
+      async getState() { return structuredClone(emptyNative); },
+      async finalizeRemoval() { assert.fail('credential-absent cleanup has no native finalization authority'); },
+    };
+    const first = nativeRemovalStore(plugin, storage);
+    await initializeRemovalCaller(first, storage);
+    assert.equal(first.getStatus().quarantined, true);
+    assert.equal(first.getStatus().preservedCounts.total_pending, 0, 'current inspected inventory is empty');
+    await assert.rejects(
+      () => first.removeEnrollment({ beforeRemove: async () => assert.fail('no protected credential may be sent') }),
+      (error) => /injected/.test(String(error?.cause?.message || error?.message || '')),
+      failure.label,
+    );
+    assert.deepEqual(snapshot(storage), originalStorage, `${failure.label}: exact original rollback`);
+    const restarted = nativeRemovalStore(plugin, storage);
+    await initializeRemovalCaller(restarted, storage);
+    await restarted.removeEnrollment({ beforeRemove: async () => assert.fail('no backend replay') });
+    const resolved = JSON.parse(storage.value(CUSTODIAL_RECOVERY_RECORD_KEY));
+    assert.equal(resolved.status, 'resolved');
+    assert.equal(resolved.resolution.method, 'explicit_enrollment_removal');
+    assert.equal(resolved.resolution.preserved_work_count, 0);
+    for (const [key, value] of Object.entries(originalRecovery)) {
+      if (key !== 'status') assert.deepEqual(resolved[key], value, `original recovery provenance ${key}`);
+    }
+    assert.equal(storage.value(CUSTODIAL_RESTORE_QUARANTINE_KEY), undefined);
+    assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
+    assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
+    assert.equal(storage.value(CUSTODIAL_CREDENTIAL_KEY), undefined);
+    for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), undefined);
+    assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY), undefined);
+    assert.equal((await restarted.ensureSecurityState()).state, 'unenrolled');
+    assert.deepEqual(await plugin.getState(), emptyNative);
+  }
+  console.log(JSON.stringify({status:'PASS_QUARANTINE_REMOVAL_CONTRACT',cases:3,
+    limits:'actual credential-store/native-state adapter with synthetic empty inventory; ACTIVE denial plus credential-absent cleanup only, no native removal admission/finalization or phone acceptance'}));
 }
+await quarantineRemovalContractCases();
 
 // Native finalization itself is restart-safe both before the atomic write and
 // after the write when the JavaScript caller loses the response.
@@ -2336,6 +2466,7 @@ for (const finalizeFailure of ['before_write', 'after_write']) {
   const storage = storageFixture(nativeRemovalLocalFixture());
   const native = nativeRemovalHarness(storage, { finalizeFailure });
   const first = nativeRemovalStore(native.plugin, storage);
+  await initializeRemovalCaller(first,storage);
   await assert.rejects(
     () => first.removeEnrollment({ beforeRemove: native.remoteComplete }),
     (error) => /injected native/.test(String(error?.cause?.message || error?.message || '')),
@@ -2343,6 +2474,7 @@ for (const finalizeFailure of ['before_write', 'after_write']) {
   assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY) != null, true);
   assert.equal(native.state().state, finalizeFailure === 'before_write' ? 'REMOVAL_TOMBSTONE' : 'EMPTY');
   const restarted = nativeRemovalStore(native.plugin, storage);
+  await initializeRemovalCaller(restarted,storage);
   await restarted.removeEnrollment({ beforeRemove: async () => assert.fail('backend replay refused') });
   assert.equal(native.state().state, 'EMPTY');
   assert.equal(native.finalizeAttempts(), 2);
@@ -2359,6 +2491,7 @@ for (const finalizeFailure of ['before_write', 'after_write']) {
   ]);
   const native = nativeRemovalHarness(storage);
   const first = nativeRemovalStore(native.plugin, storage);
+  await initializeRemovalCaller(first,storage);
   await assert.rejects(
     () => first.removeEnrollment({ beforeRemove: native.remoteComplete }),
     (error) => error?.code === 'custodial_restore_quarantine'
@@ -2368,6 +2501,7 @@ for (const finalizeFailure of ['before_write', 'after_write']) {
   assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
   assert.equal(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY), undefined);
   const restarted = nativeRemovalStore(native.plugin, storage);
+  await initializeRemovalCaller(restarted,storage);
   await restarted.removeEnrollment({ beforeRemove: async () => assert.fail('backend replay refused') });
   assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
   assert.equal(JSON.parse(storage.value(CUSTODIAL_REMOVAL_COMPLETION_KEY)).operation_id, removalOperationId);
@@ -2402,6 +2536,7 @@ for (const finalizeFailure of ['before_write', 'after_write']) {
     completed_at: '2026-08-01T02:20:00.000Z',
   }));
   const restarted = nativeRemovalStore(native.plugin, storage);
+  await initializeRemovalCaller(restarted,storage);
   await restarted.removeEnrollment({ beforeRemove: async () => assert.fail('backend replay refused') });
   assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
   await createNativeProtectedStorage(native.plugin, storage).reconcileLocalState();

@@ -68,7 +68,7 @@ export function createHomeFacts({identity,identityVersion=()=>0,sourceVersion=()
     // Publish ownership BEFORE invoking any request: synchronous callbacks may
     // themselves refresh. A joining refresh does not cancel this owner; a new
     // forced flight advances generation and retires every remaining dispatch.
-    let settle;const pending=new Promise(resolve=>{settle=resolve;});flight=pending;flightSource=source;
+    let settle,received=false;const pending=new Promise(resolve=>{settle=resolve;});flight=pending;flightSource=source;
     Promise.allSettled(requestedKinds.map(async kind=>{
       if(!ownsFlight())return;
       const before=records[kind],age=now()-Date.parse(before?.received_at||'');
@@ -86,11 +86,18 @@ export function createHomeFacts({identity,identityVersion=()=>0,sourceVersion=()
         if(!ownsFlight()||controller.signal.aborted)return;
         if(!data)throw Error('Facts update returned no usable body');
         const current=identity();if(!ownsFlight()||current===HOME_IDENTITY_SUPERSEDED||homeBinding(current)!==captured)return;
-        records[kind]={data,received_at:new Date(now()).toISOString()};
-        draw(id);await persist(id,epoch,version,source);
+        records[kind]={data,received_at:new Date(now()).toISOString()};received=true;
+        draw(id);
       }catch{if(ownsFlight()){const current=identity();if(ownsFlight()&&current!==HOME_IDENTITY_SUPERSEDED&&homeBinding(current)===captured){if(records[kind])records[kind].failed=true;draw(id);}}}
       finally{clearTimeout(timeout);requests.delete(controller);}
-    })).then(()=>{if(flight===pending){flight=null;flightSource=null;}settle();});
+    })).then(async()=>{
+      // Schedule acceptance owns the same protected rows as this optional
+      // facts cache. Persist once after its request settles, so sibling public
+      // facts cannot invalidate that original schedule mutation while queued.
+      try{if(received)await persist(id,epoch,version,source);}
+      catch{ /* Optional cache qualification must not strand the refresh. */ }
+      finally{if(flight===pending){flight=null;flightSource=null;}settle();}
+    });
     return flight;
   }
   function invalidate(){generation++;const retiring=[...requests];requests.clear();binding='';records={};flight=null;flightSource=null;for(const controller of retiring)controller.abort();}

@@ -599,7 +599,7 @@ test('PRODUCT completion source requires explicit no-open-work fields, never mis
 // proof of a real manager session or server authentication.
 function recordPageAuthFixture(f){
  const source=readFileSync(new URL('../memphis-auth.js',import.meta.url),'utf8');
- const start=source.indexOf('  function hasPermission('),end=source.indexOf('  async function signInWithMap(',start);
+ const start=source.indexOf('  function hasPermission('),end=source.indexOf('  async function ownerCoverage(',start);
  assert(start>=0&&end>start,'current owning pure permission callable required');
  const hasPermission=vm.runInNewContext(source.slice(start,end)+'\nhasPermission;',{window:f.window});
  assert.equal(typeof hasPermission,'function');

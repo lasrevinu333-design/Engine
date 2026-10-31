@@ -60,8 +60,15 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     if(!scope){if(nativeWriterObserved||security.native===true)throw mutationInvalidated();return sourceStorage.setItem(key,value);}
     if(!scope.expected.has(key)||typeof value!=='string')throw mutationInvalidated();
     scope.checkpoint();
-    try{scope.write.call(sourceStorage,key,value);if(scope.read.call(sourceStorage,key)!==value)throw mutationInvalidated();}
-    catch{throw mutationInvalidated();}
+    try{scope.write.call(sourceStorage,key,value);}
+    catch{
+      // Only an unchanged original owner and unchanged rows can distinguish
+      // storage failure from authority replacement. Preserve that distinction
+      // so a validated terminal can remain blocking in this live Home.
+      scope.checkpoint();
+      throw Object.assign(new Error('Home cache storage unavailable'),{code:'schedule_cache_storage_unavailable'});
+    }
+    if(scope.read.call(sourceStorage,key)!==value)throw mutationInvalidated();
     scope.expected.set(key,value);scope.checkpoint();
   }};
   const captureProtectedMutation=operation=>{

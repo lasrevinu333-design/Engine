@@ -339,8 +339,10 @@ assert.match(messengerApp, /filter\(\(row\) => !isRetiredThread\(row\)\)/);
 assert.doesNotMatch(messengerApp, /window\.fetch\s*=|MutationObserver/);
 assert.match(retiredChatScope, /messages\.html/);
 
-assert.match(accessHtml, /single-use personal code/i);
-assert.match(accessJs, /leadership-api\/managers\/.*enrollment-code/);
+assert.match(accessHtml, /shared four-digit PIN/i);
+assert.match(accessJs, /ops-manager-hub\.html/);
+assert.match(accessJs, /searchParams\.set\('return','index\.html'\)/);
+assert.doesNotMatch(accessJs, /enrollment-code|one_time_code|Generate Personal Code/);
 
 assert.doesNotMatch(viewerHtml, /Messenger|Moxie|Scheduler|Device Security|Manager Access|Notifications/);
 for (const module of ['Dashboard','Events']) assert.ok(viewerHtml.includes(module), `viewer app missing ${module}`);
