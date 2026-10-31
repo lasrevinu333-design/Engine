@@ -29,7 +29,7 @@ function currentBinding(w, now) {
   // storage, UI, telemetry or a caller-selected identity/URL.
   return { manager: s.manager_id, credential: s.credential_id, device: s.device_id,
     token: s.token, expires: s.expires_at, mode: s.auth_mode,
-    canCorrect: s.read_only === false && plain(s.permissions) && s.permissions.owner === true };
+    canCorrect: s.read_only === false && plain(s.permissions) && (s.permissions.owner === true || w.MemphisAuth.isCustodialManagementAdmin?.(s) === true) };
 }
 const same = (a, b) => !!a && !!b && Object.keys(a).every(key => a[key] === b[key]);
 function bounded(promise, signal) {

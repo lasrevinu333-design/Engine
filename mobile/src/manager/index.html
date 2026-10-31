@@ -50,17 +50,7 @@
       <button id="boot-retry" class="btn" type="button" hidden>Try Again</button>
     </section>
 
-    <section id="enrollment" class="card" hidden>
-      <div class="eyebrow">One-time setup</div>
-      <h2>Enroll this phone</h2>
-      <p class="sectionLead">Enter the personal eight-digit code created for your leadership account. Work and personal phones are enrolled separately.</p>
-      <form id="enroll-form">
-        <div class="field"><label for="code">Manager code</label><input id="code" class="input" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="1234 5678" required></div>
-        <div class="field"><label for="device-label">Phone name</label><input id="device-label" class="input" maxlength="160" placeholder="Brandy’s work iPhone"></div>
-        <button class="btn primary" type="submit">Enroll Phone</button>
-        <div id="enroll-status" class="status" aria-live="polite"></div>
-      </form>
-    </section>
+    <section id="enrollment" class="card" hidden><div class="eyebrow">Leadership enrollment</div><h2>Enroll this browser</h2><p>Use the shared leadership PIN and choose your approved name. The name is self-asserted; the server controls permissions.</p><a class="btn primary" href="./ops-manager-hub.html?return=index.html">Open leadership enrollment</a><div id="enroll-status" class="status" aria-live="polite"></div></section>
 
     <section id="hub" hidden>
       <section class="card">
@@ -129,6 +119,7 @@
     <a href="#more"><span class="navIcon" aria-hidden="true">•••</span><span class="navLabel">More</span></a>
   </nav>
 
+  <script src="./memphis-auth.js"></script>
   <script src="./pwa-register.js"></script>
   <script src="./mobile-manager.js"></script>
 </body>

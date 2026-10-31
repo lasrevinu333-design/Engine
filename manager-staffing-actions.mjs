@@ -45,7 +45,7 @@ export function createStaffingActions({auth, authority, api, savedRequests=null,
       || !text(session.credential_id,1,200) || !text(session.device_id,1,96) || !text(session.token,1,8192)
       || !(Date.parse(session.expires_at)>now())) throw problem('AUTH_WITHDRAWN','Current named-manager access is required. Saved requests are preserved.');
     return {managerId:session.manager_id,credentialId:session.credential_id,deviceId:session.device_id,
-      token:session.token,expiresAt:session.expires_at,canWrite:permissions.owner === true && session.read_only === false};
+      token:session.token,expiresAt:session.expires_at,canWrite:permissions.management === true && session.read_only === false};
   }
   const same = (a,b) => a && b && Object.keys(a).every(key=>a[key]===b[key]);
   function guard(write=false) {
@@ -129,7 +129,7 @@ export function createStaffingActions({auth, authority, api, savedRequests=null,
   }
   function capabilities(slotId) {
     const r=snapshot?.roster.find(s=>s.slot_id===slotId), fact=r?row(r):null;
-    if (!owner?.canWrite) return {vacate:false,fill:false,restore:false,reason:'Read-only manager view. Staffing changes and protected separation reads are owner-only.'};
+    if (!owner?.canWrite) return {vacate:false,fill:false,restore:false,reason:'Read-only manager view. Staffing changes and protected separation reads require management capability.'};
     if (!fact?.valid || fact.contractor) return {vacate:false,fill:false,restore:false,reason:'An exact stable employee position is required.'};
     if (!source) return {vacate:false,fill:false,restore:false,reason:'Exact registered source details are unavailable. Changes are disabled.'};
     const slots=source.registered_compiler_input.slots.filter(s=>s.id===slotId), v=source.registered_compiler_input.version;

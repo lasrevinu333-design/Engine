@@ -2,61 +2,33 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {webcrypto} from 'node:crypto';
-const root=new URL('../',import.meta.url);
-const read=name=>readFileSync(new URL(name,root),'utf8');
-if(process.argv.includes('--auth-browser-preservation-only')){
-  await authBrowserPreservationCases();process.exit(0);
-}
-const cases=[];
-const local=new Map(),sessionStore=new Map();
-const storage=map=>({getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k),key:i=>[...map.keys()][i],get length(){return map.size;}});
-const nodes=new Map(),redirects=[],requests=[];
-const node=id=>{if(!nodes.has(id))nodes.set(id,{hidden:false,textContent:'',className:'',href:'',classList:{toggle(){},add(){},remove(){}}});return nodes.get(id);};
-let isOwner=true,validConfig=true;
-const expiry=()=>new Date(Date.now()+600000).toISOString();
-const mockSession=()=>({role:'ops_manager',manager_id:'91000000-0000-4000-8000-000000000001',manager_display_name:isOwner?'Fixture owner':'Fixture delegate',device_id:'fixture-browser',credential_id:'92000000-0000-4000-8000-000000000001',token:'fixture-custodial-token',expires_at:expiry(),roles:isOwner?['OPS_MANAGER','CUSTODIAL_MANAGER','SECURITY_ADMIN']:['OPS_MANAGER'],access_level:isOwner?'full_access':'read_only',read_only:!isOwner,trusted_device:true,identity_source:'memphis_map',permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:isOwner,close_scan_tickets:true,manage_absences:true}});
-const location={href:'https://lasrevinu333-design.github.io/Engine/start_page1.html',pathname:'/Engine/start_page1.html',search:'',hash:'',origin:'https://lasrevinu333-design.github.io',replace:url=>redirects.push(url)};
-const fetch=async(url,options={})=>{
- requests.push({url:String(url),options});
- if(String(url).endsWith('/auth-api/map-config'))return {ok:true,json:async()=>({ok:true,data:{url:validConfig?'https://dwzdqekusvivjbxsapdu.supabase.co':'https://wrong.invalid',publishable_key:'sb_publishable_fixture'}})};
- if(String(url).includes('/auth/v1/token?grant_type=password')){
-  assert.equal(url,'https://dwzdqekusvivjbxsapdu.supabase.co/auth/v1/token?grant_type=password');
-  assert.equal(options.credentials,'omit');assert.equal(options.redirect,'error');
-  assert.equal(JSON.parse(options.body).password,'fixture-password');
-  return {ok:true,json:async()=>({access_token:'fixture-map-token',refresh_token:'fixture-provider-refresh'})};
- }
- if(String(url).endsWith('/auth-api/map-session')){
-  assert.equal(options.credentials,'include');assert.deepEqual(JSON.parse(options.body),{access_token:'fixture-map-token'});
-  return {ok:true,json:async()=>({ok:true,data:{session:mockSession(),identity_source:'memphis_map'}})};
- }
- if(String(url).includes('/auth-api/session'))return {ok:true,json:async()=>({ok:true,data:{session:mockSession()}})};
- return {ok:false,status:503,json:async()=>({ok:false})};
-};
-const document={referrer:'',getElementById:node,body:{dataset:{memphisContext:'manager'}}};
-const window={location,localStorage:storage(local),sessionStorage:storage(sessionStore),crypto:webcrypto,document};
-const context=vm.createContext({window,document,localStorage:window.localStorage,sessionStorage:window.sessionStorage,location,fetch,URL,URLSearchParams,Date,Intl,AbortSignal,console,crypto:webcrypto,setInterval:()=>0,clearInterval(){},setTimeout,clearTimeout});
-vm.runInContext(read('memphis-auth.js'),context);
-await window.MemphisAuth.signInWithMap('owner@example.invalid','fixture-password');
-assert.equal(window.MemphisAuth.canMutateOpsManagerSurface(),true);cases.push('owner session exposes full controls');
-assert.equal(requests.filter(r=>String(r.options.body).includes('fixture-password')).length,1);cases.push('password goes only to pinned Map provider');
-assert.equal([...local.values(),...sessionStore.values()].some(v=>/fixture-password|fixture-map-token|fixture-custodial-token|fixture-provider-refresh/.test(v)),false);cases.push('no password or access/refresh token stored in browser storage');
-isOwner=false;await window.MemphisAuth.signInWithMap('delegate@example.invalid','fixture-password');
-assert.equal(window.MemphisAuth.canMutateOpsManagerSurface(),false);assert.equal(window.MemphisAuth.hasPermission('close_scan_tickets'),true);cases.push('delegate has read-only session plus explicit exceptions');
-const prior=requests.length;await window.MemphisAuth.opsManagerAuthHeaders();assert.equal(requests.length,prior);cases.push('projected delegate session does not cause a refresh loop');
-validConfig=false;await assert.rejects(()=>window.MemphisAuth.signInWithMap('delegate@example.invalid','fixture-password'));validConfig=true;cases.push('wrong identity-provider configuration is rejected');
-for(const name of ['ops-manager-hub.html','owner-access.html','start_page1.html']){
- const html=read(name);
- for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(match[1].trim())new vm.Script(match[1],{filename:name});
- cases.push(name+' inline JavaScript syntax');
-}
-new vm.Script(read('owner-access.js'));new vm.Script(read('ops-hub.js'));
-vm.runInContext(read('ops-hub.js'),context);await new Promise(r=>setTimeout(r,10));
-assert.equal(redirects.length,0,'a valid read-only manager must enter the Hub instead of looping back to login');
-assert.match(node('access-mode').textContent,/Read-only/);cases.push('read-only manager Hub entry and label');
-assert.equal(read('start_page1.html').includes('id="events-admin-link"'),false,'retired input console has no Hub element');assert.equal(node('manager-access-link').hidden,true);assert.equal(node('owner-coverage-link').hidden,true);cases.push('owner-only Hub controls are hidden from delegates');
-for(const id of ['map-email','map-password','map-login-form'])assert.ok(read('ops-manager-hub.html').includes(`id="${id}"`));
-for(const id of ['coverage-form','coverage-end','coverage-reason','enable','disable','coverage-state','timezone','status'])assert.ok(read('owner-access.html').includes(`id="${id}"`));cases.push('sign-in and coverage controls have their required DOM targets');
-console.log(JSON.stringify({result:'OWNER_ACCESS_CLIENT_VM_PASS',cases:cases.length,tests:cases,scope:'Actual JavaScript in an isolated VM with synthetic network/storage/DOM; HTML script syntax and control targets. Not a rendered-browser or live-password test.'},null,2));
+const root=new URL('../',import.meta.url),read=name=>readFileSync(new URL(name,root),'utf8');
+if(process.argv.includes('--auth-browser-preservation-only')){await authBrowserPreservationCases();process.exit(0);}
+const cases=[],requests=[],local=new Map(),sessionStore=new Map();
+const storage=m=>({getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k)});
+const id=n=>'91000000-0000-4000-8000-'+String(n).padStart(12,'0');let mode='valid';
+const session=()=>({token:'synthetic-server-manager-token',role:'ops_manager',manager_id:id(1),credential_id:id(2),device_id:'fixture-browser',manager_display_name:'Custodial leadership cohort',auth_mode:'custodial_leadership_pin',owner:false,custodial_management_admin:true,access_level:'full_access',read_only:false,expires_at:'2099-01-01T00:00:00Z',roles:['CUSTODIAL_MANAGER','SECURITY_ADMIN'],permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:false,custodialManagementAdmin:true,policyVersion:1,close_scan_tickets:true,manage_absences:true}});
+const envelope=()=>{const v={registrationId:id(2),identityAssurance:'SELF_ASSERTED_NAME',claimedAccount:{accountId:id(3),displayName:'Synthetic approved name',contact:null},cohort:{principalId:id(1),policyVersion:1,permissions:['custodialManagementAdmin']},managerSession:session()};if(mode==='missing')delete v.managerSession;if(mode==='wrong-principal')v.managerSession.manager_id=id(3);if(mode==='owner')v.managerSession.owner=true;if(mode==='policy')v.managerSession.permissions.policyVersion=2;return{ok:true,enrolled:true,csrfToken:'synthetic-csrf',session:v};};
+const location=new URL('https://example.invalid/ops-manager-hub.html');
+const fetch=async(url,options={})=>{requests.push({url:String(url),options});if(String(url).endsWith('/custodial-leadership-api/session'))return{ok:true,status:200,json:async()=>envelope()};if(String(url).endsWith('/custodial-leadership-api/revoke')){assert.equal(options.body,'{}');assert.equal(options.headers['X-CSRF-Token'],'synthetic-csrf');return{ok:true,status:200,json:async()=>({ok:true,revoked:true,enrolled:false})};}if(String(url).endsWith('/admin-api/device-security/session'))return{ok:true,status:200,json:async()=>({ok:true,data:{configured:true,unlocked:true,auth_mode:'custodial_leadership_pin',security_scope:mode==='bad-security'?'unbound':'custodial_device_management',manager_id:id(1),expires_at:'2099-01-01T00:00:00Z',csrf_token:'synthetic-security-csrf'}})};throw Error('Unexpected endpoint '+url);};
+const window={location,localStorage:storage(local),sessionStorage:storage(sessionStore),crypto:webcrypto,document:{body:{dataset:{memphisContext:'manager'}}}};
+const context=vm.createContext({window,localStorage:window.localStorage,sessionStorage:window.sessionStorage,location,fetch,URL,URLSearchParams,TextEncoder,Date,Intl,AbortSignal,console,crypto:webcrypto,setTimeout,clearTimeout});
+vm.runInContext(read('memphis-auth.js'),context);vm.runInContext(read('memphis-scheduler-actions.js'),context);const auth=window.MemphisAuth,scheduler=context.MemphisSchedulerActions;
+const valid=await auth.refreshLeadershipSession();assert.equal(valid.token,session().token);assert.equal(valid.manager_id,id(1));assert.equal(valid.credential_id,id(2));cases.push('actual supplied server session binds cohort and browser registration');
+assert.equal(valid.owner,false);assert.equal(valid.permissions.owner,false);assert.notEqual(valid.manager_id,id(3));assert.equal(auth.isCustodialManagementAdmin(valid),true);cases.push('self-selected account never becomes actor or owner');
+assert.equal(auth.isCustodialManagementAdmin({...valid}),false);cases.push('marker-only copied client object cannot create management authority');
+const p=scheduler.permissions(auth);assert.equal(p.owner,false);assert.equal(p.managementAdmin,true);assert.equal(p.management,true);assert.equal(p.absences,true);cases.push('existing scheduler uses separate server management capability');
+const prior=requests.length;const headers=await auth.opsManagerAuthHeaders();assert.equal(requests.length,prior);assert.equal(headers.Authorization,'Bearer '+valid.token);assert.equal(headers['X-CSRF-Token'],'synthetic-csrf');cases.push('warm manager session does not loop through login and retains real CSRF');
+assert.equal([...local.values(),...sessionStore.values()].some(v=>v.includes(valid.token)),false);assert.equal(typeof auth.signInWithMap,'undefined');cases.push('no bearer persistence or Custodial Map login dependency');
+for(const invalid of ['missing','wrong-principal','owner','policy']){mode=invalid;await assert.rejects(()=>auth.refreshLeadershipSession());assert.equal(auth.readSession(),null);cases.push(invalid+' server adapter refused without invented session');}
+mode='valid';await auth.refreshLeadershipSession();const security=await auth.deviceSecuritySession();assert.equal(security.unlocked,true);assert.equal((await auth.deviceSecurityAuthHeaders())['X-Device-Security-CSRF'],'synthetic-security-csrf');mode='bad-security';await assert.rejects(()=>auth.deviceSecuritySession());cases.push('security scope and CSRF must come from actual server response');
+mode='valid';const phone=read('phone-assignments.js'),phoneHelpers=phone.slice(phone.indexOf('  const ownerAccess ='),phone.indexOf('  async function request(',phone.indexOf('  const ownerAccess =')));vm.runInContext(phoneHelpers,context);assert.equal(vm.runInContext('ownerAccess()',context),true);const phoneHeaders=await vm.runInContext('authHeaders()',context);assert.equal(phoneHeaders['X-CSRF-Token'],'synthetic-csrf');assert.equal(phoneHeaders.Authorization,'Bearer '+valid.token);cases.push('actual phone assignment helper uses verified management and central bearer/CSRF');
+await auth.clearSession();assert.equal(auth.readSession(),null);assert.equal(requests.filter(r=>r.url.endsWith('/revoke')).length,1);cases.push('only same-browser confirmed revocation retires local session');
+for(const name of ['ops-manager-hub.html','owner-access.html','start_page1.html','manager-access.html'])for(const match of read(name).matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(match[1].trim())new vm.Script(match[1],{filename:name});
+new vm.Script(read('owner-access.js'));new vm.Script(read('ops-hub.js'));cases.push('actual affected inline and Hub sources parse');
+for(const id of ['leadership-pin','approved-name','open-manager'])assert.ok(read('ops-manager-hub.html').includes(`id="${id}"`));for(const id of ['coverage-form','coverage-end','coverage-reason','enable','disable','coverage-state','timezone','status'])assert.ok(read('owner-access.html').includes(`id="${id}"`));cases.push('new enrollment and retained coverage controls exist');
+assert.equal(requests.some(r=>/map-session|map-config|manager-codes/.test(r.url)),false);assert.equal(read('start_page1.html').includes('id="events-admin-link"'),false);cases.push('no retired provider/personal-code route or retired input console');
+console.log(JSON.stringify({result:'CUSTODIAL_LEADERSHIP_CLIENT_VM_PASS',cases:cases.length,tests:cases,scope:'Actual frontend auth and scheduler code with synthetic server/Storage boundaries; no genuine enrollment, SQL or device.'},null,2));
 
 async function authBrowserPreservationCases(){
   const {createProtectedBrowserAdmission}=await import('../mobile/src/custodial/protected-browser-admission.js');

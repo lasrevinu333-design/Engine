@@ -12,7 +12,7 @@
   }
   const BACKEND_ORIGIN=backendOriginForCurrentDocument();
   const AUTH_URL=`${BACKEND_ORIGIN}/auth-api`;
-  const OPS_SESSION_URL=`${AUTH_URL}/session`;
+  const LEADERSHIP_URL=`${BACKEND_ORIGIN}/custodial-leadership-api`;
   const OPS_TRUSTED_DEVICES_URL=`${AUTH_URL}/ops/trusted-devices`;
   const DEVICE_SECURITY_URL=`${BACKEND_ORIGIN}/admin-api/device-security`;
   const OPS_LOGOUT_URL=`${AUTH_URL}/ops/logout`;
@@ -20,7 +20,7 @@
   const LEGACY_DEVICE_KEY='mz_scan_device_id';
   const FULL_MANAGER_ENTRY='./ops-manager-hub.html';
   const MANAGER_OVERVIEW_DEVICE_IDS=new Set(['1E74FE4C-DC20B3B9','KIOSK_01','KIOSK_1']);
-  let opsSession=null;
+  let opsSession=null,leadershipBinding=null,leadershipCsrf='';
   let opsSessionRequest=null;
   let opsSessionGeneration=0;
   let deviceSecurityCsrfToken='';
@@ -174,6 +174,7 @@
   }
 
   function getDeviceId(){
+    if(opsSession?.auth_mode==='custodial_leadership_pin'&&leadershipBinding&&opsSession===readSession())return leadershipBinding.deviceId;
     try{
       const shared=window.MemphisDeviceIdentity?.resolve?.({url:new URL(window.location.href)});
       if(shared?.deviceId)return persistDeviceId(shared.deviceId);
@@ -195,19 +196,13 @@
     return `Ops Manager · ${platform}`.slice(0,160);
   }
 
-  function normalizeManagerCode(value){
-    const normalized=String(value||'').trim().replace(/[\s-]+/g,'');
-    return /^\d{8}$/.test(normalized)?normalized:'';
-  }
-
-
   function readSession(){
     if(opsSession&&opsSession.token&&opsSession.role==='ops_manager'&&Date.parse(opsSession.expires_at)>Date.now())return opsSession;
     opsSession=null;
     return null;
   }
 
-  function clearSessionRecord(){opsSessionGeneration++;opsSession=null;opsSessionRequest=null;}
+  function clearSessionRecord(){opsSessionGeneration++;opsSession=null;leadershipBinding=null;leadershipCsrf='';opsSessionRequest=null;}
   function requireSessionGeneration(generation){
     if(generation!==opsSessionGeneration)throw Object.assign(new Error('Manager session request is no longer current.'),{code:'STALE_MANAGER_SESSION_REQUEST'});
   }
@@ -232,40 +227,48 @@
     return opsSession;
   }
 
-  async function requestTrustedOpsSession(accessLevel='full_access'){
+  function isCustodialManagementAdmin(session=readSession()){
+    const p=session?.permissions,b=leadershipBinding;
+    return session===opsSession&&!!b&&session.auth_mode==='custodial_leadership_pin'
+      &&session.manager_id===b.principalId&&session.credential_id===b.registrationId&&session.device_id===b.deviceId
+      &&session.owner===false&&session.custodial_management_admin===true
+      &&p?.schema==='custodial.manager-permissions.v1'&&p.read===true&&p.owner===false
+      &&p.custodialManagementAdmin===true&&p.policyVersion===b.policyVersion&&!isReadOnlySession(session);
+  }
+  async function refreshLeadershipSession(){
     const generation=++opsSessionGeneration;
-    const normalized=normalizeAccessLevel(accessLevel);
-    const url=new URL(OPS_SESSION_URL);
-    url.searchParams.set('access_level',normalized);
-    try{return await parseSessionResponse(await fetch(url.toString(),{
-      method:'GET',cache:'no-store',credentials:'include',signal:AbortSignal.timeout(10000),headers:{'X-Device-Id':getDeviceId()}
-    }),generation);}catch(error){requireSessionGeneration(generation);throw error;}
+    const response=await fetch(`${LEADERSHIP_URL}/session`,{method:'GET',credentials:'include',cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000)});
+    const body=await response.json().catch(()=>null);requireSessionGeneration(generation);
+    const v=body?.session,session=v?.managerSession,uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value),p=session?.permissions;
+    if(!response.ok||body?.ok!==true||body.enrolled!==true){
+      opsSession=null;leadershipBinding=null;leadershipCsrf='';
+      const error=new Error(response.status===503?'Custodial leadership enrollment is not configured.':'Leadership browser enrollment is required.');error.status=response.ok?401:response.status;throw error;
+    }
+    if(typeof body.csrfToken!=='string'||!body.csrfToken||body.csrfToken.length>4096||v.identityAssurance!=='SELF_ASSERTED_NAME'
+      ||!uuid(v.registrationId)||!uuid(v.claimedAccount?.accountId)||!uuid(v.cohort?.principalId)||v.claimedAccount.accountId===v.cohort.principalId
+      ||!Number.isSafeInteger(v.cohort.policyVersion)||v.cohort.policyVersion<1||!Array.isArray(v.cohort.permissions)
+      ||!session||typeof session.token!=='string'||!session.token||session.token.length>32768||session.role!=='ops_manager'
+      ||session.manager_id!==v.cohort.principalId||session.credential_id!==v.registrationId
+      ||typeof session.device_id!=='string'||!session.device_id||session.device_id.length>160
+      ||!(Date.parse(session.expires_at)>Date.now())||session.auth_mode!=='custodial_leadership_pin'
+      ||session.owner!==false||session.custodial_management_admin!==true||session.read_only!==false||session.access_level!=='full_access'
+      ||p?.schema!=='custodial.manager-permissions.v1'||p.read!==true||p.owner!==false||p.custodialManagementAdmin!==true
+      ||p.policyVersion!==v.cohort.policyVersion||!v.cohort.permissions.includes('custodialManagementAdmin')){
+      opsSession=null;leadershipBinding=null;throw new Error('The server manager-session adapter is unavailable or unverified. No client authority was created.');
+    }
+    // Preserve the ACTUAL server session verbatim. Name selection never creates
+    // an owner, role, token or employee identity in this client.
+    opsSession=session;leadershipCsrf=body.csrfToken;
+    leadershipBinding=Object.freeze({principalId:v.cohort.principalId,registrationId:v.registrationId,deviceId:session.device_id,policyVersion:v.cohort.policyVersion,claimedAccountId:v.claimedAccount.accountId});
+    persistDeviceId(session.device_id);return opsSession;
+  }
+  async function requestTrustedOpsSession(accessLevel='full_access'){
+    normalizeAccessLevel(accessLevel);return refreshLeadershipSession();
   }
 
   function hasPermission(action,session=window.MemphisAuth?.readSession?.()){
     const p=session?.permissions;
     return p?.schema==='custodial.manager-permissions.v1'&&p.read===true&&p[action]===true;
-  }
-  async function signInWithMap(email,password){
-    const generation=++opsSessionGeneration;
-    const configResponse=await fetch(`${AUTH_URL}/map-config`,{cache:'no-store',signal:AbortSignal.timeout(15000)});
-    const config=await configResponse.json();
-    requireSessionGeneration(generation);
-    if(!configResponse.ok||!config?.ok||config.data?.url!=='https://dwzdqekusvivjbxsapdu.supabase.co'||!String(config.data?.publishable_key||'').startsWith('sb_publishable_'))throw new Error('Map sign-in is unavailable.');
-    // Password goes directly to the same Map identity provider. Never store it,
-    // the provider refresh token, or a Custodial bearer in browser storage.
-    const loginResponse=await fetch(`${config.data.url}/auth/v1/token?grant_type=password`,{
-      method:'POST',credentials:'omit',cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000),
-      headers:{'Content-Type':'application/json',apikey:config.data.publishable_key},
-      body:JSON.stringify({email:String(email||'').trim(),password:String(password||'')})
-    });
-    const login=await loginResponse.json().catch(()=>null);
-    requireSessionGeneration(generation);
-    if(!loginResponse.ok||!login?.access_token)throw new Error('The Map email or password was not accepted.');
-    const response=await fetch(`${AUTH_URL}/map-session`,{method:'POST',credentials:'include',cache:'no-store',
-      signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/json','X-Device-Id':getDeviceId()},
-      body:JSON.stringify({access_token:login.access_token})});
-    return parseSessionResponse(response,generation);
   }
   async function ownerCoverage(change=null){
     const response=await fetch(`${BACKEND_ORIGIN}/admin-api/access/coverage`,{
@@ -293,9 +296,17 @@
     const response=await fetch(`${DEVICE_SECURITY_URL}/session`,{method:'GET',cache:'no-store',credentials:'include',headers});
     const payload=await response.json().catch(()=>null);
     if(!response.ok||!payload?.ok){return {configured:false,unlocked:false,error:payload?.error||`HTTP ${response.status}`};}
-    return payload.data;
+    const session=readSession(),value=payload.data;
+    if(isCustodialManagementAdmin(session)){
+      if(value?.configured!==true||value.unlocked!==true||value.auth_mode!=='custodial_leadership_pin'
+        ||value.security_scope!=='custodial_device_management'||value.manager_id!==session.manager_id
+        ||typeof value.csrf_token!=='string'||!value.csrf_token||!(Date.parse(value.expires_at)>Date.now()))throw Error('Server-backed Custodial Device Security session is unavailable. No extra password login is used.');
+      deviceSecurityCsrfToken=value.csrf_token;
+    }
+    return value;
   }
   async function unlockDeviceSecurity(password){
+    if(isCustodialManagementAdmin())return deviceSecuritySession();
     const headers=await opsManagerAuthHeaders();headers['Content-Type']='application/json';
     const response=await fetch(`${DEVICE_SECURITY_URL}/unlock`,{method:'POST',cache:'no-store',credentials:'include',headers,body:JSON.stringify({password})});
     const payload=await response.json().catch(()=>null);
@@ -392,7 +403,7 @@
       const session=await opsSessionRequest;
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw new Error('Sign in on the Hub entry page using your existing Memphis Zoo Map email and password.');
+      if(options.throwOnFailure===true)throw new Error('Enroll this browser on the Custodial leadership entry page.');
       return null;
     }catch(error){
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
@@ -403,15 +414,15 @@
 
   async function opsManagerAuthHeaders(){
     const session=await requireOpsManagerSession({redirect:false,interactive:false,throwOnFailure:true});
-    return {Authorization:`Bearer ${session.token}`,'X-Device-Id':session.device_id||getDeviceId()};
+    return {Authorization:`Bearer ${session.token}`,'X-Device-Id':session.device_id||getDeviceId(),...(session.auth_mode==='custodial_leadership_pin'?{'X-CSRF-Token':leadershipCsrf}:{})};
   }
 
   async function clearSession(){
-    clearSessionRecord();
-    purgeRetiredClientAccessState();
-    try{
-      await fetch(OPS_LOGOUT_URL,{method:'POST',cache:'no-store',credentials:'include',headers:{'X-Device-Id':getDeviceId()}});
-    }catch{}
+    if(!leadershipCsrf)await refreshLeadershipSession();
+    const response=await fetch(`${LEADERSHIP_URL}/revoke`,{method:'POST',credentials:'include',cache:'no-store',redirect:'error',signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/json','X-CSRF-Token':leadershipCsrf},body:'{}'});
+    const body=await response.json().catch(()=>null);
+    if(!response.ok||body?.ok!==true||body.revoked!==true)throw Error('Browser revocation is unconfirmed. Check its original enrollment before trying again.');
+    clearSessionRecord();purgeRetiredClientAccessState();
   }
 
   function isOpsManagerOpenSurface(){return false;}
@@ -422,7 +433,7 @@
     deviceSecuritySession,unlockDeviceSecurity,lockDeviceSecurity,deviceSecurityAuthHeaders,
     requireOpsManagerSession,opsManagerAuthHeaders,
     readSession,clearSession,getDeviceId,isOpsManager,isReadOnlySession,
-    canMutateOpsManagerSurface,hasRole,hasPermission,signInWithMap,ownerCoverage,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
+    canMutateOpsManagerSurface,hasRole,hasPermission,isCustodialManagementAdmin,refreshLeadershipSession,ownerCoverage,redirectToManagerHub,requestPublicOpsSession:requestTrustedOpsSession,normalizeAccessLevel,
     opsManagerAuthDisabled:false,authUrl:AUTH_URL,backendOrigin:BACKEND_ORIGIN,getCSTDate,getCSTDateString,getOperationalServiceDate,getChicagoMinutes,
     isOpsManagerOpenSurface,normalizeDeviceId,managerOverviewDeviceIds:MANAGER_OVERVIEW_DEVICE_IDS
   };

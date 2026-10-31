@@ -258,13 +258,13 @@ function acceptedStaffing(value,record){let expected;try{expected=staffingReques
 const copy=v=>JSON.parse(JSON.stringify(v));
 function principal(auth){const s=auth?.readSession?.();if(s?.role!=='ops_manager'||!UUID.test(s.manager_id||'')||!s.credential_id||!s.token||!(Date.parse(s.expires_at)>Date.now()))return null;return{managerId:s.manager_id,credentialId:s.credential_id,deviceId:s.device_id||''};}
 const same=(a,b)=>!!a&&!!b&&a.managerId===b.managerId&&a.credentialId===b.credentialId&&a.deviceId===b.deviceId;
-function permissions(auth){const s=auth?.readSession?.(),p=s?.permissions,current=principal(auth),valid=!!current&&p?.schema==='custodial.manager-permissions.v1'&&p.read===true;const owner=valid&&p.owner===true&&s.read_only===false;return{read:valid,owner,absences:valid&&(owner||p.manage_absences===true),coverall:valid&&(owner||p.manage_coverall===true),routes:valid&&(owner||p.regenerate_routes===true),closeScanTickets:valid&&(owner||p.close_scan_tickets===true)};}
+function permissions(auth){const s=auth?.readSession?.(),p=s?.permissions,current=principal(auth),valid=!!current&&p?.schema==='custodial.manager-permissions.v1'&&p.read===true;const owner=valid&&p.owner===true&&s.read_only===false,managementAdmin=valid&&auth.isCustodialManagementAdmin?.(s)===true,management=owner||managementAdmin;return{read:valid,owner,managementAdmin,management,absences:valid&&(management||p.manage_absences===true),coverall:valid&&(management||p.manage_coverall===true),routes:valid&&(management||p.regenerate_routes===true),closeScanTickets:valid&&(management||p.close_scan_tickets===true)};}
 function receiptProjection(value){return value?.data?.current_projection||value?.data?.projection||null;}
 function accepted(value,record){if(isStaffingCommand(record)){try{return validateStaffingPreview(value,record).state==='ACCEPTED';}catch{return false;}}if(staffingOperation(record.path))return acceptedStaffing(value,record);const p=receiptProjection(value);return Number.isSafeInteger(value?.revision)&&value.revision>=record.body.expected_revision&&UUID.test(p?.projection_id||'')&&(!record.body.publication_id||p.publication_id===record.body.publication_id)&&(!p.week_start||p.week_start===record.body.week_start);}
-function authorized(auth,path,body){const p=permissions(auth);if(vacancyPreviewPath(path))return p.read&&p.owner;if(!p.read||!knownPath(path))return false;
- if(staffingOperation(path))return p.owner;
+function authorized(auth,path,body){const p=permissions(auth);if(vacancyPreviewPath(path))return p.read&&p.management;if(!p.read||!knownPath(path))return false;
+ if(staffingOperation(path))return p.management;
  if(commandRoute(path))return p.absences&&(path!==staffingCommandPath||['absence','cancel_absence'].includes(body?.command_kind));
- if(ownerPaths.has(path))return p.owner;
+ if(ownerPaths.has(path))return p.management;
  if(path==='/static-weekly/contractor-capacity')return p.coverall&&p.absences;
  if(path==='/static-weekly/projections'||path==='/static-weekly/rebuild-current-projection')return p.routes;
  return p.absences&&(path!=='/static-weekly/day-changes/batch'||!body?.operations?.some(x=>x.operation==='cover_all')||p.coverall);
@@ -433,8 +433,8 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
  }
  return Object.freeze({pending,
   async runVacancy(body,reviewed,binding){identity();if(read()||sending)throw Error('Resolve the original scheduler work first.');
-   if(!permissions(auth).owner||binding?.managerId!==owner.managerId)throw Error('Current owner vacancy access is required.');
-   await validateVacancyPreview(reviewed,body,binding);identity();if(read()||!permissions(auth).owner)throw Error('The current vacancy operation changed.');
+   if(!permissions(auth).management||binding?.managerId!==owner.managerId)throw Error('Current owner vacancy access is required.');
+   await validateVacancyPreview(reviewed,body,binding);identity();if(read()||!permissions(auth).management)throw Error('The current vacancy operation changed.');
    binding.assertCurrent?.();
    const path='/static-weekly/roster/'+binding.slotId+'/vacate',confirmed={...copy(body),preview_digest:reviewed.previewDigest};
    const r={schema:'custodial.scheduler-pending.v1',base,managerId:owner.managerId,path,body:confirmed,encoded:JSON.stringify(confirmed),

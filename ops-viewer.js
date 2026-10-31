@@ -1,22 +1,28 @@
-(function(){
-  'use strict';
-  const API='https://memphis-zoo-mcp.onrender.com';
-  const panels=[...document.querySelectorAll('.panel')];
-  const tabs=[...document.querySelectorAll('[data-panel]')];
-  const metrics=document.getElementById('metrics');
-  const eventList=document.getElementById('event-list');
-  const dashboardStatus=document.getElementById('dashboard-status');
-  const eventsStatus=document.getElementById('events-status');
-
-  function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
-  function setStatus(node,text,kind=''){node.textContent=text||'';node.className=`status${kind?` ${kind}`:''}`;}
-  function showPanel(id){panels.forEach((panel)=>panel.classList.toggle('active',panel.id===id));tabs.forEach((tab)=>tab.classList.toggle('active',tab.dataset.panel===id));}
-  async function getJson(path){const response=await fetch(`${API}${path}`,{cache:'no-store'});const payload=await response.json().catch(()=>null);if(!response.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${response.status}`);return payload.data;}
-  async function loadDashboard(){setStatus(dashboardStatus,'Loading dashboard…');try{const data=await getJson('/viewer-api/dashboard');const cards=[['Locations',data.locations_total,''],['Current',data.locations_current,'current'],['Due soon',data.locations_due_soon,''],['Overdue',data.locations_overdue,'attention'],['In progress',data.locations_in_progress,''],['Cleanings today',data.cleanings_completed_today,'']];metrics.innerHTML=cards.map(([label,value,kind])=>`<article class="metric ${kind}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value??0)}</strong></article>`).join('');setStatus(dashboardStatus,`Updated ${new Date(data.generated_at||Date.now()).toLocaleString()}`);}catch(error){setStatus(dashboardStatus,error.message||String(error),'error');}}
-  async function loadEvents(){setStatus(eventsStatus,'Loading events…');try{const data=await getJson('/viewer-api/events?days=90');const rows=Array.isArray(data.events)?data.events:[];eventList.innerHTML=rows.length?rows.map((event)=>{const date=String(event.event_date||'');const end=event.end_date&&event.end_date!==event.event_date?` through ${escapeHtml(event.end_date)}`:'';const time=event.start_time?` · ${escapeHtml(String(event.start_time).slice(0,5))}`:'';const location=event.display_location?` · ${escapeHtml(event.display_location)}`:'';return `<article class="event"><strong>${escapeHtml(event.event_name||'Event')}</strong><div>${escapeHtml(date)}${end}${time}${location}</div></article>`;}).join(''):'<div class="event-empty">No upcoming events are currently published.</div>';setStatus(eventsStatus,`Updated ${new Date(data.generated_at||Date.now()).toLocaleString()}`);}catch(error){setStatus(eventsStatus,error.message||String(error),'error');}}
-
-  tabs.forEach((tab)=>tab.addEventListener('click',()=>showPanel(tab.dataset.panel)));
-  document.getElementById('refresh-dashboard').addEventListener('click',loadDashboard);
-  document.getElementById('refresh-events').addEventListener('click',loadEvents);
-  Promise.allSettled([loadDashboard(),loadEvents()]);
+(function(){'use strict';
+ const API=location.protocol==='http:'&&['127.0.0.1','localhost'].includes(location.hostname)&&location.pathname.startsWith('/__custodial-preview__/')?location.origin:'https://memphis-zoo-mcp.onrender.com';
+ const el=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),requests=new Set(),generations={dashboard:0,events:0};
+ let stopped=false;const cards=[['Locations','locations_total',''],['Current','locations_current','current'],['Due soon','locations_due_soon',''],['Overdue','locations_overdue','attention'],['In progress','locations_in_progress',''],['Cleanings today','cleanings_completed_today','']];
+ function status(id,text,error=false){el(id).textContent=text;el(id).classList.toggle('error',error);}
+ async function get(path){const abort=new AbortController();requests.add(abort);const timer=setTimeout(()=>abort.abort(),15000);try{const response=await fetch(API+path,{method:'GET',credentials:'omit',cache:'no-store',redirect:'error',signal:abort.signal});const body=await response.json();if(!response.ok||body?.ok!==true)throw Error('Public source unavailable.');return body.data;}finally{clearTimeout(timer);requests.delete(abort);}}
+ const updateText=data=>typeof data.generated_at==='string'&&Number.isFinite(Date.parse(data.generated_at))?'Public source updated '+new Date(data.generated_at).toLocaleString('en-US',{timeZone:'America/Chicago'})+' Central.':'Source update time unavailable.';
+ async function dashboard(){const seq=++generations.dashboard;status('dashboard-status','Reading public operational totals…');try{const data=await get('/viewer-api/dashboard');if(stopped||seq!==generations.dashboard)return;
+  if(cards.some(([,key])=>!Number.isSafeInteger(data?.[key])||data[key]<0))throw Error('Public operational totals are unverified.');
+  el('metrics').innerHTML=cards.map(([label,key,kind])=>`<article class="metric ${kind}"><span>${esc(label)}</span><strong>${data[key]}</strong></article>`).join('');
+  el('public-status-counts').innerHTML=[['current','locations_current'],['due_soon','locations_due_soon'],['overdue','locations_overdue'],['in_progress','locations_in_progress']].map(([label,key])=>`<span data-status="${label}">${esc(label.replaceAll('_',' '))}: ${data[key]}</span>`).join('');status('dashboard-status',updateText(data)+' Read-only aggregates; individual records are restricted.');
+ }catch{if(!stopped&&seq===generations.dashboard)status('dashboard-status','Public totals unavailable. Any displayed totals are from the previous read, not confirmed current.',true);}}
+ async function events(){const seq=++generations.events;status('events-status','Reading published events…');try{const data=await get('/viewer-api/events?days=90');if(stopped||seq!==generations.events)return;
+  if(!Array.isArray(data?.events)||data.events.length>250)throw Error('Public event projection unavailable.');
+  // Render only existing public route fields, never private/addressed payloads.
+  const rows=data.events.map(r=>({name:typeof r.event_name==='string'?r.event_name.slice(0,500):'Published event',date:typeof r.event_date==='string'?r.event_date:'Date unavailable',end:typeof r.end_date==='string'?r.end_date:null,time:typeof r.start_time==='string'?r.start_time.slice(0,5):'',place:typeof r.display_location==='string'?r.display_location.slice(0,500):''}));
+  const html=rows.length?rows.map(r=>`<article class="event"><strong>${esc(r.name)}</strong><div>${esc(r.date)}${r.end&&r.end!==r.date?' through '+esc(r.end):''}${r.time?' · '+esc(r.time):''}${r.place?' · '+esc(r.place):''}</div></article>`).join(''):'<p>No upcoming published events in this public feed.</p>';
+  el('event-list').innerHTML=html;el('viewer-board-content').innerHTML=html;el('events-ticker').textContent=rows.length?rows.map(r=>r.name+' · '+r.date).join('   |   '):'No upcoming published events.';status('events-status',updateText(data));
+ }catch{if(!stopped&&seq===generations.events)status('events-status','Published events unavailable. Any displayed events are from the previous read.',true);}}
+ function clock(){const now=new Date();el('viewer-clock').textContent=now.toLocaleTimeString('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit'});el('viewer-date').textContent=now.toLocaleDateString('en-US',{timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric'});}
+ el('refresh-dashboard').addEventListener('click',dashboard);el('refresh-events').addEventListener('click',events);
+ el('open-events').addEventListener('click',()=>el('viewer-event-board').showModal());el('viewer-board-close').addEventListener('click',()=>el('viewer-event-board').close());
+ el('viewer-motion').addEventListener('click',()=>{const paused=document.body.classList.toggle('motionPaused');el('viewer-motion').textContent=paused?'Resume motion':'Pause motion';el('viewer-motion').setAttribute('aria-pressed',String(paused));});
+ el('viewer-map-fullscreen').addEventListener('click',()=>{const full=document.querySelector('.commandMap').classList.toggle('viewerMapExpanded');el('viewer-map-fullscreen').textContent=full?'Exit map full screen':'⛶ Map full screen';});
+ document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.querySelector('.commandMap').classList.remove('viewerMapExpanded');el('viewer-map-fullscreen').textContent='⛶ Map full screen';}});
+ const tick=setInterval(clock,1000),refresh=setInterval(()=>{if(!document.hidden){void dashboard();void events();}},30000);clock();void dashboard();void events();
+ window.addEventListener('pagehide',()=>{stopped=true;clearInterval(tick);clearInterval(refresh);for(const r of requests)r.abort();requests.clear();el('viewer-event-board').close();},{once:true});
 })();

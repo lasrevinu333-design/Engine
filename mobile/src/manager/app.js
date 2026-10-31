@@ -82,7 +82,7 @@ function renderAuthenticated(session, person = {}) {
   els.name.textContent = displayName;
   els.title.textContent = title;
   const roles = Array.isArray(session.roles) ? session.roles : [];
-  const custodialAdmin = roles.includes('CUSTODIAL_MANAGER');
+  const custodialAdmin = roles.includes('CUSTODIAL_MANAGER')||window.MemphisAuth?.isCustodialManagementAdmin?.(session)===true;
   if (els.insights) els.insights.hidden = !custodialAdmin;
   for (const tile of [els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
 }
@@ -117,7 +117,7 @@ async function request(path, { method = 'GET', body = null } = {}) {
       credentials: 'include',
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
-        'X-Device-Id': deviceId(),
+        ...(await window.MemphisAuth.opsManagerAuthHeaders()),
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -212,7 +212,9 @@ async function refresh({ quiet = false } = {}) {
   const generation = ++refreshGeneration;
   if (!quiet && !currentSession) showBoot();
   try {
-    const data = await request('/auth-api/session?access_level=full_access');
+    const session=await window.MemphisAuth?.requireOpsManagerSession?.({forceRefresh:true,redirect:false,interactive:false,throwOnFailure:true});
+    if(!session)throw Object.assign(new Error('Leadership browser enrollment is required.'),{status:401});
+    const data={session};
     if (generation !== refreshGeneration) return false;
     adopt(data);
     await refreshOperationalTruth(generation);
@@ -231,33 +233,6 @@ async function refresh({ quiet = false } = {}) {
   }
 }
 
-async function enroll(event) {
-  event.preventDefault();
-  const code = String(els.code.value || '').replace(/[\s-]+/g, '');
-  if (!/^\d{8}$/.test(code)) return setEnrollStatus('Enter the eight-digit personal manager code.', true);
-  setEnrollStatus('Enrolling this phone…');
-  try {
-    const data = await request('/auth-api/ops/manager-codes/consume', {
-      method: 'POST',
-      body: {
-        manager_code: code,
-        device_id: deviceId(),
-        device_label: String(els.label.value || '').trim() || `${navigator.platform || 'Phone'} · Memphis Zoo Ops`,
-        access_level: 'full_access',
-      },
-    });
-    adopt(data);
-    const generation = ++refreshGeneration;
-    await refreshOperationalTruth(generation);
-    await installNotificationRouting();
-    void ensurePushRegistration({ requestPermission: true }).then((result) => {
-      if (result?.receive === 'granted') setHubStatus('Phone enrolled. Message notifications are enabled.', 'ok');
-    }).catch((error) => setHubStatus(`Phone enrolled. Notifications can be enabled later: ${error.message}`));
-    els.code.value = '';
-    setEnrollStatus('');
-  } catch (error) { setEnrollStatus(error.message, true); }
-}
-
 function setEnrollStatus(text, error = false) {
   els.enrollStatus.textContent = text || '';
   els.enrollStatus.className = `status${error ? ' error' : ''}`;
@@ -266,19 +241,18 @@ function setEnrollStatus(text, error = false) {
 async function logout() {
   try {
     await unregisterPushNotifications();
-    await request('/auth-api/ops/logout', { method: 'POST' });
+    await window.MemphisAuth.clearSession();
   } catch (error) {
     setHubStatus(`Could not remove this phone. Phone access was kept. ${error.message || ''}`.trim(), 'error');
     return false;
   }
-  renderEnrollment('This phone has been removed. A new personal code is required to enroll it again.');
+  renderEnrollment('This browser enrollment has been removed. Enroll again through the leadership entry.');
   return true;
 }
 
-els.form.addEventListener('submit', enroll);
 els.bootRetry.addEventListener('click', () => { showBoot('Trying again…'); void refresh(); });
 els.refresh.addEventListener('click', () => refresh().catch((error) => setHubStatus(error.message, 'error')));
-els.logout.addEventListener('click', () => { if (confirm('Remove this phone from your Memphis Zoo Ops account? You will need a new personal code to use it again.')) void logout(); });
+els.logout.addEventListener('click', () => { if (confirm('Remove leadership enrollment from this browser?')) void logout(); });
 void Network.addListener('networkStatusChange', ({ connected }) => {
   document.getElementById('offline-banner')?.remove();
   if (!connected) {

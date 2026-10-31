@@ -36,17 +36,15 @@
     els.toast.className = `uxToast show ${kind}`.trim();
     state.toastTimer = setTimeout(() => { els.toast.className = 'uxToast'; }, 2600);
   }
-  const ownerAccess = () => window.MemphisAuth?.hasPermission?.('write') === true;
+  const ownerAccess = () => window.MemphisAuth?.hasPermission?.('write') === true || window.MemphisAuth?.isCustodialManagementAdmin?.() === true;
   async function authHeaders() {
     if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
     const session = await window.MemphisAuth?.requireOpsManagerSession?.({
       accessLevel: 'read_only', interactive: true, redirect: false, throwOnFailure: true,
     });
     if (!session?.token) throw new Error('Custodial Manager access is required.');
-    return {
-      Authorization: `Bearer ${session.token}`,
-      'X-Device-Id': session.device_id || window.MemphisAuth?.getDeviceId?.() || '',
-    };
+    if(typeof window.MemphisAuth.opsManagerAuthHeaders!=='function')throw new Error('Current manager authentication adapter unavailable.');
+    return window.MemphisAuth.opsManagerAuthHeaders();
   }
   async function request(path, { method = 'GET', body = null, headers: extraHeaders = {} } = {}) {
     if (method !== 'GET' && !ownerAccess()) throw new Error('Phone assignment and activation are owner-only.');

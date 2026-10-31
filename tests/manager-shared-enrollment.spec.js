@@ -1,140 +1,30 @@
-const { test, expect } = require('@playwright/test');
+const {test,expect}=require('@playwright/test');
+// All requests below are intercepted synthetic server fixtures. This suite
+// cannot establish live enrollment, SQL authorization or real browser identity.
+const syntheticPin='0000',accountName='Fixture leadership name';
+const uuid=n=>'12000000-0000-4000-8000-'+String(n).padStart(12,'0');
+function managerEnvelope(mobile=false,contact=null){const principal=uuid(1),registration=uuid(mobile?4:2);return{registrationId:registration,identityAssurance:'SELF_ASSERTED_NAME',claimedAccount:{accountId:uuid(3),displayName:accountName,contact},cohort:{principalId:principal,policyVersion:1,permissions:['custodialManagementAdmin']},managerSession:{token:'synthetic-manager-token-'+registration,role:'ops_manager',manager_id:principal,credential_id:registration,device_id:mobile?'fixture-android-browser':'fixture-desktop-browser',manager_display_name:'Custodial leadership cohort',roles:['CUSTODIAL_MANAGER','SECURITY_ADMIN'],access_level:'full_access',read_only:false,owner:false,custodial_management_admin:true,auth_mode:'custodial_leadership_pin',expires_at:'2099-01-01T00:00:00Z',permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:false,custodialManagementAdmin:true,policyVersion:1,manage_absences:true,manage_coverall:true,regenerate_routes:true,close_scan_tickets:true}}};}
+async function installAuthBackend(context,{mobile=false}={}){let enrolled=false,challenge=false,challengeCount=0,enrollCount=0,contact=null;const requests=[];
+ await context.route('**/*',async route=>{const r=route.request(),u=new URL(r.url());if(u.hostname==='127.0.0.1'||u.hostname==='localhost')return route.continue();
+ const send=(value,status=200,headers={})=>route.fulfill({status,contentType:'application/json',headers,body:JSON.stringify(value)});
+ if(u.origin!=='https://memphis-zoo-mcp.onrender.com')return route.fulfill({status:200,body:''});requests.push({path:u.pathname,method:r.method()});
+ const base='/custodial-leadership-api';
+ if(u.pathname===base+'/session'){if(enrolled)expect(r.headers().cookie||'').toContain('fixture_registration=opaque');return send({ok:true,enrolled,csrfToken:'fixture-csrf',...(enrolled?{session:managerEnvelope(mobile,contact)}:{})});}
+ if(u.pathname===base+'/challenge'){challengeCount++;expect(r.headers()['x-csrf-token']).toBe('fixture-csrf');expect(Object.keys(r.postDataJSON())).toEqual(['pin']);if(r.postDataJSON().pin!==syntheticPin)return send({ok:false,error:'invalid_pin'},403);challenge=true;return send({ok:true,approvedNames:[{accountId:uuid(3),displayName:accountName}]},200,{'set-cookie':'fixture_challenge=opaque; Path=/; Secure; HttpOnly; SameSite=None'});}
+ if(u.pathname===base+'/enroll'){enrollCount++;expect(challenge).toBe(true);expect(r.headers().cookie||'').toContain('fixture_challenge=opaque');expect(r.postDataJSON()).toEqual({accountId:uuid(3)});expect(r.headers()['x-csrf-token']).toBe('fixture-csrf');challenge=false;enrolled=true;return send({ok:true,enrolled:true,csrfToken:'fixture-csrf',session:managerEnvelope(mobile,contact)},200,{'set-cookie':'fixture_registration=opaque; Path=/; Secure; HttpOnly; SameSite=None'});}
+ if(u.pathname===base+'/revoke'){expect(r.headers()['x-csrf-token']).toBe('fixture-csrf');expect(r.headers().cookie||'').toContain('fixture_registration=opaque');enrolled=false;return send({ok:true,revoked:true,enrolled:false});}
+ return send({ok:false,error:'Unprovided fixture endpoint'},503);
+ });return{setContact:value=>{contact=value;},state:()=>({enrolled,challengeCount,enrollCount}),requests};}
+async function verifyEnrollment(browser,{mobile=false,reloadBeforeSubmit=false}={}){const context=await browser.newContext(mobile?{viewport:{width:390,height:844},userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'}:{});
+ try{const backend=await installAuthBackend(context,{mobile});const page=await context.newPage();await page.goto('/start_page1.html');await expect(page).toHaveURL(/\/ops-manager-hub\.html/);await expect(page.getByRole('heading',{name:'Custodial leadership',exact:true})).toBeVisible();await expect(page.locator('#map-password')).toHaveCount(0);await expect(page.locator('#approved-name option')).toHaveCount(1);await page.getByLabel('Leadership PIN').fill(syntheticPin);
+ if(reloadBeforeSubmit){await page.reload();await expect(page.getByLabel('Leadership PIN')).toHaveValue('');await page.getByLabel('Leadership PIN').fill(syntheticPin);}
+ await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.getByLabel('Leadership PIN')).toHaveValue('');await expect(page.getByLabel('Your approved name')).toBeVisible();await page.getByLabel('Your approved name').selectOption(uuid(3));await page.getByRole('button',{name:'Remember this browser'}).click();await expect(page.getByRole('link',{name:'Open management screens'})).toBeVisible();
+ expect(await page.evaluate(()=>({owner:window.MemphisAuth.readSession().owner,id:window.MemphisAuth.readSession().manager_id,admin:window.MemphisAuth.isCustodialManagementAdmin()}))).toEqual({owner:false,id:uuid(1),admin:true});await page.getByRole('link',{name:'Open management screens'}).click();await expect(page.locator('#access-mode')).toContainText('Leadership management · self-asserted name');expect(backend.state()).toEqual({enrolled:true,challengeCount:1,enrollCount:1});
+ const values=await page.evaluate(()=>({local:Object.values(localStorage),session:Object.values(sessionStorage),url:location.href}));expect(values.local).not.toContain(syntheticPin);expect(values.session).not.toContain(syntheticPin);expect(JSON.stringify(values)).not.toContain('synthetic-manager-token');expect(values.url).not.toContain(syntheticPin);
+ await page.reload();await expect(page.locator('#access-mode')).toContainText('Leadership management · self-asserted name');expect(backend.state().enrollCount).toBe(1);expect(backend.state().challengeCount).toBe(1);expect(backend.requests.some(r=>/map-session|map-config|manager-codes/.test(r.path))).toBe(false);
+ }finally{await context.close();}}
+test('leadership PIN and approved self-selected name enroll a desktop browser and reopen without another PIN',async({browser})=>{await verifyEnrollment(browser);});
+test('leadership PIN enrolls an independent Android browser without storing the typed PIN across reload',async({browser})=>{await verifyEnrollment(browser,{mobile:true,reloadBeforeSubmit:true});});
+test('an unrelated browser has no approved-name directory or management access before a verified PIN challenge',async({browser})=>{const context=await browser.newContext();try{const backend=await installAuthBackend(context);const page=await context.newPage();await page.goto('/start_page1.html');await expect(page).toHaveURL(/\/ops-manager-hub\.html/);await expect(page.getByLabel('Leadership PIN')).toBeVisible();await expect(page.locator('#name-form')).toBeHidden();await expect(page.locator('#open-manager')).toBeHidden();await page.getByLabel('Leadership PIN').fill('9999');await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('#status')).toContainText('refused');await expect(page.locator('#name-form')).toBeHidden();await expect(page.locator('#open-manager')).toBeHidden();expect(backend.state().enrollCount).toBe(0);await expect(page.getByRole('link',{name:'Open the read-only viewer'})).toBeVisible();}finally{await context.close();}});
 
-const validCode = '24681357';
-const managerName = 'Brandy Gull';
-const deviceLabelDraftKey = 'memphisOpsManagerDeviceLabelDraft.v1';
-
-function sessionPayload(deviceId, mobile = false) {
-  return {
-    ok: true,
-    data: {
-      session: {
-        token: `browser-session-${deviceId}`,
-        role: 'ops_manager',
-        roles: ['OPS_MANAGER'],
-        manager_id: '00000000-0000-4000-8000-000000000002',
-        manager_display_name: managerName,
-        device_id: deviceId,
-        credential_id: `credential-${mobile ? 'mobile' : 'desktop'}`,
-        access_level: 'full_access',
-        read_only: false,
-        expires_at: '2036-07-18T00:00:00.000Z'
-      },
-      manager: {
-        manager_id: '00000000-0000-4000-8000-000000000002',
-        display_name: managerName,
-        job_title: 'Horticulture Manager',
-        roles: ['OPS_MANAGER']
-      },
-      trusted_device: { device_id: deviceId }
-    }
-  };
-}
-
-async function installAuthBackend(context, { mobile = false } = {}) {
-  let trusted = false;
-  let consumeCount = 0;
-  let submittedCode = '';
-  let submittedDeviceLabel = '';
-  await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
-    const request = route.request();
-    const url = new URL(request.url());
-    if (url.pathname === '/auth-api/session') {
-      if (!trusted) {
-        await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'Enrollment required.' }) });
-        return;
-      }
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionPayload(mobile ? 'mobile-browser' : 'desktop-browser', mobile)) });
-      return;
-    }
-    if (url.pathname === '/auth-api/ops/manager-codes/consume') {
-      consumeCount += 1;
-      const body = request.postDataJSON();
-      submittedCode = String(body.code || body.manager_code || '');
-      submittedDeviceLabel = String(body.device_label || '');
-      if (submittedCode !== validCode) {
-        await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'Invalid.' }) });
-        return;
-      }
-      trusted = true;
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        headers: { 'set-cookie': 'memphis_ops_trust=test; Path=/; Secure; HttpOnly; SameSite=None' },
-        body: JSON.stringify(sessionPayload(mobile ? 'mobile-browser' : 'desktop-browser', mobile))
-      });
-      return;
-    }
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: {} }) });
-  });
-  return {
-    state: () => ({ trusted, consumeCount, submittedCode, submittedDeviceLabel })
-  };
-}
-
-async function verifyNamedEnrollment(browser, { mobile = false, reloadBeforeSubmit = false } = {}) {
-  const context = await browser.newContext(mobile ? {
-    viewport: { width: 390, height: 844 },
-    userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'
-  } : {});
-  const backend = await installAuthBackend(context, { mobile });
-  const page = await context.newPage();
-  await page.goto('/start_page1.html');
-  await expect(page).toHaveURL(/\/ops-manager-hub\.html/);
-  await expect(page.getByRole('heading', { name: 'Operations Leadership Hub' })).toBeVisible();
-  await expect(page.getByText('This browser is not enrolled. Enter the personal code created for your leadership account.')).toBeVisible();
-  await page.getByLabel('Personal enrollment code').fill('2468 1357');
-  const deviceLabel = mobile ? 'Brandy Personal Android' : 'Brandy Work Desktop';
-  await page.getByLabel('Browser name').fill(deviceLabel);
-  await expect(page.getByLabel('Browser name')).toHaveValue(deviceLabel);
-  if (reloadBeforeSubmit) {
-    await expect.poll(() => page.evaluate((key) => sessionStorage.getItem(key), deviceLabelDraftKey)).toBe(deviceLabel);
-    await page.reload();
-    await expect(page.getByText('This browser is not enrolled. Enter the personal code created for your leadership account.')).toBeVisible();
-    await expect(page.getByLabel('Browser name')).toHaveValue(deviceLabel);
-    await expect(page.getByLabel('Personal enrollment code')).toHaveValue('');
-    await page.getByLabel('Browser name').fill('');
-    await expect.poll(() => page.evaluate((key) => sessionStorage.getItem(key), deviceLabelDraftKey)).toBeNull();
-    await page.getByLabel('Browser name').fill(deviceLabel);
-    await page.getByLabel('Personal enrollment code').fill('2468 1357');
-  }
-  await page.getByRole('button', { name: 'Enroll This Browser' }).click();
-  await expect(page.locator('#access-mode')).toContainText(`Full-access Ops Manager · ${managerName}`);
-  await expect(page).toHaveURL(/\/start_page1\.html\?manager_access=full_access$/);
-  expect(backend.state()).toEqual({ trusted: true, consumeCount: 1, submittedCode: validCode, submittedDeviceLabel: deviceLabel });
-  const storage = await page.evaluate((key) => ({
-    local: Object.values(localStorage),
-    session: Object.values(sessionStorage),
-    deviceLabelDraft: sessionStorage.getItem(key),
-    url: location.href
-  }), deviceLabelDraftKey);
-  expect(JSON.stringify(storage)).not.toContain(validCode);
-  expect(storage.deviceLabelDraft).toBeNull();
-  await page.reload();
-  await expect(page.locator('#access-mode')).toContainText(`Full-access Ops Manager · ${managerName}`);
-  await expect(page.getByRole('heading', { name: 'Operations Leadership Hub' })).toHaveCount(0);
-  expect(backend.state().consumeCount).toBe(1);
-  await context.close();
-}
-
-test('personal manager code enrolls a desktop browser and daily reopen is passwordless', async ({ browser }) => {
-  await verifyNamedEnrollment(browser, { mobile: false });
-});
-
-test('personal manager code enrolls an Android browser independently', async ({ browser }) => {
-  await verifyNamedEnrollment(browser, { mobile: true, reloadBeforeSubmit: true });
-});
-
-test('an unrelated untrusted browser stays denied and shared enrollment UI is absent', async ({ browser }) => {
-  const context = await browser.newContext();
-  await installAuthBackend(context);
-  const page = await context.newPage();
-  await page.goto('/start_page1.html');
-  await expect(page).toHaveURL(/\/ops-manager-hub\.html/);
-  await expect(page.getByRole('heading', { name: 'Operations Leadership Hub' })).toBeVisible();
-  await expect(page.getByLabel('Personal enrollment code')).toBeVisible();
-  await expect(page.getByText(/shared 48-hour|shared enrollment|Generate PC Invite|Generate Phone Invite|Copy Invite Link|Pair Manager Device/i)).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Open the read-only Viewer instead' })).toBeVisible();
-  await expect(page.locator('.apps')).toHaveCount(0);
-  await context.close();
-});
+test('current browser status shows only verified contacts and revokes only this enrollment',async({browser})=>{const context=await browser.newContext();try{const backend=await installAuthBackend(context);const page=await context.newPage();await page.goto('/ops-manager-hub.html');await page.getByLabel('Leadership PIN').fill(syntheticPin);await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Your approved name').selectOption(uuid(3));await page.getByRole('button',{name:'Remember this browser'}).click();await expect(page.getByRole('link',{name:'Open management screens'})).toBeVisible();backend.setContact({email:'unverified@example.invalid'});await page.goto('/manager-access.html');await expect(page.locator('#status')).toContainText('Current server-issued enrollment is verified');await expect(page.locator('#claimed-name')).toHaveText(accountName+' · self-selected');await expect(page.locator('#verified-contact')).toHaveText('No verified contact supplied.');backend.setContact({email:'verified@example.invalid',verifiedAt:'2026-10-30T12:00:00Z'});await page.getByRole('button',{name:'Check browser enrollment'}).click();await expect(page.locator('#verified-contact')).toHaveText('verified@example.invalid');await expect(page.locator('#status')).toContainText('owner remains false');await page.getByRole('button',{name:'Remove enrollment from this browser'}).click();await expect(page.locator('#status')).toContainText('enrollment was revoked');await expect(page.getByRole('button',{name:'Remove enrollment from this browser'})).toBeDisabled();expect(backend.state().enrolled).toBe(false);expect(backend.requests.filter(r=>r.path.endsWith('/revoke'))).toHaveLength(1);expect(backend.requests.some(r=>/map-session|manager-codes/.test(r.path))).toBe(false);}finally{await context.close();}});

@@ -199,7 +199,7 @@ function create({api,auth=root.MemphisAuth,managerId,baseUrl,storage=root.localS
   if(busy)error('The exact schedule request is already in progress.');
   const scheduler=root.MemphisSchedulerActions;
   const principal=()=>{const current=scheduler?.principal(auth);
-   if(!current||current.managerId!==managerId||!scheduler.permissions(auth).owner)
+   if(!current||current.managerId!==managerId||!scheduler.permissions(auth).management)
     error('Current named-manager write access is required to read the original confirmation.');return current;};
   const originalPrincipal=principal(),originalText=storage.getItem(key),originalRecord=JSON.stringify(record);
   const current=()=>{

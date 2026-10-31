@@ -1,39 +1,11 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
-  <meta name="referrer" content="no-referrer">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1320" />
-  <title>Memphis Zoo Operations Viewer</title>
-  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./ops-viewer.css" />
-</head>
-<body>
-  <header class="viewer-header">
-    <div class="brand"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo" /><div><h1>Operations Viewer</h1><p>Read-only dashboard and published events</p></div></div>
-    <a class="leadership-link" href="./ops-manager-hub.html">Leadership sign-in</a>
-  </header>
-  <main class="viewer-shell">
-    <nav class="tabs" aria-label="Operations Viewer sections">
-      <button class="tab active" data-panel="dashboard" type="button">Dashboard</button>
-      <button class="tab" data-panel="events" type="button">Events</button>
-    </nav>
-
-    <section id="dashboard" class="panel active">
-      <div class="panel-heading"><div><h2>Custodial Dashboard</h2><p>Public-safe operational totals only. Employee, device, note, ticket-detail, and submitted-report data are excluded.</p></div><button id="refresh-dashboard" class="button" type="button">Refresh</button></div>
-      <div id="metrics" class="metrics" aria-live="polite"></div>
-      <div id="dashboard-status" class="status"></div>
-    </section>
-
-    <section id="events" class="panel">
-      <div class="panel-heading"><div><h2>Upcoming Events</h2><p>Published scheduled events from the Operations system.</p></div><button id="refresh-events" class="button" type="button">Refresh</button></div>
-      <div id="event-list" class="event-list" aria-live="polite"></div>
-      <div id="events-status" class="status"></div>
-    </section>
-
-  </main>
-  <script src="./ops-viewer.js"></script>
-</body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'">
+<title>Custodial Operations Center · Read-only Viewer</title><link rel="icon" href="./dashboard_tiger_icon.svg"><link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css"><link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css"><link rel="stylesheet" href="./operations-dashboard.css"><link rel="stylesheet" href="./ops-viewer.css"></head>
+<body class="mapWebPage operationsPage viewerOperations"><main class="mapPage commandPage">
+<header class="hubHero uxCard mapHeader"><div class="hubBrand"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><div><h1>Custodial Operations Center</h1><p>Read-only public dashboard · no enrollment required</p></div></div><nav class="mapNav"><a class="uxButton compact" href="./ops-manager-hub.html">Leadership sign-in</a><button id="refresh-dashboard" type="button">Refresh dashboard</button><button id="viewer-motion" type="button" aria-pressed="false">Pause motion</button></nav></header>
+<p id="dashboard-status" class="mapNotice" role="status" aria-live="polite">Loading public operational totals…</p>
+<div id="operations-panels"><header class="telemetry"><section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="viewer-clock" class="bigClock">—</time><div id="viewer-date" class="calendarDate"></div></section><section class="attendanceCard"><div class="eyebrow">CURRENT ATTENDANCE</div><div class="attendanceValue restrictedValue">Restricted</div><div class="metricNote">Not supplied by this public dashboard.</div></section><section class="weatherCard"><div><div class="eyebrow">MEMPHIS WEATHER</div><strong>Not in public feed</strong><p class="metricNote">This viewer uses only the existing public operational and event sources.</p></div></section></header>
+<section id="metrics" class="viewerMetrics" aria-label="Public operational totals"></section>
+<section class="activityTickers" aria-label="Operations boards"><div class="tickerBand"><span class="tickerLabel">TICKETS</span><span class="tickerWindow"><span class="tickerTrack">Private ticket details require management access.</span></span></div><button class="tickerBand" id="open-events" type="button"><span class="tickerLabel">EVENTS</span><span class="tickerWindow"><span class="tickerTrack" id="events-ticker">Loading published events…</span></span><span class="feedButton">Open board ↗</span></button><div class="tickerBand"><span class="tickerLabel">SCHOOLS</span><span class="tickerWindow"><span class="tickerTrack">No public school feed is supplied.</span></span></div></section></div>
+<section class="mzMapStage uxCard commandMap"><div class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h2>On the grounds</h2></div><div class="statusCounts" id="public-status-counts">Status totals unavailable</div><button id="viewer-map-fullscreen" type="button">⛶ Map full screen</button></div><div class="viewerMapViewport"><img src="./dashboard-map-assets/Memphis-Zoo-Transparent-Framed-Clean-Base-20261003.png" alt="Illustrated Memphis Zoo map. Individual location status and employee positions are not included in the public feed."></div><p class="metricNote">Illustrated map only. No individual cleaning pins or employee locations are inferred from aggregate totals.</p></section>
+<section class="viewerBottom"><article class="uxCard viewerEvents"><div class="viewerSectionHeading"><h2>Published events</h2><button id="refresh-events" type="button">Refresh events</button></div><p id="events-status" role="status">Loading published events…</p><div id="event-list" class="viewerEventList"></div></article><aside class="uxCard viewerRestricted"><h2>Management-only information</h2><p>Individual restroom and exhibit records, staff assignments, employee activity, punches, payroll, PTO, notes, submitted reports and ticket details are not part of this public feed.</p><p>This view sends no mutation requests. Sign in to use authorized management tools.</p></aside></section>
+</main><dialog class="operationsBoard" id="viewer-event-board" aria-labelledby="viewer-board-title"><header class="boardHeader"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><h2 id="viewer-board-title">Published events</h2><button id="viewer-board-close" type="button">Close / Back</button></header><p class="boardNote">Only the existing public scheduled-event projection is shown.</p><div id="viewer-board-content" class="boardContent"></div></dialog><script src="./ops-viewer.js"></script></body></html>

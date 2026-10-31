@@ -38,18 +38,18 @@ export async function mountStaffingRuntime({w=window,d=document,fetchImpl=w.fetc
       if(payload?.operation_outcome==='accepted')e.acceptedResult=payload.accepted_result;throw e;}
     return payload.data;
   };
-  async function ensureHelper(){current();if(!authority.permissions(auth).owner)throw Error('Staffing changes require current owner access.');
+  async function ensureHelper(){current();if(!authority.permissions(auth).management)throw Error('Staffing changes require current management access.');
     if(!helper)helper=authority.create({auth,api,baseUrl:await base()});return helper;}
   // The existing helper is created only after the real page authentication;
   // readonly views never read its storage or install owner action adapters.
   const savedRequests={
-    pending(){if(!helper){current();if(!authority.permissions(auth).owner)return null;
+    pending(){if(!helper){current();if(!authority.permissions(auth).management)return null;
       throw Error('Owner saved-request service has not initialized.');}return helper.pending();},
     run:(...args)=>helper.run(...args),retry:()=>helper.retry(),acknowledge:value=>helper.acknowledge(value)
   };
   const normalApi=async(path,options)=>{
     const data=await api(path,options);
-    if(authority.permissions(auth).owner&&!helper)await ensureHelper();
+    if(authority.permissions(auth).management&&!helper)await ensureHelper();
     return data;
   };
   page=mount({w,d,auth,authority,api:normalApi,savedRequests});

@@ -107,7 +107,7 @@
     if(!current(state.generation))return;
     const owner=window.MemphisAuth.canMutateOpsManagerSurface(session);
     const coverageLink=document.getElementById('owner-coverage-link');if(coverageLink)coverageLink.hidden=!owner;
-    const custodial=window.MemphisAuth.hasRole('CUSTODIAL_MANAGER',session);
+    const custodial=window.MemphisAuth.hasRole('CUSTODIAL_MANAGER',session)||window.MemphisAuth.isCustodialManagementAdmin?.(session)===true;
     const director=window.MemphisAuth.hasRole('DIRECTOR',session);
     const security=window.MemphisAuth.hasRole('SECURITY_ADMIN',session);
     for(const element of [els.insightsLink,els.phoneAssignmentsLink,els.managerAccessLink,els.geminiConsoleLink])if(element)element.hidden=!custodial;
@@ -195,13 +195,14 @@
     if(state.retired||generation!==state.generation)return;
     if(priorSession&&(session!==priorSession||sessionBinding(session)!==priorBinding)){retire();return;}
     if(!session||!window.MemphisAuth.isOpsManager(session)){showAccessRequired();return;}
+    if(!priorSession&&window.MemphisAuth.isCustodialManagementAdmin?.(session))state.currentDeviceId=resolveDeviceId();
     state.session=session;
     state.sessionBinding=sessionBinding(session);
     if(!current(generation))return;
     const returnPath=new URLSearchParams(window.location.search).get('return');
     if(returnPath){try{const resolved=new URL(returnPath,window.location.href);if(resolved.origin===window.location.origin&&!resolved.pathname.includes('..')){window.location.replace(resolved.toString());return;}}catch{}}
     const name=session.manager_display_name||'Operations Leadership';const title=session.manager_job_title||'';
-    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${window.MemphisAuth.canMutateOpsManagerSurface(session)?"Owner · full control":"Read-only · absence routes, CoverAll and scan tickets"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
+    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${window.MemphisAuth.isCustodialManagementAdmin?.(session)?"Leadership management · self-asserted name":session.permissions?.owner===true?"Owner · full control":"Read-only · absence routes, CoverAll and scan tickets"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
     updateLinks();applyRoleVisibility(session);startClock(generation);setStatus('Access current.','ok');
     await Promise.allSettled([refreshWeather(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
     if(!current(generation))return;

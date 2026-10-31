@@ -225,7 +225,7 @@
         ||!TRIAGE_UUID.test(s.credential_id||'')||typeof s.token!=='string'||!s.token||typeof s.device_id!=='string'||!s.device_id
         ||!(Date.parse(s.expires_at)>Date.now())||p?.schema!=='custodial.manager-permissions.v1'||p.read!==true)throw Error('Current named-manager access is unavailable.');
       return {manager_id:s.manager_id,credential_id:s.credential_id,device_id:s.device_id,token:s.token,expires_at:s.expires_at,
-        write:s.read_only===false&&s.access_level!=='read_only'&&p.owner===true};
+        write:s.read_only===false&&s.access_level!=='read_only'&&(p.owner===true||window.MemphisAuth.isCustodialManagementAdmin?.(s)===true)};
     }
     function sameInboxActor(a,b) {return !!a&&!!b&&Object.keys(a).every(k=>a[k]===b[k]);}
     function stopInbox() {

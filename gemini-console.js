@@ -131,10 +131,10 @@
       ||['manager_id','credential_id','device_id','token','expires_at'].some(key=>typeof session[key]!=='string'||!session[key])
       ||!Number.isFinite(Date.parse(session.expires_at))||Date.parse(session.expires_at)<=Date.now()
       ||session.access_level!=='full_access'||session.read_only!==false
-      ||permissions?.schema!=='custodial.manager-permissions.v1'||permissions.read!==true||permissions.owner!==true)throw originalManagerChanged();
+      ||permissions?.schema!=='custodial.manager-permissions.v1'||permissions.read!==true||!(permissions.owner===true||window.MemphisAuth.isCustodialManagementAdmin?.(session)===true))throw originalManagerChanged();
     return Object.freeze({session,role:session.role,manager_id:session.manager_id,
       credential_id:session.credential_id,device_id:session.device_id,token:session.token,expires_at:session.expires_at,
-      access_level:session.access_level,read_only:session.read_only,permission_schema:permissions.schema,permission_read:permissions.read,permission_write:permissions.owner});
+      access_level:session.access_level,read_only:session.read_only,permission_schema:permissions.schema,permission_read:permissions.read,permission_write:permissions.owner,permission_admin:window.MemphisAuth.isCustodialManagementAdmin?.(session)===true});
   }
   function captureConversationPage(conversation=state.conversation,generation=state.selectedConversationGeneration,manager=captureManagerIdentity()){
     if(!conversation?.conversation_id||conversation!==state.conversation||generation!==state.selectedConversationGeneration||!sameManagerSession(manager))throw originalManagerChanged();
@@ -147,7 +147,7 @@
       &&session.token===binding.token&&session.expires_at===binding.expires_at&&Number.isFinite(Date.parse(session.expires_at))
       &&Date.parse(session.expires_at)>Date.now()&&session.access_level===binding.access_level&&session.access_level==='full_access'
       &&session.read_only===binding.read_only&&session.read_only===false&&p?.schema===binding.permission_schema
-      &&p.schema==='custodial.manager-permissions.v1'&&p.read===binding.permission_read&&p.read===true&&p.owner===binding.permission_write&&p.owner===true);
+      &&p.schema==='custodial.manager-permissions.v1'&&p.read===binding.permission_read&&p.read===true&&p.owner===binding.permission_write&&window.MemphisAuth.isCustodialManagementAdmin?.(session)===binding.permission_admin&&(p.owner===true||binding.permission_admin===true));
   }
   function sameConversationPage(binding){return Boolean(sameManagerSession(binding)&&state.conversation===binding.conversation
     &&state.conversation?.conversation_id===binding.conversation_id&&state.selectedConversationGeneration===binding.generation);}
@@ -167,13 +167,13 @@
       ||['manager_id','credential_id','device_id','token','expires_at'].some(key=>typeof session[key]!=='string'||!session[key])
       ||!Number.isFinite(Date.parse(session.expires_at))||Date.parse(session.expires_at)<=Date.now()
       ||session.access_level!=='full_access'||session.read_only!==false
-      ||permissions?.schema!=='custodial.manager-permissions.v1'||permissions.read!==true||permissions.owner!==true
+      ||permissions?.schema!=='custodial.manager-permissions.v1'||permissions.read!==true||!(permissions.owner===true||window.MemphisAuth.isCustodialManagementAdmin?.(session)===true)
       ||!state.conversation?.conversation_id)throw originalManagerChanged();
     return Object.freeze({session,conversation:state.conversation,conversation_id:state.conversation.conversation_id,
       conversation_generation:state.selectedConversationGeneration,
       role:session.role,manager_id:session.manager_id,credential_id:session.credential_id,device_id:session.device_id,
       token:session.token,expires_at:session.expires_at,access_level:session.access_level,read_only:session.read_only,
-      permission_schema:permissions.schema,permission_read:permissions.read,permission_write:permissions.owner});
+      permission_schema:permissions.schema,permission_read:permissions.read,permission_write:permissions.owner,permission_admin:window.MemphisAuth.isCustodialManagementAdmin?.(session)===true});
   }
   function originalManagerChanged(){return Object.assign(new Error('Original manager session changed. Saved request remains held.'),{code:'gemini_original_manager_changed'});}
   function sameOriginalManager(binding){
@@ -188,7 +188,7 @@
       &&session.access_level===binding.access_level&&session.access_level==='full_access'
       &&session.read_only===binding.read_only&&session.read_only===false
       &&p?.schema===binding.permission_schema&&p.schema==='custodial.manager-permissions.v1'
-      &&p.read===binding.permission_read&&p.read===true&&p.owner===binding.permission_write&&p.owner===true);
+      &&p.read===binding.permission_read&&p.read===true&&p.owner===binding.permission_write&&window.MemphisAuth.isCustodialManagementAdmin?.(session)===binding.permission_admin&&(p.owner===true||binding.permission_admin===true));
   }
   function assertOriginalManager(binding,controller){if(!sameOriginalManager(binding)){controller?.abort();throw originalManagerChanged();}}
   async function originalStreamHeaders(binding,controller){
