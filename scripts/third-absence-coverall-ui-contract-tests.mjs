@@ -12,7 +12,7 @@ function options(){return{schema:'custodial.approved-manual-coverall-options.v1'
  lunchCoverers:[{slotId:U(8),label:'Synthetic available helper',shift:{start:'05:00',end:'14:00'},lunch:{start:'12:00',end:'13:00'}}]}]};}
 function days(){return[{service_date:'2026-11-02',capacity_id:U(7),shift:{start:'05:00',end:'14:00'},lunch:{start:'11:00',end:'12:00'},lunch_coverer_slot_id:U(8),confirmation_reference:'Synthetic manager confirmed actual hours',actual_hours_confirmed:true}];}
 function dto(r,state='PREPARING',summary=null){const v={operation_id:U(4),state,expected_revision:7,prepared_by_manager_id:U(1),current_service_date:'2026-11-02',
- semantic_body:{commandKind:'absence',employeeId:U(9),startDate:'2026-11-02',endDate:'2026-11-02',absenceKind:'pto',targetAbsenceId:null},semantic_digest:H('a')};
+ semantic_body:{commandKind:'absence',employeeId:U(9),startDate:r.body.start_date,endDate:r.body.end_date,absenceKind:'pto',targetAbsenceId:null},semantic_digest:H('a')};
  if(state==='PREPARING')return {...v,coverallChoice:summary};
  return{...v,preview_digest:H('d'),input_digest:H('e'),candidate_set_digest:H('f'),publication_vector:{expectedRevision:7,weeks:copy(r.weekBindings)},coverallChoice:summary,
  preview:{schema:'memphis-zoo.staffing-command-preview.v1',weeks:[{week_start:'2026-11-02',publicationId:U(2),versionId:U(3),database_projection_identity:H('1'),replayDigest:H('2'),
@@ -21,18 +21,25 @@ function dto(r,state='PREPARING',summary=null){const v={operation_id:U(4),state,
  projectionAvailability:[{serviceDate:'2026-11-02',slotId:U(7),dayOfWeek:1,incumbentPersonId:null,capacityId:U(7),ownerKind:'CONTRACTOR_CAPACITY'}],lunch_loans:[],lunch_responsibilities:[]}]}};}
 function fixture(){let session={role:'ops_manager',manager_id:U(1),credential_id:U(11),device_id:U(12),token:'synthetic-not-a-credential',expires_at:'2099-01-01T00:00:00Z',read_only:false,permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:false,manage_absences:true,manage_coverall:true}};
  const storage=new Map(),saved=record(),key='mz_scheduler_dated_operation_v1:'+encodeURIComponent(base)+':'+U(1);storage.set(key,JSON.stringify(saved));
- const calls=[],states=[],f={calls,storage,key,saved,state:'PREPARING',summary:null,postMode:'ok',mutateOptions:()=>{},onOptions:()=>{},onOriginal:()=>{},onConfirm:()=>{},onCancel:()=>{}};
+ const calls=[],states=[],f={calls,storage,key,saved,serverDate:'2026-11-02',nonces:0,regularPrepare:false,state:'PREPARING',summary:null,postMode:'ok',mutateOptions:()=>{},onOptions:()=>{},onOriginal:()=>{},onConfirm:()=>{},onCancel:()=>{}};
  const auth={readSession:()=>session},api=async(path,opts)=>{calls.push({path,opts:copy(opts)});
+  if(f.newMode&&path===A.staffingCommandPath){f.newRequest={body:JSON.parse(opts.body),prepared:false};return{operation_id:U(70),expected_revision:7,semantic_digest:H('7')};}
+  if(f.newMode&&path===A.staffingCommandPath+'/'+U(70)+'/prepare'){f.newRequest.prepared=true;return{state:'PREPARED'};}
+  if(f.newMode&&path===A.staffingCommandPath+'/'+U(70)){const n=f.newRequest,b=n.body;return{...dto({...saved,body:b},n.prepared?'PREPARED':'PREPARING'),operation_id:U(70),current_service_date:f.serverDate,semantic_digest:H('7')};}
+
  if(path.endsWith('/coverall-options')){const o=options();o.state=f.state;o.choice=f.summary;f.mutateOptions(o);await f.onOptions();return o;}
  if(path.endsWith('/coverall-prepare')){assert.equal(f.actions.pending().command.coverallAttempt.encoded,opts.body);const b=JSON.parse(opts.body);assert.deepEqual(Object.keys(b).sort(),['choice_id','days']);assert.deepEqual(b.days,days());
   if(f.postMode==='unknown-before')throw Error('Synthetic unknown before response');f.summary={choiceId:b.choice_id,choiceDigest:H('5'),operationId:U(4),semanticDigest:H('a'),expectedRevision:7};f.state='PREPARED';
   if(f.postMode==='unknown-after')throw Error('Synthetic unknown after response');return dto(saved,f.state,f.summary);}
  if(path.endsWith('/confirm')){await f.onConfirm();throw Error('Synthetic UNKNOWN confirmation');}
  if(path.endsWith('/cancel')){await f.onCancel();throw Error('Synthetic UNKNOWN cancellation');}
- if(path.endsWith('/prepare'))throw Object.assign(Error('Server says explicit choice required'),{status:409,serverRejected:true,code:'static_manual_coverall_choice_required',operationOutcome:'rejected'});
- if(path===A.staffingCommandPath+'/'+U(4)){await f.onOriginal();const v=dto(saved,f.state,f.summary);if(f.cancelRead){Object.assign(v,{original_cancellation_target:null,candidate_row_count:1,candidate_bytes:100,candidate_summary:{weeks:1,projections:1,lunches:1,scheduleRefreshes:0},accepted_revision:null,accepted_receipt:null,created_at:'2026-11-01T12:00:00Z',prepared_at:'2026-11-01T12:01:00Z',accepted_at:null});}return v;}
+ if(path.endsWith('/prepare')&&f.prepareLost)throw Error('Synthetic UNKNOWN private preparation');
+  if(path.endsWith('/prepare')&&f.regularPrepare){f.state='PREPARED';return {...dto(saved,f.state,f.summary),current_service_date:f.serverDate};}
+  if(path.endsWith('/prepare'))throw Object.assign(Error('Server says explicit choice required'),{status:409,serverRejected:true,code:'static_manual_coverall_choice_required',operationOutcome:'rejected'});
+ if(path===A.staffingCommandPath+'/'+U(4)){await f.onOriginal();const v={...dto(saved,f.state,f.summary),current_service_date:f.serverDate};if(f.acceptedReceipt)Object.assign(v,{accepted_revision:8,accepted_receipt:f.acceptedReceipt});if(f.cancelRead){Object.assign(v,{original_cancellation_target:null,candidate_row_count:1,candidate_bytes:100,candidate_summary:{weeks:1,projections:1,lunches:1,scheduleRefreshes:0},accepted_revision:null,accepted_receipt:null,created_at:'2026-11-01T12:00:00Z',prepared_at:'2026-11-01T12:01:00Z',accepted_at:null});}return v;}
  throw Error('Unexpected synthetic route '+path);};
- f.actions=A.create({auth,api,baseUrl:base,storage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},onState:r=>states.push(r),nonce:()=>U(13)});
+ f.storageAdapter={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)};
+  f.actions=A.create({auth,api,baseUrl:base,storage:f.storageAdapter,onState:r=>states.push(r),nonce:()=>{f.nonces++;return U(13);}});
  f.setSession=x=>{session=x;};f.session=()=>session;f.posts=()=>calls.filter(c=>c.opts.method==='POST');return f;}
 
 test('source reference08–17 permits explicitly confirmed actual05–14 and typed null-person preview',async()=>{const f=fixture(),o=await f.actions.readCoverAllOptions(),old=f.actions.pending();const result=await f.actions.prepareCoverAll(o,days());assert.equal(result.state,'PREPARED');const r=f.actions.pending();assert.equal(r.command.coverallAttempt.phase,'PREPARED');assert.equal(r.encoded,old.encoded);assert.deepEqual(r.weekBindings,old.weekBindings);assert.equal(r.command.coverallAttempt.dayBindings[0].retainedPlanDigest,H('c'));assert.equal(result.preview.weeks[0].assignments[0].owner_person_id,null);assert.equal(f.posts().length,1);assert.ok(f.posts()[0].path.endsWith('/coverall-prepare'));});
@@ -47,7 +54,7 @@ test('changed current form denies after fresh GET before saving/sending',async()
 test('lost CoverAll permission during fresh GET sends nothing',async()=>{const f=fixture();f.onOptions=()=>{f.session().permissions.manage_coverall=false;};await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/permission changed/);assert.equal(f.posts().length,0);});
 for(const mode of ['unknown-before','unknown-after'])test(mode+' preserves exact one attempted choice; status/options recovery never POSTs',async()=>{const f=fixture();f.postMode=mode;await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/unknown/i);const r=f.actions.pending(),encoded=r.command.coverallAttempt.encoded;assert.equal(r.encoded,f.saved.encoded);assert.equal(f.posts().length,1);await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/do not resend/);await assert.rejects(()=>f.actions.retryStaffingPreparation());await assert.rejects(()=>f.actions.cancelStaffingPreparation());await f.actions.readCoverAllOptions();await f.actions.reviewStaffing();assert.equal(f.posts().length,1);assert.equal(f.actions.pending().command.coverallAttempt.encoded,encoded);assert.equal(f.actions.pending().command.coverallAttempt.phase,mode==='unknown-after'?'PREPARED':'ATTEMPTED');});
 test('mismatched immutable companion never becomes prepared and does not replay',async()=>{const f=fixture();f.postMode='unknown-after';await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()));f.summary.choiceId=U(99);await assert.rejects(()=>f.actions.reviewStaffing(),/unverified/);assert.equal(f.actions.pending().command.coverallAttempt.phase,'ATTEMPTED');assert.equal(f.posts().length,1);});
-test('POST choice digest is pinned before original GET; changed GET digest remains unresolved',async()=>{const f=fixture();f.onOriginal=()=>{f.summary.choiceDigest=H('6');};await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/digest changed/);assert.equal(f.actions.pending().command.coverallAttempt.phase,'OBSERVED');assert.equal(f.actions.pending().command.coverallAttempt.choiceDigest,H('5'));assert.equal(f.posts().length,1);});
+test('POST choice digest is pinned before original GET; changed GET digest remains unresolved',async()=>{const f=fixture();f.onOriginal=()=>{if(f.summary)f.summary.choiceDigest=H('6');};await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/digest changed/);assert.equal(f.actions.pending().command.coverallAttempt.phase,'OBSERVED');assert.equal(f.actions.pending().command.coverallAttempt.choiceDigest,H('5'));assert.equal(f.posts().length,1);});
 test('prepared original without compact companion fails closed',async()=>{const f=fixture();f.postMode='unknown-after';await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()));f.summary=null;await assert.rejects(()=>f.actions.reviewStaffing(),/unverified/);assert.equal(f.posts().length,1);});
 test('explicit original choice-required error is saved; Resume is GET-only',async()=>{const f=fixture();await assert.rejects(()=>f.actions.reviewStaffing(),/choice required/);assert.equal(f.actions.pending().command.preparationIssue.code,'static_manual_coverall_choice_required');const posts=f.posts().length;await f.actions.reviewStaffing();await assert.rejects(()=>f.actions.retryStaffingPreparation());assert.equal(f.posts().length,posts);});
 test('UNKNOWN confirmation keeps original preview/key and cannot confirm twice',async()=>{const f=fixture();const p=await f.actions.prepareCoverAll(options(),days());await assert.rejects(()=>f.actions.confirmStaffing(p),/UNKNOWN/);const r=f.actions.pending();assert.equal(r.command.confirmationAttempted,true);assert.equal(r.command.confirmationKey,U(13));const confirm=f.posts().find(c=>c.path.endsWith('/confirm'));assert.deepEqual(JSON.parse(confirm.opts.body),{preview_digest:H('d'),confirmation_key:U(13)});await assert.rejects(()=>f.actions.confirmStaffing(p));await f.actions.reviewStaffing();assert.equal(f.posts().filter(c=>c.path.endsWith('/confirm')).length,1);});
@@ -58,9 +65,119 @@ test('corrupt saved original actual-hours request refuses without mutation',asyn
 const page=fs.readFileSync(new URL('../schedule-weekly.js',import.meta.url),'utf8');
 function pageFunction(name){const re=new RegExp('^(?:async )?function '+name+'\\(','m'),m=re.exec(page);assert.ok(m,name);const tail=page.slice(m.index),end=/\n(?:async )?function [A-Za-z]/.exec(tail.slice(1));return tail.slice(0,end?end.index+1:undefined);}
 test('recording DOM renders actual blank hours, explicit confirmation and reference label; locked saved hours preserved',()=>{const nodes=new Map();for(const id of ['third-coverall-status','third-coverall-days','third-coverall-prepare'])nodes.set(id,{});const state={pending:record(),coverallSelection:{options:options(),context:{}},busy:false,accessDenied:false};const panel={};
- const c={state,ensureCoverAllPanel:()=>panel,schedulerPermissions:()=>({coverall:true,absences:true}),requireStaffingContext:()=>{},coverAllOriginalEligible:()=>true,window:{MemphisSchedulerActions:A},document:{getElementById:id=>nodes.get(id)},escapeHtml:x=>String(x).replaceAll('&','&amp;').replaceAll('"','&quot;')};vm.createContext(c);vm.runInContext(pageFunction('renderThirdCoverAll'),c);c.renderThirdCoverAll();let html=nodes.get('third-coverall-days').innerHTML;assert.match(html,/template 08:00–17:00 \(reference only\)/);assert.match(html,/data-coverall-start value=""/);assert.match(html,/data-coverall-confirmed/);assert.match(html,/data-coverall-reference/);assert.equal(nodes.get('third-coverall-prepare').hidden,false);
+ const c={state,ensureCoverAllPanel:()=>panel,schedulerPermissions:()=>({coverall:true,absences:true}),requireStaffingContext:()=>{},coverAllOriginalEligible:()=>true,staffingDateUnavailable:()=>false,window:{MemphisSchedulerActions:A},document:{getElementById:id=>nodes.get(id)},escapeHtml:x=>String(x).replaceAll('&','&amp;').replaceAll('"','&quot;')};vm.createContext(c);vm.runInContext(pageFunction('renderThirdCoverAll'),c);c.renderThirdCoverAll();let html=nodes.get('third-coverall-days').innerHTML;assert.match(html,/template 08:00–17:00 \(reference only\)/);assert.match(html,/data-coverall-start value=""/);assert.match(html,/data-coverall-confirmed/);assert.match(html,/data-coverall-reference/);assert.equal(nodes.get('third-coverall-prepare').hidden,false);
  state.pending.command.coverallAttempt={encoded:JSON.stringify({days:days()})};c.renderThirdCoverAll();html=nodes.get('third-coverall-days').innerHTML;assert.match(html,/data-coverall-start value="05:00" disabled/);assert.equal(nodes.get('third-coverall-prepare').hidden,true);});
 test('actual page before-send fence rejects changed actual hours and original owner context',async()=>{let changed=false,captured=null;const selection={options:options(),context:{review:{}},actions:null},state={pending:record(),coverallSelection:selection};const c={state,JSON,requireSchedulerPermission:()=>{},coverAllOriginalEligible:()=>true,requireStaffingContext:()=>{},selectedCoverAllDays:()=>{const d=days();if(changed)d[0].confirmation_reference='Changed';return d;},displayStaffingPreview:()=>{throw Error('not reached');},renderThirdCoverAll:()=>{},setStatus:()=>{}};
  state.actions={prepareCoverAll:async(o,d,{assertCurrent})=>{captured=copy(d);assertCurrent();changed=true;assertCurrent();}};selection.actions=state.actions;vm.createContext(c);vm.runInContext(pageFunction('prepareThirdCoverAll'),c);await assert.rejects(()=>c.prepareThirdCoverAll(),/arrangement.*changed/);assert.deepEqual(captured,days());});
 test('native manual view never offers old contractor batch; typed reversal uses canonical third absence',()=>{const c={manualScheduleView:()=>true,els:{contractor_slots:{}},selectedServiceDate:()=>{throw Error('legacy path must not run');}};vm.createContext(c);vm.runInContext(pageFunction('renderContractors'),c);c.renderContractors({},[]);assert.match(c.els.contractor_slots.innerHTML,/original absence first/);assert.doesNotMatch(c.els.contractor_slots.innerHTML,/data-contractor-slot/);
  const f={};vm.createContext(f);vm.runInContext(pageFunction('typedCoverAllOperation'),f);assert.equal(f.typedCoverAllOperation({payload:{coverAllOperationId:U(4)}}),U(4));assert.equal(f.typedCoverAllOperation({payload:{coverAllOperationId:'not-an-employee'}}),null);const reverse=pageFunction('reverseChange');assert.match(reverse,/typedCoverAllOperation/);assert.match(reverse,/prepareAbsenceCancellation/);assert.match(reverse,/canonicalAbsenceTargets/);});
+
+
+for(const serverState of ['PREPARING','PREPARED'])test('expired '+serverState+' ordinary original is GET-only and byte-preserved',async()=>{
+ const f=fixture();f.state=serverState;f.serverDate='2026-11-03';const before=f.storage.get(f.key);
+ const value=await f.actions.reviewStaffing();assert.equal(value.state,serverState);assert.equal(f.actions.staffingDateStatus().state,'EXPIRED');
+ assert.equal(f.storage.get(f.key),before);assert.equal(f.posts().length,0);assert.equal(f.nonces,0);assert.ok(f.calls.every(c=>c.opts.method==='GET'));
+ if(serverState==='PREPARED')await assert.rejects(()=>f.actions.confirmStaffing(value),/unavailable|elapsed|server service date/);
+ assert.equal(f.posts().length,0);assert.equal(f.nonces,0);assert.equal(f.storage.get(f.key),before);
+});
+test('expiry is fresh server date, not an earlier observed date or browser clock',async()=>{
+ const f=fixture();f.regularPrepare=true;const prepared=await f.actions.reviewStaffing();assert.equal(prepared.state,'PREPARED');assert.equal(f.actions.staffingDateStatus().state,'CURRENT');
+ const before=f.storage.get(f.key),posts=f.posts().length;f.serverDate='2026-11-03';await assert.rejects(()=>f.actions.confirmStaffing(prepared),/unavailable|server service date/);
+ assert.equal(f.posts().length,posts);assert.equal(f.nonces,0);assert.equal(f.storage.get(f.key),before);assert.equal(f.actions.staffingDateStatus().state,'EXPIRED');
+});
+for(const today of [null,'not-a-date'])test('unavailable server date '+today+' fails closed without changing original',async()=>{
+ const f=fixture();f.serverDate=today;const before=f.storage.get(f.key);await f.actions.reviewStaffing();assert.equal(f.actions.staffingDateStatus().state,'UNAVAILABLE');
+ await assert.rejects(()=>f.actions.readCoverAllOptions(),/server service date/);await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/server service date/);
+ assert.equal(f.posts().length,0);assert.equal(f.nonces,0);assert.equal(f.storage.get(f.key),before);
+});
+test('expired CoverAll choice and direct prepare cannot allocate a choice key or POST',async()=>{
+ const f=fixture();f.serverDate='2026-11-03';const before=f.storage.get(f.key);
+ await assert.rejects(()=>f.actions.readCoverAllOptions(),/server service date/);await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/server service date/);
+ assert.equal(f.storage.get(f.key),before);assert.equal(f.posts().length,0);assert.equal(f.nonces,0);assert.ok(f.calls.every(c=>c.opts.method==='GET'));
+});
+test('rollover while options are awaited is checked again before CoverAll key allocation',async()=>{
+ const f=fixture();f.onOptions=()=>{f.serverDate='2026-11-03';};const before=f.storage.get(f.key);
+ await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/server service date/);assert.equal(f.posts().length,0);assert.equal(f.nonces,0);assert.equal(f.storage.get(f.key),before);
+});
+for(const mode of ['unknown-before','unknown-after'])test('expired '+mode+' CoverAll stays exact and GET-only during recovery',async()=>{
+ const f=fixture();f.postMode=mode;await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/unknown/i);f.serverDate='2026-11-03';
+ const before=f.storage.get(f.key),posts=f.posts().length,nonces=f.nonces,calls=f.calls.length;await f.actions.readCoverAllOptions();await f.actions.reviewStaffing();
+ assert.equal(f.storage.get(f.key),before);assert.equal(f.posts().length,posts);assert.equal(f.nonces,nonces);assert.ok(f.calls.slice(calls).every(c=>c.opts.method==='GET'));
+ await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()));assert.equal(f.posts().length,posts);assert.equal(f.nonces,nonces);
+});
+for(const today of ['2026-11-01','2026-11-02'])test('current/future ordinary '+today+' retains one preparation and existing UNKNOWN confirmation',async()=>{
+ const f=fixture();f.serverDate=today;f.regularPrepare=true;const p=await f.actions.reviewStaffing();assert.equal(p.state,'PREPARED');assert.equal(f.posts().filter(c=>c.path.endsWith('/prepare')).length,1);
+ await assert.rejects(()=>f.actions.confirmStaffing(p),/UNKNOWN/);const before=f.storage.get(f.key),posts=f.posts().length;assert.equal(f.actions.pending().command.confirmationAttempted,true);assert.equal(f.nonces,1);
+ f.serverDate='2026-11-03';await f.actions.reviewStaffing();assert.equal(f.storage.get(f.key),before);assert.equal(f.posts().length,posts);assert.equal(f.nonces,1);
+});
+test('partly elapsed multi-day original is not silently shortened or re-dated',async()=>{
+ const f=fixture(),r=JSON.parse(f.storage.get(f.key));r.body.end_date='2026-11-04';r.encoded=JSON.stringify(r.body);f.storage.set(f.key,JSON.stringify(r));f.saved.body.end_date=r.body.end_date;f.serverDate='2026-11-03';
+ const value=await f.actions.reviewStaffing();assert.equal(value.state,'PREPARING');assert.equal(f.actions.staffingDateStatus().state,'EXPIRED');assert.equal(f.posts().length,0);assert.equal(f.storage.get(f.key),JSON.stringify(r));
+});
+test('expired explicit missing-pattern retry remains GET-only',async()=>{
+ const f=fixture(),r=JSON.parse(f.storage.get(f.key));r.command.preparationIssue={code:'static_template_missing_approved_pattern',message:'No release-admitted approved pattern matches the current staffing. The original request is preserved; nothing was accepted.',principal:A.principal({readSession:f.session}),encoded:r.encoded,operationId:r.command.operationId,semanticDigest:r.command.semanticDigest,weekBindings:copy(r.weekBindings)};
+ f.storage.set(f.key,JSON.stringify(r));f.serverDate='2026-11-03';await f.actions.retryStaffingPreparation();assert.equal(f.posts().length,0);assert.equal(f.nonces,0);assert.equal(f.storage.get(f.key),JSON.stringify(r));
+});
+test('ACCEPTED history remains readable after server day advances',async()=>{
+ const f=fixture();f.regularPrepare=true;const p=await f.actions.reviewStaffing();await assert.rejects(()=>f.actions.confirmStaffing(p),/UNKNOWN/);const original=f.actions.pending();
+ f.state='ACCEPTED';f.serverDate='2026-11-03';f.acceptedReceipt={event:'ACCEPTED',operation_id:U(4),manager_id:U(1),preview_digest:H('d'),semantic_digest:H('a'),candidate_set_digest:H('f'),authority_revision:8,projections:{'2026-11-02':{projection_id:U(60),publication_id:U(2),projection_identity:H('1'),lunch_document_identity:H('9')}}};
+ const posts=f.posts().length;const value=await f.actions.reviewStaffing();assert.equal(value.state,'ACCEPTED');assert.equal(f.actions.pending().state,'ACCEPTED');assert.equal(f.actions.pending().encoded,original.encoded);assert.equal(f.actions.pending().command.confirmationKey,original.command.confirmationKey);assert.equal(f.actions.staffingDateStatus().state,'ACCEPTED');await f.actions.reviewStaffing();assert.equal(f.posts().length,posts);
+});
+test('page expired explanation preserves request and hides new choice/confirmation; no local reset',()=>{
+ const status={state:'EXPIRED',currentServiceDate:'2026-11-03',message:'Expired original; preserved; status only.'},state={actions:{staffingDateStatus:()=>status},staffingPreview:{},coverallSelection:{}};let message='';
+ const c={state,renderApprovedPreview:()=>{},renderPending:()=>{},setControls:()=>{},setStatus:x=>{message=x;}};vm.createContext(c);vm.runInContext(pageFunction('showStaffingDateUnavailable'),c);
+ assert.equal(c.showStaffingDateUnavailable(),true);assert.equal(state.staffingPreview,null);assert.equal(state.coverallSelection,null);assert.equal(message,status.message);
+ assert.match(pageFunction('renderPending'),/Read original status only/);assert.match(pageFunction('setControls'),/staffingDateUnavailable/);assert.match(pageFunction('coverAllOriginalEligible'),/staffingDateUnavailable/);
+});
+
+
+for(const nextDate of ['2026-11-03','2026-11-04'])test('elapsed-history: explicit preservation permits independent dated request '+nextDate,async()=>{
+ const f=fixture();f.serverDate='2026-11-03';const raw=f.storage.get(f.key),beforePosts=f.posts().length;
+ const result=await f.actions.archiveElapsedStaffingOriginal();assert.equal(result.archived,true);assert.equal(result.serverState,'PREPARING');assert.equal(result.serverRecordChanged,false);assert.equal(f.state,'PREPARING');assert.equal(f.posts().length,beforePosts);assert.equal(f.nonces,0);assert.equal(f.actions.pending(),null);
+ const archiveKey=f.key+':elapsed-history:'+U(4),entryRaw=f.storage.get(archiveKey);assert.equal(JSON.parse(entryRaw).originalRaw,raw);const safe=f.actions.expiredStaffingHistory()[0];assert.deepEqual(Object.keys(safe).sort(),['commandKind','endDate','observedServiceDate','observedState','operationId','startDate']);
+ f.newMode=true;const body={...record().body,start_date:nextDate,end_date:nextDate,client_prepare_key:U(90)},binding={...record().weekBindings[0],weeks:record().weekBindings};
+ const prepared=await f.actions.prepareStaffing(body,binding);assert.equal(prepared.state,'PREPARED');assert.equal(f.actions.pending().command.operationId,U(70));assert.equal(f.actions.pending().body.client_prepare_key,U(90));assert.equal(f.storage.get(archiveKey),entryRaw);assert.equal(f.state,'PREPARING');
+ const active=f.storage.get(f.key),posts=f.posts().length,history=await f.actions.readExpiredStaffingOriginal(U(4));assert.equal(history.readOnly,true);assert.equal(history.state,'PREPARING');assert.equal(f.storage.get(f.key),active);assert.equal(f.storage.get(archiveKey),entryRaw);assert.equal(f.posts().length,posts);
+});
+test('elapsed-history: known PREPARED fully elapsed original is retained without server mutation',async()=>{
+ const f=fixture(),r=record();r.command.phase='PREPARED';f.storage.set(f.key,JSON.stringify(r));f.state='PREPARED';f.serverDate='2026-11-03';const raw=f.storage.get(f.key);await f.actions.archiveElapsedStaffingOriginal();assert.equal(JSON.parse(f.storage.get(f.key+':elapsed-history:'+U(4))).originalRaw,raw);assert.equal(f.state,'PREPARED');assert.equal(f.posts().length,0);
+});
+test('elapsed-history: partly elapsed multi-day original cannot release active control',async()=>{
+ const f=fixture(),r=record();r.body.end_date='2026-11-04';r.encoded=JSON.stringify(r.body);f.saved.body.end_date=r.body.end_date;f.storage.set(f.key,JSON.stringify(r));f.serverDate='2026-11-03';const raw=f.storage.get(f.key);await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/complete original window/);assert.equal(f.storage.get(f.key),raw);assert.equal(f.actions.expiredStaffingHistory().length,0);assert.equal(f.posts().length,0);
+});
+test('elapsed-history: UNKNOWN prepare persists across rollover and cannot be archived or resent',async()=>{
+ const f=fixture();f.prepareLost=true;await assert.rejects(()=>f.actions.reviewStaffing(),/UNKNOWN private preparation/);assert.equal(f.actions.pending().command.preparationUnknown,true);const firstPosts=f.posts().length;await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/unattempted|UNKNOWN/);assert.equal(f.posts().length,firstPosts);assert.equal(f.nonces,0);f.serverDate='2026-11-03';const raw=f.storage.get(f.key),posts=f.posts().length;await f.actions.reviewStaffing();await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/UNKNOWN/);assert.equal(f.storage.get(f.key),raw);assert.equal(f.posts().length,posts);
+});
+test('elapsed-history: UNKNOWN confirmation is never archived',async()=>{
+ const f=fixture();f.regularPrepare=true;const p=await f.actions.reviewStaffing();await assert.rejects(()=>f.actions.confirmStaffing(p),/UNKNOWN/);f.serverDate='2026-11-03';const raw=f.storage.get(f.key),posts=f.posts().length;await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/UNKNOWN/);assert.equal(f.storage.get(f.key),raw);assert.equal(f.posts().length,posts);
+});
+test('elapsed-history: UNKNOWN CoverAll choice cannot release or replace original',async()=>{
+ const f=fixture();f.postMode='unknown-before';await assert.rejects(()=>f.actions.prepareCoverAll(options(),days()),/unknown/i);f.serverDate='2026-11-03';const raw=f.storage.get(f.key),posts=f.posts().length;await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/UNKNOWN/);assert.equal(f.storage.get(f.key),raw);assert.equal(f.posts().length,posts);
+});
+test('elapsed-history: in-flight original GET prevents a second archive action',async()=>{
+ const f=fixture();f.serverDate='2026-11-03';let release,entered;const ready=new Promise(r=>{entered=r;});f.onOriginal=async()=>{entered();await new Promise(r=>{release=r;});};const raw=f.storage.get(f.key),pending=f.actions.reviewStaffing();await ready;await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/in-flight/);assert.equal(f.storage.get(f.key),raw);release();await pending;assert.equal(f.storage.get(f.key),raw);assert.equal(f.posts().length,0);
+});
+test('elapsed-history: changed active identity during original GET is never overwritten',async()=>{
+ const f=fixture();f.serverDate='2026-11-03';const other=record();other.command.operationId=U(80);const raw=JSON.stringify(other);f.onOriginal=()=>f.storage.set(f.key,raw);await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/changed/);assert.equal(f.storage.get(f.key),raw);assert.equal(f.posts().length,0);
+});
+test('elapsed-history: race while writing history preserves newer active control and complete old raw entry',async()=>{
+ const f=fixture();f.serverDate='2026-11-03';const old=f.storage.get(f.key),other=record();other.command.operationId=U(80);const newer=JSON.stringify(other),set=f.storageAdapter.setItem;f.storageAdapter.setItem=(k,v)=>{set(k,v);if(k===f.key+':elapsed-history:'+U(4))f.storage.set(f.key,newer);};
+ await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/active original changed/);assert.equal(f.storage.get(f.key),newer);assert.equal(JSON.parse(f.storage.get(f.key+':elapsed-history:'+U(4))).originalRaw,old);assert.equal(f.posts().length,0);
+});
+for(const at of ['entry','index'])test('elapsed-history: quota failure at '+at+' leaves exact active original intact',async()=>{
+ const f=fixture();f.serverDate='2026-11-03';const raw=f.storage.get(f.key),set=f.storageAdapter.setItem;f.storageAdapter.setItem=(k,v)=>{if((at==='entry'&&k.includes(':elapsed-history:'))||(at==='index'&&k.endsWith(':elapsed-history-index')))throw Error('Synthetic quota failure');set(k,v);};await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/quota/);assert.equal(f.storage.get(f.key),raw);assert.equal(f.posts().length,0);if(at==='index')assert.equal(JSON.parse(f.storage.get(f.key+':elapsed-history:'+U(4))).originalRaw,raw);
+});
+test('elapsed-history: mismatched immutable archive entry refuses without clearing active original',async()=>{
+ const f=fixture();f.serverDate='2026-11-03';const raw=f.storage.get(f.key),archiveKey=f.key+':elapsed-history:'+U(4);f.storage.set(archiveKey,'{"different":"original"}');await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/different immutable original/);assert.equal(f.storage.get(f.key),raw);assert.equal(f.storage.get(archiveKey),'{"different":"original"}');assert.equal(f.posts().length,0);
+});
+test('elapsed-history: missing fresh server date cannot archive a control',async()=>{
+ const f=fixture();f.serverDate=null;const raw=f.storage.get(f.key);await assert.rejects(()=>f.actions.archiveElapsedStaffingOriginal(),/complete original window/);assert.equal(f.storage.get(f.key),raw);assert.equal(f.posts().length,0);
+});
+test('elapsed-history: a new request cannot reuse the archived original preparation key',async()=>{
+ const f=fixture();f.serverDate='2026-11-03';await f.actions.archiveElapsedStaffingOriginal();await assert.rejects(()=>f.actions.prepareStaffing({...record().body,start_date:'2026-11-03',end_date:'2026-11-03'},{...record().weekBindings[0],weeks:record().weekBindings}),/separate preparation identity/);assert.equal(f.actions.pending(),null);assert.equal(f.posts().length,0);
+});
+test('elapsed-history: history rendering exposes summary/GET only and no original request keys',async()=>{
+ const f=fixture();f.serverDate='2026-11-03';await f.actions.archiveElapsedStaffingOriginal();let panel;const pending={parentNode:{insertBefore:x=>{panel=x;}}},buttons=[];
+ const c={state:{actions:f.actions,busy:false,accessDenied:false},schedulerPermissions:()=>({read:true,absences:true}),escapeHtml:x=>String(x),busy:async fn=>fn(),setStatus:()=>{},document:{getElementById:id=>id==='scheduler-pending-panel'?pending:panel,createElement:()=>({querySelectorAll(){const ids=[...this.innerHTML.matchAll(/data-history-original="([^"]+)"/g)].map(m=>m[1]);return ids.map(id=>{const b={dataset:{historyOriginal:id},addEventListener:(event,fn)=>{b.click=fn;}};buttons.push(b);return b;});}})}};
+ vm.createContext(c);vm.runInContext(pageFunction('renderStaffingHistory'),c);c.renderStaffingHistory();assert.match(panel.innerHTML,/read only/);assert.doesNotMatch(panel.innerHTML,new RegExp(U(10)));assert.doesNotMatch(panel.innerHTML,/client_prepare_key|semanticDigest|originalRaw/);const posts=f.posts().length;await buttons[0].click();assert.equal(f.posts().length,posts);
+});

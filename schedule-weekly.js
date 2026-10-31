@@ -254,9 +254,13 @@ async function applyDayChanges(){requireSchedulerPermission('absences');const sn
  await busy(()=>{requireCurrentDatedReview(binding,'absences');if(JSON.stringify(dayChangeSelection())!==reviewed)throw new Error('The selected absences or CoverAll arrangement changed. Review the dated change again.');
   return runDated('/static-weekly/day-changes/batch',{service_date:selection.date,base_version_id:publication.version_id,version_id:publication.version_id,publication_id:publication.publication_id,operations:selection.operations,expected_revision:snapshot.authority_revision,idempotency_key:commandId('dated-routes'),week_start:snapshot.week_start});});
 }
+function staffingDateUnavailable(){return ['EXPIRED','UNAVAILABLE'].includes(state.actions?.staffingDateStatus?.().state);}
+function showStaffingDateUnavailable(){const status=state.actions?.staffingDateStatus?.();if(!status||status.state==='CURRENT'||status.state==='ACCEPTED')return false;
+ state.staffingPreview=null;state.coverallSelection=null;renderApprovedPreview();renderPending();setControls();setStatus(status.message,'error');return true;}
 function coverAllOriginalEligible(r){return !state.accessDenied&&!state.approvedPending&&!state.manualPending&&schedulerPermissions().absences&&schedulerPermissions().coverall
  &&window.MemphisSchedulerActions.isStaffingCommand(r)&&r.state==='PENDING'&&r.body.command_kind==='absence'
- &&r.command.phase==='PREPARING'&&typeof r.command.operationId==='string'&&!r.command.confirmationAttempted&&!r.command.cancellationAttempt;}
+ &&r.command.phase==='PREPARING'&&typeof r.command.operationId==='string'&&!r.command.confirmationAttempted&&!r.command.preparationUnknown&&!r.command.cancellationAttempt
+  &&(!staffingDateUnavailable()||!!r.command.coverallAttempt);}
 function ensureCoverAllPanel(){let panel=document.getElementById('third-coverall-panel');if(panel)return panel;
  panel=document.createElement('section');panel.id='third-coverall-panel';panel.className='status';panel.hidden=true;
  panel.innerHTML='<h2>Third absence — confirmed CoverAll replacement</h2><p>The accepted two-absence plan stays intact. Only the third missing owner is replaced by typed nonemployee capacity. This does not book a vendor or create an employee.</p><p id="third-coverall-status" role="status" aria-live="polite"></p><div id="third-coverall-days"></div><button class="btn primary" type="button" id="third-coverall-prepare">Prepare selected CoverAll preview</button>';
@@ -277,7 +281,7 @@ function renderThirdCoverAll(){const panel=ensureCoverAllPanel(),selected=state.
  panel.hidden=!selected||!r||state.accessDenied||!schedulerPermissions().coverall||!schedulerPermissions().absences;
  if(panel.hidden)return;
  try{requireStaffingContext(selected.context);window.MemphisSchedulerActions.validateCoverAllOptions(selected.options,r);}catch{panel.hidden=true;state.coverallSelection=null;return;}
- const attempted=r.command.coverallAttempt,chosen=attempted?JSON.parse(attempted.encoded).days:[],locked=!!attempted||state.busy;
+ const attempted=r.command.coverallAttempt,chosen=attempted?JSON.parse(attempted.encoded).days:[],locked=!!attempted||state.busy||staffingDateUnavailable();
  document.getElementById('third-coverall-status').textContent=attempted?'Original choice and actual hours are saved. Recovery reads only that operation; no choice is resent.':'Select each server-listed capacity and lunch helper, then enter and explicitly confirm the actual hours. Template hours are reference only.';
  document.getElementById('third-coverall-days').innerHTML=selected.options.days.map(day=>{const saved=chosen.find(d=>d.service_date===day.serviceDate),disable=locked?'disabled':'';
   return `<fieldset data-coverall-day="${escapeHtml(day.serviceDate)}"><legend>${escapeHtml(day.serviceDate)} · retained two-absence plan</legend><label>Approved nonemployee capacity <select data-coverall-capacity ${disable}><option value="">Select approved capacity</option>${day.capacities.map(c=>`<option value="${escapeHtml(c.capacityId)}" ${saved?.capacity_id===c.capacityId?'selected':''}>${escapeHtml(c.label)} · template ${escapeHtml(c.shift.start)}–${escapeHtml(c.shift.end)} (reference only)</option>`).join('')}</select></label><div class="inline"><label>Confirmed actual shift start <input type="time" data-coverall-start value="${escapeHtml(saved?.shift.start||'')}" ${disable}></label><label>Confirmed actual shift end <input type="time" data-coverall-end value="${escapeHtml(saved?.shift.end||'')}" ${disable}></label></div><div class="inline"><label>Actual full-hour lunch start <input type="time" data-coverall-lunch-start value="${escapeHtml(saved?.lunch.start||'')}" ${disable}></label><label>Actual full-hour lunch end <input type="time" data-coverall-lunch-end value="${escapeHtml(saved?.lunch.end||'')}" ${disable}></label></div><label>Full-hour lunch helper <select data-coverall-helper ${disable}><option value="">Select approved helper</option>${day.lunchCoverers.map(h=>`<option value="${escapeHtml(h.slotId)}" ${saved?.lunch_coverer_slot_id===h.slotId?'selected':''}>${escapeHtml(h.label)} · shift ${escapeHtml(h.shift.start)}–${escapeHtml(h.shift.end)} · own lunch ${escapeHtml(h.lunch.start)}–${escapeHtml(h.lunch.end)}</option>`).join('')}</select></label><label>Actual-hours confirmation reference <input data-coverall-reference maxlength="256" value="${escapeHtml(saved?.confirmation_reference||'')}" ${disable}></label><label><input type="checkbox" data-coverall-confirmed ${saved?.actual_hours_confirmed?'checked':''} ${disable}> I explicitly confirmed these actual CoverAll shift and full-hour lunch times.</label></fieldset>`;
@@ -312,6 +316,7 @@ function requireStaffingContext(context){requireSchedulerPermission('absences');
 async function displayStaffingPreview(value,review){
  requireSchedulerPermission('absences');const saved=state.pending;
  if(value.state==='ACCEPTED'){await verifyStaffingAccepted();state.staffingPreview=null;await refreshSnapshot();return;}
+ if(showStaffingDateUnavailable())return;
  window.MemphisSchedulerActions.validateStaffingPreview(value,saved);
  if(value.state!=='PREPARED')throw new Error('The private staffing preview is not prepared. Resume the original request.');
  const context={review,principal:window.MemphisSchedulerActions.principal(window.MemphisAuth),encoded:saved.encoded,operationId:saved.command.operationId};
@@ -323,6 +328,7 @@ async function resumeStaffingPreview(){requireSchedulerPermission('absences');co
  const cancellation=state.pending?.command?.cancellationAttempt;
  const cancellationView=cancellation?{context:staffingContext(),actions:state.actions,original:state.pending,selection:originalStaffingSelectionIdentity(state.pending)}:null;
  const value=await state.actions.reviewStaffing();requireCurrentPreviewContext(context);
+ if(!cancellation&&value.state!=='ACCEPTED'&&showStaffingDateUnavailable())return value;
  if(state.pending?.command?.coverallAttempt&&value.state==='PREPARING'){renderPending();setControls();setStatus('Original CoverAll preparation remains unresolved. No choice or confirmation was resent. Read original CoverAll options/status only.','error');return value;}
  if(cancellation){requireUnpublishedCancellationSelection(cancellationView);showUnpublishedCancellationOutcome(value);return value;}
  if(value.state==='PREPARING'&&missingPatternOriginal(state.pending)){renderPending();setControls();setStatus(missingStaffingPatternMessage,'error');return value;}
@@ -333,10 +339,10 @@ function canCancelUnpublishedPreparation(r){
   &&window.MemphisSchedulerActions.same(state.principal,window.MemphisSchedulerActions.principal(window.MemphisAuth))
   &&window.MemphisSchedulerActions.isStaffingCommand(r)&&r.state==='PENDING'
   &&r.managerId===state.principal.managerId
-  &&['PREPARING','PREPARED'].includes(r.command.phase)&&typeof r.command.operationId==='string'
+  &&!staffingDateUnavailable()&&['PREPARING','PREPARED'].includes(r.command.phase)&&typeof r.command.operationId==='string'
   &&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.command.operationId)
   &&/^[a-f0-9]{64}$/.test(r.command.semanticDigest||'')&&!r.command.confirmationAttempted
-  &&r.command.confirmationKey===null&&!r.command.cancellationAttempt&&(!r.command.coverallAttempt||r.command.coverallAttempt.phase==='PREPARED');
+  &&r.command.confirmationKey===null&&!r.command.preparationUnknown&&!r.command.cancellationAttempt&&(!r.command.coverallAttempt||r.command.coverallAttempt.phase==='PREPARED');
 }
 function requireUnpublishedCancellationSelection(binding){
  requireSchedulerPermission('absences');requireCurrentPreviewContext(binding.context.review);
@@ -398,8 +404,8 @@ async function verifyStaffingBasis(saved,context){
   if(!window.MemphisSchedulerActions.staffingSnapshotCovers(current,basis.weekStart,saved.body)||current.authority_revision!==saved.body.expected_revision
    ||current.current_publication?.publication_id!==basis.publicationId||current.current_publication?.version_id!==basis.versionId)
    throw new Error('A remaining week publication/version/revision changed. No confirmation was sent.');
-  if(saved.body.command_kind==='cancel_absence'&&(!validServerDate(current.current_service_date)||saved.body.start_date<current.current_service_date))
-   throw new Error('The server civil date advanced or is unavailable. The saved cancellation cannot rewrite elapsed days.');
+  if(!validServerDate(current.current_service_date)||saved.body.start_date<current.current_service_date)
+   throw new Error('The original staffing dates have elapsed or the current server service date is unavailable. Read original status only; its request is preserved.');
   snapshots.push(current);
  }return snapshots;
 }
@@ -772,9 +778,10 @@ function setControls(){const p=schedulerPermissions(),blocked=state.busy||state.
  for(const input of document.querySelectorAll('[data-contractor-slot]:not(:checked)'))input.disabled=blocked||!p.coverall;
  const saved=state.pending||state.approvedPending,accepted=saved?.state==='ACCEPTED'||!!saved?.acceptance;
  const resumeAllowed=p.read&&!!saved&&(accepted||(state.approvedPending?p.management:window.MemphisSchedulerActions.authorized(window.MemphisAuth,saved.path,saved.body)));
+ renderStaffingHistory();const archive=document.getElementById('scheduler-preserve-expired');if(archive){archive.hidden=!canArchiveElapsedStaffing(state.pending);archive.disabled=state.busy||!canArchiveElapsedStaffing(state.pending);}
  state.manualActivationPanel?.refreshControls();if(normalLocked)document.getElementById('approved-source-panel').hidden=true;
  document.getElementById('scheduler-retry').disabled=state.busy||!resumeAllowed||saved?.state==='REJECTED';document.getElementById('scheduler-retry').hidden=saved?.state==='REJECTED';document.getElementById('scheduler-dismiss').disabled=state.busy;document.getElementById('approved-source').disabled=blocked||!p.management;
- const staffingConfirm=document.getElementById('staffing-confirm-btn');if(staffingConfirm){staffingConfirm.hidden=!state.staffingPreview&&!state.unresolvedPreview;staffingConfirm.disabled=state.busy||!p.absences||!state.staffingPreview||!!state.unresolvedPreview||state.pending?.command?.confirmationAttempted===true||!!state.pending?.command?.cancellationAttempt;}
+ const staffingConfirm=document.getElementById('staffing-confirm-btn');if(staffingConfirm){staffingConfirm.hidden=!state.staffingPreview&&!state.unresolvedPreview;staffingConfirm.disabled=state.busy||!p.absences||!state.staffingPreview||!!state.unresolvedPreview||state.pending?.command?.confirmationAttempted===true||!!state.pending?.command?.cancellationAttempt||staffingDateUnavailable();}
  const prepareRetry=document.getElementById('scheduler-prepare-retry');if(prepareRetry){prepareRetry.hidden=!missingPatternOriginal(state.pending);prepareRetry.disabled=state.busy||!p.absences||!missingPatternOriginal(state.pending);}
  const coverallButton=document.getElementById('scheduler-coverall-choice');if(coverallButton){coverallButton.hidden=!coverAllOriginalEligible(state.pending);coverallButton.disabled=state.busy||!coverAllOriginalEligible(state.pending);}
  const coverallSubmit=document.getElementById('third-coverall-prepare');if(coverallSubmit)coverallSubmit.disabled=state.busy||!coverAllOriginalEligible(state.pending)||!!state.pending?.command?.coverallAttempt;
@@ -791,13 +798,26 @@ function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,(char)=>(
 
 function canReverseDated(snapshot,row){if(isCanonicalStaffingAbsence(row)||typedCoverAllOperation(row))return schedulerPermissions().absences;if(schedulerPermissions().management)return true;if(!schedulerPermissions().absences)return false;if(['daily_absence','partial_absence','pto','cover_all'].includes(row.type))return true;return row.type==='lunch'&&activeRoster(snapshot).some(r=>r.contractor_capacity&&r.slot_id===row.payload?.slotId);}
 function missingPatternOriginal(r){const issue=r?.command?.preparationIssue,principal=window.MemphisSchedulerActions.principal(window.MemphisAuth);
- return !state.accessDenied&&window.MemphisSchedulerActions.isStaffingCommand(r)&&r.state==='PENDING'&&r.command.phase==='PREPARING'&&!r.command.confirmationAttempted&&!r.command.cancellationAttempt&&!r.command.coverallAttempt
+ return !state.accessDenied&&window.MemphisSchedulerActions.isStaffingCommand(r)&&r.state==='PENDING'&&r.command.phase==='PREPARING'&&!r.command.confirmationAttempted&&!r.command.cancellationAttempt&&!r.command.coverallAttempt&&!staffingDateUnavailable()
   &&issue?.code===missingStaffingPatternCode&&issue.message===missingStaffingPatternMessage
   &&window.MemphisSchedulerActions.same(issue.principal,principal)&&(!state.principal||window.MemphisSchedulerActions.same(state.principal,principal))
   &&issue.encoded===r.encoded&&issue.operationId===r.command.operationId&&issue.semanticDigest===r.command.semanticDigest
   &&JSON.stringify(issue.weekBindings)===JSON.stringify(window.MemphisSchedulerActions.staffingBindings(r));
 }
-function renderPending(){if(state.accessDenied){document.getElementById('scheduler-pending-panel').hidden=true;return;}const r=state.pending||state.approvedPending,panel=document.getElementById('scheduler-pending-panel');panel.hidden=!r;
+
+function canArchiveElapsedStaffing(r){const status=state.actions?.staffingDateStatus?.();return !state.busy&&!state.accessDenied&&schedulerPermissions().absences&&window.MemphisSchedulerActions.isStaffingCommand(r)&&r.state==='PENDING'&&['PREPARING','PREPARED'].includes(r.command.phase)&&status?.state==='EXPIRED'&&r.body.end_date<status.currentServiceDate&&!r.command.confirmationAttempted&&!r.command.confirmationKey&&!r.command.preparationUnknown&&!r.command.cancellationAttempt&&(!r.command.coverallAttempt||r.command.coverallAttempt.phase==='PREPARED');}
+async function preserveElapsedOriginalForNewRequest(){const r=state.actions?.pending();if(!canArchiveElapsedStaffing(r))throw Error('Read the fully elapsed original first. UNKNOWN or still-active work cannot be replaced.');
+ const original=JSON.stringify(r);if(!await confirmAction('Preserve this complete elapsed original in read-only browser history and open a separate new dated request? The original server request remains unchanged. No new request is sent and no date is shifted.',{title:'Preserve elapsed original',confirmLabel:'Preserve and start separately'}))return;
+ if(JSON.stringify(state.actions.pending())!==original||!canArchiveElapsedStaffing(state.actions.pending()))throw Error('The original request changed; nothing was released.');
+ await busy(async()=>{await state.actions.archiveElapsedStaffingOriginal();state.staffingPreview=null;state.coverallSelection=null;state.unresolvedPreview=null;await refreshSnapshot();renderPending();setStatus('The complete elapsed original is preserved in read-only history. Choose and review new current or future dates explicitly; the new request will use a separate identity.','done');});
+}
+function renderStaffingHistory(){let panel=document.getElementById('scheduler-original-history');if(!panel){panel=document.createElement('section');panel.id='scheduler-original-history';panel.className='status';document.getElementById('scheduler-pending-panel').parentNode.insertBefore(panel,document.getElementById('scheduler-pending-panel'));}
+ panel.hidden=state.accessDenied||!schedulerPermissions().read;if(panel.hidden)return;const rows=state.actions?.expiredStaffingHistory?.()||[];panel.hidden=!rows.length;if(panel.hidden)return;
+ panel.innerHTML='<h3>Preserved elapsed originals — read only</h3><p>These original server requests were not cancelled or accepted by moving them here. Request keys are kept privately in this browser and are not displayed.</p>'+rows.map(r=>'<div><span>'+escapeHtml(r.startDate+' through '+r.endDate+' · '+r.commandKind+' · observed '+r.observedState)+'</span> <button type="button" class="btn secondary" data-history-original="'+escapeHtml(r.operationId)+'">Read original status</button></div>').join('');
+ for(const b of panel.querySelectorAll('[data-history-original]')){b.disabled=state.busy||!schedulerPermissions().absences;b.addEventListener('click',()=>busy(async()=>{const v=await state.actions.readExpiredStaffingOriginal(b.dataset.historyOriginal);setStatus('Preserved original '+v.startDate+' through '+v.endDate+': '+v.state+'. Read only; no request was resent.');}));}
+}
+
+function renderPending(){renderStaffingHistory();if(state.accessDenied){document.getElementById('scheduler-pending-panel').hidden=true;return;}const r=state.pending||state.approvedPending,panel=document.getElementById('scheduler-pending-panel');panel.hidden=!r;
  let prepareRetry=document.getElementById('scheduler-prepare-retry');if(!prepareRetry){prepareRetry=document.createElement('button');prepareRetry.id='scheduler-prepare-retry';prepareRetry.type='button';prepareRetry.className='btn secondary';prepareRetry.textContent='Retry original preparation';prepareRetry.addEventListener('click',()=>busy(retryMissingStaffingPreparation));panel.append(prepareRetry);}
  prepareRetry.hidden=!missingPatternOriginal(r);prepareRetry.disabled=state.busy||!schedulerPermissions().absences;
  let cancelPreparation=document.getElementById('scheduler-cancel-preparation');if(!cancelPreparation){cancelPreparation=document.createElement('button');cancelPreparation.id='scheduler-cancel-preparation';cancelPreparation.type='button';cancelPreparation.className='btn secondary';cancelPreparation.textContent='Cancel unpublished preparation';cancelPreparation.addEventListener('click',()=>busy(cancelUnpublishedPreparation));panel.append(cancelPreparation);}
@@ -805,13 +825,17 @@ function renderPending(){if(state.accessDenied){document.getElementById('schedul
  let coverallButton=document.getElementById('scheduler-coverall-choice');if(!coverallButton){coverallButton=document.createElement('button');coverallButton.id='scheduler-coverall-choice';coverallButton.type='button';coverallButton.className='btn secondary';coverallButton.addEventListener('click',()=>busy(readThirdCoverAllOptions));panel.append(coverallButton);}
  coverallButton.hidden=!coverAllOriginalEligible(r);coverallButton.disabled=state.busy||!coverAllOriginalEligible(r);coverallButton.textContent=r?.command?.coverallAttempt?'Read original CoverAll choice/status':'Choose approved CoverAll for third absence';
  renderThirdCoverAll();
+ let archive=document.getElementById('scheduler-preserve-expired');if(!archive){archive=document.createElement('button');archive.id='scheduler-preserve-expired';archive.type='button';archive.className='btn secondary';archive.textContent='Preserve expired original / start separately';archive.addEventListener('click',()=>preserveElapsedOriginalForNewRequest().catch(error=>setStatus(safe(error),'error')));panel.append(archive);}
+ archive.hidden=!canArchiveElapsedStaffing(r);archive.disabled=state.busy||!canArchiveElapsedStaffing(r);
  if(!r)return;document.getElementById('scheduler-pending-text').textContent=(r.state==='ACCEPTED'||r.acceptance)?'Changes were accepted; current route readback is pending.':r.state==='REJECTED'?`Request rejected: ${r.error}. Refresh before making a corrected request.`:'A dated scheduler request is saved. Resume it with the same operation identity; do not submit another.';document.getElementById('scheduler-dismiss').hidden=r.state!=='REJECTED';document.getElementById('scheduler-retry').textContent=(r.state==='ACCEPTED'||r.acceptance)?'Verify accepted routes':'Resume exact request';
  if(window.MemphisSchedulerActions.isStaffingCommand(r)&&r.state!=='ACCEPTED'){
   document.getElementById('scheduler-pending-text').textContent=r.command.confirmationAttempted?'The original staffing confirmation outcome is unresolved. Read its exact operation; do not confirm again.':'An original private staffing operation is saved. Read its prepared candidate before one confirmation.';
-  document.getElementById('scheduler-retry').textContent=r.command.confirmationAttempted?'Read original confirmation outcome':'Read / prepare original staffing preview';
+  document.getElementById('scheduler-retry').textContent=r.command.confirmationAttempted?'Read original confirmation outcome':'Read original staffing status';
   if(missingPatternOriginal(r)){document.getElementById('scheduler-pending-text').textContent='Last preparation: '+missingStaffingPatternMessage+' No confirmation is available. Resume only reads the original; retry preparation separately after a current basis check.';
    document.getElementById('scheduler-retry').textContent='Read original preparation status';document.getElementById('scheduler-dismiss').hidden=true;}
-  if(r.command.cancellationAttempt){document.getElementById('scheduler-pending-text').textContent='An original unpublished cancellation was attempted. Its outcome is unconfirmed until exact original GET readback. No cancellation or confirmation will be resent; protected history is retained.';
+  if(r.command.preparationUnknown){document.getElementById('scheduler-pending-text').textContent='The original preparation outcome is UNKNOWN. Read original status only; do not prepare, cancel or replace it.';document.getElementById('scheduler-retry').textContent='Read original preparation outcome';document.getElementById('scheduler-dismiss').hidden=true;}
+   const dateStatus=state.actions?.staffingDateStatus?.();if(dateStatus&&['EXPIRED','UNAVAILABLE'].includes(dateStatus.state)){document.getElementById('scheduler-pending-text').textContent=dateStatus.message;document.getElementById('scheduler-retry').textContent='Read original status only';document.getElementById('scheduler-dismiss').hidden=true;}
+   if(r.command.cancellationAttempt){document.getElementById('scheduler-pending-text').textContent='An original unpublished cancellation was attempted. Its outcome is unconfirmed until exact original GET readback. No cancellation or confirmation will be resent; protected history is retained.';
    document.getElementById('scheduler-retry').textContent='Read original cancellation outcome';document.getElementById('scheduler-dismiss').hidden=true;}
  }
 }

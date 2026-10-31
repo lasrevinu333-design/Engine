@@ -326,11 +326,21 @@ function authorized(auth,path,body){const p=permissions(auth);if(vacancyPreviewP
  if(path==='/static-weekly/projections'||path==='/static-weekly/rebuild-current-projection')return p.routes;
  return p.absences&&(path!=='/static-weekly/day-changes/batch'||!body?.operations?.some(x=>x.operation==='cover_all')||p.coverall);
 }
+// Volatile observation from an original server GET, never the browser clock or saved date.
+function staffingDateEligibility(value,record){
+ if(value?.state==='ACCEPTED')return{state:'ACCEPTED',currentServiceDate:null,message:''};
+ if(!civilDate(value?.current_service_date))return{state:'UNAVAILABLE',currentServiceDate:null,message:'The server service date is unavailable. Original staffing work is saved; read its status only.'};
+ const today=value.current_service_date;
+ return record.body.start_date<today?{state:'EXPIRED',currentServiceDate:today,message:'This original staffing request starts before the server service date '+today+'. It is unavailable for changes; its complete original request is preserved. Read status only. A new dated request must be explicit and separate; nothing was shifted or cleared.'}
+  :{state:'CURRENT',currentServiceDate:today,message:''};
+}
+function requireCurrentStaffingDate(value,record){const status=staffingDateEligibility(value,record);if(status.state!=='CURRENT')throw Object.assign(Error(status.message||'The original staffing request is no longer available for a change.'),{code:'STAFFING_ORIGINAL_DATE_UNAVAILABLE'});return status;}
 function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce=()=>root.crypto.randomUUID()}={}){
  const owner=principal(auth);if(!owner||typeof api!=='function')throw Error('A current manager session is required.');const base=new URL(baseUrl).origin;
- const key='mz_scheduler_dated_operation_v1:'+encodeURIComponent(base)+':'+owner.managerId;let sending=false,cancelledOriginal=null;
+ const key='mz_scheduler_dated_operation_v1:'+encodeURIComponent(base)+':'+owner.managerId;let sending=false,cancelledOriginal=null,dateObservation=null;
  function identity(){if(!same(owner,principal(auth)))throw Error('Manager access changed. Saved scheduling work remains preserved.');}
- function read(){identity();const raw=storage.getItem(key);if(raw===null)return null;let r;try{r=JSON.parse(raw);}catch{throw Error('Saved scheduler request cannot be read. Preserve it for recovery.');}
+ function read(){identity();const raw=storage.getItem(key);return raw===null?null:decodeControl(raw);}
+ function decodeControl(raw){let r;try{r=JSON.parse(raw);}catch{throw Error('Saved scheduler request cannot be read. Preserve it for recovery.');}
   if(raw.length>200000||r?.schema!=='custodial.scheduler-pending.v1'||r.base!==base||r.managerId!==owner.managerId||!knownPath(r.path)
    ||typeof r.encoded!=='string'||r.encoded!==JSON.stringify(r.body)||!Number.isSafeInteger(r.body?.expected_revision)||r.body.expected_revision<0
    ||(!isStaffingCommand(r)&&(typeof r.body.idempotency_key!=='string'||!r.body.idempotency_key))||!['PENDING','ACCEPTED','REJECTED'].includes(r.state)
@@ -341,6 +351,7 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
     ||!['BEGIN','PREPARING','PREPARED','CONFIRMING','ACCEPTED'].includes(c.phase)||typeof c.confirmationAttempted!=='boolean'
     ||c.operationId!==null&&!UUID.test(c.operationId)||c.confirmationAttempted&&!UUID.test(c.confirmationKey||''))
     throw Error('The saved original staffing operation is invalid.');
+   if(c.preparationUnknown!==undefined&&(c.preparationUnknown!==true||r.state!=='PENDING'||c.phase!=='PREPARING'||!UUID.test(c.operationId||'')))throw Error('Original preparation uncertainty is invalid; preserve it.');
    if(c.preparationIssue!==undefined){const issue=c.preparationIssue;
     if(!issue||Object.keys(issue).sort().join(',')!=='code,encoded,message,operationId,principal,semanticDigest,weekBindings'
      ||!(issue.code===missingPatternCode&&issue.message===missingPatternMessage||issue.code===coverAllRequiredCode&&issue.message===coverAllRequiredMessage)||!same(issue.principal,owner)
@@ -394,8 +405,12 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
   catch(error){currentCommand(r);throw error;}
   currentCommand(r);return value;
  }
+ function staffingDateStatus(){const r=read();return r&&dateObservation?.encoded===r.encoded&&dateObservation.operationId===r.command?.operationId
+  ?copy(dateObservation.status):{state:'UNAVAILABLE',currentServiceDate:null,message:'Read original status to obtain its current server service date. Original work remains saved.'};}
  async function readCommand(r){
   const value=validateStaffingPreview(await commandCall(r,staffingCommandPath+'/'+r.command.operationId,{method:'GET'}),r);
+  const status=staffingDateEligibility(value,r);dateObservation={encoded:r.encoded,operationId:r.command.operationId,status};
+  if(['PREPARING','PREPARED'].includes(value.state)&&status.state!=='CURRENT')return value;
   const current=read();let coverallAttempt=current.command.coverallAttempt;
   if(coverallAttempt&&(value.coverallChoice||['PREPARED','ACCEPTED'].includes(value.state))){const summary=requireCoverAllSummary(value.coverallChoice,current);coverallAttempt={...coverallAttempt,phase:['PREPARED','ACCEPTED'].includes(value.state)?'PREPARED':'OBSERVED',choiceDigest:summary.choiceDigest};}
   if(value.state==='PREPARING'&&coverallAttempt&&JSON.stringify(coverallAttempt)!==JSON.stringify(current.command.coverallAttempt))save({...current,command:{...current.command,coverallAttempt}});
@@ -406,7 +421,7 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
    save({...current,state:'ACCEPTED',receipt:copy({...value,preview:null}),command:{...current.command,...(coverallAttempt?{coverallAttempt}:{}),phase:'ACCEPTED'}});return value;
   }
   if(value.state==='PREPARED'){
-   const week=value.preview.weeks[0],{preparationIssue,...command}=current.command;save({...current,command:{...command,phase:current.command.confirmationAttempted?'CONFIRMING':'PREPARED',
+   const week=value.preview.weeks[0],{preparationIssue,preparationUnknown,...command}=current.command;save({...current,command:{...command,phase:current.command.confirmationAttempted?'CONFIRMING':'PREPARED',
     ...(coverallAttempt?{coverallAttempt}:{}),previewDigest:value.preview_digest,inputDigest:value.input_digest,candidateSetDigest:value.candidate_set_digest,
     projectionIdentity:week.database_projection_identity,replayDigest:week.replayDigest,
     projections:Object.fromEntries(value.preview.weeks.map(row=>[row.week_start,{projectionIdentity:row.database_projection_identity,replayDigest:row.replayDigest}]))}});
@@ -451,23 +466,26 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
    save({...r,command:{...r.command,phase:'PREPARING',operationId:begun.operation_id,semanticDigest:begun.semantic_digest}});r=read();
   }
   let value=await readCommand(r);r=read();
-  if(value.state==='PREPARING'&&!r.command.confirmationAttempted&&!r.command.coverallAttempt&&(!r.command.preparationIssue||retryPreparation)){
+  if(['PREPARING','PREPARED'].includes(value.state)&&staffingDateEligibility(value,r).state!=='CURRENT')return value;
+  if(value.state==='PREPARING'&&!r.command.confirmationAttempted&&!r.command.coverallAttempt&&!r.command.preparationUnknown&&(!r.command.preparationIssue||retryPreparation)){
    if(retryPreparation){
     for(const basis of staffingBindings(r)){
      const snapshot=await api('/static-weekly/manager-snapshot?week_start='+encodeURIComponent(basis.weekStart),{method:'GET',expectedManagerId:owner.managerId});
-     currentCommand(r);
+     currentCommand(r);requireCurrentStaffingDate({current_service_date:snapshot.current_service_date},r);
      if(!staffingSnapshotCovers(snapshot,basis.weekStart,r.body)||snapshot.authority_revision!==r.body.expected_revision
       ||snapshot.current_publication?.publication_id!==basis.publicationId||snapshot.current_publication?.version_id!==basis.versionId)
       throw Error('The current original staffing publication/version/revision changed. No preparation retry was sent.');
     }
    }
+   requireCurrentStaffingDate(value,r);
+   save({...r,command:{...r.command,preparationUnknown:true}});r=read();
    try{await commandCall(r,staffingCommandPath+'/'+r.command.operationId+'/prepare',{method:'POST',body:'{}'});}
    catch(error){
     if(error?.status===409&&error.serverRejected===true&&error.acceptedResult===undefined
      &&(error.code===missingPatternCode&&error.message===missingPatternMessage&&error.operationOutcome==='rejected'
       ||error.code===coverAllRequiredCode&&error.operationOutcome!=='unknown')){
-     const current=currentCommand(r);
-     save({...current,command:{...current.command,phase:'PREPARING',preparationIssue:{code:error.code,message:error.code===coverAllRequiredCode?coverAllRequiredMessage:missingPatternMessage,
+     const current=currentCommand(r),{preparationUnknown,...knownCommand}=current.command;
+     save({...current,command:{...knownCommand,phase:'PREPARING',preparationIssue:{code:error.code,message:error.code===coverAllRequiredCode?coverAllRequiredMessage:missingPatternMessage,
       principal:copy(owner),encoded:r.encoded,operationId:r.command.operationId,semanticDigest:r.command.semanticDigest,weekBindings:copy(staffingBindings(r))}}});
     }
     throw error;
@@ -505,7 +523,37 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
    throw error;
   }finally{sending=false;}
  }
- return Object.freeze({pending,
+ 
+ const historyIndexKey=key+':elapsed-history-index',historyPrefix=key+':elapsed-history:';
+ function historyIndex(){const raw=storage.getItem(historyIndexKey);if(raw===null)return{raw,ids:[]};let ids;try{ids=JSON.parse(raw);}catch{throw Error('Saved original history index cannot be read; preserve it.');}
+  if(!Array.isArray(ids)||ids.some(id=>!UUID.test(id))||new Set(ids).size!==ids.length)throw Error('Saved original history index changed; preserve it.');return{raw,ids};}
+ function historyEntry(operationId){if(!UUID.test(operationId||''))throw Error('Exact archived original identity required.');const raw=storage.getItem(historyPrefix+operationId);if(raw===null)throw Error('The preserved original history entry is missing.');let entry;try{entry=JSON.parse(raw);}catch{throw Error('The preserved original history entry cannot be read.');}
+  if(!entry||Object.keys(entry).sort().join(',')!=='observedServerState,observedServiceDate,operationId,originalRaw,schema'||entry.schema!=='custodial.scheduler-elapsed-original-history.v1'||entry.operationId!==operationId||!['PREPARING','PREPARED'].includes(entry.observedServerState)||!civilDate(entry.observedServiceDate)||typeof entry.originalRaw!=='string')throw Error('The preserved original history entry changed.');
+  const record=decodeControl(entry.originalRaw);if(!archivableOriginal(record)||record.command.operationId!==operationId||record.body.end_date>=entry.observedServiceDate)throw Error('Preserved history does not match this fully elapsed original.');return{raw,entry,record};}
+ function expiredStaffingHistory(){identity();return historyIndex().ids.map(operationId=>{const{entry,record}=historyEntry(operationId);return{operationId,startDate:record.body.start_date,endDate:record.body.end_date,commandKind:record.body.command_kind,observedState:entry.observedServerState,observedServiceDate:entry.observedServiceDate};});}
+ function archivableOriginal(r){return isStaffingCommand(r)&&r.state==='PENDING'&&['PREPARING','PREPARED'].includes(r.command.phase)&&UUID.test(r.command.operationId||'')&&!r.command.confirmationAttempted&&r.command.confirmationKey===null&&!r.command.preparationUnknown&&!r.command.cancellationAttempt&&(!r.command.coverallAttempt||r.command.coverallAttempt.phase==='PREPARED');}
+ async function archiveElapsedStaffingOriginal(){identity();const originalRaw=storage.getItem(key),r=read();if(sending||!permissions(auth).absences||!archivableOriginal(r))throw Error('Only a known, unattempted, fully elapsed original may be preserved separately. UNKNOWN and in-flight work stays active.');
+  sending=true;try{const value=await readCommand(r);currentCommand(r);const status=staffingDateEligibility(value,r);
+   if(!['PREPARING','PREPARED'].includes(value.state)||status.state!=='EXPIRED'||r.body.end_date>=status.currentServiceDate||!archivableOriginal(read()))throw Error('The complete original window is not known to be elapsed. Preserve the active original; no dates were shifted.');
+   if(r.command.coverallAttempt)requireCoverAllSummary(value.coverallChoice,r);
+   const sameActive=()=>{identity();if(!permissions(auth).absences)throw Error('Absence permission changed; active original was not released.');if(storage.getItem(key)!==originalRaw)throw Error('The active original changed; it was not released.');};sameActive();
+   const archiveKey=historyPrefix+r.command.operationId,entryRaw=JSON.stringify({schema:'custodial.scheduler-elapsed-original-history.v1',operationId:r.command.operationId,originalRaw,observedServerState:value.state,observedServiceDate:status.currentServiceDate}),existing=storage.getItem(archiveKey);
+   if(existing!==null&&existing!==entryRaw)throw Error('A different immutable original already occupies this history identity. Active work is preserved.');
+   if(existing===null)storage.setItem(archiveKey,entryRaw);if(storage.getItem(archiveKey)!==entryRaw)throw Error('The complete original could not be preserved; active work was not released.');sameActive();
+   const index=historyIndex(),ids=index.ids.includes(r.command.operationId)?index.ids:[...index.ids,r.command.operationId],nextIndex=JSON.stringify(ids);
+   if(storage.getItem(historyIndexKey)!==index.raw)throw Error('Original history changed concurrently; active work was not released.');
+   if(index.raw!==nextIndex)storage.setItem(historyIndexKey,nextIndex);if(storage.getItem(historyIndexKey)!==nextIndex||storage.getItem(archiveKey)!==entryRaw)throw Error('Original history storage is unconfirmed; active work was not released.');sameActive();
+   storage.removeItem(key);if(storage.getItem(key)!==null)throw Error('The active pointer changed; the immutable old original remains preserved.');dateObservation=null;onState(null);
+   return{archived:true,operationId:r.command.operationId,serverState:value.state,serverRecordChanged:false,newRequestSubmitted:false};
+  }finally{sending=false;}
+ }
+ async function readExpiredStaffingOriginal(operationId){identity();if(sending||!permissions(auth).absences)throw Error('Current absence read access and settled work are required.');const saved=historyEntry(operationId);sending=true;
+  try{const value=validateStaffingPreview(await api(staffingCommandPath+'/'+operationId,{method:'GET',expectedManagerId:owner.managerId}),saved.record);identity();if(!permissions(auth).absences||storage.getItem(historyPrefix+operationId)!==saved.raw)throw Error('The original history or read permission changed.');if(saved.record.command.coverallAttempt)requireCoverAllSummary(value.coverallChoice,saved.record);
+   return{operationId,state:value.state,currentServiceDate:civilDate(value.current_service_date)?value.current_service_date:null,startDate:saved.record.body.start_date,endDate:saved.record.body.end_date,readOnly:true};
+  }finally{sending=false;}
+ }
+
+ return Object.freeze({pending,staffingDateStatus,expiredStaffingHistory,archiveElapsedStaffingOriginal,readExpiredStaffingOriginal,
   async runVacancy(body,reviewed,binding){identity();if(read()||sending)throw Error('Resolve the original scheduler work first.');
    if(!permissions(auth).management||binding?.managerId!==owner.managerId)throw Error('Current owner vacancy access is required.');
    await validateVacancyPreview(reviewed,body,binding);identity();if(read()||!permissions(auth).management)throw Error('The current vacancy operation changed.');
@@ -514,27 +562,30 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
    const r={schema:'custodial.scheduler-pending.v1',base,managerId:owner.managerId,path,body:confirmed,encoded:JSON.stringify(confirmed),
     state:'PENDING',receipt:null,error:null,vacancy:vacancyWitness(reviewed)};save(r);return send(r);
   },
-  async readCoverAllOptions(){const r=read();
+  async readCoverAllOptions(){let r=read();
    if(!isStaffingCommand(r)||r.state!=='PENDING'||r.body.command_kind!=='absence'||!UUID.test(r.command.operationId||'')
     ||r.command.confirmationAttempted||r.command.cancellationAttempt||!permissions(auth).coverall)throw Error('Current CoverAll access and an original unconfirmed third-absence command are required.');
    if(sending)throw Error('Original staffing work is already in progress.');sending=true;
-   try{const options=validateCoverAllOptions(await commandCall(r,staffingCommandPath+'/'+r.command.operationId+'/coverall-options',{method:'GET'}),r);
+   try{const original=await readCommand(r);if(!r.command.coverallAttempt)requireCurrentStaffingDate(original,r);r=read();
+    const options=validateCoverAllOptions(await commandCall(r,staffingCommandPath+'/'+r.command.operationId+'/coverall-options',{method:'GET'}),r);
     if(!permissions(auth).coverall)throw Error('CoverAll permission changed during readback.');
-    if(r.command.coverallAttempt&&options.choice){const summary=requireCoverAllSummary(options.choice,r);const current=currentCommand(r);
+    if(r.command.coverallAttempt&&options.choice&&staffingDateEligibility(original,r).state==='CURRENT'){const summary=requireCoverAllSummary(options.choice,r);const current=currentCommand(r);
      save({...current,command:{...current.command,coverallAttempt:{...current.command.coverallAttempt,phase:current.command.coverallAttempt.phase==='PREPARED'?'PREPARED':'OBSERVED',choiceDigest:summary.choiceDigest}}});}
     return options;
    }finally{sending=false;}
   },
   async prepareCoverAll(options,days,{assertCurrent=()=>{}}={}){const r=read();
    if(!isStaffingCommand(r)||r.state!=='PENDING'||r.body.command_kind!=='absence'||r.command.phase!=='PREPARING'
-    ||r.command.confirmationAttempted||r.command.cancellationAttempt||r.command.coverallAttempt||!permissions(auth).coverall)
+    ||r.command.confirmationAttempted||r.command.preparationUnknown||r.command.cancellationAttempt||r.command.coverallAttempt||!permissions(auth).coverall)
     throw Error('Only the original unattempted third-absence CoverAll choice may be prepared. Read UNKNOWN outcomes; do not resend.');
    validateCoverAllOptions(options,r);if(options.choice)throw Error('An original CoverAll choice already exists. Read its saved outcome.');
    const selected=validateCoverAllDays(options,days);if(sending)throw Error('Original staffing work is already in progress.');sending=true;
    try{
+    const original=await readCommand(r);requireCurrentStaffingDate(original,r);if(original.state!=='PREPARING')throw Error('Read the original prepared staffing status; no new CoverAll choice was sent.');
     assertCurrent();const fresh=validateCoverAllOptions(await commandCall(r,staffingCommandPath+'/'+r.command.operationId+'/coverall-options',{method:'GET'}),r);
     if(JSON.stringify(fresh)!==JSON.stringify(options))throw Error('The retained two-absence plan or source-approved capacity changed. Review it again.');
     assertCurrent();currentCommand(r);validateCoverAllDays(fresh,selected);if(!permissions(auth).coverall)throw Error('CoverAll permission changed before preparation.');
+    const finalOriginal=await readCommand(r);requireCurrentStaffingDate(finalOriginal,r);if(finalOriginal.state!=='PREPARING')throw Error('The original staffing state changed; no CoverAll choice was sent.');assertCurrent();currentCommand(r);if(!permissions(auth).coverall)throw Error('CoverAll permission changed before preparation.');
     const choice=nonce();if(!UUID.test(choice||''))throw Error('Original CoverAll choice identity unavailable.');
     const body={choice_id:choice,days:selected},attempted={...r,command:{...r.command,coverallAttempt:{phase:'ATTEMPTED',choiceId:choice,choiceDigest:null,encoded:JSON.stringify(body),
      principal:copy(owner),operationId:r.command.operationId,semanticDigest:r.command.semanticDigest,weekBindings:copy(staffingBindings(r)),
@@ -547,7 +598,8 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
     return await readCommand(read());
    }finally{sending=false;}
   },
-  async prepareStaffing(body,binding){identity();absenceCommand(body);if(sending)throw Error('Original staffing work is already in progress.');if(read())throw Error('Resolve the original saved operation first.');
+  async prepareStaffing(body,binding){identity();absenceCommand(body);
+    if(historyIndex().ids.some(id=>historyEntry(id).record.body.client_prepare_key===body.client_prepare_key))throw Error('A new dated request needs a separate preparation identity; the preserved original key cannot be reused.');if(sending)throw Error('Original staffing work is already in progress.');if(read())throw Error('Resolve the original saved operation first.');
    if(!permissions(auth).absences||!civilDate(binding?.weekStart)||!UUID.test(binding?.publicationId||'')||!UUID.test(binding?.versionId||''))throw Error('A current published staffing basis and absence permission are required.');
    const date=new Date(body.start_date+'T00:00:00Z');date.setUTCDate(date.getUTCDate()-(date.getUTCDay()+6)%7);
    if(date.toISOString().slice(0,10)!==binding.weekStart)throw Error('The staffing date is outside its reviewed week.');
@@ -564,7 +616,7 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
    sending=true;try{return await reviewCommand(r);}finally{sending=false;}
   },
   async retryStaffingPreparation(){const r=read();
-   if(!isStaffingCommand(r)||r.state!=='PENDING'||r.command.phase!=='PREPARING'||!r.command.preparationIssue||r.command.confirmationAttempted||r.command.cancellationAttempt||r.command.coverallAttempt||r.command.preparationIssue.code!==missingPatternCode)
+   if(!isStaffingCommand(r)||r.state!=='PENDING'||r.command.phase!=='PREPARING'||!r.command.preparationIssue||r.command.preparationUnknown||r.command.confirmationAttempted||r.command.cancellationAttempt||r.command.coverallAttempt||r.command.preparationIssue.code!==missingPatternCode)
     throw Error('Only the original missing-pattern preparation may be explicitly retried. Confirmation recovery is read-only.');
    if(sending)throw Error('Original staffing work is already in progress.');
    sending=true;try{return await reviewCommand(r,true);}finally{sending=false;}
@@ -572,12 +624,12 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
   async cancelStaffingPreparation(){const r=read();
    if(!isStaffingCommand(r)||r.state!=='PENDING'||!['PREPARING','PREPARED'].includes(r.command.phase)
     ||!UUID.test(r.command.operationId||'')||!HASH.test(r.command.semanticDigest||'')||r.command.confirmationAttempted
-    ||r.command.confirmationKey!==null||r.command.cancellationAttempt||r.command.coverallAttempt&&r.command.coverallAttempt.phase!=='PREPARED')
+    ||r.command.confirmationKey!==null||r.command.preparationUnknown||r.command.cancellationAttempt||r.command.coverallAttempt&&r.command.coverallAttempt.phase!=='PREPARED')
     throw Error('Only an unattempted original unpublished preparation may be cancelled. Read the original outcome.');
    if(sending)throw Error('Original staffing work is already in progress.');sending=true;
    try{
     const value=validateUnpublishedOriginal(await commandCall(r,staffingCommandPath+'/'+r.command.operationId,{method:'GET'}),r);
-    cancellationCurrent(r);
+    cancellationCurrent(r);requireCurrentStaffingDate(value,r);
     if(!['PREPARING','PREPARED'].includes(value.state))throw Error('The original preparation is no longer cancellable.');
     const attempted={...r,command:{...r.command,cancellationAttempt:{principal:copy(owner),encoded:r.encoded,
      operationId:r.command.operationId,semanticDigest:r.command.semanticDigest,weekBindings:copy(staffingBindings(r)),createdAt:value.created_at}}};
@@ -601,8 +653,7 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
    validateStaffingPreview(reviewed,r);if(sending)throw Error('Original staffing work is already in progress.');sending=true;
    try{
     const current=await readCommand(r);const latest=read();
-    if(r.body.command_kind==='cancel_absence'&&(!civilDate(current.current_service_date)||r.body.start_date<current.current_service_date))
-     throw Error('The server civil date advanced; the original cancellation must not rewrite elapsed service days.');
+    requireCurrentStaffingDate(current,r);
     if(current.state!=='PREPARED'||current.preview_digest!==reviewed.preview_digest||current.input_digest!==reviewed.input_digest
       ||current.candidate_set_digest!==reviewed.candidate_set_digest||JSON.stringify(current.preview)!==JSON.stringify(reviewed.preview))throw Error('The staffing preview changed before confirmation.');
     if(latest.command.coverallAttempt&&!permissions(auth).coverall)throw Error('CoverAll permission changed before the original confirmation.');
