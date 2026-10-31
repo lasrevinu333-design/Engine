@@ -71,7 +71,7 @@ jobs:
               && grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger" \
               && grep -Fq 'Phone Assignments' <<<"$phone_assignments" \
               && grep -Fq 'tr:has(.status-not_cleaned)' <<<"$shared_css" \
-              && grep -Fq 'ops-manager-auth.v6.custodial-leadership-pin' <<<"$manifest" \
+              && grep -Fq 'ops-manager-auth.v6.http-only-boundary' <<<"$manifest" \
               && grep -Fq 'operational-analytics.v1' <<<"$manifest" \
               && grep -Fq "$expected" <<<"$manifest" \
               && test "$published_manifest_digest" = "$expected_manifest_digest" \
@@ -108,7 +108,7 @@ jobs:
           grep -Fq "new URL('./messages.html'" <<<"$legacy_messenger"
           grep -Fq 'Phone Assignments' <<<"$phone_assignments"
           grep -Fq 'tr:has(.status-not_cleaned)' <<<"$shared_css"
-          grep -Fq 'ops-manager-auth.v6.custodial-leadership-pin' <<<"$manifest"
+          grep -Fq 'ops-manager-auth.v6.http-only-boundary' <<<"$manifest"
           grep -Fq 'operational-analytics.v1' <<<"$manifest"
           grep -Fq "$expected" <<<"$manifest"
           test "$published_manifest_digest" = "$expected_manifest_digest"

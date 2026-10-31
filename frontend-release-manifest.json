@@ -3,11 +3,11 @@
   "audited_start_commit": "59d03b83132a5515f0ca8c4e11fe47de71eadf91",
   "frontend_commit_sha_source": "exact-release-pair-input-and-github-pages-deployment-commit",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "0c48b7d1977f5c5187b56cdf96d8bb33ec356792bd81980b7cb98abbfa09513e",
+  "schema_fingerprint": "30218d9f5885ac5a8ca77785338a546da685d7e277c0633929e673ef80a870db",
   "schema_transition": {
     "transition_id": "custodial-full-hour-test-20261029",
     "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
-    "to_fingerprint": "0c48b7d1977f5c5187b56cdf96d8bb33ec356792bd81980b7cb98abbfa09513e",
+    "to_fingerprint": "30218d9f5885ac5a8ca77785338a546da685d7e277c0633929e673ef80a870db",
     "expires_at": "2026-11-01T15:12:05Z"
   },
   "api_contract_versions": {
@@ -18,7 +18,7 @@
     "schedule": "schedule.v2",
     "coverall_assignments": "coverall-assignments.v2.secure-links",
     "operational_analytics": "operational-analytics.v1",
-    "ops_manager_auth": "ops-manager-auth.v6.custodial-leadership-pin",
+    "ops_manager_auth": "ops-manager-auth.v6.http-only-boundary",
     "gemini_console": "gemini-console.v2",
     "guest_reports": "guest-reports.v2.approval-gated",
     "feedback": "feedback.v3.enrolled-authority"

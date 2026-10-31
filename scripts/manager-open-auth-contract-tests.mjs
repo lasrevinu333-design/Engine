@@ -70,13 +70,13 @@ assert.doesNotMatch(viewer,/Messenger|Moxie|Scheduler|Device Security|Manager Ac
 
 assert.match(liveWorkflow,/Custodial Leadership Published Asset Verification/);
 assert.match(liveWorkflow,/custodial-leadership-enrollment\.mjs/);assert.match(liveWorkflow,/Leadership PIN/);assert.match(liveWorkflow,/SELF_ASSERTED_NAME/);
-assert.match(liveWorkflow,/ops-manager-auth\.v6\.custodial-leadership-pin/);
+assert.match(liveWorkflow,/ops-manager-auth\.v6\.http-only-boundary/);
 assert.match(liveWorkflow,/! grep -Fq 'messenger-runtime-patch\.js'/);
 assert.match(liveWorkflow,/grep -Fq 'employeeDeviceAuthority'/);
 assert.match(liveWorkflow,/grep -Fq 'ops_manager_shared_chat_v1'/);
 assert.doesNotMatch(liveWorkflow,/Verify published shared manager-enrollment release/);
 assert.doesNotMatch(liveWorkflow,/grep -Fq ['"]ops\/shared-enrollment/);
-assert.equal(releaseManifest.api_contract_versions.ops_manager_auth,'ops-manager-auth.v6.custodial-leadership-pin');
+assert.equal(releaseManifest.api_contract_versions.ops_manager_auth,'ops-manager-auth.v6.http-only-boundary');
 assert.equal(releaseManifest.api_contract_versions.operational_analytics,'operational-analytics.v1');
 
 console.log('CUSTODIAL_LEADERSHIP_ACCESS_CONTRACT_PASS');
