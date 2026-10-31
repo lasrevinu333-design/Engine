@@ -6,7 +6,7 @@ layout: null
   "frontend_commit_sha": "{{ site.github.build_revision }}",
   "deployment_source": "github-pages-jekyll-build",
   "backend_minimum_version": "release-2026.07.19.custodial-v3.12",
-  "schema_fingerprint": "04e4c3d7abaa71cdf36a164a483ee1fa5efef77ab1711b07a201f515b85248d6",
+  "schema_fingerprint": "8f9c8059f07dcebbba60f3ef143b8e7a58fe063a960d08b05dae0b4ef2e03d80",
   "api_contract_versions": {
     "scan": "scan.v4.snapshot-bound-authority",
     "events": "events.v3",
@@ -46,7 +46,7 @@ layout: null
   "schema_transition": {
     "transition_id": "custodial-full-hour-test-20261029",
     "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
-    "to_fingerprint": "04e4c3d7abaa71cdf36a164a483ee1fa5efef77ab1711b07a201f515b85248d6",
+    "to_fingerprint": "8f9c8059f07dcebbba60f3ef143b8e7a58fe063a960d08b05dae0b4ef2e03d80",
     "expires_at": "2026-11-01T15:12:05Z"
   }
 }
