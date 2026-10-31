@@ -235,6 +235,149 @@ function create({api,auth=root.MemphisAuth,managerId,baseUrl,storage=root.localS
    storage.removeItem(key);if(storage.getItem(key)!==null)error('Accepted receipt could not be cleared.');onState(null);return {current:snapshot.authority_revision===receipt.authority_revision,receipt:COPY(receipt)};
   }});
 }
-const api=Object.freeze({create,selectors,validatePreview,validateReceipt,validateUnresolvedPreview,unresolvedReasons,validSnapshotWindow,loadInitialEntry,selectInitial,paths});root.MemphisApprovedSchedule=api;
+// Native/manual activation is distinct from the historical source/template flow.
+const manualPath='/static-weekly/manual-activation';
+function civilDate(value){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||value.startsWith('0000-'))return false;const n=Date.parse(value+'T12:00:00Z');return Number.isFinite(n)&&new Date(n).toISOString().slice(0,10)===value;}
+const sevenEnd=value=>new Date(Date.parse(value+'T12:00:00Z')+6*86400000).toISOString().slice(0,10);
+const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+const exactFields=(value,fields)=>plain(value)&&Object.keys(value).length===fields.length&&fields.every(k=>Object.hasOwn(value,k));
+function validateManualOptions(roster){
+ const value=roster?.approvedManualActivation;
+ if(value?.schema!=='custodial.approved-manual-activation-options.v2'||!civilDate(value.serviceDate)||!Number.isSafeInteger(value.authorityRevision)||value.authorityRevision<0
+  ||roster.serviceDate!==value.serviceDate||roster.authorityRevision!==value.authorityRevision||!Array.isArray(value.choices)||value.choices.length>256)
+  error('Current approved activation choices are unavailable. No activation was sent.');
+ const seen=new Set();for(const row of value.choices){if(!exactFields(row,['packetId','label','serviceDate','windowEnd','expectedRevision','activationEligible'])
+  ||!UUID.test(row.packetId||'')||typeof row.label!=='string'||!row.label.trim()||row.label.length>400||row.serviceDate!==value.serviceDate
+  ||row.windowEnd!==sevenEnd(row.serviceDate)||row.expectedRevision!==value.authorityRevision||row.activationEligible!==true||seen.has(row.packetId))
+  error('The server-listed activation selection is invalid.');seen.add(row.packetId);}
+ const a=value.active;if(a!==null&&(!exactFields(a,['sourceId','publicationId','projectionId','authorityRevision','projectionStatus','normalSourceLocked','initialOperationId','initialProjectionId'])
+  ||!UUID.test(a.sourceId||'')||!UUID.test(a.publicationId||'')||!(a.projectionId===null||UUID.test(a.projectionId||''))
+  ||a.authorityRevision!==value.authorityRevision||typeof a.projectionStatus!=='string'||!a.projectionStatus||a.normalSourceLocked!==true
+  ||!UUID.test(a.initialOperationId||'')||!UUID.test(a.initialProjectionId||'')))error('The accepted normal source status is unavailable.');
+ return COPY(value);
+}
+function validateManualPreview(value,choice,managerId){
+ if(value?.status==='CURRENT_TYPED_EMPLOYMENT_PACKET_REQUIRED'&&value.activationEligible===false)
+  error('A current employment-aware approved packet is required. The original packet remains preserved; nothing was activated.');
+ if(value?.schema!=='custodial.approved-manual-activation-preview.v2'||value.status!=='PREVIEW_ONLY'||value.published!==false
+  ||value.managerId!==managerId||value.packetId!==choice.packetId||value.expectedRevision!==choice.expectedRevision
+  ||value.serviceDate!==choice.serviceDate||value.windowEnd!==choice.windowEnd||!UUID.test(value.sourceId||'')
+  ||!HASH.test(value.previewDigest||'')||!HASH.test(value.sourceDigest||'')||!HASH.test(value.packetPreviewDigest||'')||!HASH.test(value.packetFingerprint||'')
+  ||value.operationIdRequired!==true||value.activationKind!=='INITIAL_EMPLOYMENT_OPERATIONALIZATION'||value.normalPatternSolverInvoked!==false
+  ||value.operationalAdjustmentPending!==true||value.atomicRosterAndPublication!==true||value.currentPositions!==22||value.additionalCapacityPositions!==8
+  ||value.prospectivePositions!==30||value.newEmployees!==0||!Array.isArray(value.employmentRevisionVector)||value.employmentRevisionVector.length!==14)
+  error('The actual approved activation preview is incomplete or changed. Nothing was activated.');
+ const seen=new Set();for(const row of value.employmentRevisionVector){const id=row?.serviceDate+':'+row?.employeeId;
+  if(!exactFields(row,['serviceDate','employeeId','employmentRevision','requestId'])||!civilDate(row.serviceDate)||row.serviceDate<value.serviceDate||row.serviceDate>value.windowEnd
+   ||!UUID.test(row.employeeId||'')||!Number.isSafeInteger(row.employmentRevision)||row.employmentRevision<0||!(row.requestId===null||UUID.test(row.requestId||''))||seen.has(id))
+   error('The original seven-day employment bindings changed.');seen.add(id);}
+ return COPY(value);
+}
+function validateManualReceipt(receipt,body,context,managerId){
+ if(!receipt||!['PERSISTED_CURRENT','ACCEPTED_ORIGINAL_RECEIPT'].includes(receipt.status))error('Activation acceptance is unverified. Keep the exact original request.');
+ if(receipt.schema==='custodial.approved-manual-activation-confirmation.v1'){
+  if(body.operation_id!==undefined||receipt.ok!==true||receipt.persistence_status!=='PERSISTED'||receipt.packetId!==body.packet_id
+   ||receipt.previewDigest!==body.preview_digest||receipt.solverInvoked!==false||!UUID.test(receipt.source_id||'')||!UUID.test(receipt.publication_id||'')
+   ||!UUID.test(receipt.projection_id||'')||!HASH.test(receipt.lunch_document_identity||'')||!Number.isSafeInteger(receipt.authority_revision)
+   ||receipt.authority_revision<=body.expected_revision||!civilDate(receipt.serviceDate)||receipt.windowEnd!==sevenEnd(receipt.serviceDate))error('The original v1 activation receipt does not match its saved request.');
+ }else if(receipt.schema==='custodial.approved-manual-coverall-source-confirmation.v2'){
+  if(!UUID.test(body.operation_id||'')||receipt.operationId!==body.operation_id||receipt.managerId!==managerId
+   ||!UUID.test(receipt.sourceId||'')||!UUID.test(receipt.publicationId||'')||!UUID.test(receipt.projectionId||'')||!HASH.test(receipt.lunchDocumentIdentity||'')
+   ||!Number.isSafeInteger(receipt.authorityRevision)||receipt.authorityRevision<=body.expected_revision||receipt.sourceId!==context?.sourceId
+   ||receipt.frameStart!==context?.serviceDate||receipt.frameEnd!==context?.windowEnd||receipt.normalPatternSolverInvoked!==false
+   ||typeof receipt.operationalSelectionSolverInvoked!=='boolean'||receipt.samePhysicalTransaction!==true||receipt.actualPositions!==30
+   ||receipt.newEmployeesCreated!==false||receipt.weeklyBaselineChanged!==false
+   ||JSON.stringify(receipt.employmentRevisionVector)!==JSON.stringify(context?.employmentRevisionVector)
+   ||(receipt.packetId!==undefined&&receipt.packetId!==body.packet_id)||(receipt.previewDigest!==undefined&&receipt.previewDigest!==body.preview_digest)
+   ||(receipt.idempotencyKey!==undefined&&receipt.idempotencyKey!==body.idempotency_key))error('The native activation receipt does not match its original operation and employment preview.');
+ }else error('Unsupported activation receipt. Preserve the original request.');
+ return COPY(receipt);
+}
+function createManualActivation({api,auth=root.MemphisAuth,managerId,baseUrl,storage=root.localStorage,nonce=()=>root.crypto.randomUUID(),otherPending=()=>false,onState=()=>{}}={}){
+ if(typeof api!=='function'||!UUID.test(managerId||'')||typeof baseUrl!=='string')error('Current manager and scheduler service are required.');
+ const base=new URL(baseUrl).origin,key='mz_manual_activation_pending_v1:'+encodeURIComponent(base)+':'+managerId;
+ let busy=false,broken=false,choices=null,reviewed=null;
+ const principal=()=>{const s=root.MemphisSchedulerActions,p=s?.principal(auth);if(!p||p.managerId!==managerId||!s.permissions(auth).management)error('Current leadership management access is required. Original activation remains saved.');return p;};
+ const same=(a,b)=>root.MemphisSchedulerActions.same(a,b);
+ function read(){let text;try{text=storage.getItem(key);}catch{broken=true;error('Original activation recovery cannot be read.');}if(text===null)return null;
+  try{const r=JSON.parse(text),b=r.body;if(text.length>12000||!['custodial.manual-activation-pending.v1','custodial.manual-activation-pending.v2'].includes(r.schema)
+   ||r.managerId!==managerId||r.base!==base||r.path!==manualPath+'/confirm'||r.encoded!==JSON.stringify(b)||!['PENDING','ACCEPTED','REJECTED'].includes(r.state)
+   ||!exactFields(b,b?.operation_id===undefined?['packet_id','expected_revision','preview_digest','idempotency_key']:['packet_id','operation_id','expected_revision','preview_digest','idempotency_key'])
+   ||!UUID.test(b.packet_id||'')||!Number.isSafeInteger(b.expected_revision)||b.expected_revision<0||!HASH.test(b.preview_digest||'')||!UUID.test(b.idempotency_key||'')
+   ||(b.operation_id!==undefined&&!UUID.test(b.operation_id))||(r.state==='ACCEPTED'&&!r.acceptance)
+   ||(r.state==='REJECTED'&&(r.acceptance||![400,401,403,409,422].includes(r.rejectionStatus)||typeof r.error!=='string')))throw Error();
+   if(r.acceptance)validateManualReceipt(r.acceptance,b,r.context,managerId);return r;
+  }catch{broken=true;error('Original activation recovery is invalid. Preserve its bytes; no request was sent.');}}
+ function save(r){const text=JSON.stringify(r);storage.setItem(key,text);if(storage.getItem(key)!==text)error('Original activation could not be saved. Nothing was sent.');onState(COPY(r));}
+ function pending(){const r=read();onState(r?COPY(r):null);return r;}
+ async function bound(path,options,record=null){const actor=principal(),raw=record?storage.getItem(key):null;if(record&&raw!==JSON.stringify(record))error('Original activation changed before dispatch.');
+  const current=()=>{if(!same(actor,principal()))error('Manager access changed. Original activation remains saved.');if(record&&storage.getItem(key)!==raw)error('Original activation changed during readback. Preserve current bytes.');};
+  current();try{const value=await api(path,{...options,expectedManagerId:managerId});current();return value;}catch(e){current();throw e;}}
+ return Object.freeze({pending,isBlocked:()=>broken||!!read(),
+  async load(){choices=validateManualOptions(await bound(manualPath+'/roster',{method:'GET'}));reviewed=null;return COPY(choices);},
+  async preview(packetId){if(busy||read()||broken||otherPending())error('Resolve the saved scheduler operation first.');const choice=choices?.choices.find(x=>x.packetId===packetId);if(!choice||choices.active)error('Select a current server-listed approved activation packet.');busy=true;
+   try{const value=await bound(manualPath+'/preview',{method:'POST',body:JSON.stringify({packet_id:choice.packetId,expected_revision:choice.expectedRevision})});reviewed=validateManualPreview(value,choice,managerId);return COPY(reviewed);}finally{busy=false;}},
+  async confirm(preview){if(busy||read()||broken||otherPending()||!reviewed||JSON.stringify(preview)!==JSON.stringify(reviewed))error('Review the current original activation preview first.');
+   const operation=nonce(),idempotency=nonce();if(!UUID.test(operation)||!UUID.test(idempotency)||operation===idempotency)error('Distinct original activation identities are required.');
+   const body={packet_id:reviewed.packetId,operation_id:operation,expected_revision:reviewed.expectedRevision,preview_digest:reviewed.previewDigest,idempotency_key:idempotency};
+   const r={schema:'custodial.manual-activation-pending.v2',managerId,base,path:manualPath+'/confirm',body,encoded:JSON.stringify(body),state:'PENDING',acceptance:null,
+    context:{sourceId:reviewed.sourceId,serviceDate:reviewed.serviceDate,windowEnd:reviewed.windowEnd,employmentRevisionVector:COPY(reviewed.employmentRevisionVector)}};save(r);busy=true;
+   try{let receipt;try{receipt=await bound(r.path,{method:'POST',body:r.encoded},r);}catch(e){if(e.acceptedResult!==undefined)receipt=e.acceptedResult;
+    else{if(e.serverRejected===true&&[400,401,403,409,422].includes(e.status))save({...r,state:'REJECTED',rejectionStatus:e.status,error:String(e.message).slice(0,600)});throw e;}}
+    const accepted=validateManualReceipt(receipt,body,r.context,managerId);save({...r,state:'ACCEPTED',acceptance:accepted});return accepted;
+   }finally{busy=false;reviewed=null;}},
+  async recover(){const r=read();if(!r||busy)error('No available original activation recovery.');busy=true;
+   try{const query=new URLSearchParams({idempotency_key:r.body.idempotency_key,...(r.body.operation_id?{operation_id:r.body.operation_id}:{})});
+    const status=await bound(manualPath+'/outcome?'+query,{method:'GET'},r);
+    if(!['custodial.approved-manual-activation-status.v1','custodial.approved-manual-activation-status.v2'].includes(status?.schema)
+     ||status.idempotencyKey!==r.body.idempotency_key||status.doesNotAuthorizeRetry!==true||!['ACCEPTED','NOT_FOUND'].includes(status.state)
+     ||(r.body.operation_id&&status.operationId!==r.body.operation_id))error('Original activation status is unverified. Do not submit it again.');
+    if(status.state==='NOT_FOUND')error('Original activation was not found. Its outcome is unresolved; no confirmation will be resent.');
+    const wanted={managerId,packetId:r.body.packet_id,...(r.body.operation_id?{operationId:r.body.operation_id}:{}),expectedRevision:r.body.expected_revision,previewDigest:r.body.preview_digest,idempotencyKey:r.body.idempotency_key};
+    if(!exactFields(status.original?.request,Object.keys(wanted))||Object.keys(wanted).some(k=>status.original.request[k]!==wanted[k])
+     ||(r.body.operation_id&&status.original.operationId!==r.body.operation_id))error('Original activation request identity changed. Keep the saved request.');
+    const accepted=validateManualReceipt(status.original.receipt,r.body,r.context,managerId);save({...r,state:'ACCEPTED',acceptance:accepted});return accepted;
+   }finally{busy=false;}},
+  acknowledge(snapshot){const r=read();if(!r?.acceptance)error('Verified original acceptance required.');const a=r.acceptance,v2=a.schema==='custodial.approved-manual-coverall-source-confirmation.v2',revision=v2?a.authorityRevision:a.authority_revision,pub=v2?a.publicationId:a.publication_id,proj=v2?a.projectionId:a.projection_id;
+   if(snapshot?.projection_status!=='current'||!Number.isSafeInteger(snapshot.authority_revision)||snapshot.authority_revision<revision||snapshot.current_publication?.publication_id!==pub
+    ||!UUID.test(snapshot.latest_projection?.projection_id||'')||(snapshot.authority_revision===revision&&snapshot.latest_projection.projection_id!==proj))error('Accepted activation remains saved until exact current schedule readback.');
+   storage.removeItem(key);if(storage.getItem(key)!==null)error('Accepted activation recovery could not be retired.');onState(null);return COPY(a);},
+  discardRejected(){const r=read();if(busy||r?.state!=='REJECTED')error('Only a conclusively rejected original activation may be dismissed.');storage.removeItem(key);if(storage.getItem(key)!==null)error('Rejected activation remains saved.');onState(null);reviewed=null;},
+  clearPreview(){reviewed=null;}
+ });
+}
+
+function mountManualActivation({container,before,api,auth,managerId,baseUrl,storage,nonce,otherPending=()=>false,available=()=>true,onState=()=>{},onBusy=()=>{},onAccepted=async()=>null}={}){
+ const doc=container?.ownerDocument||root.document;if(!doc||!container)error('Activation panel is unavailable.');
+ const panel=doc.createElement('section');panel.id='manual-activation-panel';panel.className='status';panel.hidden=true;
+ const node=(tag,text)=>{const n=doc.createElement(tag);if(text)n.textContent=text;return n;},title=node('h2','Approved normal schedule activation'),status=node('p','Reading current approved activation choices…'),label=node('label','Approved staffing plan '),select=node('select'),summary=node('p'),buttons=node('div');status.setAttribute('role','status');status.setAttribute('aria-live','polite');select.id='manual-activation-choice';label.append(select);
+ const button=(id,text)=>{const b=node('button',text);b.id=id;b.type='button';b.className='btn';buttons.append(b);return b;};
+ const refresh=button('manual-activation-refresh','Refresh approved activation'),previewButton=button('manual-activation-preview','Preview approved activation'),confirmButton=button('manual-activation-confirm','Activate reviewed schedule'),recover=button('manual-activation-recover','Read original activation outcome'),dismiss=button('manual-activation-dismiss','Dismiss rejected activation');
+ panel.append(title,status,label,summary,buttons);container.insertBefore(panel,before||null);
+ let options=null,preview=null,busy=false,record=null;
+ const controller=createManualActivation({api,auth,managerId,baseUrl,storage,nonce,otherPending,onState:r=>{record=r;onState(r);refreshControls();}});
+ function allowed(){try{return available()&&root.MemphisSchedulerActions.principal(auth)?.managerId===managerId&&root.MemphisSchedulerActions.permissions(auth).management===true;}catch{return false;}}
+ function refreshControls(){panel.hidden=!allowed();const held=busy||otherPending()||!allowed(),locked=!!options?.active;select.hidden=locked;label.hidden=locked;select.disabled=held||!!record;
+  refresh.disabled=busy||!allowed();previewButton.hidden=locked;previewButton.disabled=held||!!record||!select.value;
+  confirmButton.hidden=locked||!preview;confirmButton.disabled=held||!!record||!preview;recover.hidden=!record;recover.disabled=busy||!allowed();dismiss.hidden=record?.state!=='REJECTED';dismiss.disabled=busy||!allowed();
+  if(record)status.textContent=record.state==='ACCEPTED'?'The original activation was accepted. Its receipt is saved until current schedule readback.':record.state==='REJECTED'?'The original activation was conclusively rejected. Its request is preserved; refresh before dismissing.':'The original activation outcome is unresolved. Read its exact outcome; confirmation will not be resent.';
+ }
+ async function run(work){if(busy)return;busy=true;onBusy(true);refreshControls();try{await work();}catch(e){status.textContent=(record?.state==='ACCEPTED'?'Accepted receipt remains saved. ':'')+String(e.message||e);}finally{busy=false;onBusy(false);refreshControls();}}
+ async function load(){preview=null;options=await controller.load();select.replaceChildren();const empty=node('option','Select an approved staffing plan');empty.value='';select.append(empty);
+  for(const choice of options.choices){const o=node('option',choice.label+' · '+choice.serviceDate+' through '+choice.windowEnd);o.value=choice.packetId;select.append(o);}
+  if(options.active){const a=options.active;title.textContent='Active approved normal source — locked';status.textContent=a.projectionStatus==='current'&&a.projectionId?'The approved normal source is active and locked. Current dated coverage is available.':'The approved normal source is locked. Current dated coverage: '+a.projectionStatus+'. Refresh the current schedule before relying on coverage.';summary.textContent='The seven normal views remain read-only. Use the existing absence/PTO workflow for dated changes; no normal schedule is regenerated here.';}
+  else{title.textContent='Approved normal schedule activation';status.textContent=options.choices.length?'Select the current server-approved staffing plan, then review before activation.':'No current approved activation packet is available. Nothing can be activated.';summary.textContent='Only current approved choices are listed. Staffing, employment and the operational schedule are validated together during activation.';}
+  refreshControls();return options;
+ }
+ async function accept(work){const receipt=await work();preview=null;status.textContent='Activation accepted. Reading the current schedule…';const snapshot=await onAccepted(receipt);controller.acknowledge(snapshot);await load();}
+ refresh.addEventListener('click',()=>run(load));select.addEventListener('change',()=>{preview=null;controller.clearPreview();summary.textContent='Review the selected approved plan before activation.';refreshControls();});
+ previewButton.addEventListener('click',()=>run(async()=>{preview=await controller.preview(select.value);summary.textContent='Approved staffing basis for '+preview.serviceDate+' through '+preview.windowEnd+' · '+preview.currentPositions+' existing positions + '+preview.additionalCapacityPositions+' approved capacity positions; no new employees. The normal pattern stays fixed. Final operational placement is prepared and validated atomically on confirmation.';status.textContent='Preview only — nothing activated. Review the staffing basis before confirming.';}));
+ confirmButton.addEventListener('click',()=>run(()=>accept(()=>controller.confirm(preview))));recover.addEventListener('click',()=>run(()=>accept(()=>controller.recover())));
+ dismiss.addEventListener('click',()=>run(async()=>{await load();controller.discardRejected();await load();}));
+ controller.pending();refreshControls();
+ return Object.freeze({load,refreshControls,pending:controller.pending,normalLocked:()=>!!options?.active,acknowledge:controller.acknowledge,element:panel});
+}
+
+const api=Object.freeze({mountManualActivation,createManualActivation,validateManualOptions,validateManualPreview,validateManualReceipt,manualPath,create,selectors,validatePreview,validateReceipt,validateUnresolvedPreview,unresolvedReasons,validSnapshotWindow,loadInitialEntry,selectInitial,paths});root.MemphisApprovedSchedule=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
