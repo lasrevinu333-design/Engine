@@ -6,9 +6,9 @@ import vm from 'node:vm';
 const root = new URL('../',import.meta.url);
 const sourceDirectory = process.argv.find(x=>x.startsWith('--source-directory='))?.slice('--source-directory='.length);
 const read = name=>readFileSync(sourceDirectory?resolve(sourceDirectory,name):new URL(name,root),'utf8');
-const binding=JSON.parse(readFileSync(new URL('scripts/fixtures/current302-schema-source-binding.json',root),'utf8'));
+const binding=JSON.parse(readFileSync(new URL('scripts/fixtures/current303-schema-source-binding.json',root),'utf8'));
 const good={version:'release-2026.07.19.custodial-v3.12',contracts:{scan:'scan.v4.snapshot-bound-authority'},release_manifest:{schema:{fingerprint:binding.schema_fingerprint}}};
-const cases=[['current',good,true],['prior298',{...good,release_manifest:{schema:{fingerprint:'432052a95830b4a8550cd6478d766bacc2bbbb4b2dd21d44544b238c70c5f001'}}},false],['missing',{},false],['unknown',{...good,release_manifest:{schema:{fingerprint:'0'.repeat(64)}}},false],['wrong-contract',{...good,contracts:{scan:'unsupported'}},false],['http-failure',good,false],['offline',good,false]];
+const cases=[['current',good,true],['prior302',{...good,release_manifest:{schema:{fingerprint:'04e4c3d7abaa71cdf36a164a483ee1fa5efef77ab1711b07a201f515b85248d6'}}},false],['prior298',{...good,release_manifest:{schema:{fingerprint:'432052a95830b4a8550cd6478d766bacc2bbbb4b2dd21d44544b238c70c5f001'}}},false],['missing',{},false],['unknown',{...good,release_manifest:{schema:{fingerprint:'0'.repeat(64)}}},false],['wrong-contract',{...good,contracts:{scan:'unsupported'}},false],['http-failure',good,false],['offline',good,false]];
 let passed=0,failed=0;
 for(const [name,file,fn] of [['page','index.html','verifyBackendCompatibility'],['worker','memphis-scan-sync.js','verifyWorkerBackendCompatibility']]) {
  const source=read(file);

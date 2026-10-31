@@ -1,0 +1,92 @@
+{
+  "schema": "custodial.frontend-retained-source303-binding.v1",
+  "scope": "RETAINED_SOURCE_METADATA_AND_COMPATIBILITY_DECLARATIONS_ONLY",
+  "backend_baseline_commit": "f66a6e9fa248d3d4124ec345644ef134d0c9e54c",
+  "canonical_source_count": 303,
+  "schema_fingerprint": "8f9c8059f07dcebbba60f3ef143b8e7a58fe063a960d08b05dae0b4ef2e03d80",
+  "schema_transition": {
+    "transition_id": "custodial-full-hour-test-20261029",
+    "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "to_fingerprint": "8f9c8059f07dcebbba60f3ef143b8e7a58fe063a960d08b05dae0b4ef2e03d80",
+    "expires_at": "2026-11-01T15:12:05Z"
+  },
+  "backend_source_files": [
+    {
+      "path": "supabase/canonical/schema-fingerprint.txt",
+      "bytes": 65,
+      "sha256": "1e798aa925d33b8646c01ce3a3e0bdfb5562c55a32ee9f05635fe2d71db4102d"
+    },
+    {
+      "path": "supabase/canonical/schema-fingerprint-input.json",
+      "bytes": 7839956,
+      "sha256": "ccde9462dadd63c07d65e6b94125d9b628d87af29c9e9f2f9adcb97f82f5b6c5"
+    },
+    {
+      "path": "supabase/canonical/migration-replay-order.json",
+      "bytes": 57485,
+      "sha256": "3e5a9219707a0724b375d94225940b6271d30dcda1b34a4289a9bf77d290f0dd"
+    },
+    {
+      "path": "release/fresh-only-replay/SOURCE303_SUCCESSOR.json",
+      "bytes": 1874,
+      "sha256": "d51728e9973dcfba729164bce441d45efff8cf10b59f3382ade56efbae515e27"
+    }
+  ],
+  "new_catalog_observation": false,
+  "production": false,
+  "production_applicability": false,
+  "independent_review": false,
+  "release_admission": false,
+  "frontend_pair_admission": false,
+  "full_program_or_physical_acceptance": false,
+  "retained_source303_successor": {
+    "schema": "custodial.ci-fresh-only-exact-source-successor.v1",
+    "scope": "DISPOSABLE_CONSTRUCTION_ONLY_NOT_VENDOR_NORMAL_OR_PRODUCTION_ADMISSION",
+    "predecessor_manifest": {
+      "path": "release/fresh-only-replay/MANIFEST.json",
+      "sha256": "5094a272dcc9f01ccbf043f3de7012e12bdb542606089a0a818629c1ecf86b26",
+      "migrations": 297,
+      "overrides": 22
+    },
+    "predecessor_successor": {
+      "path": "release/fresh-only-replay/SOURCE302_SUCCESSOR.json",
+      "sha256": "e4ebb172dbcdfa58690742b9ff09973d33bf35e93ab53d1ebdc41b5a554bcf69",
+      "bytes": 1882,
+      "source_migrations": 302
+    },
+    "preserved_predecessor_replay": {
+      "path": "release/fresh-only-replay/SOURCE302_REPLAY_ORDER.json",
+      "sha256": "af4d8f471f1e5e6276f3232e396d3511a1ae1767edde093f12fe145f461930a9",
+      "bytes": 57303
+    },
+    "source_migrations": 303,
+    "replay_manifest": {
+      "path": "supabase/canonical/migration-replay-order.json",
+      "sha256": "3e5a9219707a0724b375d94225940b6271d30dcda1b34a4289a9bf77d290f0dd",
+      "bytes": 57485
+    },
+    "append": {
+      "name": "20261031180631_cohort_ticket_transaction_context.sql",
+      "original": {
+        "path": "supabase/migrations/20261031180631_cohort_ticket_transaction_context.sql",
+        "sha256": "063669e808c354d4f4498b13c7597b7603636badc9d2e5f9b5d819cdfeee179b",
+        "bytes": 10348
+      },
+      "selected": {
+        "path": "supabase/migrations/20261031180631_cohort_ticket_transaction_context.sql",
+        "sha256": "063669e808c354d4f4498b13c7597b7603636badc9d2e5f9b5d819cdfeee179b",
+        "bytes": 10348
+      },
+      "atomic_mode": "exact-Source-BEGIN-COMMIT"
+    },
+    "observed_empty_source_fingerprint": "8f9c8059f07dcebbba60f3ef143b8e7a58fe063a960d08b05dae0b4ef2e03d80",
+    "source_capture_scope": "ACTUAL_FRESH303_TICKET_NORMAL_CONSTRUCTION_AND_READ_ONLY_CATALOG",
+    "full_vendor_NORMAL": false,
+    "expected_fingerprint_authority": null
+  },
+  "preserved_source302_binding": {
+    "path": "scripts/fixtures/current302-schema-source-binding.json",
+    "sha256": "b29026a877990c5da27d670acd10ef74c9e1db415ab0410b307921d4683adede",
+    "bytes": 3656
+  }
+}

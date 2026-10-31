@@ -217,8 +217,21 @@ assert.equal(current302Source.retained_source302_successor.observed_empty_source
 assert.equal(current302Source.retained_source302_successor.full_vendor_NORMAL,false);
 assert.equal(current302Source.retained_source302_successor.expected_fingerprint_authority,null);
 for(const flag of ['new_catalog_observation','production','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(current302Source[flag],false);
-const CANONICAL_SCHEMA_FINGERPRINT = current302Source.schema_fingerprint;
-const ACTIVE_SCHEMA_TRANSITION = current302Source.schema_transition;
+// The additive ticket successor is the current compatibility declaration.
+// Historical302 evidence above remains intact; neither fixture grants release admission.
+const current303Bytes=readFileSync(resolve(root,'scripts/fixtures/current303-schema-source-binding.json'));
+assert.equal(createHash('sha256').update(current303Bytes).digest('hex'),'0f00aeb56dcd180bfb0e37c19910076a5f95f0fba54b8482cea4e4b250ff6a8f');
+const current303Source=JSON.parse(current303Bytes);
+assert.equal(current303Source.schema,'custodial.frontend-retained-source303-binding.v1');
+assert.equal(current303Source.scope,'RETAINED_SOURCE_METADATA_AND_COMPATIBILITY_DECLARATIONS_ONLY');
+assert.equal(current303Source.canonical_source_count,303);
+assert.equal(current303Source.schema_fingerprint,'8f9c8059f07dcebbba60f3ef143b8e7a58fe063a960d08b05dae0b4ef2e03d80');
+assert.equal(current303Source.retained_source303_successor.observed_empty_source_fingerprint,current303Source.schema_fingerprint);
+assert.equal(current303Source.retained_source303_successor.full_vendor_NORMAL,false);
+assert.equal(current303Source.retained_source303_successor.expected_fingerprint_authority,null);
+for(const flag of ['new_catalog_observation','production','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(current303Source[flag],false);
+const CANONICAL_SCHEMA_FINGERPRINT = current303Source.schema_fingerprint;
+const ACTIVE_SCHEMA_TRANSITION = current303Source.schema_transition;
 assert.equal(ACTIVE_SCHEMA_TRANSITION.from_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
 assert.equal(ACTIVE_SCHEMA_TRANSITION.expires_at,PRIOR294_SCHEMA_TRANSITION.expires_at);
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
