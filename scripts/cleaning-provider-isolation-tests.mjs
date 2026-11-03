@@ -1,3 +1,4 @@
+import {normalizeBoundProviderComparison} from './current-provider-comparison-source-boundary.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
@@ -19,6 +20,7 @@ const read=name=>readFileSync(directory+name,'utf8');
 // Immutable packet reviewers may supply its manifest-bound exact baseline;
 // normal execution uses tracked hashes, not local-only historical Git objects.
 const verify=(name,current,normalization='raw',normalize=x=>x)=>{
+  current=normalizeBoundProviderComparison(name,current);
   assertNativeBaseline(base,directory+name,current,normalization);
   if(process.argv[2])assert.equal(current,normalize(readFileSync(join(process.argv[2],name),'utf8')));
 };
@@ -53,7 +55,7 @@ assert.match(historicalRuntime,/new NativeProviderRuntimeOwner.Delivery\(NativeP
   'conditional dependencies do not select a qualified production profile');checks++;
 assertLocalProviderBoundary(read('CustodialNativeRuntime.java'));checks++;
 for(const name of ['NativeCompletionJournal.java','AndroidOfflineAuthorityTimeStore.java','NativeNfcScanHandoff.java','NativeNfcScanAuthority.java']){
-  verify(name,withoutReadinessObservation(name,read(name)));checks++;
+  verify(name,withoutReadinessObservation(name,normalizeBoundProviderComparison(name,read(name))));checks++;
 }
 console.log(JSON.stringify({status:'PASS_CLEANING_PROVIDER_SOURCE_ISOLATION',checks,baseline:base,comparisons,
   limits:'source comparison only; shared runtime constructor and Android/manifest merger behavior still require review and runtime proof'},null,2));

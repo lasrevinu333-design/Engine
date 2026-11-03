@@ -5,11 +5,17 @@ import {fileURLToPath} from 'node:url';
 import {withoutRemovalTransport} from './native-removal-source-boundary.mjs';
 import {assertNativeBaseline,sourceSha256} from './native-source-baselines.mjs';
 import {withoutProviderInterval} from './provider-interval-source-boundary.mjs';
+import {normalizeCurrentFirstAudio} from './native-first-audio-source-boundary.mjs';
+import {assertBoundCurrentProviderSource} from './current-provider-comparison-source-boundary.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const base='df679151ac0384fb6974c6eab2aba07a210d7b9f';
 const path='mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/VaultEngine.java';
-const engine=readFileSync(new URL('../'+path,import.meta.url),'utf8');
+// Historical destructive/expiry mutations keep their genuine F6 source view.
+// Actual current Java is bound first; current removal-refusal cases run below.
+const currentEngine=readFileSync(new URL('../'+path,import.meta.url),'utf8');
+assertBoundCurrentProviderSource('VaultEngine.java',currentEngine);
+const engine=normalizeCurrentFirstAudio('VaultEngine.java',currentEngine);
 if (process.argv.includes('--new-removal-preflight-only')) {
  const bridge=readFileSync(new URL('../mobile/src/custodial/bridge.js',import.meta.url),'utf8');
  const security=readFileSync(new URL('../mobile/src/custodial/native-security.js',import.meta.url),'utf8');
@@ -66,5 +72,7 @@ for(const script of ['native-readiness-observation-tests.mjs','provider-local-ow
  const output=execFileSync(process.execPath,['scripts/'+script],{cwd:root,env:{...process.env,PATH:''},encoding:'utf8'});
  assert.match(output,/PASS/);portable.push(script);checks++;
 }
+const currentRemoval=JSON.parse(execFileSync(process.execPath,['scripts/native-removal-contract-tests.mjs','--new-removal-preflight-only'],{cwd:root,env:{...process.env,PATH:''},encoding:'utf8'}));
+assert.equal(currentRemoval.passed,5);assert.equal(currentRemoval.local_removal_intents,0);assert.equal(currentRemoval.removal_effects,0);checks+=5;
 console.log(JSON.stringify({status:'NATIVE_REMOVAL_SOURCE_PORTABILITY_PASS',checks,base,
  engine_sha256:sourceSha256(engine),portable,limits:'Bounded source and synthetic concurrency proof only; no policy or provider activation.'}));

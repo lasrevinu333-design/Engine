@@ -1,3 +1,5 @@
+import {normalizeCurrentNativeAudioSequence} from './native-audio-sequence-source-boundary.mjs';
+import {assertBoundCurrentProviderSource} from './current-provider-comparison-source-boundary.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {withoutLocalProviderLifecycle, assertLocalProviderBoundary} from './provider-local-owner-source-boundary.mjs';
@@ -12,7 +14,11 @@ const directory = 'mobile/plugins/custodial-native-vault/android/src/main/java/o
 const read = name => readFileSync(directory + name, 'utf8');
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
-const runtime = read('CustodialNativeRuntime.java'), plugin = read('CustodialNativeVaultPlugin.java');
+const actualRuntime = read('CustodialNativeRuntime.java'), plugin = read('CustodialNativeVaultPlugin.java');
+assertBoundCurrentProviderSource('CustodialNativeRuntime.java',actualRuntime);
+// Preserve these older lifecycle mutations in their exact qualified-comparison context.
+// Current constructor behavior is also checked by provider-runtime-construction-tests.
+const runtime = normalizeCurrentNativeAudioSequence('CustodialNativeRuntime.java',actualRuntime);
 assertLocalProviderBoundary(runtime); checks++;
 assertNativeBaseline(base, directory+'CustodialNativeVaultPlugin.java', withoutLocalProviderLifecycle(plugin)); checks++;
 for (const name of ['VaultEngine.java', 'RemovalCoordinator.java', 'NativeProviderJournal.java', 'OfflineAuthorityTime.java',

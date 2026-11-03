@@ -1,13 +1,16 @@
+import {withoutReleaseAdmission} from './provider-release-admission-source-boundary.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {providerEventDecisionPins as pins,validateProviderEventDecisionPins,withoutProviderEventDecisions} from './provider-event-decisions-source-boundary.mjs';
 import {withoutProviderDecisionWire} from './provider-event-decision-wire-source-boundary.mjs';
+import {normalizeCurrentFirstAudio} from './native-first-audio-source-boundary.mjs';
+import {assertBoundCurrentProviderSource,normalizeBoundProviderComparison} from './current-provider-comparison-source-boundary.mjs';
 const sha=value=>createHash('sha256').update(value).digest('hex');let checks=0;
 const equal=(a,b,message)=>{assert.deepEqual(a,b,message);checks++;},reject=fn=>{assert.throws(fn);checks++;};
 equal(pins.base,'6b013c48f1d430f4a229cf5d812fb6926c095111','exact integrated predecessor');
 equal(pins.files.map(row=>row.name),['NativeProviderEventReceipts.java','NativeProviderHttp.java','NativeProviderJournal.java','NativeProviderRuntimeOwner.java','VaultEngine.java'],'five existing provider-only source deltas');
-function requireCurrent(row,source){assert.equal(sha(source),row.current_sha256,'current caller required, predecessor is not acceptance');return withoutProviderEventDecisions(row.name,source);}
+function requireCurrent(row,source){assertBoundCurrentProviderSource(row.name,source);source=normalizeCurrentFirstAudio(row.name,source);assert.equal(sha(source),row.current_sha256,'current caller required, predecessor is not acceptance');return withoutProviderEventDecisions(row.name,source);}
 for(const row of pins.files){
  const current=readFileSync(row.path,'utf8'),prior=requireCurrent(row,current);checks++;
  equal(sha(prior),row.prior_sha256,'all original bytes restored: '+row.name);
@@ -16,7 +19,7 @@ for(const row of pins.files){
  for(const changed of [current+'\n// unknown delta',current.slice(1),prior+' ',current.replace(row.hunks[0].after[0],row.hunks[0].after[0]+' ')])reject(()=>withoutProviderEventDecisions(row.name,changed));
 }
 equal(pins.pinned.length,6,'one new class, four focused tests and one owning runner');
-for(const row of pins.pinned)equal(sha(withoutProviderDecisionWire(row.path,readFileSync(row.path,'utf8'))),row.sha256,'exact new class/test/runner after separately pinned test-only wire delta: '+row.path);
+for(const row of pins.pinned)equal(sha(withoutProviderDecisionWire(row.path,withoutReleaseAdmission(row.path,normalizeCurrentFirstAudio(row.path,readFileSync(row.path,'utf8'))))),row.sha256,'exact new class/test/runner after separately pinned test-only wire delta: '+row.path);
 for(const mutate of [p=>p.extra=true,p=>p.base='0'.repeat(40),p=>p.files.pop(),p=>p.files.reverse(),p=>p.files.push(p.files[0]),
  p=>p.files[0].path='other',p=>p.files[0].prior_sha256='0'.repeat(64),p=>p.files[0].current_sha256='0'.repeat(64),
  p=>p.files[0].hunks=[],p=>p.files[0].hunks.push(p.files[0].hunks[0]),p=>p.files[0].hunks[0].extra=true,
@@ -26,7 +29,7 @@ for(const mutate of [p=>p.extra=true,p=>p.base='0'.repeat(40),p=>p.files.pop(),p
 }
 for(const value of [null,{},[],{files:[]},'unknown'])reject(()=>validateProviderEventDecisionPins(value));
 equal(Object.isFrozen(pins)&&Object.isFrozen(pins.files)&&Object.isFrozen(pins.files[0].hunks[0].after),true,'immutable pinned delta');
-equal(sha(readFileSync('scripts/provider-event-decisions-source-boundary.mjs')),'d55e4bf5ee7c760150aba952be38d1b7e00d38cfb3e91ff89940d09e6145eda3','exact portable owning helper');
+equal(sha(normalizeBoundProviderComparison('scripts/provider-event-decisions-source-boundary.mjs',readFileSync('scripts/provider-event-decisions-source-boundary.mjs','utf8'))),'d55e4bf5ee7c760150aba952be38d1b7e00d38cfb3e91ff89940d09e6145eda3','exact portable owning helper');
 for(const [name,hash] of Object.entries({
  'classification':'f382e593a1d70866f4a7e429379961e98210ee099c08524811e033752a031360',
  'maintenance':'6b42cc547adee79ca266743485567195a624700dc65796fbb374450e088f4bbc',

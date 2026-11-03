@@ -1,0 +1,1304 @@
+package org.memphiszoo.custodial.vault;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+/** Keystore-protected durable state for monotonic offline work time. */
+final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.OfflineAuthorityTimeStore, NativeAssignedActivationJournal.Store, NativePrincipalJournal.Store, NativeLegacyLineageJournal.Store, NativeSeparationFreeze.RecoveryStore {
+    private static final String PREFERENCES = "MemphisZooCustodialOfflineAuthorityTimeV1";
+    private static final String ANCHOR_KEY = "offline_authority_anchor";
+    private static final String ANCHOR_QUARANTINE_RECORD_PREFIX = "offline_authority_anchor_quarantine_record:";
+    private static final String ANCHOR_QUARANTINE_METADATA_PREFIX = "offline_authority_anchor_quarantine_metadata:";
+    private static final String ROLLBACK_FENCE_KEY = "rollback_fence";
+    private static final String SCAN_ENTRIES_KEY = "offline_scan_entries";
+    private static final String SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY = "offline_scan_journal_quarantine_active";
+    private static final String SCAN_JOURNAL_QUARANTINE_PREFIX = "offline_scan_journal_quarantine_record:";
+    private static final String SCAN_JOURNAL_DISPOSITION_LATEST_KEY = "offline_scan_journal_disposition_latest";
+    private static final String SCAN_JOURNAL_DISPOSITION_PREFIX = "offline_scan_journal_disposition:";
+    private static final String NFC_HANDOFFS_KEY = "native_nfc_handoffs";
+    private static final String OCCURRENCE_PREFIX = "offline_occurrence_sha256:";
+    private static final String FINISH_PROOF_PREFIX = "offline_finish_proof_sha256:";
+    private static final String PROTECTION_AAD = "org.memphiszoo.custodial.native-vault.offline-authority-time.v1";
+    private static final int MAX_PROTECTED_RECORD_CHARACTERS = 131_072;
+    private final AndroidProtectedWorkPreferences preferences;
+    private final SharedPreferences rawPreferences;
+    private static final Object NFC_WRITE_LOCK = new Object();
+    private static final Map<SharedPreferences, NfcWrite> UNCERTAIN_NFC_WRITES = new java.util.IdentityHashMap<>();
+    enum NfcWriteResult { DURABLE, REFUSED, UNCERTAIN }
+    private static final class NfcWrite {
+        final String original, candidate;
+        NfcWrite(String original, String candidate) { this.original=original; this.candidate=candidate; }
+    }
+    private final CredentialCipher cipher;
+    private final CredentialCipher legacyLineageCipher;
+
+    AndroidOfflineAuthorityTimeStore(Context context) {
+        this(
+            context.getApplicationContext().getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE),
+            new AndroidKeystoreCipher(PROTECTION_AAD, MAX_PROTECTED_RECORD_CHARACTERS),
+            new AndroidKeystoreCipher(PROTECTION_AAD+".legacy-lineage.v1", MAX_PROTECTED_RECORD_CHARACTERS)
+        );
+    }
+
+    /** Package-private fault-injection seam for the encrypted journal adapter. */
+    AndroidOfflineAuthorityTimeStore(SharedPreferences preferences, CredentialCipher cipher) {
+        this(preferences,cipher,cipher);
+    }
+    private AndroidOfflineAuthorityTimeStore(SharedPreferences preferences,CredentialCipher cipher,CredentialCipher legacyLineageCipher) {
+        this.rawPreferences = preferences;
+        this.preferences = new AndroidProtectedWorkPreferences(preferences);
+        this.cipher = cipher;
+        this.legacyLineageCipher=legacyLineageCipher;
+    }
+
+    /** Ordinary work admission is separate from read-only retained evidence.
+     * Presence of even an unreadable fence denies new authority. Recovery uses
+     * its own purpose-specific path, never an ordinary cached-success return. */
+    @Override public void requireWorkAdmission() throws VaultFailure {
+        try {
+            if (preferences.frozen()) throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE,error); }
+    }
+
+    /** Capture once under original storage locks, decode only the immutable view,
+     * and recheck original complete bytes/admission before reporting. No editor. */
+    NativeReadinessObservation.Snapshot captureReadinessObservation(OfflineAuthorityTime time) throws VaultFailure {
+        synchronized(NFC_WRITE_LOCK) {
+            AndroidProtectedWorkPreferences.ReadOnlyObservation original=preferences.observeReadOnly();
+            boolean uncertain=UNCERTAIN_NFC_WRITES.containsKey(rawPreferences);
+            AndroidOfflineAuthorityTimeStore frozen=new AndroidOfflineAuthorityTimeStore(new AndroidReadOnlyPreferences(original.values),cipher,legacyLineageCipher);
+            return new NativeReadinessObservation.Snapshot(time.readOnlyView(frozen),new NativePrincipalJournal(frozen),new NativeLegacyLineageJournal(frozen),
+                original.frozen || uncertain, () -> { synchronized(NFC_WRITE_LOCK) {
+                    return uncertain==UNCERTAIN_NFC_WRITES.containsKey(rawPreferences) && preferences.matchesReadOnly(original);
+                }});
+        }
+    }
+
+    /** Native owner captures this BEFORE validating/signing its original
+     * principal; final CAS refuses any intervening work or identity mutation.
+     * An existing fence is intentionally not hidden from a fresh inventory. */
+    @Override public Map<String,?> separationRawSnapshot() throws VaultFailure {
+        try{return preferences.protectedSnapshot();}
+        catch(Exception error){throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE,error);}
+    }
+
+    @Override public synchronized void prepareSeparationProbe(Map<String,?> original)throws VaultFailure{
+        final String code=AndroidProtectedWorkPreferences.FAILURE;
+        try{
+            NativeProtectedWorkSnapshot snapshot=NativeProtectedWorkSnapshot.capture(original);
+            Object retained=preferences.recoverableProbe();
+            String encoded;
+            if(retained==null&&!preferences.contains(AndroidProtectedWorkPreferences.PROBE_KEY)){
+                JSONObject pending=new JSONObject().put("schema","custodial.separation-check-pending.v1")
+                    .put("operation_id",UUID.randomUUID().toString()).put("raw_snapshot_sha256",snapshot.digest).put("separation_observed",false);
+                encoded=protect(pending,code,true);
+            }else{
+                if(!(retained instanceof String))throw new VaultFailure(code);
+                encoded=(String)retained;requirePendingProbe(encoded,snapshot.digest);
+            }
+            preferences.prepareProbe(original,encoded);
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(code,error);}
+    }
+
+    private void requirePendingProbe(String encoded,String digest)throws VaultFailure{
+        final String code=AndroidProtectedWorkPreferences.FAILURE;
+        try{
+            JSONObject pending=decodeProtectedRecord(encoded,code);
+            requireKeys(pending,code,"schema","operation_id","raw_snapshot_sha256","separation_observed");
+            if(!"custodial.separation-check-pending.v1".equals(pending.get("schema"))
+                ||!(pending.get("operation_id") instanceof String)
+                ||!pending.getString("operation_id").matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+                ||!digest.equals(pending.get("raw_snapshot_sha256"))||!Boolean.FALSE.equals(pending.get("separation_observed")))throw new VaultFailure(code);
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(code,error);}
+    }
+
+    @Override public synchronized Map<String,?> preparePendingSeparationRecovery()throws VaultFailure{
+        Map<String,Object> raw=new java.util.HashMap<>(separationRawSnapshot());
+        if(raw.containsKey(AndroidProtectedWorkPreferences.FENCE_KEY)||preferences.recoverableProbe()==null)
+            throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        raw.remove(AndroidProtectedWorkPreferences.PROBE_KEY);
+        // Recommit the SAME operation before network, including an ambiguous
+        // earlier cancellation. No missing check is created by this operation.
+        prepareSeparationProbe(raw);
+        return separationRawSnapshot();
+    }
+
+    @Override public synchronized void cancelPendingSeparationRecovery(Map<String,?> captured)throws VaultFailure{
+        if(captured==null)throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        Map<String,Object> raw=new java.util.HashMap<>(captured);
+        Object encoded=raw.remove(AndroidProtectedWorkPreferences.PROBE_KEY);
+        if(raw.containsKey(AndroidProtectedWorkPreferences.FENCE_KEY)||!(encoded instanceof String))
+            throw new VaultFailure(AndroidProtectedWorkPreferences.FAILURE);
+        requirePendingProbe((String)encoded,NativeProtectedWorkSnapshot.capture(raw).digest);
+        preferences.cancelProbe(raw,(String)encoded);
+    }
+
+    @Override public JSONObject readSeparationSnapshotEvidence(Map<String,?> captured)throws VaultFailure{
+        Object encoded=captured==null?null:captured.get(AndroidProtectedWorkPreferences.FENCE_KEY);
+        if(!(encoded instanceof String)||((String)encoded).isEmpty())throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE);
+        return decodeProtectedRecord((String)encoded,NativeProtectedWorkSnapshot.FAILURE);
+    }
+
+    /** Read-only native discovery from EXACT captured ciphertext, not live
+     * getters that could silently cross inventories. No clear records or keys
+     * leave this native-only decoder; the discovery returns digests/IDs only. */
+    @Override public NativeProtectedWorkInventory inspectSeparationSnapshot(Map<String,?> original,NativeSeparationEvidence proof)throws VaultFailure{
+        return NativeProtectedWorkInventory.inspect(original,proof,(key,raw)->{
+            char[] clear=null;
+            try{
+                if(!(raw instanceof String)||((String)raw).isEmpty())throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE);
+                JSONObject envelope=ProviderWireJson.object(((String)raw).getBytes(StandardCharsets.UTF_8),262144);
+                requireKeys(envelope,NativeProtectedWorkSnapshot.FAILURE,"ciphertext","iv");
+                if(!(envelope.get("ciphertext") instanceof String)||!(envelope.get("iv") instanceof String))throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE);
+                CredentialCipher decoder=key.startsWith("legacy_lineage:")?legacyLineageCipher:cipher;
+                clear=decoder.decrypt(new EncryptedSecret(envelope.getString("ciphertext"),envelope.getString("iv")));
+                if(clear.length>MAX_PROTECTED_RECORD_CHARACTERS)throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE);
+                java.nio.ByteBuffer encoded=StandardCharsets.UTF_8.newEncoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                    .encode(java.nio.CharBuffer.wrap(clear));
+                byte[] bytes=new byte[encoded.remaining()];encoded.get(bytes);
+                try{return new NativeProtectedWorkInventory.Decoded(ProviderWireJson.object(bytes,262144),sha256(new String(clear)));}
+                finally{java.util.Arrays.fill(bytes,(byte)0);}
+            }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(NativeProtectedWorkSnapshot.FAILURE,error);}
+            finally{if(clear!=null)VaultValidation.wipe(clear);}
+        });
+    }
+
+    /** Unmounted H04 storage stage. Only the exact signed raw snapshot can be
+     * frozen; semantic/browser inventory remain UNKNOWN. Existing work key is
+     * required, never generated/replaced. This grants no recovery ACK or reuse.
+     */
+    @Override public synchronized void freezeSeparationSnapshot(Map<String,?> original,NativeSeparationEvidence evidence)throws VaultFailure{
+        final String code=AndroidProtectedWorkPreferences.FAILURE;
+        try{
+            if(evidence==null||!NativeProtectedWorkSnapshot.capture(original).digest.equals(evidence.rawSnapshotDigest))
+                throw new VaultFailure(code);
+            JSONObject wire=evidence.json();String protectedRecord=preferences.getString(AndroidProtectedWorkPreferences.FENCE_KEY,null);
+            if(protectedRecord==null)protectedRecord=protect(wire,code,true);
+            else{
+                JSONObject prior=load(AndroidProtectedWorkPreferences.FENCE_KEY,code);
+                if(prior==null||!ProviderWireJson.same(prior,wire))throw new VaultFailure(code);
+            }
+            // Reuses exact ciphertext on ambiguous retry; primitive recommits
+            // it to disk before success. Original records are never rewritten.
+            String probe=preferences.getString(AndroidProtectedWorkPreferences.PROBE_KEY,null);
+            if(probe!=null)requirePendingProbe(probe,evidence.rawSnapshotDigest);
+            preferences.freeze(original,protectedRecord,probe);
+        }catch(VaultFailure error){throw error;}catch(Exception error){throw new VaultFailure(code,error);}
+    }
+
+    private String legacyKey(String key)throws VaultFailure{
+        if(!"principal".equals(key)&&!key.matches("(binding|activation|terminal|invalidated):[a-f0-9-]{36}"))throw NativeLegacyLineageJournal.invalid();
+        return "legacy_lineage:"+key;
+    }
+    @Override public synchronized String loadLegacyRecord(String key)throws VaultFailure{
+        String encoded=preferences.getString(legacyKey(key),null);if(encoded==null)return null;
+        char[] clear=null;
+        try{
+            JSONObject envelope=new JSONObject(encoded);requireKeys(envelope,NativeLegacyLineageJournal.FAILURE,"ciphertext","iv");
+            clear=legacyLineageCipher.decrypt(new EncryptedSecret(envelope.getString("ciphertext"),envelope.getString("iv")));
+            if(clear.length>8192)throw NativeLegacyLineageJournal.invalid();
+            JSONObject record=new JSONObject(String.valueOf(clear));
+            requireKeys(record,NativeLegacyLineageJournal.FAILURE,"key","value");
+            if(!key.equals(record.getString("key")))throw NativeLegacyLineageJournal.invalid();
+            return record.getString("value");
+        }catch(VaultFailure e){throw e;}catch(Exception e){throw NativeLegacyLineageJournal.invalid(e);}
+        finally{if(clear!=null)VaultValidation.wipe(clear);}
+    }
+    @Override public synchronized void saveLegacyRecord(String key,String value)throws VaultFailure{
+        String target=legacyKey(key);char[] clear=null;
+        try{
+            if(value==null||value.length()>4096)throw NativeLegacyLineageJournal.invalid();
+            if(!preferences.contains(target)&&preferences.getAll().keySet().stream().filter(k->k.startsWith("legacy_lineage:")).count()>=1024)
+                throw new VaultFailure("custodial_legacy_lineage_capacity");
+            clear=new JSONObject().put("key",key).put("value",value).toString().toCharArray();
+            EncryptedSecret secret=legacyLineageCipher.encryptWithExistingKey(clear);
+            String encoded=new JSONObject().put("ciphertext",secret.ciphertext).put("iv",secret.iv).toString();
+            if(!preferences.edit().putString(target,encoded).commit()||!encoded.equals(preferences.getString(target,null))
+                ||!value.equals(loadLegacyRecord(key)))throw NativeLegacyLineageJournal.invalid();
+        }catch(VaultFailure e){throw e;}catch(Exception e){throw NativeLegacyLineageJournal.invalid(e);}
+        finally{if(clear!=null)VaultValidation.wipe(clear);}
+    }
+
+    private static final String SERVER_RECEIPT_PREFIX = "authenticated_completion_receipt_sha256:";
+    @Override public synchronized String loadPrincipal() throws VaultFailure {
+        JSONObject record=load("authenticated_principal",NativePrincipalJournal.FAILURE);
+        return record==null?null:record.toString();
+    }
+    @Override public synchronized void savePrincipal(String record) throws VaultFailure {
+        try{save("authenticated_principal",new JSONObject(record),NativePrincipalJournal.FAILURE,true);}
+        catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(NativePrincipalJournal.FAILURE,e);}
+    }
+    @Override public synchronized String loadAssignedActivation() throws VaultFailure {
+        JSONObject record=load("assigned_activation_proof",NativeAssignedActivationJournal.FAILURE);
+        return record==null?null:record.toString();
+    }
+    @Override public synchronized String loadAssignedActivationTransport() throws VaultFailure {
+        JSONObject record=load("assigned_activation_transport",NativeAssignedActivationJournal.FAILURE);
+        return record==null?null:record.toString();
+    }
+    @Override public synchronized void saveAssignedActivationTransport(String record) throws VaultFailure {
+        try {save("assigned_activation_transport",new JSONObject(record),NativeAssignedActivationJournal.FAILURE,true);}
+        catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(NativeAssignedActivationJournal.FAILURE,e);}
+    }
+    @Override public synchronized void saveAssignedActivation(String record) throws VaultFailure {
+        try {save("assigned_activation_proof",new JSONObject(record),NativeAssignedActivationJournal.FAILURE,true);}
+        catch(VaultFailure e){throw e;}
+        catch(Exception e){throw new VaultFailure(NativeAssignedActivationJournal.FAILURE,e);}
+    }
+    private String serverReceiptKey(String key) throws VaultFailure {
+        if (key == null || !key.matches("[a-f0-9]{64}")) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        return SERVER_RECEIPT_PREFIX + key;
+    }
+    @Override public synchronized String loadCompletionReceipt(String key) throws VaultFailure {
+        JSONObject value = load(serverReceiptKey(key), NativeCompletionJournal.FAILURE);
+        if (value == null) return null;
+        if (value.length()!=1 || !(value.opt("receipt") instanceof String)
+            || value.optString("receipt").isEmpty()) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        return value.optString("receipt");
+    }
+    @Override public synchronized void saveCompletionReceipt(String key, String receipt) throws VaultFailure {
+        String target = serverReceiptKey(key);
+        if (!preferences.contains(target) && preferences.getAll().keySet().stream()
+            .filter(name -> name.startsWith(SERVER_RECEIPT_PREFIX)).count() >= 1024)
+            throw new VaultFailure("custodial_native_server_receipt_capacity");
+        try {
+            if (receipt == null || receipt.length() > 65536) throw new VaultFailure(NativeCompletionJournal.FAILURE);
+            JSONObject value = new JSONObject(); value.put("receipt", receipt);
+            save(target, value, NativeCompletionJournal.FAILURE, true);
+        } catch (VaultFailure error) { throw error; }
+        catch (Exception error) { throw new VaultFailure(NativeCompletionJournal.FAILURE,error); }
+    }
+    @Override public synchronized void deleteCompletionReceipt(String key) throws VaultFailure {
+        String target=serverReceiptKey(key), original=preferences.getString(target,null);
+        if (!preferences.edit().remove(target).commit() || preferences.contains(target)) {
+            if (original != null) preferences.edit().putString(target,original).commit();
+            throw new VaultFailure(NativeCompletionJournal.FAILURE);
+        }
+    }
+
+    @Override
+    public OfflineAuthorityTime.OfflineAuthorityAnchor loadAnchor() throws VaultFailure {
+        try {
+            JSONObject value = load(ANCHOR_KEY, "custodial_native_offline_anchor_refused");
+            if (value == null) return null;
+            Set<String> keys = keys(value);
+            Set<String> legacyKeys = setOf(
+                "device_id", "snapshot_id", "generated_at", "expires_at",
+                "anchor_elapsed_realtime_ms", "boot_count"
+            );
+            Set<String> currentKeys = setOf(
+                "device_id", "snapshot_id", "generated_at", "expires_at", "clock_base_at",
+                "anchor_elapsed_realtime_ms", "boot_count", "new_work_authorized", "snapshot_json"
+            );
+            if (!keys.equals(legacyKeys) && !keys.equals(currentKeys)) {
+                throw new VaultFailure("custodial_native_offline_anchor_refused");
+            }
+            boolean legacy = keys.equals(legacyKeys);
+            return new OfflineAuthorityTime.OfflineAuthorityAnchor(
+                value.getString("device_id"),
+                value.getString("snapshot_id"),
+                value.getString("generated_at"),
+                value.getString("expires_at"),
+                legacy ? value.getString("generated_at") : value.getString("clock_base_at"),
+                value.getLong("anchor_elapsed_realtime_ms"),
+                value.getInt("boot_count"),
+                !legacy && value.getBoolean("new_work_authorized"),
+                legacy ? "" : value.getString("snapshot_json")
+            );
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_offline_anchor_refused", error);
+        }
+    }
+
+    @Override
+    public void saveAnchor(OfflineAuthorityTime.OfflineAuthorityAnchor anchor) throws VaultFailure {
+        try {
+            JSONObject value = new JSONObject();
+            value.put("device_id", anchor.deviceId);
+            value.put("snapshot_id", anchor.snapshotId);
+            value.put("generated_at", anchor.generatedAt);
+            value.put("expires_at", anchor.expiresAt);
+            value.put("clock_base_at", anchor.clockBaseAt);
+            value.put("anchor_elapsed_realtime_ms", anchor.anchorElapsedRealtimeMillis);
+            value.put("boot_count", anchor.bootCount);
+            value.put("new_work_authorized", anchor.newWorkAuthorized);
+            value.put("snapshot_json", anchor.snapshotJson);
+            save(ANCHOR_KEY, value, "custodial_native_offline_anchor_refused");
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_offline_anchor_refused", error);
+        }
+    }
+
+    @Override
+    public boolean preserveUnreadableAuthorityAnchor(String deviceId, String preservedAt) throws VaultFailure {
+        final String code = "custodial_native_offline_anchor_preservation_failed";
+        try {
+            String canonicalDevice = VaultValidation.deviceId(deviceId);
+            String canonicalPreservedAt = String.valueOf(preservedAt);
+            if (!canonicalPreservedAt.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$")) {
+                throw new VaultFailure(code);
+            }
+            VaultTimestamps.epochMillis(canonicalPreservedAt, code);
+            String protectedRecord = preferences.getString(ANCHOR_KEY, null);
+            if (protectedRecord == null || protectedRecord.isEmpty()) return false;
+
+            String sourceDigest = sha256(protectedRecord, code);
+            String recordKey = ANCHOR_QUARANTINE_RECORD_PREFIX + sourceDigest;
+            String metadataKey = ANCHOR_QUARANTINE_METADATA_PREFIX + sourceDigest;
+            String preservedRecord = preferences.getString(recordKey, null);
+            if (preservedRecord != null && !preservedRecord.equals(protectedRecord)) {
+                throw new VaultFailure(code);
+            }
+
+            JSONObject metadata = new JSONObject();
+            metadata.put("schema_version", "custodial-authority-anchor-quarantine.v1");
+            metadata.put("source_key", ANCHOR_KEY);
+            metadata.put("source_sha256", sourceDigest);
+            metadata.put("quarantine_key", recordKey);
+            metadata.put("device_id", canonicalDevice);
+            metadata.put("preserved_at", canonicalPreservedAt);
+            metadata.put("reason", "unreadable_protected_authority_anchor");
+
+            if (!preferences.edit()
+                .putString(recordKey, protectedRecord)
+                .putString(metadataKey, metadata.toString())
+                .commit()) {
+                throw new VaultFailure(code);
+            }
+            if (!protectedRecord.equals(preferences.getString(recordKey, null))
+                || !metadata.toString().equals(preferences.getString(metadataKey, null))
+                || !sourceDigest.equals(sha256(preferences.getString(recordKey, ""), code))) {
+                throw new VaultFailure(code);
+            }
+            return true;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        }
+    }
+
+    @Override
+    public OfflineAuthorityTime.OfflineOccurrence loadOccurrence(String clientSessionId) throws VaultFailure {
+        try {
+            JSONObject value = load(occurrenceKey(clientSessionId), "custodial_native_offline_occurrence_mismatch");
+            if (value == null) return null;
+            Set<String> legacyKeys = setOf(
+                "client_session_id",
+                "device_id",
+                "location_code",
+                "snapshot_id",
+                "generated_at",
+                "expires_at",
+                "anchor_elapsed_realtime_ms",
+                "boot_count",
+                "native_scan_entry_id",
+                "started_at",
+                "completed_at"
+            );
+            Set<String> currentKeys = new HashSet<>(legacyKeys);
+            currentKeys.add("clock_base_at");
+            Set<String> actualKeys = keys(value);
+            Set<String> identityKeys = new HashSet<>(currentKeys);
+            identityKeys.add("native_tag_identity");
+            if (!actualKeys.equals(legacyKeys) && !actualKeys.equals(currentKeys) && !actualKeys.equals(identityKeys)) {
+                throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            }
+            boolean legacy = actualKeys.equals(legacyKeys);
+            if (!clientSessionId.equals(value.getString("client_session_id"))) {
+                throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            }
+            return new OfflineAuthorityTime.OfflineOccurrence(
+                value.getString("client_session_id"),
+                value.getString("device_id"),
+                value.getString("location_code"),
+                value.getString("snapshot_id"),
+                value.getString("generated_at"),
+                value.getString("expires_at"),
+                legacy ? value.getString("generated_at") : value.getString("clock_base_at"),
+                value.getLong("anchor_elapsed_realtime_ms"),
+                value.getInt("boot_count"),
+                value.getString("native_scan_entry_id"),
+                value.getString("started_at"),
+                value.getString("completed_at"),
+                value.has("native_tag_identity") ? PhysicalNfcTagIdentity.require(value.getString("native_tag_identity")) : ""
+            );
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch", error);
+        }
+    }
+
+    @Override
+    public void saveOccurrence(OfflineAuthorityTime.OfflineOccurrence occurrence) throws VaultFailure {
+        try {
+            JSONObject value = new JSONObject();
+            value.put("client_session_id", occurrence.clientSessionId);
+            value.put("device_id", occurrence.deviceId);
+            value.put("location_code", occurrence.locationCode);
+            value.put("snapshot_id", occurrence.snapshotId);
+            value.put("generated_at", occurrence.generatedAt);
+            value.put("expires_at", occurrence.expiresAt);
+            value.put("clock_base_at", occurrence.clockBaseAt);
+            value.put("anchor_elapsed_realtime_ms", occurrence.anchorElapsedRealtimeMillis);
+            value.put("boot_count", occurrence.bootCount);
+            value.put("native_scan_entry_id", occurrence.nativeScanEntryId);
+            if (!occurrence.nativeTagIdentity.isEmpty())
+                value.put("native_tag_identity", PhysicalNfcTagIdentity.require(occurrence.nativeTagIdentity));
+            value.put("started_at", occurrence.startedAt);
+            value.put("completed_at", occurrence.completedAt);
+            save(occurrenceKey(occurrence.clientSessionId), value, "custodial_native_offline_occurrence_mismatch");
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch", error);
+        }
+    }
+
+    /** Safe counts only: no credentials, identifiers, coordinates, or saved answers. */
+    Map<String, Object> offlineWorkDiagnostics() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        int total=0, unfinished=0, finished=0, unreadable=0;
+        for (String key : preferences.getAll().keySet()) {
+            if (!key.startsWith(OCCURRENCE_PREFIX)) continue;
+            total++;
+            try {
+                JSONObject raw=load(key,"custodial_native_offline_occurrence_mismatch");
+                String id=raw==null?"":raw.optString("client_session_id","");
+                if (!key.equals(occurrenceKey(id))) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+                OfflineAuthorityTime.OfflineOccurrence row=loadOccurrence(id);
+                if (row==null) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+                if (row.completedAt.isEmpty() || loadFinishEntryId(row).isEmpty()) unfinished++;
+                else finished++;
+            } catch (Exception error) { unreadable++; }
+        }
+        out.put("native_record_count",total);
+        out.put("unfinished_or_unsealed_count",unfinished);
+        out.put("finished_awaiting_upload_count",finished);
+        out.put("unreadable_record_count",unreadable);
+        try { out.put("anchor_state",loadAnchor()==null?"absent":"readable"); }
+        catch(Exception error){out.put("anchor_state","unreadable");}
+        try { out.put("recovery_fence_state",loadRollbackFence()==null?"absent":"active"); }
+        catch(Exception error){out.put("recovery_fence_state","unreadable");}
+        return out;
+    }
+
+    private String finishProofKey(String sessionId) throws VaultFailure {
+        return FINISH_PROOF_PREFIX + sha256(sessionId, "custodial_native_offline_occurrence_mismatch");
+    }
+
+    @Override
+    public String loadFinishEntryId(OfflineAuthorityTime.OfflineOccurrence occurrence) throws VaultFailure {
+        final String code = "custodial_native_offline_occurrence_mismatch";
+        JSONObject value = load(finishProofKey(occurrence.clientSessionId), code);
+        if (value == null) return "";
+        try {
+            requireKeys(value, code, "client_session_id", "device_id", "location_code", "started_at", "completed_at", "entry_id");
+            String entry = value.getString("entry_id");
+            if (!occurrence.clientSessionId.equals(value.getString("client_session_id"))
+                || !occurrence.deviceId.equals(value.getString("device_id"))
+                || !occurrence.locationCode.equals(value.getString("location_code"))
+                || !occurrence.startedAt.equals(value.getString("started_at"))
+                || !occurrence.completedAt.equals(value.getString("completed_at"))
+                || occurrence.completedAt.isEmpty() || !entry.matches("[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")) throw new VaultFailure(code);
+            return entry;
+        } catch (Exception error) { throw new VaultFailure(code, error); }
+    }
+
+    @Override
+    public void saveFinishEntryId(OfflineAuthorityTime.OfflineOccurrence occurrence, String entryId) throws VaultFailure {
+        final String code = "custodial_native_offline_occurrence_mismatch";
+        String existing = loadFinishEntryId(occurrence);
+        if (!existing.isEmpty()) {
+            if (!existing.equals(entryId)) throw new VaultFailure(code);
+            return;
+        }
+        if (occurrence.completedAt.isEmpty() || !entryId.matches("[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")) throw new VaultFailure(code);
+        try {
+            JSONObject value = new JSONObject();
+            value.put("client_session_id", occurrence.clientSessionId);
+            value.put("device_id", occurrence.deviceId);
+            value.put("location_code", occurrence.locationCode);
+            value.put("started_at", occurrence.startedAt);
+            value.put("completed_at", occurrence.completedAt);
+            value.put("entry_id", entryId);
+            save(finishProofKey(occurrence.clientSessionId), value, code, true);
+        } catch (Exception error) { throw new VaultFailure(code, error); }
+    }
+
+    @Override
+    public boolean hasUnfinishedOccurrences() throws VaultFailure {
+        for (String key : preferences.getAll().keySet()) {
+            if (!key.startsWith(OCCURRENCE_PREFIX)) continue;
+            JSONObject raw = load(key, "custodial_native_offline_occurrence_mismatch");
+            if (raw == null) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            String sessionId = raw.optString("client_session_id", "");
+            if (!key.equals(occurrenceKey(sessionId))) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+            OfflineAuthorityTime.OfflineOccurrence occurrence = loadOccurrence(sessionId);
+            if (occurrence == null || occurrence.completedAt.isEmpty() || loadFinishEntryId(occurrence).isEmpty()) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void deleteOccurrence(String clientSessionId) throws VaultFailure {
+        String key = occurrenceKey(clientSessionId);
+        String proofKey = finishProofKey(clientSessionId);
+        String original = preferences.getString(key, null);
+        String originalProof = preferences.getString(proofKey, null);
+        if (!preferences.edit().remove(key).remove(proofKey).commit() || preferences.contains(key) || preferences.contains(proofKey)) {
+            // A failed disk commit may already change SharedPreferences memory.
+            // Restore the exact original bytes so a retry cannot misread that as acknowledgement.
+            SharedPreferences.Editor restore = preferences.edit();
+            if (original != null) restore.putString(key, original);
+            if (originalProof != null) restore.putString(proofKey, originalProof);
+            restore.commit();
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        }
+    }
+
+    @Override
+    public OfflineAuthorityTime.RollbackFence loadRollbackFence() throws VaultFailure {
+        try {
+            JSONObject value = load(ROLLBACK_FENCE_KEY, "custodial_native_rollback_fence_mismatch");
+            if (value == null) return null;
+            requireKeys(value, "custodial_native_rollback_fence_mismatch", "device_id", "fence_id");
+            return new OfflineAuthorityTime.RollbackFence(
+                VaultValidation.deviceId(value.getString("device_id")),
+                value.getString("fence_id")
+            );
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_rollback_fence_mismatch", error);
+        }
+    }
+
+    @Override
+    public void saveRollbackFence(OfflineAuthorityTime.RollbackFence fence) throws VaultFailure {
+        try {
+            JSONObject value = new JSONObject();
+            value.put("device_id", fence.deviceId);
+            value.put("fence_id", fence.fenceId);
+            save(ROLLBACK_FENCE_KEY, value, "custodial_native_rollback_fence_mismatch");
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_rollback_fence_mismatch", error);
+        }
+    }
+
+    @Override
+    public void deleteRollbackFence() throws VaultFailure {
+        if (!preferences.edit().remove(ROLLBACK_FENCE_KEY).commit() || preferences.contains(ROLLBACK_FENCE_KEY)) {
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+        }
+    }
+
+    @Override
+    public boolean hasOccurrences() {
+        for (String key : preferences.getAll().keySet()) {
+            if (key.startsWith(OCCURRENCE_PREFIX)) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public Map<String, Map<String, Object>> loadScanEntries() throws VaultFailure {
+        try {
+            JSONObject value = load(SCAN_ENTRIES_KEY, "custodial_native_scan_journal_refused");
+            if (value == null) return new LinkedHashMap<>();
+            requireKeys(value, "custodial_native_scan_journal_refused", "entries");
+            JSONArray entries = value.getJSONArray("entries");
+            if (entries.length() > 4) throw new VaultFailure("custodial_native_scan_journal_refused");
+            Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+            for (int index = 0; index < entries.length(); index += 1) {
+                JSONObject record = entries.getJSONObject(index);
+                Map<String, Object> converted = new LinkedHashMap<>();
+                java.util.Iterator<String> iterator = record.keys();
+                while (iterator.hasNext()) {
+                    String key = iterator.next();
+                    Object item = record.get(key);
+                    converted.put(key, item == JSONObject.NULL ? null : item);
+                }
+                String entryId = record.getString("entry_id");
+                if (result.put(entryId, converted) != null) {
+                    throw new VaultFailure("custodial_native_scan_journal_refused");
+                }
+            }
+            return result;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_refused", error);
+        }
+    }
+
+    @Override
+    public void saveScanEntries(Map<String, Map<String, Object>> entries) throws VaultFailure {
+        if (entries == null || entries.size() > 4) throw new VaultFailure("custodial_native_scan_journal_refused");
+        try {
+            JSONArray encodedEntries = new JSONArray();
+            for (Map.Entry<String, Map<String, Object>> entry : entries.entrySet()) {
+                if (!entry.getKey().equals(String.valueOf(entry.getValue().get("entry_id")))) {
+                    throw new VaultFailure("custodial_native_scan_journal_refused");
+                }
+                encodedEntries.put(new JSONObject(entry.getValue()));
+            }
+            JSONObject value = new JSONObject();
+            value.put("entries", encodedEntries);
+            save(SCAN_ENTRIES_KEY, value, "custodial_native_scan_journal_refused");
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_refused", error);
+        }
+    }
+
+    @Override
+    public Map<String, Object> preserveUnreadableScanJournal(String reason) throws VaultFailure {
+        try {
+            String protectedRecord = preferences.getString(SCAN_ENTRIES_KEY, null);
+            if (protectedRecord == null || protectedRecord.isEmpty()) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            String digest = sha256(protectedRecord);
+            Map<String, Object> existing = loadScanJournalQuarantine();
+            if (digest.equals(existing.get("source_sha256"))) return existing;
+
+            String recoveryId = UUID.randomUUID().toString();
+            String recordKey = SCAN_JOURNAL_QUARANTINE_PREFIX + recoveryId;
+            JSONObject metadata = new JSONObject();
+            metadata.put("schema_version", "custodial-scan-journal-quarantine.v1");
+            metadata.put("state", "CORRUPTED");
+            metadata.put("preserved", true);
+            metadata.put("manager_recovery_required", true);
+            metadata.put("recovery_id", recoveryId);
+            metadata.put("source_key", SCAN_ENTRIES_KEY);
+            metadata.put("source_sha256", digest);
+            metadata.put("quarantine_key", recordKey);
+            metadata.put("reason", String.valueOf(reason == null ? "custodial_native_scan_journal_refused" : reason));
+            metadata.put("preserved_at", VaultTimestamps.fromEpochMillisExact(System.currentTimeMillis()));
+            String encodedMetadata = metadata.toString();
+
+            if (!preferences.edit()
+                .putString(recordKey, protectedRecord)
+                .putString(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY, encodedMetadata)
+                .commit()) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            if (!protectedRecord.equals(preferences.getString(SCAN_ENTRIES_KEY, null))
+                || !protectedRecord.equals(preferences.getString(recordKey, null))
+                || !encodedMetadata.equals(preferences.getString(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY, null))) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            return jsonMap(metadata);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_preservation_failed", error);
+        }
+    }
+
+    @Override
+    public Map<String, Object> loadScanJournalQuarantine() throws VaultFailure {
+        try {
+            String encoded = preferences.getString(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY, null);
+            if (encoded == null || encoded.isEmpty()) return new LinkedHashMap<>();
+            JSONObject metadata = new JSONObject(encoded);
+            requireKeys(
+                metadata,
+                "custodial_native_scan_journal_preservation_failed",
+                "schema_version", "state", "preserved", "manager_recovery_required",
+                "recovery_id", "source_key", "source_sha256", "quarantine_key",
+                "reason", "preserved_at"
+            );
+            if (!"custodial-scan-journal-quarantine.v1".equals(metadata.getString("schema_version"))
+                || !"CORRUPTED".equals(metadata.getString("state"))
+                || !metadata.getBoolean("preserved")
+                || !metadata.getBoolean("manager_recovery_required")
+                || !SCAN_ENTRIES_KEY.equals(metadata.getString("source_key"))) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            String protectedRecord = preferences.getString(metadata.getString("quarantine_key"), null);
+            if (protectedRecord == null
+                || !sha256(protectedRecord).equals(metadata.getString("source_sha256"))) {
+                throw new VaultFailure("custodial_native_scan_journal_preservation_failed");
+            }
+            return jsonMap(metadata);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_preservation_failed", error);
+        }
+    }
+
+    @Override
+    public Map<String, Object> resolvePreservedScanJournal(
+        String managerRecoveryOperationId,
+        String deviceId,
+        String managerRecoveryEnrolledAt
+    ) throws VaultFailure {
+        try {
+            String operationId = VaultValidation.operationId(managerRecoveryOperationId);
+            String canonicalDeviceId = VaultValidation.deviceId(deviceId);
+            String enrolledAt = VaultValidation.timestamp(
+                managerRecoveryEnrolledAt,
+                "custodial_native_scan_journal_recovery_refused"
+            );
+            Map<String, Object> quarantine = loadScanJournalQuarantine();
+            if (quarantine.isEmpty()) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_refused");
+            }
+            String preservedAt = String.valueOf(quarantine.get("preserved_at"));
+            long preservedMillis = VaultTimestamps.epochMillis(
+                preservedAt,
+                "custodial_native_scan_journal_recovery_refused"
+            );
+            long enrolledMillis = VaultTimestamps.epochMillis(
+                enrolledAt,
+                "custodial_native_scan_journal_recovery_refused"
+            );
+            // A recovery credential can resolve only evidence that was already
+            // quarantined when that exact manager operation enrolled the phone.
+            // A later corruption therefore requires a new manager recovery.
+            if (preservedMillis >= enrolledMillis) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_refused");
+            }
+
+            String sourceRecord = preferences.getString(SCAN_ENTRIES_KEY, null);
+            String quarantineKey = String.valueOf(quarantine.get("quarantine_key"));
+            String quarantineRecord = preferences.getString(quarantineKey, null);
+            String sourceDigest = String.valueOf(quarantine.get("source_sha256"));
+            if (sourceRecord == null
+                || !sourceRecord.equals(quarantineRecord)
+                || !sha256(sourceRecord).equals(sourceDigest)) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_refused");
+            }
+
+            JSONObject replacement = new JSONObject();
+            replacement.put("entries", new JSONArray());
+            String protectedReplacement = protect(
+                replacement,
+                "custodial_native_scan_journal_recovery_refused"
+            );
+            String recoveryId = String.valueOf(quarantine.get("recovery_id"));
+            String dispositionKey = SCAN_JOURNAL_DISPOSITION_PREFIX + recoveryId;
+            JSONObject disposition = new JSONObject();
+            disposition.put("schema_version", "custodial-scan-journal-disposition.v1");
+            disposition.put("state", "RESOLVED");
+            disposition.put("preserved", true);
+            disposition.put("manager_recovery_required", false);
+            disposition.put("recovery_id", recoveryId);
+            disposition.put("source_key", SCAN_ENTRIES_KEY);
+            disposition.put("source_sha256", sourceDigest);
+            disposition.put("quarantine_key", quarantineKey);
+            disposition.put("reason", String.valueOf(quarantine.get("reason")));
+            disposition.put("preserved_at", preservedAt);
+            disposition.put("disposition_key", dispositionKey);
+            disposition.put("manager_recovery_operation_id", operationId);
+            disposition.put("device_id", canonicalDeviceId);
+            disposition.put("manager_recovery_enrolled_at", enrolledAt);
+            disposition.put("resolved_at", VaultTimestamps.fromEpochMillisExact(System.currentTimeMillis()));
+            disposition.put("replacement_journal_sha256", sha256(protectedReplacement));
+            String encodedDisposition = disposition.toString();
+
+            if (!preferences.edit()
+                .putString(SCAN_ENTRIES_KEY, protectedReplacement)
+                .putString(dispositionKey, encodedDisposition)
+                .putString(SCAN_JOURNAL_DISPOSITION_LATEST_KEY, encodedDisposition)
+                .remove(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY)
+                .commit()) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            if (!protectedReplacement.equals(preferences.getString(SCAN_ENTRIES_KEY, null))
+                || !quarantineRecord.equals(preferences.getString(quarantineKey, null))
+                || !encodedDisposition.equals(preferences.getString(dispositionKey, null))
+                || !encodedDisposition.equals(preferences.getString(SCAN_JOURNAL_DISPOSITION_LATEST_KEY, null))
+                || preferences.contains(SCAN_JOURNAL_QUARANTINE_ACTIVE_KEY)) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            return jsonMap(disposition);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_recovery_failed", error);
+        }
+    }
+
+    @Override
+    public Map<String, Object> loadLatestScanJournalDisposition() throws VaultFailure {
+        try {
+            String encoded = preferences.getString(SCAN_JOURNAL_DISPOSITION_LATEST_KEY, null);
+            if (encoded == null || encoded.isEmpty()) return new LinkedHashMap<>();
+            JSONObject disposition = new JSONObject(encoded);
+            requireKeys(
+                disposition,
+                "custodial_native_scan_journal_recovery_failed",
+                "schema_version", "state", "preserved", "manager_recovery_required",
+                "recovery_id", "source_key", "source_sha256", "quarantine_key",
+                "reason", "preserved_at", "disposition_key",
+                "manager_recovery_operation_id", "device_id", "manager_recovery_enrolled_at",
+                "resolved_at", "replacement_journal_sha256"
+            );
+            if (!"custodial-scan-journal-disposition.v1".equals(disposition.getString("schema_version"))
+                || !"RESOLVED".equals(disposition.getString("state"))
+                || !disposition.getBoolean("preserved")
+                || disposition.getBoolean("manager_recovery_required")
+                || !SCAN_ENTRIES_KEY.equals(disposition.getString("source_key"))) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            VaultValidation.operationId(disposition.getString("manager_recovery_operation_id"));
+            VaultValidation.deviceId(disposition.getString("device_id"));
+            VaultValidation.timestamp(
+                disposition.getString("manager_recovery_enrolled_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            VaultValidation.timestamp(
+                disposition.getString("preserved_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            VaultValidation.timestamp(
+                disposition.getString("resolved_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            String recoveryId = VaultValidation.operationId(disposition.getString("recovery_id"));
+            if (!disposition.getString("disposition_key").equals(SCAN_JOURNAL_DISPOSITION_PREFIX + recoveryId)
+                || !disposition.getString("quarantine_key").equals(SCAN_JOURNAL_QUARANTINE_PREFIX + recoveryId)
+                || !disposition.getString("source_sha256").matches("^[a-f0-9]{64}$")) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            long preservedMillis = VaultTimestamps.epochMillis(
+                disposition.getString("preserved_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            long enrolledMillis = VaultTimestamps.epochMillis(
+                disposition.getString("manager_recovery_enrolled_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            long resolvedMillis = VaultTimestamps.epochMillis(
+                disposition.getString("resolved_at"),
+                "custodial_native_scan_journal_recovery_failed"
+            );
+            if (preservedMillis >= enrolledMillis || enrolledMillis > resolvedMillis) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            String unique = preferences.getString(disposition.getString("disposition_key"), null);
+            String quarantineRecord = preferences.getString(disposition.getString("quarantine_key"), null);
+            if (!encoded.equals(unique)
+                || quarantineRecord == null
+                || !sha256(quarantineRecord).equals(disposition.getString("source_sha256"))
+                || !disposition.getString("replacement_journal_sha256").matches("^[a-f0-9]{64}$")) {
+                throw new VaultFailure("custodial_native_scan_journal_recovery_failed");
+            }
+            return jsonMap(disposition);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_scan_journal_recovery_failed", error);
+        }
+    }
+
+
+    /** Carries the recovery decision from the protected load into its replacement write. */
+    static final class NfcHandoffCapture {
+        final Map<String, Map<String, Object>> handoffs;
+        private final AndroidOfflineAuthorityTimeStore owner;
+        private final boolean recovered;
+        private final String original;
+
+        private NfcHandoffCapture(AndroidOfflineAuthorityTimeStore owner,
+            Map<String, Map<String, Object>> handoffs, boolean recovered, String original) {
+            this.owner = owner;
+            this.handoffs = handoffs;
+            this.recovered = recovered;
+            this.original = original;
+        }
+    }
+
+    /** Used only while recording a NEW physical tag read. Claims never recover old bytes. */
+    NfcHandoffCapture loadNfcHandoffsForPhysicalRead() throws VaultFailure {
+        synchronized (NFC_WRITE_LOCK) {
+        reconcileUncertainNfcWrite();
+        final String original = preferences.getString(NFC_HANDOFFS_KEY, null);
+        try {
+            return new NfcHandoffCapture(this, loadNfcHandoffs(), false, original);
+        } catch (VaultFailure failure) {
+            if (original == null || original.isEmpty() || !recoverableNfcHandoffFailure(failure)) {
+                throw failure;
+            }
+            preserveUnreadableNfcHandoffs(original, failure);
+            // The original ciphertext is durably retained. The caller must still
+            // persist a fresh physical read before it can return a handoff ID.
+            return new NfcHandoffCapture(this, new LinkedHashMap<>(), true, original);
+        }
+        }
+    }
+
+    void saveNfcHandoffsAfterPhysicalRead(NfcHandoffCapture capture) throws VaultFailure {
+        if (capture == null || capture.owner != this) {
+            throw new VaultFailure("custodial_native_nfc_handoff_refused");
+        }
+        if (persistPhysicalNfcHandoffs(capture) != NfcWriteResult.DURABLE)
+            throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+    }
+
+    /** A false commit may already have changed memory. Never report that as
+     * definite absence. Only this NEW-read path creates an additional locator. */
+    NfcWriteResult persistPhysicalNfcHandoffs(NfcHandoffCapture capture) throws VaultFailure {
+        synchronized (NFC_WRITE_LOCK) {
+            reconcileUncertainNfcWrite();
+            if (capture == null || capture.owner != this
+                || !java.util.Objects.equals(capture.original, preferences.getString(NFC_HANDOFFS_KEY, null)))
+                throw new VaultFailure("custodial_native_nfc_handoff_refused");
+            String encoded=protect(encodeNfcHandoffs(capture.handoffs),
+                "custodial_native_nfc_handoff_refused", capture.recovered);
+            NfcWrite write=new NfcWrite(capture.original, encoded);
+            // The exact prior/candidate bytes survive across store/Activity
+            // instances in this process until success or verified rollback.
+            UNCERTAIN_NFC_WRITES.put(rawPreferences, write);
+            if (commitNfcValue(encoded)) {
+                UNCERTAIN_NFC_WRITES.remove(rawPreferences);
+                return NfcWriteResult.DURABLE;
+            }
+            // One bounded retry of the identical ciphertext, never reencrypt.
+            if (exactNfcValue(encoded) && commitNfcValue(encoded)) {
+                UNCERTAIN_NFC_WRITES.remove(rawPreferences);
+                return NfcWriteResult.DURABLE;
+            }
+            if (rollbackNfcWrite(write)) {
+                UNCERTAIN_NFC_WRITES.remove(rawPreferences);
+                return NfcWriteResult.REFUSED;
+            }
+            return NfcWriteResult.UNCERTAIN;
+        }
+    }
+
+    private boolean exactNfcValue(String value) {
+        try { return value == null ? !preferences.contains(NFC_HANDOFFS_KEY)
+            : value.equals(preferences.getString(NFC_HANDOFFS_KEY, null)); }
+        catch (RuntimeException error) { return false; }
+    }
+
+    private boolean commitNfcValue(String value) {
+        try {
+            SharedPreferences.Editor editor=preferences.edit();
+            if (value == null) editor.remove(NFC_HANDOFFS_KEY); else editor.putString(NFC_HANDOFFS_KEY, value);
+            return editor.commit() && exactNfcValue(value);
+        } catch (RuntimeException error) { return false; }
+    }
+
+    private boolean rollbackNfcWrite(NfcWrite write) {
+        // Do not overwrite a third, unexplained value.
+        return (exactNfcValue(write.candidate) || exactNfcValue(write.original))
+            && commitNfcValue(write.original);
+    }
+
+    private void reconcileUncertainNfcWrite() throws VaultFailure {
+        NfcWrite write=UNCERTAIN_NFC_WRITES.get(rawPreferences);
+        if (write == null) return;
+        if (!rollbackNfcWrite(write))
+            throw new VaultFailure("custodial_native_nfc_handoff_persistence_uncertain");
+        UNCERTAIN_NFC_WRITES.remove(rawPreferences);
+    }
+
+    private static boolean recoverableNfcHandoffFailure(VaultFailure failure) {
+        if ("custodial_native_nfc_handoff_refused".equals(failure.code)
+            || "custodial_native_vault_corrupt".equals(failure.code)) return true;
+        if (!"custodial_native_vault_decrypt_failed".equals(failure.code)) return false;
+        Throwable cause = failure;
+        for (int depth = 0; depth < 8 && cause != null; depth++, cause = cause.getCause()) {
+            if (cause instanceof javax.crypto.AEADBadTagException) return true;
+        }
+        return false;
+    }
+
+    private void preserveUnreadableNfcHandoffs(String original, VaultFailure failure) throws VaultFailure {
+        final String code = "custodial_native_nfc_handoff_preservation_failed";
+        final String recordPrefix = "native_nfc_handoff_quarantine_record:";
+        final String metadataPrefix = "native_nfc_handoff_quarantine_metadata:";
+        try {
+            if (original.length() > MAX_PROTECTED_RECORD_CHARACTERS * 2
+                || !original.equals(preferences.getString(NFC_HANDOFFS_KEY, null))) {
+                throw new VaultFailure(code);
+            }
+            String digest = sha256(original, code);
+            String recordKey = recordPrefix + digest;
+            String metadataKey = metadataPrefix + digest;
+            String retained = preferences.getString(recordKey, null);
+            String encodedMetadata = preferences.getString(metadataKey, null);
+            if (retained != null && !original.equals(retained)) throw new VaultFailure(code);
+            if (retained == null) {
+                long count = preferences.getAll().keySet().stream()
+                    .filter(key -> key.startsWith(recordPrefix)).count();
+                if (count >= 4) throw new VaultFailure("custodial_native_nfc_handoff_preservation_capacity_reached");
+            }
+            if (encodedMetadata == null) {
+                JSONObject metadata = new JSONObject();
+                metadata.put("schema_version", "custodial-nfc-handoff-quarantine.v1");
+                metadata.put("state", "preserved_unreadable");
+                metadata.put("source_key", NFC_HANDOFFS_KEY);
+                metadata.put("source_sha256", digest);
+                metadata.put("quarantine_key", recordKey);
+                metadata.put("reason", "custodial_native_vault_decrypt_failed".equals(failure.code)
+                    ? "authentication_failed" : "malformed_record");
+                metadata.put("preserved_at", VaultTimestamps.fromEpochMillisExact(System.currentTimeMillis()));
+                encodedMetadata = metadata.toString();
+            } else {
+                JSONObject metadata = new JSONObject(encodedMetadata);
+                requireKeys(metadata, code, "schema_version", "state", "source_key", "source_sha256",
+                    "quarantine_key", "reason", "preserved_at");
+                if (!"custodial-nfc-handoff-quarantine.v1".equals(metadata.getString("schema_version"))
+                    || !"preserved_unreadable".equals(metadata.getString("state"))
+                    || !NFC_HANDOFFS_KEY.equals(metadata.getString("source_key"))
+                    || !digest.equals(metadata.getString("source_sha256"))
+                    || !recordKey.equals(metadata.getString("quarantine_key"))
+                    || !Set.of("authentication_failed", "malformed_record").contains(metadata.getString("reason"))) {
+                    throw new VaultFailure(code);
+                }
+                VaultTimestamps.epochMillis(metadata.getString("preserved_at"), code);
+            }
+            // Two phases: retain and verify the exact old bytes BEFORE any active
+            // record replacement. A crash here leaves the old record in place;
+            // the same ciphertext is deduplicated on the next physical attempt.
+            // Recommit even on a retry: a failed prior SharedPreferences commit
+            // can leave values in memory that have not reached durable storage.
+            if (!preferences.edit().putString(recordKey, original)
+                .putString(metadataKey, encodedMetadata).commit()) throw new VaultFailure(code);
+            if (!original.equals(preferences.getString(NFC_HANDOFFS_KEY, null))
+                || !original.equals(preferences.getString(recordKey, null))
+                || !encodedMetadata.equals(preferences.getString(metadataKey, null))
+                || !digest.equals(sha256(preferences.getString(recordKey, ""), code))) {
+                throw new VaultFailure(code);
+            }
+        } catch (VaultFailure failureToPreserve) {
+            throw failureToPreserve;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        }
+    }
+
+    Map<String, Map<String, Object>> loadNfcHandoffs() throws VaultFailure {
+        synchronized (NFC_WRITE_LOCK) {
+        reconcileUncertainNfcWrite();
+        try {
+            JSONObject value = load(NFC_HANDOFFS_KEY, "custodial_native_nfc_handoff_refused");
+            if (value == null) return new LinkedHashMap<>();
+            requireKeys(value, "custodial_native_nfc_handoff_refused", "handoffs");
+            JSONArray handoffs = value.getJSONArray("handoffs");
+            if (handoffs.length() > 4) throw new VaultFailure("custodial_native_nfc_handoff_refused");
+            Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+            for (int index = 0; index < handoffs.length(); index += 1) {
+                JSONObject record = handoffs.getJSONObject(index);
+                Map<String, Object> converted = new LinkedHashMap<>();
+                java.util.Iterator<String> iterator = record.keys();
+                while (iterator.hasNext()) {
+                    String key = iterator.next();
+                    Object item = record.get(key);
+                    converted.put(key, item == JSONObject.NULL ? null : item);
+                }
+                String handoffId = record.getString("handoff_id");
+                if (result.put(handoffId, converted) != null) {
+                    throw new VaultFailure("custodial_native_nfc_handoff_refused");
+                }
+            }
+            return result;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_nfc_handoff_refused", error);
+        }
+        }
+    }
+
+    void saveNfcHandoffs(Map<String, Map<String, Object>> handoffs) throws VaultFailure {
+        saveNfcHandoffs(handoffs, false);
+    }
+
+    private void saveNfcHandoffs(Map<String, Map<String, Object>> handoffs,
+        boolean existingKeyOnly) throws VaultFailure {
+        synchronized (NFC_WRITE_LOCK) {
+            reconcileUncertainNfcWrite();
+            save(NFC_HANDOFFS_KEY, encodeNfcHandoffs(handoffs),
+                "custodial_native_nfc_handoff_refused", existingKeyOnly);
+        }
+    }
+
+    private JSONObject encodeNfcHandoffs(Map<String, Map<String, Object>> handoffs) throws VaultFailure {
+        if (handoffs == null || handoffs.size() > 4) {
+            throw new VaultFailure("custodial_native_nfc_handoff_refused");
+        }
+        try {
+            JSONArray encodedHandoffs = new JSONArray();
+            for (Map.Entry<String, Map<String, Object>> entry : handoffs.entrySet()) {
+                if (!entry.getKey().equals(String.valueOf(entry.getValue().get("handoff_id")))) {
+                    throw new VaultFailure("custodial_native_nfc_handoff_refused");
+                }
+                encodedHandoffs.put(new JSONObject(entry.getValue()));
+            }
+            JSONObject value = new JSONObject();
+            value.put("handoffs", encodedHandoffs);
+            return value;
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_nfc_handoff_refused", error);
+        }
+    }
+
+    private JSONObject load(String key, String code) throws VaultFailure {
+        String encoded = preferences.getString(key, null);
+        if (encoded == null || encoded.isEmpty()) return null;
+        return decodeProtectedRecord(encoded,code);
+    }
+
+    /** Decode the exact captured ciphertext, never a later live-preferences row. */
+    private JSONObject decodeProtectedRecord(String encoded,String code)throws VaultFailure{
+        char[] clear = null;
+        try {
+            JSONObject envelope = new JSONObject(encoded);
+            requireKeys(envelope, code, "ciphertext", "iv");
+            clear = cipher.decrypt(new EncryptedSecret(
+                envelope.getString("ciphertext"),
+                envelope.getString("iv")
+            ));
+            String value = String.valueOf(clear);
+            if (value.length() > MAX_PROTECTED_RECORD_CHARACTERS) throw new VaultFailure(code);
+            return new JSONObject(value);
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        } finally {
+            if (clear != null) VaultValidation.wipe(clear);
+        }
+    }
+
+    private void save(String key, JSONObject value, String code) throws VaultFailure {
+        save(key, value, code, false);
+    }
+
+    private void save(String key, JSONObject value, String code, boolean existingKeyOnly) throws VaultFailure {
+        try {
+            String encoded = protect(value, code, existingKeyOnly);
+            if (!preferences.edit().putString(key, encoded).commit()) {
+                throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+            }
+            if (!encoded.equals(preferences.getString(key, null))) {
+                throw new VaultFailure("custodial_native_offline_time_persistence_failed");
+            }
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        }
+    }
+
+    private String protect(JSONObject value, String code) throws VaultFailure {
+        return protect(value, code, false);
+    }
+
+    private String protect(JSONObject value, String code, boolean existingKeyOnly) throws VaultFailure {
+        String encodedValue = value.toString();
+        if (encodedValue.length() > MAX_PROTECTED_RECORD_CHARACTERS) throw new VaultFailure(code);
+        char[] clear = encodedValue.toCharArray();
+        try {
+            EncryptedSecret protectedValue = existingKeyOnly
+                ? cipher.encryptWithExistingKey(clear)
+                : cipher.encrypt(clear);
+            JSONObject envelope = new JSONObject();
+            envelope.put("ciphertext", protectedValue.ciphertext);
+            envelope.put("iv", protectedValue.iv);
+            return envelope.toString();
+        } catch (VaultFailure error) {
+            throw error;
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        } finally {
+            VaultValidation.wipe(clear);
+        }
+    }
+
+    private static String occurrenceKey(String clientSessionId) throws VaultFailure {
+        if (clientSessionId == null || clientSessionId.isEmpty()) {
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+        }
+        byte[] clear = clientSessionId.getBytes(StandardCharsets.UTF_8);
+        byte[] digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-256").digest(clear);
+            StringBuilder encoded = new StringBuilder(digest.length * 2);
+            for (byte value : digest) encoded.append(String.format(Locale.ROOT, "%02x", value & 0xff));
+            return OCCURRENCE_PREFIX + encoded;
+        } catch (Exception error) {
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch", error);
+        } finally {
+            Arrays.fill(clear, (byte) 0);
+            if (digest != null) Arrays.fill(digest, (byte) 0);
+        }
+    }
+
+    private static String sha256(String value) throws VaultFailure {
+        return sha256(value, "custodial_native_scan_journal_preservation_failed");
+    }
+
+    private static String sha256(String value, String code) throws VaultFailure {
+        byte[] clear = String.valueOf(value).getBytes(StandardCharsets.UTF_8);
+        byte[] digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-256").digest(clear);
+            StringBuilder encoded = new StringBuilder(digest.length * 2);
+            for (byte item : digest) encoded.append(String.format(Locale.ROOT, "%02x", item & 0xff));
+            return encoded.toString();
+        } catch (Exception error) {
+            throw new VaultFailure(code, error);
+        } finally {
+            Arrays.fill(clear, (byte) 0);
+            if (digest != null) Arrays.fill(digest, (byte) 0);
+        }
+    }
+
+    private static Map<String, Object> jsonMap(JSONObject value) throws Exception {
+        Map<String, Object> result = new LinkedHashMap<>();
+        java.util.Iterator<String> iterator = value.keys();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            Object item = value.get(key);
+            result.put(key, item == JSONObject.NULL ? null : item);
+        }
+        return result;
+    }
+
+    private static void requireKeys(JSONObject value, String code, String... expected) throws VaultFailure {
+        Set<String> keys = keys(value);
+        Set<String> allowed = setOf(expected);
+        if (!keys.equals(allowed)) throw new VaultFailure(code);
+    }
+
+    private static Set<String> keys(JSONObject value) {
+        Set<String> keys = new HashSet<>();
+        java.util.Iterator<String> iterator = value.keys();
+        while (iterator.hasNext()) keys.add(iterator.next());
+        return keys;
+    }
+
+    private static Set<String> setOf(String... values) {
+        return new HashSet<>(Arrays.asList(values));
+    }
+}
