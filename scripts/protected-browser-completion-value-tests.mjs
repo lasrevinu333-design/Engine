@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {webcrypto,createHash} from 'node:crypto';
-import {spawnSync} from 'node:child_process';
+import {execFile} from 'node:child_process';
+import {readCoreNativeFixtureClasspath} from './core-native-fixture.mjs';
 import {captureProtectedBrowserWork,observeProtectedBrowserWork,closeCapturedProtectedBrowserWork,
  inspectCapturedOriginalCompletion,readCapturedOriginalCompletionArguments} from '../mobile/src/custodial/protected-browser-inventory.js';
 
@@ -11,14 +12,20 @@ const helper=fs.readFileSync(new URL('./protected-browser-inventory-tests.mjs',i
 const factory=helper.slice(helper.indexOf('function storage('),helper.indexOf('const call='));
 assert.ok(factory.startsWith('function storage(')&&factory.includes('function idb('));
 const fixtures=vm.runInNewContext(factory+'\n({storage,idb})',{assert,queueMicrotask,setTimeout});
-const javaCp=process.env.CUSTODIAL_SOURCE_JOIN_TEST_CLASSPATH;
+const javaCp=process.env.CUSTODIAL_SOURCE_JOIN_TEST_CLASSPATH||readCoreNativeFixtureClasspath();
 assert.ok(javaCp,'main-owned synthetic compiled JVM classpath required');
-function native(mode,input) {
- const r=spawnSync('/usr/bin/java',['-Xmx256m','-cp',javaCp,'org.memphiszoo.custodial.vault.NativeCompletionArgumentStdinProbe',mode],
-  {input:input?JSON.stringify(input):'',encoding:'utf8',timeout:10000,maxBuffer:1048576});
- assert.equal(r.status,0,r.stderr);return JSON.parse(r.stdout.trim());
+async function native(mode,input) {
+ return await new Promise((resolve,reject)=>{
+  const child=execFile('/usr/bin/java',['-Xmx256m','-cp',javaCp,'org.memphiszoo.custodial.vault.NativeCompletionArgumentStdinProbe',mode],
+   {encoding:'utf8',timeout:10000,maxBuffer:1048576},(error,stdout,stderr)=>{
+    if(error)return reject(new Error(`Synthetic JVM probe failed: ${error.message} ${stderr}`));
+    try{resolve(JSON.parse(stdout.trim()));}catch(error){reject(error);}
+   });
+  // Explicit EOF keeps the JVM's bounded read independent of synchronous-pipe behavior.
+  child.stdin.end(input?JSON.stringify(input):'');
+ });
 }
-const args=native('fixture'),selector={deviceId:args.p_device_id,clientSessionId:args.p_client_session_id,clientCompletionId:args.p_client_completion_id,timeoutMs:500};
+const args=await native('fixture'),selector={deviceId:args.p_device_id,clientSessionId:args.p_client_session_id,clientCompletionId:args.p_client_completion_id,timeoutMs:500};
 const op='50000000-0000-4000-8000-000000000001';
 const row=(payload=args,id=1)=>({id,type:'forward-replay-fenced:commit_workflow',forward_action_type:'commit_workflow',forward_replay_contract:'scan.v4.snapshot-bound-authority',
  schema_version:6,operation_id:op,completion_client_id:payload.p_client_completion_id,payload:structuredClone(payload)});
@@ -36,7 +43,7 @@ async function join(payload=args,{kind='v2',fault='none'}={}) {
  try{
   const candidate=await inspectCapturedOriginalCompletion(c,selector);flags(candidate);assert.equal(candidate.state,'ONE_ORIGINAL_ARGUMENT_CANDIDATE_NOT_AUTHENTICATED');
   const bytes=await readCapturedOriginalCompletionArguments(c,candidate,{timeoutMs:500});
-  try {const reply=native('join',{candidate_args_base64:Buffer.from(bytes).toString('base64'),receipt_kind:kind,fault});
+  try {const reply=await native('join',{candidate_args_base64:Buffer.from(bytes).toString('base64'),receipt_kind:kind,fault});
    if(!reply.refused){nativeFlags(reply);assert.equal(reply.candidate_arguments_sha256,createHash('sha256').update(bytes).digest('hex'));}
    assert.ok(!JSON.stringify(candidate).includes('services_performed'));assert.equal(candidate.queue_operation_id,op);return reply;
   }finally{bytes.fill(0);}

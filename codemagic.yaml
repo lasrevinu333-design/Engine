@@ -182,6 +182,7 @@ definitions:
         npx --no-install playwright install chromium
         npm run --silent build:chatscope
         git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
+        node scripts/prepare-core-native-fixture.mjs
         node scripts/custodial-core-release-gate-tests.mjs
         node scripts/custodial-core-release-gate.mjs
         npm run --silent test:mobile
