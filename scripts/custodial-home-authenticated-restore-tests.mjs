@@ -7,7 +7,7 @@ import vm from 'node:vm';
 import './synthetic-schedule-locks.mjs';
 import {installHomeFacts} from '../mobile/src/custodial/home-facts-dom.js';
 import {installHourlyForecastKeyboard} from '../mobile/src/custodial/hourly-forecast-keyboard.js';
-import {classifyReadiness,createReadinessObservation,readinessPresentation} from '../mobile/src/custodial/readiness.js';
+import {classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode} from '../mobile/src/custodial/readiness.js';
 import {principalIdentity,profileMatchesPrincipal,protectedPrincipal} from '../mobile/src/custodial/protected-principal.js';
 import {zooServiceDate} from '../mobile/src/custodial/home-facts.js';
 import * as keys from '../mobile/src/custodial/security-keys.js';
@@ -126,7 +126,7 @@ async function run(name){
       },readCustodialHomeCache:actualBridge.readCustodialHomeCache,
       requestJson:async(path,options)=>(await actualBridge.requestEnvelope(path,options)).data},
   };
-  const context={window,document,navigator:{onLine:false},sessionStorage,console,Date,Error,Promise,classifyReadiness,createReadinessObservation,readinessPresentation,installHourlyForecastKeyboard,
+  const context={window,document,navigator:{onLine:false},sessionStorage,console,Date,Error,Promise,classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode,installHourlyForecastKeyboard,
     installHomeFacts:options=>{
       controller=installHomeFacts(options);
       // Observe the actual local method; only hostile boundary cases alter its

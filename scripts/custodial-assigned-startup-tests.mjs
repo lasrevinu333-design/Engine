@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {assertOwnerContextClosed} from './scan-owner-vm-context.mjs';
 import { installHourlyForecastKeyboard } from '../mobile/src/custodial/hourly-forecast-keyboard.js';
 const source=readFileSync(new URL('../mobile/src/custodial/app.js',import.meta.url),'utf8');
-const { classifyReadiness, createReadinessObservation, readinessPresentation } = await import(`data:text/javascript;base64,${Buffer.from(readFileSync(new URL('../mobile/src/custodial/readiness.js',import.meta.url),'utf8')).toString('base64')}`);
+const { classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode } = await import(`data:text/javascript;base64,${Buffer.from(readFileSync(new URL('../mobile/src/custodial/readiness.js',import.meta.url),'utf8')).toString('base64')}`);
 const html=readFileSync(new URL('../mobile/src/custodial/index.html',import.meta.url),'utf8');
 const results=[];
 async function check(name,fn){try{await fn();results.push({name,passed:true});}catch(error){results.push({name,passed:false,error:error.message});}}
@@ -22,9 +22,9 @@ function fixture({enrolled=false,reject=false,delay=false,cached=null}={}){
       profileMatchesPrincipal:value=>status.state==='enrolled'&&value?.authenticated===true&&value?.canonical_device_id==='KIOSK_08'&&value?.fixture_principal===principal,
       requestJson:async path=>{calls.push(path);const value={authenticated:true,canonical_device_id:'KIOSK_08',employee_name:name,employee_role:'CUSTODIAL_EMPLOYEE',fixture_principal:principal};await responseReady;if(reject)throw Object.assign(new Error('Not authorized'),{status:403});if(failNetwork)throw Error('offline');return value;}},
     setInterval:()=>1,clearInterval(){},setTimeout:()=>2,clearTimeout(){}};
-  const context={window,document:{getElementById:element},navigator:{onLine:false},console,queueMicrotask,classifyReadiness,createReadinessObservation,readinessPresentation,installHourlyForecastKeyboard,
+  const context={window,document:{getElementById:element},navigator:{onLine:false},console,queueMicrotask,classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode,installHourlyForecastKeyboard,
     sessionStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)},
-    installHomeFacts:()=>({stop(){},update(){},authenticatedProfileRestored(){return true;}}),App:{addListener:async()=>{}},Network:{addListener:async()=>{}},StatusBar:{hide:async()=>{}},Promise,Date,Error};
+    installHomeFacts:()=>({stop(){},update(){},authenticatedProfileRestored(){return true;},async restoreProfileFacts(){return true;}}),App:{addListener:async()=>{}},Network:{addListener:async()=>{}},StatusBar:{hide:async()=>{}},Promise,Date,Error};
   vm.createContext(context);
   const executable=source.replace(/^import .*;\s*$/gm,'').replace('void (async () => {','globalThis.__startup = (async () => {');
   const closed=executable+'\nglobalThis.__restore=restore;';
