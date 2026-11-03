@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { installHourlyForecastKeyboard } from '../mobile/src/custodial/hourly-forecast-keyboard.js';
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 const moduleSource = read('mobile/src/custodial/readiness.js');
-const { classifyReadiness, createReadinessObservation, readinessPresentation } = await import(`data:text/javascript;base64,${Buffer.from(moduleSource).toString('base64')}`);
+const { classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode } = await import(`data:text/javascript;base64,${Buffer.from(moduleSource).toString('base64')}`);
 const app = read('mobile/src/custodial/app.js');
 const html = read('mobile/src/custodial/index.html');
 const results = [];
@@ -14,6 +14,19 @@ const positive = { security, principalPresent: true, profileMatches: true, serve
   snapshotAnchored: true, startupClear: true, connected: true, queue: [], sessionState: 'none',
   nativeState: { observation: 'CONFIRMED', read_only: true, native_clock_continuity: 'CONFIRMED', protected_work_admission: 'CLEAR',
     rollback_fence_active: false, pending_occurrences: false, unfinished_occurrence: false } };
+await check('support code is a read-only bounded observation, never arbitrary data or authority', () => {
+  const input = { ...positive, security: { ...security, state: 'unenrolled', reason: 'private_fixture_credential',
+    deviceId: 'private_fixture_device', credential: 'private_fixture_secret' }, sessionState: 'corrupted' };
+  const before = JSON.stringify(input);
+  const code = readinessSupportCode(input);
+  assert.match(code, /^S1 unenrolled\/unknown I1 R1 A1 Q0 P1 J:corrupted N:CONFIRMED$/);
+  assert.doesNotMatch(code, /private_fixture/);
+  assert.equal(JSON.stringify(input), before);
+  assert.equal(classifyReadiness(input).state, 'do_not_use');
+  assert.equal(readinessSupportCode({ security: { state: '<script>secret</script>', ready: 'secret' },
+    sessionState: 'secret', nativeState: { observation: 'secret' } }),
+    'S1 unknown/unknown I? R? A? Q? P? J:unknown N:unknown');
+});
 await check('four exact labels with deterministic integrity/manager/pending priority', () => {
   assert.equal(classifyReadiness(positive).label, 'Ready for work');
   assert.equal(classifyReadiness({ ...positive, queue: [{}] }).label, 'Needs internet');
@@ -106,7 +119,7 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
   };
   const context = { window, document: { getElementById: element }, navigator: { onLine: connected }, console,queueMicrotask,
     sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
-    classifyReadiness, createReadinessObservation, readinessPresentation, installHourlyForecastKeyboard, installHomeFacts: () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; }, async restoreProfileFacts() { return true; } }),
+    classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode, installHourlyForecastKeyboard, installHomeFacts: () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; }, async restoreProfileFacts() { return true; } }),
     Network: { addListener: async (name, fn) => listeners.set(name, fn) }, App: { addListener: async (name, fn) => listeners.set(name, fn) }, StatusBar: { hide: async () => {} } };
   vm.createContext(context);
   vm.runInContext(app.replace(/^import .*;\s*$/gm, '').replace('void (async () => {', 'globalThis.__startup = (async () => {'), context);
@@ -127,6 +140,8 @@ await check('actual controller presents positive existing restore/anchor and rea
   }
   assert.equal(f.calls.filter(c => c === 'existing-anchor').length, 1);
   assert.equal(f.elements.get('home').hidden, false);
+  assert.equal(f.elements.get('assignment-support').hidden, true);
+  assert.equal(f.elements.get('assignment-support').textContent, '');
 });
 for (const [name, options] of [['no anchor confirmation', { anchored: false }], ['offline cache', { connected: false, cacheOnly: true }], ['pending completion', { pending: [{ type: 'complete_session', payload: { id: 'original' } }] }], ['native pending', { nativePending: true }]]) {
   await check(`controller ${name} is not Ready`, async () => {

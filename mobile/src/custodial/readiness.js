@@ -58,6 +58,24 @@ export function readinessPresentation(result, input = {}) {
     label: actionable ? result.label : '', detail: actionable ? result.detail : '' });
 }
 
+// Read-only support breadcrumb. Only fixed vocabulary and booleans may leave
+// the existing observation; never display identities, records or caller text.
+export function readinessSupportCode(input = {}) {
+  const security = input.security || {};
+  const pick = (value, allowed) => allowed.includes(value) ? value : 'unknown';
+  const flag = value => value === true ? '1' : value === false ? '0' : '?';
+  const state = pick(security.state, ['checking', 'enrolled', 'unenrolled', 'unavailable', 'quarantined', 'removing']);
+  const reason = pick(security.reason, ['', 'custodial_security_state_checking', 'custodial_security_state_unavailable',
+    'custodial_browser_preservation_pending', 'custodial_browser_admission_unavailable',
+    'custodial_secure_storage_unavailable', 'custodial_state_inspection_failed',
+    'custodial_native_vault_blocked', 'custodial_enrollment_removal_pending',
+    'installation_binding_missing', 'installation_binding_mismatch', 'device_identity_binding_incomplete',
+    'preserved_state_without_protected_enrollment', 'server_credential_rejected']);
+  const session = pick(input.sessionState, ['none', 'open', 'corrupted', 'ambiguous']);
+  const native = pick(input.nativeState?.observation, ['CONFIRMED', 'NEEDS_INTERNET', 'NEEDS_MANAGER', 'DO_NOT_USE', 'UNKNOWN']);
+  return `S1 ${state}/${reason || 'none'} I${flag(security.initialized)} R${flag(security.ready)} A${flag(security.available)} Q${flag(security.quarantined)} P${flag(input.principalPresent)} J:${session} N:${native}`;
+}
+
 // Generation-bound observations prevent a late prior-principal/network response
 // from promoting the current phone. Tokens are local presentation state only.
 export function createReadinessObservation() {

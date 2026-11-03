@@ -1,6 +1,6 @@
 import { installHomeFacts } from './home-facts-dom.js';
 import { installHourlyForecastKeyboard } from './hourly-forecast-keyboard.js';
-import { classifyReadiness, createReadinessObservation, readinessPresentation } from './readiness.js';
+import { classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode } from './readiness.js';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
@@ -47,6 +47,12 @@ function paintReadiness(input) {
     element.hidden = result.hidden;
     element.textContent = result.hidden ? '' : `${result.label} — ${result.detail}`;
     element.className = `phoneReadiness ${result.state}`;
+  }
+  for (const id of ['boot-support', 'assignment-support']) {
+    const element = document.getElementById(id);
+    if (!element) continue;
+    element.hidden = result.hidden;
+    element.textContent = result.hidden ? '' : `Support code: ${readinessSupportCode(input)}`;
   }
 }
 async function refreshReadiness() {
