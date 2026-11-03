@@ -149,7 +149,11 @@ assert.equal(await actualBrowserQueue.mutateProtectedWork(context => {
 assert.equal(browserEmployee.resolveOpenScanSession('KIOSK_08').state, 'ambiguous',
   'multiple indexed active contexts must fail closed instead of selecting the newest');
 assert.equal(await browserEmployee.clearScanView(secondSession.session_uuid, 'KIOSK_08'), true);
-assert.equal(browserEmployee.resolveOpenScanSession('KIOSK_08').state, 'open');
+assert.equal(browserEmployee.resolveOpenScanSession('KIOSK_08').state, 'ambiguous', 'clearing navigation metadata cannot hide an original still-active session record');
+await actualBrowserQueue.mutateProtectedWork(context => {
+ context.assertCurrent(); browserEmployeeRuntime.localStorage.setItem(`session:${secondSession.session_uuid}`,JSON.stringify({...secondSession,status:'closed'}));context.assertCurrent();
+});
+assert.equal(browserEmployee.resolveOpenScanSession('KIOSK_08').state, 'open', 'only an actual terminal record removes its active-session ambiguity');
 browserEmployeeRuntime.localStorage.setItem('mz_phone_scan_resume:KIOSK_08', '{bad json');
 assert.equal(browserEmployee.resolveOpenScanSession('KIOSK_08').state, 'corrupted',
   'a malformed active-work index must fail closed');

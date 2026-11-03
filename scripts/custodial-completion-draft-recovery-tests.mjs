@@ -15,9 +15,11 @@ const server = createServer((request, response) => {
   response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   response.end(`<!doctype html><script>
     let protectedTail = Promise.resolve();
+    const principal = {schema_version:'custodial-protected-principal.v1',device_id:'KIOSK_08',employee_id:'33333333-3333-4333-8333-333333333333',credential_id:'44444444-4444-4444-8444-444444444444',assignment_epoch:1};
+    window.MemphisMobile = {principalIdentity:()=>JSON.stringify(principal)};
     window.MemphisCustodialSecurity = {
       native: true,
-      getStatus: () => ({ ready: true, available: true, quarantined: false, deviceId: 'KIOSK_08' }),
+      getStatus: () => ({ ready: true, available: true, quarantined: false, state:'enrolled',generation:1,principal, deviceId: 'KIOSK_08' }),
       waitForStableState: async () => true,
       mutateProtectedWork: async (operation) => {
         const previous = protectedTail;
@@ -206,8 +208,11 @@ try {
   assert.equal(tampered.code, 'custodial_storage_unavailable');
   assert.match(tampered.message, /integrity check failed/);
 
-  await page.evaluate((sessionUuid) => window.MemphisScanSync.deleteCompletionDraft(sessionUuid), identity.session_uuid);
-  assert.equal(await page.evaluate((input) => window.MemphisScanSync.loadCompletionDraft(input), identity), null);
+  const refusedDeletion=await page.evaluate(async(sessionUuid)=>{try{await window.MemphisScanSync.deleteCompletionDraft(sessionUuid);return null;}catch(error){return{code:error.code,message:error.message};}},identity.session_uuid);
+  assert.equal(refusedDeletion.code,'custodial_storage_unavailable');
+  assert.match(refusedDeletion.message,/integrity check failed/,'damaged original cannot silently be cleared by an ordinary delete');
+  const retainedDamage=await page.evaluate(async()=>{const request=indexedDB.open('mz_scan_completion_drafts',1);const db=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});try{return await new Promise((resolve,reject)=>{const r=db.transaction('drafts','readonly').objectStore('drafts').get('11111111-1111-4111-8111-111111111111');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}finally{db.close();}});
+  assert.deepEqual(retainedDamage.draft,{work_result:'full'},'exact tampered original remains available for explicit recovery');
   console.log('CUSTODIAL_COMPLETION_DRAFT_RECOVERY_PASS');
   }
 } finally {

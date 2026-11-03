@@ -28,11 +28,10 @@ const viewerHtml = readFileSync(new URL('../ops-viewer.html', import.meta.url), 
 const viewerScript = readFileSync(new URL('../ops-viewer.js', import.meta.url), 'utf8');
 const releaseManifest = JSON.parse(readFileSync(new URL('../frontend-release-manifest.json', import.meta.url), 'utf8'));
 assert.equal(releaseManifest.api_contract_versions.feedback, 'feedback.v3.enrolled-authority');
-assert.deepEqual(
-  [...viewerHtml.matchAll(/data-panel="([^"]+)"/g)].map((match) => match[1]),
-  ['dashboard', 'events'],
-  'Read Only Viewer must expose exactly Dashboard and Events',
-);
+assert.match(viewerHtml,/id="metrics"/,'Public viewer retains Dashboard aggregate cards');
+assert.match(viewerHtml,/id="viewer-event-board"/,'Published Events remain available in the read-only board');
+assert.deepEqual([...viewerScript.matchAll(/await get\('([^']+)'\)/g)].map(m=>m[1]),['/viewer-api/dashboard','/viewer-api/events?days=90'],'Only existing public dashboard and scheduled-event sources may be queried');
+assert.match(viewerScript,/method:'GET',credentials:'omit'/);
 assert.doesNotMatch(viewerHtml, /Feedback|<form|<textarea|<select|type=["']submit["']/i);
 assert.doesNotMatch(viewerScript, /feedback-api\/submit|method\s*:\s*["']POST["']/i);
 

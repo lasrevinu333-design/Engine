@@ -8,7 +8,18 @@ import {createRequire} from 'node:module';
 const fixtureRoot=dirname(fileURLToPath(import.meta.url));
 const baseline=resolve(fixtureRoot,'..');
 const require=createRequire(baseline+'/mobile/package.json');
-const {transformSync}=require('esbuild');
+// Fixture compiler ownership: esbuild's worker service is unref'ed and its
+// stop() does not join worker termination. Its supported synchronous path
+// uses execFileSync, so every transform child exits before this call returns.
+// This process-local loader choice is restored before any fixture executes.
+const esbuild=(()=>{
+ const prior=process.env.ESBUILD_WORKER_THREADS;
+ process.env.ESBUILD_WORKER_THREADS='0';
+ try{return require('esbuild');}
+ finally{if(prior===undefined)delete process.env.ESBUILD_WORKER_THREADS;else process.env.ESBUILD_WORKER_THREADS=prior;}
+})();
+const {transformSync}=esbuild;
+try {
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const pins=new Map();
 const syntheticLocksPath=baseline+'/scripts/synthetic-schedule-locks.mjs';
@@ -292,3 +303,7 @@ for(const f of [schedule,lifecycle]){
 console.log(JSON.stringify({status:'PASS_SYNTHETIC_NORMAL_FACTORY_ORDINARY_RELEASE_PROTOCOL',releaseChecks,
  actual_normal_module_files:pins.size,scope:'Actual normal factory/renderer/callback protocol with synthetic native/DOM/vendor ports. No Java owner, native release acceptance, native effect/OS/backend or receipt authority.',
  receipt:false,OS_settlement:false,native_release_acceptance:false}));
+
+} finally {
+ await esbuild.stop();
+}

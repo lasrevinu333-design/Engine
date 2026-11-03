@@ -120,8 +120,8 @@ await test('closing capture revokes both old narrow and new complete-list child 
  const f=setup(),c=await capture(f),r=await inspect(c),a=args();
  const narrow=await inspectCapturedOriginalCompletion(c,{deviceId:a.p_device_id,clientSessionId:a.p_client_session_id,clientCompletionId:a.p_client_completion_id});
  closeCapturedProtectedBrowserWork(c);closeCapturedProtectedBrowserWork(c);
- await assert.rejects(readCapturedOriginalCompletionCensusArguments(c,r),/census_required/);
- await assert.rejects(readCapturedOriginalCompletionArguments(c,narrow),/candidate_required/);resources(f);
+ await assert.rejects(readCapturedOriginalCompletionCensusArguments(c,r),/original_browser_capture_required/);
+ await assert.rejects(readCapturedOriginalCompletionArguments(c,narrow),/original_browser_capture_required/);resources(f);
 });
 await test('close during digest prevents private census publication',async()=>{
  const f=setup();let close=false,c;const cryptoApi={subtle:{digest(...values){if(close){close=false;closeCapturedProtectedBrowserWork(c);}return webcrypto.subtle.digest(...values);}}};
@@ -147,7 +147,8 @@ await test('one deadline bounds hung digest and invalid inspection budgets fail 
 });
 await test('empty captured realm is represented but not an authenticated empty inventory',async()=>{
  const f=setup([],{},{});await withCapture(f,async c=>{const r=await inspect(c);flags(r);assert.equal(r.record_count,0);assert.equal(r.argument_candidate_count,0);
-  assert.equal(r.domains.length,3);const list=await readCapturedOriginalCompletionCensusArguments(c,r);assert.deepEqual(list,[]);});
+  assert.equal(r.domains.length,4);
+  assert.equal(r.domains.filter(d=>d.store==='sessionStorage').length,1,'the undeclared session area remains an explicit UNKNOWN domain');const list=await readCapturedOriginalCompletionCensusArguments(c,r);assert.deepEqual(list,[]);});
 });
 console.log(JSON.stringify({schema:'custodial.browser-whole-capture-completion-census-source-proof.v1',new_groups:passed,failed:0,skipped:0,outcomes,
  scope:'ACTUAL_UNMOUNTED_ESM_COMPLETE_CAPTURE_AND_PRIVATE_LIST_OVER_SYNTHETIC_STORAGE_IDB_NODE_WEBCRYPTO_ONLY',

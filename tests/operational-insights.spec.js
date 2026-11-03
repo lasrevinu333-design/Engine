@@ -1,4 +1,5 @@
-const { test, expect } = require('@playwright/test');
+const {currentLeadershipSession}=require('./helpers/current-leadership-session.cjs');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
 const employeeTammy = '00000000-0000-4000-8000-000000000111';
 const employeeSherita = '00000000-0000-4000-8000-000000000112';
@@ -10,26 +11,7 @@ const eligibleSessionEndedAt = new Date(Date.now() - (15 * 60 * 1000)).toISOStri
 const eligibleSessionStartedAt = new Date(Date.parse(eligibleSessionEndedAt) - (45 * 60 * 1000)).toISOString();
 const eligibleUntil = new Date(Date.parse(eligibleSessionEndedAt) + (24 * 60 * 60 * 1000)).toISOString();
 
-function authPayload() {
-  return {
-    ok: true,
-    data: {
-      session: {
-        token: 'operational-insights-browser-session',
-        role: 'ops_manager',
-        roles: ['CUSTODIAL_MANAGER', 'SECURITY_ADMIN'],
-        manager_id: '00000000-0000-4000-8000-000000000901',
-        manager_display_name: 'Eric Operle',
-        manager_job_title: 'Custodial Manager',
-        device_id: 'ui-audit-browser',
-        credential_id: '00000000-0000-4000-8000-000000000902',
-        access_level: 'full_access',
-        read_only: false,
-        expires_at: '2036-07-18T00:00:00.000Z',
-      },
-    },
-  };
-}
+function authPayload(){return currentLeadershipSession({deviceId:'ui-audit-browser',managerId:'00000000-0000-4000-8000-000000000901',credentialId:'00000000-0000-4000-8000-000000000902',displayName:'Synthetic selected insights manager'});}
 
 const performance = [
   {
@@ -97,7 +79,7 @@ async function installBackend(context, capture = {}) {
     const request = route.request();
     const url = new URL(request.url());
     const auth = request.headers().authorization || '';
-    if (url.pathname === '/auth-api/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(authPayload()) });
+    if (url.pathname === '/custodial-leadership-api/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(authPayload()) });
     if (url.pathname.startsWith('/analytics-api/') && !auth.startsWith('Bearer ')) {
       return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'Custodial Manager access is required.' }) });
     }
@@ -124,7 +106,7 @@ for (const viewport of [
     await installBackend(context);
     const page = await context.newPage();
     await page.goto('/operational-insights.html');
-    await expect(page.getByRole('heading', { name: 'Insights & Inspections' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Operational Insights' })).toBeVisible();
     const performanceList = page.locator('#performance-list');
     await expect(performanceList.getByText('Tammy Miller · Teton', { exact: true })).toBeVisible();
     await expect(performanceList.getByText('Sherita James · Teton', { exact: true })).toBeVisible();
@@ -164,86 +146,24 @@ for (const viewport of [
   });
 }
 
-test('a manager inspection is tied to the exact cleaning session and saved idempotently', async ({ browser }, testInfo) => {
-  const capture = {};
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await installBackend(context, capture);
-  const page = await context.newPage();
-  await page.goto('/operational-insights.html');
-  await page.getByRole('tab', { name: 'Cleanings' }).click();
-  const tammyCard = page.locator('[data-session-id]').filter({ hasText: 'Tammy Miller' });
-  const sheritaCard = page.locator('[data-session-id]').filter({ hasText: 'Sherita James' });
-  await expect(tammyCard.getByText(/Inspection window open until/)).toBeVisible();
-  await expect(sheritaCard.getByText('24-hour inspection window closed', { exact: true })).toBeVisible();
-  await expect(sheritaCard.getByRole('button', { name: 'Closed' })).toBeDisabled();
-  await page.screenshot({ path: testInfo.outputPath('cleaning-inspection-freshness.png'), fullPage: true });
-  await tammyCard.getByRole('button', { name: 'Inspect' }).click();
-  await expect(page.getByRole('heading', { name: 'Record cleaning quality' })).toBeVisible();
-  await expect(page.getByText('Teton · Tammy Miller · 45 min cleaning')).toBeVisible();
-  await page.locator('#appearance-score').selectOption('100');
-  await page.locator('#sanitation-score').selectOption('100');
-  await page.locator('#supplies-score').selectOption('90');
-  await page.locator('#detail-score').selectOption('100');
-  await page.locator('#safety-score').selectOption('100');
-  await page.getByLabel('Inspection notes').fill('Excellent result. Keep this standard.');
-  await page.getByRole('button', { name: 'Save Inspection' }).click();
-  await expect(page.getByText('Inspection saved.')).toBeVisible();
-  expect(capture.payload.session_id).toBe(sessionTammy);
-  expect(capture.payload.overall_score).toBe(98);
-  expect(capture.payload.pass_threshold).toBe(85);
-  expect(capture.payload.notes).toBe('Excellent result. Keep this standard.');
-  expect(capture.idempotencyKey).toBe(capture.payload.operation_id);
-  await context.close();
+// Original recording cases are retained in the frozen baseline. The supplied
+// current page keeps historical evidence readable and retires new recording.
+test('cleaning history preserves exact employee/session attribution while new inspection recording stays retired',async({browser})=>{
+ const capture={},context=await browser.newContext({viewport:{width:390,height:844}});try{
+  await installBackend(context,capture);const page=await context.newPage();await page.goto('/operational-insights.html');await page.getByRole('tab',{name:'Cleanings'}).click();
+  for(const [id,name]of [[sessionTammy,'Tammy Miller'],[sessionSherita,'Sherita James']])await expect(page.locator('[data-session-id="'+id+'"]').filter({hasText:name})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Inspect',exact:true})).toHaveCount(0);await expect(page.locator('#inspection-overlay')).toHaveCount(0);expect(capture.payload).toBeUndefined();
+ }finally{await context.close();}
 });
-
-test('an open inspection fails closed when its 24-hour window expires before submit', async ({ browser }) => {
-  const capture = {};
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await installBackend(context, capture);
-  const page = await context.newPage();
-  await page.goto('/operational-insights.html');
-  await page.getByRole('tab', { name: 'Cleanings' }).click();
-  const tammyCard = page.locator('[data-session-id]').filter({ hasText: 'Tammy Miller' });
-  await tammyCard.getByRole('button', { name: 'Inspect' }).click();
-  await expect(page.getByRole('heading', { name: 'Record cleaning quality' })).toBeVisible();
-
-  await page.evaluate((deadline) => {
-    const expiredNow = Date.parse(deadline) + 1;
-    Date.now = () => expiredNow;
-  }, eligibleUntil);
-  await page.getByRole('button', { name: 'Save Inspection' }).click();
-
-  await expect(page.locator('#inspection-status')).toHaveText('The 24-hour inspection window has closed. Refresh cleanings to continue.');
-  await expect(page.locator('#inspection-overlay')).toBeVisible();
-  expect(capture.payload).toBeUndefined();
-  await context.close();
+test('expired historical eligibility cannot reopen retired inspection recording or send a write',async({browser})=>{
+ const capture={},context=await browser.newContext();try{await installBackend(context,capture);const page=await context.newPage();await page.goto('/operational-insights.html');await page.getByRole('tab',{name:'Cleanings'}).click();
+  await expect(page.locator('[data-session-id="'+sessionTammy+'"]').filter({hasText:'Tammy Miller'})).toBeVisible();await page.evaluate(deadline=>{Date.now=()=>Date.parse(deadline)+1;},eligibleUntil);
+  await expect(page.getByRole('button',{name:'Save Inspection',exact:true})).toHaveCount(0);await expect(page.getByRole('dialog')).toHaveCount(0);expect(capture.payload).toBeUndefined();
+ }finally{await context.close();}
 });
-
-test('insights tabs and inspection dialog keep keyboard focus in the active interface', async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await installBackend(context);
-  const page = await context.newPage();
-  await page.goto('/operational-insights.html');
-
-  const performanceTab = page.getByRole('tab', { name: 'Performance' });
-  await performanceTab.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Cleanings' })).toBeFocused();
-  await expect(page.getByRole('tabpanel', { name: 'Cleanings' })).toBeVisible();
-
-  const inspectButton = page.locator('[data-session-id]').filter({ hasText: 'Tammy Miller' }).getByRole('button', { name: 'Inspect' });
-  await inspectButton.click();
-  await expect(page.locator('#inspection-type')).toBeFocused();
-  await expect(page.locator('#insights-main')).toHaveAttribute('aria-hidden', 'true');
-
-  await page.getByRole('button', { name: 'Close inspection form' }).focus();
-  await page.keyboard.press('Shift+Tab');
-  await expect(page.getByRole('button', { name: 'Cancel' })).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Close inspection form' })).toBeFocused();
-
-  await page.keyboard.press('Escape');
-  await expect(inspectButton).toBeFocused();
-  await expect(page.locator('#insights-main')).not.toHaveAttribute('aria-hidden', 'true');
-  await context.close();
+test('insights keyboard focus follows the active history tab without a retired recording dialog',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:1440,height:900}});try{await installBackend(context);const page=await context.newPage();await page.goto('/operational-insights.html');const tab=page.getByRole('tab',{name:'Performance'});await tab.focus();
+  await page.keyboard.press('ArrowRight');await expect(page.getByRole('tab',{name:'Cleanings'})).toBeFocused();await expect(page.getByRole('tabpanel',{name:'Cleanings'})).toBeVisible();await page.keyboard.press('End');await expect(page.getByRole('tab').last()).toBeFocused();
+  await page.keyboard.press('Home');await expect(tab).toBeFocused();await expect(page.getByRole('tabpanel',{name:'Performance'})).toBeVisible();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.locator('#insights-main')).not.toHaveAttribute('aria-hidden','true');
+ }finally{await context.close();}
 });

@@ -1,4 +1,4 @@
-const { test, expect, chromium } = require('@playwright/test');
+const { test, expect, chromium } = require('./helpers/isolated-browser-test.cjs');
 const { execFileSync } = require('node:child_process');
 const { createReadStream, statSync } = require('node:fs');
 const { cp, mkdtemp, rm } = require('node:fs/promises');

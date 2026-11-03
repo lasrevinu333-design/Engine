@@ -135,10 +135,10 @@ public final class NativeReadinessObservationTest {
         assertArrayEquals(staged,new VaultSnapshotCodec().encode(pending.current()));assertEquals(commits,pending.commitAttempts.get());
     }
     @Test public void exactExistingExpiryBoundaryAndUnavailableEnrollmentStayTruthful()throws Exception{
-        Fixture boundary=new Fixture(false);boundary.clock.elapsed=901000;assertEquals("CONFIRMED",boundary.unchanged().get("observation"));
-        boundary.clock.elapsed=901001;assertEquals("EXPIRED",boundary.unchanged().get("native_clock_continuity"));
+        Fixture boundary=new Fixture(false);boundary.clock.elapsed=900999;assertEquals("CONFIRMED",boundary.unchanged().get("observation"));
+        boundary.clock.elapsed=901000;assertEquals("EXPIRED",boundary.unchanged().get("native_clock_continuity"));
         for(boolean unreadable:new boolean[]{false,true}){Fixture x=new Fixture(false);
-            if(unreadable)x.f.cipher.makeUnreadable(x.f.persistence.current().secret);else x.f.engine.removeEnrollment(NativeProviderHttpTest.RID,DEVICE);
+            if(unreadable)x.f.cipher.makeUnreadable(x.f.persistence.current().secret);else NativeProviderHttpTest.preserveSyntheticOriginal(x.f);
             Map<String,Object> r=x.unchanged();assertEquals("NEEDS_MANAGER",r.get("observation"));assertNull(r.get("pending_occurrences"));assertNull(r.get("principal_identity"));
         }
     }
@@ -155,7 +155,7 @@ public final class NativeReadinessObservationTest {
     }
     @Test public void admissionDispositionOrEnrollmentChangingMidObservationCannotPromote()throws Exception{
         for(boolean remove:new boolean[]{false,true}){Fixture x=new Fixture(false);
-            x.clock.hook=()->{if(remove)x.f.engine.removeEnrollment(NativeProviderHttpTest.RID,DEVICE);else x.data.frozen=true;};
+            x.clock.hook=()->{if(remove)NativeProviderHttpTest.preserveSyntheticOriginal(x.f);else x.data.frozen=true;};
             assertEquals("UNKNOWN",x.observer().observe(DEVICE,x.identity).get("observation"));assertEquals(0,x.data.writes);
         }
     }

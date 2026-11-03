@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#081422">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,9 +27,12 @@
     .todaySource{margin:12px 0 0;color:var(--muted);font-size:.84rem;font-weight:800}
     .evidenceTile{grid-column:1/-1;border-color:rgba(145,214,58,.34)!important;background:linear-gradient(145deg,rgba(61,112,37,.22),rgba(65,199,167,.08))!important}
     details.toolsDetails{margin-top:14px}.toolsDetails summary{cursor:pointer;font-weight:900;min-height:48px;display:flex;align-items:center}
+    #manager-weather-hours{display:flex;gap:12px;overflow:auto}#manager-weather-hours>*{flex:0 0 125px}#manager-weather [data-stale="true"]{color:#facc15}
+    .managerWeatherAlerts li {padding:10px 0}.managerWeatherAlerts li[data-urgent="true"]{border:2px solid #facc15;padding:12px}
     @keyframes mzSpin{to{transform:rotate(360deg)}}
     @media(prefers-reduced-motion:reduce){.bootSpinner{animation:none;border-top-color:rgba(255,255,255,.18);background:var(--green)}}
   </style>
+  <link rel="stylesheet" href="./manager-home-weather.css">
 </head>
 <body>
   <main class="shell">
@@ -50,33 +53,28 @@
       <button id="boot-retry" class="btn" type="button" hidden>Try Again</button>
     </section>
 
-    <section id="enrollment" class="card" hidden>
-      <div class="eyebrow">One-time setup</div>
-      <h2>Enroll this phone</h2>
-      <p class="sectionLead">Enter the personal eight-digit code created for your leadership account. Work and personal phones are enrolled separately.</p>
-      <form id="enroll-form">
-        <div class="field"><label for="code">Manager code</label><input id="code" class="input" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="1234 5678" required></div>
-        <div class="field"><label for="device-label">Phone name</label><input id="device-label" class="input" maxlength="160" placeholder="Brandy’s work iPhone"></div>
-        <button class="btn primary" type="submit">Enroll Phone</button>
-        <div id="enroll-status" class="status" aria-live="polite"></div>
-      </form>
-    </section>
+    <section id="enrollment" class="card" hidden><div class="eyebrow">Leadership enrollment</div><h2>Enroll this browser</h2><p>Use the shared leadership PIN and choose your approved name. The name is self-asserted; the server controls permissions.</p><a class="btn primary" href="./ops-manager-hub.html?return=index.html">Open leadership enrollment</a><div id="enroll-status" class="status" aria-live="polite"></div></section>
 
     <section id="hub" hidden>
+      <section class="card" id="manager-weather" aria-label="Zoo date, time and weather" style="margin-top:14px"><h2>At the Zoo</h2><p><span id="manager-home-date">Date unavailable</span> · <time id="manager-home-clock">Time unavailable</time> Central</p><strong id="manager-weather-current">Weather unavailable</strong><p id="manager-weather-summary"></p><p id="manager-weather-freshness">Weather source not loaded.</p><ul id="manager-weather-hours" aria-label="Next hours at the Zoo"></ul><ul id="manager-weather-alerts" class="managerWeatherAlerts" aria-label="Source weather warnings" aria-live="polite"></ul><p id="manager-alerts-freshness">Weather warnings not loaded.</p></section>
       <section class="card">
         <div class="eyebrow">What is happening now</div>
         <h2 class="sectionTitle">Today</h2>
         <p class="sectionLead">Open the exact part of today that needs attention.</p>
         <div class="primaryGrid">
+          <a class="tile primaryTile" href="./operations-dashboard.html"><span>Dashboard Map</span><small>Cleaning locations and operational context</small></a>
+          <a class="tile primaryTile" href="./events.html"><span>Events</span><small>Shared event details and source review</small></a>
           <a class="tile primaryTile" href="./dashboard.html#overdue"><span>Overdue</span><strong id="today-overdue" class="todayValue" data-state="loading">—</strong><small>Areas that should already be finished</small></a>
           <a class="tile primaryTile" href="./dashboard.html#due-soon"><span>Due soon</span><strong id="today-due-soon" class="todayValue" data-state="loading">—</strong><small>Areas coming up next</small></a>
           <a class="tile primaryTile" href="./dashboard.html#being-cleaned"><span>Being cleaned now</span><strong id="today-in-progress" class="todayValue" data-state="loading">—</strong><small>Who is cleaning and where</small></a>
-          <a class="tile primaryTile" href="./dashboard.html#tickets-section"><span>Open problems</span><strong id="today-open-problems" class="todayValue" data-state="loading">—</strong><small>Cleaning and maintenance issues needing attention</small></a>
+          <a class="tile primaryTile" href="#open-problems"><span>Open problems</span><strong id="today-open-problems" class="todayValue" data-state="loading">—</strong><small>Cleaning, maintenance, approved guest issues and saved work needing review</small></a>
           <article id="today-guest-attendance" class="todayInfoTile" aria-live="polite"><span>Guest entries</span><strong id="today-guest-count" class="todayValue" data-state="loading">—</strong><small id="today-guest-meta">Loading gate feed…</small></article>
         </div>
         <p id="today-source" class="todaySource" aria-live="polite">Loading operational status…</p>
       </section>
 
+      <section class="card" aria-labelledby="today-events-heading"><h2 id="today-events-heading">Events today</h2><p id="today-events-source">Event source not loaded.</p><div id="today-events"></div><a href="./events.html">Open Events</a></section>
+      <section class="card" id="open-problems" aria-labelledby="open-problems-heading"><h2 id="open-problems-heading">Open problems</h2><p id="open-problems-source">Problem sources not loaded.</p><div id="open-problems-list"></div></section>
       <section id="decisions" class="card" style="margin-top:14px">
         <div class="eyebrow">Choose what needs to change</div>
         <h2 class="sectionTitle">Decisions</h2>
@@ -96,10 +94,11 @@
         <details class="toolsDetails">
           <summary>Admin Tools</summary>
           <p class="sectionLead">Restricted setup, security, evidence, and release work.</p>
+          <details id="phone-settings" class="toolsDetails"><summary>Phone Settings</summary><p>Remove this browser’s leadership enrollment only when it should no longer have manager access. You will need the current shared PIN to enroll again. This does not erase employee saved work.</p><button id="logout" class="btn danger" type="button">Remove This Phone</button><a class="btn" href="./notifications.html">Notification settings</a></details>
           <div class="grid">
             <a class="tile" href="./phone-assignments.html"><span>Phone enrollment</span><small>Prepare a Custodial phone for secure use</small></a>
             <a class="tile" href="./phone-assignments.html"><span>Phone assignment</span><small>Phone Assignments for a named employee</small></a>
-            <a id="manager-access-tile" class="tile" href="./manager-access.html"><span>Manager Access</span><small>Personal enrollment codes and leadership accounts</small></a>
+            <a id="manager-access-tile" class="tile" href="./manager-access.html"><span>Manager Access</span><small>Shared leadership enrollment and approved names</small></a>
             <a id="device-security-tile" class="tile" href="./device-security.html"><span>Device Security</span><small>Review and revoke enrolled phones</small></a>
             <a id="gemini-tile" class="tile" href="./gemini-admin.html"><span>Diagnostics</span><small>Read-only technical details kept away from daily work</small></a>
             <a class="tile" href="./admin.html#sessions-panel"><span>Offline evidence details</span><small>Protected work and recovery evidence</small></a>
@@ -114,7 +113,7 @@
       <section class="card" style="margin-top:14px">
         <div class="actions">
           <button id="refresh" class="btn" type="button">Update Page</button>
-          <button id="logout" class="btn danger" type="button">Remove This Phone</button>
+
         </div>
         <div id="hub-status" class="status" aria-live="polite"></div>
       </section>
@@ -129,6 +128,7 @@
     <a href="#more"><span class="navIcon" aria-hidden="true">•••</span><span class="navLabel">More</span></a>
   </nav>
 
+  <script src="./memphis-auth.js"></script>
   <script src="./pwa-register.js"></script>
   <script src="./mobile-manager.js"></script>
 </body>

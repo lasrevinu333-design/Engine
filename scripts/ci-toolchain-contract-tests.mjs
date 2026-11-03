@@ -1717,9 +1717,9 @@ assertCodemagicSourceAttestation(codemagic);
 assertCodemagicMobileBrowserDependencies(
   codemagic,
   ['install'],
-  ['manager-ios', 'viewer-ios', 'manager-android', 'custodial-android', 'custodial-callback-reference', 'viewer-android'],
+  ['manager-ios', 'viewer-ios', 'manager-android', 'custodial-android', 'custodial-callback-reference', 'viewer-android', 'custodial-first-test'],
 );
-// This sixth workflow is existing G30 reference evidence, not a sixth release role.
+// Seven explicit workflows retain five release roles, the G30 reference and one manual owner TEST route.
 const codemagicInstallLines = codemagic
   .split(/\r?\n/)
   .map((line) => line.trim())
@@ -1732,13 +1732,13 @@ assert.deepEqual(
 assert.match(codemagic, /test "\$\(npm --version\)" = "11\.17\.0"/, 'Codemagic must verify npm 11.17.0');
 assert.equal(
   [...codemagic.matchAll(/^\s+node:\s*['"]22\.23\.4['"]\s*$/gm)].length,
-  6,
-  'All five release workflows and the callback reference must use Node 22.23.4 exactly',
+  7,
+  'All five release workflows, the callback reference and manual owner TEST route must use Node 22.23.4 exactly',
 );
 assert.equal(
   [...codemagic.matchAll(/^\s+instance_type:\s*mac_mini_m2\s*$/gm)].length,
-  6,
-  'All five release workflows and the callback reference must remain on the personal-plan machine with free monthly minutes',
+  7,
+  'All five release workflows, the callback reference and manual owner TEST route must remain on the personal-plan machine with free monthly minutes',
 );
 assert.doesNotMatch(
   codemagic,
@@ -1772,8 +1772,8 @@ assert.equal(
 );
 assert.equal(
   [...codemagic.matchAll(/^\s+xcode:\s*['"]26\.2['"]\s*$/gm)].length,
-  4,
-  'All three Android release workflows and the callback reference must pin the documented Xcode 26.2 image containing Build Tools 35.0.1',
+  5,
+  'All three Android release workflows, the callback reference and manual owner TEST route must pin the documented Xcode 26.2 image containing Build Tools 35.0.1',
 );
 assert.doesNotMatch(codemagic, /xcode:\s*latest/, 'Codemagic must not float on the latest Xcode image');
 assert.match(codemagic, /git diff --exit-code -- chatscope-messenger\.js chatscope-messenger\.css/, 'Codemagic must reject ChatScope bundle drift');

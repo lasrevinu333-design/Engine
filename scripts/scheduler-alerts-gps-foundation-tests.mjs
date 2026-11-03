@@ -121,12 +121,12 @@ assert.equal(storedIdentity.deviceId, 'KIOSK_06');
 assert.equal(storedIdentity.source, 'storage_canonical');
 
 const schedule = read('employee-schedule.html');
-assert.match(schedule, /window\.MemphisMobile\?\.deviceId/);
-assert.match(schedule, /window\.MemphisCustodialSecurity\.mutateProtectedWork/);
+assert.match(schedule, /mobile=window\.MemphisMobile/);assert.match(schedule,/const device=String\(mobile\?\.deviceId\?\.\(\)\|\|status\?\.deviceId\|\|''\)/);assert.match(schedule,/mobile\.deviceId!==deviceMethod/,'The originally captured device method remains fenced');
+assert.match(schedule,/const security=original\.native\?window\.MemphisCustodialSecurity:null/);assert.match(schedule,/const mutate=security\?\.mutateProtectedWork/);assert.match(schedule,/security\.mutateProtectedWork!==mutate/,'The captured native writer remains fenced');
 assert.match(schedule, /\/my-day-summary\?device_id=/);
 assert.doesNotMatch(schedule, /visitor-/);
 assert.match(schedule, /This phone needs a manager/);
-assert.match(schedule, /You are not scheduled now/);
+assert.match(schedule, /No regular areas are active right now\./);
 assert.match(schedule, /Your areas now/);
 assert.match(schedule, /current_items/);
 assert.doesNotMatch(schedule, /display_sections|consolidateDisplayItems|>Now<\/span>/);
@@ -171,9 +171,9 @@ assert.match(reminders, /for \(let cycle = 0; cycle < 2; cycle \+= 1\)/);
 assert.match(reminders, /acknowledgeAlert\(alert, 'dismissed'\)/);
 assert.match(reminders, /closeActiveAlert\(\{ stopSpeech: false \}\)/);
 assert.match(reminders, /await waitForActiveAlertSpeech\(\)/, 'Opening an alert must wait for its spoken sentence before navigation');
-assert.match(reminders, /state\.activeSpeechPromise = speakOnce/);
+assert.match(reminders,/const speech = speakOnce\(normalized\);\s*state\.activeSpeechPromise = speech;\s*const spoken=await speech/);
 assert.match(reminders, /state\.activeSequencePromise \|\| state\.activeSpeechPromise/, 'A new alert must not interrupt a dismissed alert that is still speaking');
-assert.match(reminders, /Math\.min\(45000/, 'Fully Kiosk speech estimate must allow longer event announcements');
+assert.match(reminders,/return speakViaBrowser\(normalized\)/,'A void Fully call or timer cannot prove this exact utterance completed');assert.match(reminders,/utterance\.onend = \(\) => finish\(true\)/);assert.match(reminders,/utterance\.onerror = \(\) => finish\(false\)/);
 assert.doesNotMatch(reminders, /stopTextToSpeech[^\n]*setTimeout/);
 
 const sharedSync = read('memphis-scan-sync.js');
@@ -205,7 +205,7 @@ assert.match(scan, /reconcileOpenLocalSessions/, 'Scan page must reconcile phone
 assert.match(scan, /session_cancelled_without_authoritative_completion|discard_local_workflow/);
 assert.match(scan, /Cleaning Cancelled/);
 
-assert.match(read('schedule.html'), /REQUIRED_CONTRACT:"schedule\.v2"/);
+assert.match(read('schedule.html'),/new URL\('\.\/schedule-weekly\.html',current\)/,'The retired generator remains an exact safe weekly alias');
 assert.match(read('employee-schedule.html'), /current_items/);
 assert.doesNotMatch(read('employee-schedule.html'), /display_sections|consolidateDisplayItems/);
 const chatScope = read('mobile/src/chatscope/app.jsx');

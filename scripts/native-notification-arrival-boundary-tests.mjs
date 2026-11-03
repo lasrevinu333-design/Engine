@@ -70,7 +70,7 @@ function assertNotificationOwnerContext(context,actualOwnerSource) {
   // This finite version-bound context contract is not a generic identifier parser.
   // Any owner-source change refuses before evaluation and requires its bindings
   // to be reviewed; missing current context names are reported directly.
-  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'f8bb4f54cfb8a0d4c951ac29b0d2fc062aeb699cd5afc1f9eccca4d1bdfbbc47','Frozen notification owner changed; review the exact current import/closure dependencies');
+  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'3343031c5c1e4ba8c78b1efb031b14d03ec7c30c0b7688d3a8604c623e86271f','Frozen notification owner changed; review the exact current import/closure dependencies');
   for(const name of notificationOwnerContextNames)
     assert.ok(Object.hasOwn(context,name)&&context[name]!==undefined,'Missing notification owner context: '+name);
   assert.equal(context.nativeApplicationSource,null,'Fixture selects only the real existing null-default application-source route');
@@ -149,7 +149,7 @@ function fullBrowserFixture(context, { rows = [], fetchWait = null, fetchRows = 
     get speech(){return context.window.speechSynthesis;},get card(){return card;},get active(){return card!==null;},get presented(){return cards.length;},get fetches(){return fetches;},get audioStops(){return audioStops;}};
 }
 async function fixture({memory=new Map(),offline=true,capable=true,firebaseAvailable=capable,localAvailable=capable,platform='android',receive='granted',display='granted',
-  supported=true,actionFailure=false,listenerFailure=false,channelFailure=false,registrationFailure=false,permissionWait=null,initialize=true,initialPrincipal=principal,presentationIsCurrent=null,scheduleAuthorityFactory=null,providerMirror=null,presenterNativeOwner=false,scopeProfile='full-system'}={}){
+  supported=true,actionFailure=false,listenerFailure=false,channelFailure=false,registrationFailure=false,permissionWait=null,initialize=true,initialPrincipal=principal,presentationIsCurrent=null,scheduleAuthorityFactory=null,providerMirror=null,presenterNativeOwner=false,scopeProfile='full-system',clock=Date}={}){
   const native=new Map(),local=new Map(),network=new Map(),windowEvents=new Map(),effects=[],requests=[],scheduled=[],actionTypes=[],modes=[],cancelled=[],securityListeners=[];
   const pluginCalls=[],pluginConstructions=new Set();
   let active=initialPrincipal,failStorage=false,readbackLost=false,mutationHook=()=>{},presentFailure=false,displayWriteFailure=false,audioClaimWriteFailure=false,modeHook=()=>{};
@@ -182,11 +182,17 @@ async function fixture({memory=new Map(),offline=true,capable=true,firebaseAvail
     // The new mounted-authority suite supplies the REAL factory plus cache.
     createScheduleNotificationAuthority:options=>(scheduleAuthority=scheduleAuthorityFactory?scheduleAuthorityFactory(options):{
       isCurrent:()=>true,refresh:async()=>true,observe:async()=>true,securityChanged(){},unavailable(){},isStorageKey:()=>false,
+      beginLunchAudio(row,scope){
+        if(row?.kind!=='employee_lunch_coverage'||scope!==principalIdentity(active))return null;
+        const owner=active,originalGeneration=generation;let live=true;
+        return Object.freeze({isCurrent:()=>live&&active===owner&&generation===originalGeneration
+          &&(!presentationIsCurrent||presentationIsCurrent(row,scope)===true),retire(){live=false;}});
+      },
       // Legacy receipt fixtures have no accepted-location read. New writer
       // cases above/below use the real schedule-authority factory instead.
       beginAcceptedLocationSessionRead:()=>null,acceptedLocationSessionReadCurrent:()=>false,
       finishAcceptedLocationSessionRead(){},observeAcceptedLocationSession:()=>false}),
-    createPrincipalNotificationScheduler:schedulerForFixtureProfile(scopeProfile),nativeApplicationSource:null,localStorage:storage,NATIVE_NOTIFICATION_OUTBOX_PREFIX:'receipt:',JSON,Date,Number,Math,
+    createPrincipalNotificationScheduler:schedulerForFixtureProfile(scopeProfile),nativeApplicationSource:null,localStorage:storage,NATIVE_NOTIFICATION_OUTBOX_PREFIX:'receipt:',JSON,Date:clock,Number,Math,
     Capacitor:{getPlatform:()=>platform,isPluginAvailable:name=>name==='FirebaseMessaging'?firebaseAvailable:name==='LocalNotifications'?localAvailable:false},
     // Existing legacy suite leaves the separately constructed native mirror suspended.
     // Its owning integration suite passes the actual mirror coordinator here.

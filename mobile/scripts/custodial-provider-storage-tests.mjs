@@ -8,6 +8,18 @@ import assert from 'node:assert/strict';
 
 // Offline javac/JUnit against the actual installed Android SDK API stubs.
 // No APK, Gradle, emulator, AndroidKeyStore instrumentation or network proof.
+// Current complete source requires the full AGP-compiled Android host fixture.
+// This explicit mode executes the SAME closed forty-class JUnit inventory in
+// fresh processes because runtime ownership is intentionally process-lifetime.
+// The original exact historical wire/preparation runner remains below.
+if(process.argv[2]==='--current-compiled-fixture'){
+  assert.deepEqual(process.argv.slice(3).filter((_,i)=>i%2===0),['--profile','--output']);
+  assert.equal(process.argv.length,7,'Exact current profile and new owned output required');
+  for(const value of [process.argv[4],process.argv[6]])assert.ok(isAbsolute(value));
+  const result=spawnSync('python3',[fileURLToPath(new URL('./current-custodial-provider-unit-tests.py',import.meta.url)),
+    '--profile',process.argv[4],'--output',process.argv[6]],{stdio:'inherit',timeout:700000});
+  if(result.error)throw result.error;process.exit(result.status??1);
+}
 const required = ['JUNIT_JAR', 'HAMCREST_JAR', 'JSON_JAR', 'ANDROID_API_JAR'];
 const jars = required.map(name => {
   if (!process.env[name]) throw new Error(`${name} must identify an existing local JAR`);

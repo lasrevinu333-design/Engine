@@ -1,11 +1,13 @@
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
 const text=fs.readFileSync(process.argv[2]+'/memphis-device-reminders.js','utf8');
 function block(name,next){return text.slice(text.indexOf('  '+name),text.indexOf('  '+next,text.indexOf('  '+name)));}
-let source=block('function clearPendingRingtoneRepeats(','function stopActiveSpeech(')+block('function queueAlertStep(','function speakViaBrowser(')+block('async function startAlertAudioSequence(','async function waitForActiveAlertSpeech(')+block('function closeActiveAlert(','function showAlert(');
+let source=block('function clearPendingRingtoneRepeats(','function stopActiveSpeech(')+block('function queueAlertStep(','function speakViaBrowser(')+block('async function startAlertAudioSequence(','async function waitForActiveAlertSpeech(')+block('function stopAlertAudio(','function closeActiveAlert(')+block('function closeActiveAlert(','function showAlert(');
 async function scenario(dismissAt,stopSpeech=false){let clock=0,id=0,finished=false,rings=0;const pending=new Map(),spoken=[];
- const state={ringTimeouts:[],alertSequenceToken:0,activeAlert:{id:'fixture'}};
- const ctx={state,CONFIG:{RINGTONE_ESTIMATED_DURATION_MS:1000,ALERT_POST_RINGTONE_DELAY_MS:100,VOICE_REPEAT_GAP_MS:1500,ALERT_LOCK_KEY:'fixture'},
-  safeText:v=>String(v||''),playOneRingtone:()=>{rings++;},stopActiveRingtone(){},stopActiveSpeech(){},
+ const state={ringTimeouts:[],alertSequenceToken:0,activeAlert:{id:'fixture'}};state.activeAudioAlert=state.activeAlert;
+ const ctx={state,lunchAudioContinuations:new WeakMap(),CONFIG:{RINGTONE_ESTIMATED_DURATION_MS:1000,ALERT_POST_RINGTONE_DELAY_MS:100,VOICE_REPEAT_GAP_MS:1500,ALERT_LOCK_KEY:'fixture'},
+  safeText:v=>String(v||''),playOneRingtone:()=>{rings++;},
+  Audio:class {play(){rings++;const self=this;ctx.window.setTimeout(()=>self.onended?.(),1000);return Promise.resolve();}},ensureRingtoneDataUrl:()=> 'SYNTHETIC_NO_AUDIO_PLAYBACK',
+  stopActiveRingtone(){state.sequenceTone?.finish(false);},stopActiveSpeech(){},retireLunchAudio(){},clearLunchCutoff(){},
   speakOnce:async s=>{spoken.push(s);return true;},setReminderPresentationActive(){},sessionStorage:{removeItem(){}},
   document:{querySelector:()=>({remove(){}})},Date:{now:()=>clock},
   window:{setTimeout:(fn,delay)=>{const key=++id;pending.set(key,{at:clock+delay,fn});return key;},clearTimeout:key=>pending.delete(key)}};

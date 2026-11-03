@@ -1,5 +1,7 @@
 const { installNativeAcceptanceFixture } = require('./helpers/native-acceptance-fixture.cjs');
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
+test.afterEach(async({browser},info)=>{if(info.status===info.expectedStatus)return;const pages=[];for(const c of browser.contexts())for(const p of c.pages())pages.push(await p.evaluate(async()=>({url:location.href,online:navigator.onLine,body:document.body.innerText,queue:await window.MemphisScanSync?.listActions?.(),security:window.MemphisCustodialSecurity?.getStatus?.()})).catch(error=>({error:String(error)})));await info.attach('owned-synthetic-phone-failure-state',{contentType:'application/json',body:JSON.stringify(pages)});});
+
 
 const DEVICE_ID = 'KIOSK_04';
 const SESSION_ID = '00000000-0000-4000-8000-000000000401';
@@ -11,8 +13,9 @@ const NFC_ENTRY_E = '00000000-0000-4000-8000-000000000425';
 const NFC_ENTRY_F = '00000000-0000-4000-8000-000000000426';
 const NFC_ENTRY_G = '00000000-0000-4000-8000-000000000430';
 const NFC_ENTRY_H = '00000000-0000-4000-8000-000000000439';
-// Candidate's isolated NORMAL catalog; not physical wake or installation proof.
-const SCHEMA_FINGERPRINT = 'ce1406bf491d398acb0d9d81ce1ed8f5d9ad60f503bc27585b9991c93b1b6ee2';
+// Synthetic version response for the unchanged declared runtime compatibility contract.
+// This is not a measurement/admission of current308 or hosted schema identity.
+const SCHEMA_FINGERPRINT = 'ff233923ac21cd46b70985a9eaeb20dbb2a4c0bdc6f69f527159d437ed893440';
 const PREVIOUS_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
 
 // Changed shipping join only: real local browser Storage/Web Locks/IndexedDB,
@@ -442,9 +445,7 @@ test('a transient protected-start refusal retries the exact same session once', 
   await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_A] });
   await installSuccessfulStartRoutes(context);
   const page = await context.newPage();
-  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
-  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     const original = window.MemphisMobile.createOfflineStartAttestation;
     window.__startProofInputs = [];
     window.MemphisMobile.createOfflineStartAttestation = async (input) => {
@@ -457,8 +458,8 @@ test('a transient protected-start refusal retries the exact same session once', 
       return original(input);
     };
   });
-  await page.getByRole('button', { name: 'Start Cleaning' }).click();
-  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   const attempts = await page.evaluate(() => window.__startProofInputs);
   expect(attempts).toHaveLength(3);
   expect(attempts[1]).toEqual(attempts[0]);
@@ -476,9 +477,7 @@ test('a persistent protected-start refusal preserves one journal and gives truth
   await installKioskRuntime(context, { verifiedEntryIds: [NFC_ENTRY_B] });
   await installSuccessfulStartRoutes(context);
   const page = await context.newPage();
-  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
-  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     window.__startProofInputs = [];
     window.MemphisMobile.createOfflineStartAttestation = async (input) => {
       window.__startProofInputs.push(input);
@@ -487,7 +486,7 @@ test('a persistent protected-start refusal preserves one journal and gives truth
       throw error;
     };
   });
-  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+  await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
   await expect(page.getByRole('heading', { name: 'Could Not Start Cleaning' })).toBeVisible();
   await expect(page.getByText('Cleaning did not start. No work was lost. Return to Home; this phone will try the same cleaning again.')).toBeVisible();
   await expect(page.getByText(/needs a manager/i)).toHaveCount(0);
@@ -547,9 +546,9 @@ test('a verified stale rollback fence is cleared before one exact start retry', 
   }, { onScanRequest: (request) => requests.push(request.fn) });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
-  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
-  await page.getByRole('button', { name: 'Start Cleaning' }).click();
-  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   expect(requests.filter((fn) => fn === 'tool_get_device_rollback_readiness')).toHaveLength(1);
   await expect.poll(() => requests.filter((fn) => fn === 'tool_start_offline_occurrence')).toHaveLength(1);
   expect(await page.evaluate(() => ({
@@ -576,7 +575,7 @@ test('preserved native work blocks rollback-fence recovery without clearing or s
   }, { onScanRequest: (request) => requests.push(request.fn) });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
-  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+
   await expect(page.getByRole('heading', { name: 'Could Not Start Cleaning' })).toBeVisible();
   await expect(page.getByText('Saved work must finish sending before new cleaning can start. Keep the phone connected and try again.')).toBeVisible();
   expect(requests).not.toContain('tool_get_device_rollback_readiness');
@@ -611,7 +610,7 @@ test('backend work blocks stale-fence recovery and leaves the native fence intac
   }, { onScanRequest: (request) => requests.push(request.fn) });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_C}`);
-  await page.getByRole('button', { name: 'Start Cleaning' }).click();
+
   await expect(page.getByRole('heading', { name: 'Could Not Start Cleaning' })).toBeVisible();
   await expect(page.getByText('Saved work must finish sending before new cleaning can start. Keep the phone connected and try again.')).toBeVisible();
   expect(requests.filter((fn) => fn === 'tool_get_device_rollback_readiness')).toHaveLength(1);
@@ -657,7 +656,7 @@ test('screen wake resumes an active scan without finishing it', async ({ browser
   await page.goto(`/employee-hub.html?device=${DEVICE_ID}&lock=1`);
   await page.evaluate(() => window.MemphisUI.handlePhoneWake({ force: true }));
   await expect(page).toHaveURL(/index\.html.*action=resume/);
-  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   expect(finishCalls).toBe(0);
   await context.close();
 });
@@ -691,7 +690,7 @@ test('screen wake without an open scan refreshes the locked employee hub', async
   await installKioskRuntime(context);
   await installCommonRoutes(context);
   const page = await context.newPage();
-  await page.goto(`/events.html?hub=employee&device=${DEVICE_ID}`);
+  await page.goto(`/employee-hub.html?device=${DEVICE_ID}`);
   await page.evaluate(() => window.MemphisUI.handlePhoneWake({ force: true }));
   await expect(page).toHaveURL(/employee-hub\.html.*lock=1/);
   await expect(page.locator('#kiosk-lock-screen')).toBeVisible();
@@ -780,7 +779,7 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
-  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`device=${DEVICE_ID}`));
   const scanStateRequest = observed.find((request) => request.fn === 'tool_get_location_scan_state');
   expect(scanStateRequest).toEqual({
@@ -790,8 +789,8 @@ test('NFC entry keeps the stored canonical kiosk identity instead of Fully hardw
     headerDeviceId: DEVICE_ID,
     entrySource: undefined,
   });
-  await page.getByRole('button', { name: 'Start Cleaning' }).click();
-  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   const storedEvidence = await page.evaluate(() => {
     for (let index = 0; index < localStorage.length; index += 1) {
       const key = localStorage.key(index);
@@ -852,15 +851,16 @@ test('NFC occurrence completes through v4 with signed start and finish entry evi
     return json(route, 200, { ok: true, data: {} });
   });
   const page = await context.newPage();
+  await page.clock.install();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_A}`);
-  await page.getByRole('button', { name: 'Start Cleaning' }).click();
-  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
+  await page.clock.fastForward(60_001);
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_B}`);
-  await expect(page.getByRole('heading', { name: 'Finish Cleaning' })).toBeVisible();
-  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: 'How did it go?' })).toBeVisible();
-  await page.getByText('Something needs attention', { exact: true }).click();
-  await page.locator('input[name="services"]').first().check();
+  await expect(page.getByRole('heading', { name: 'How did it go?' })).toBeVisible();
+  await page.getByLabel('Full cleaning finished',{exact:true}).check();
+  await page.locator('input[name="attention_needed"][value="no"]').check();
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect.poll(() => completion).not.toBeNull();
   expect(completion.p_client_session_id).toBe(activeClientSession);
@@ -919,7 +919,7 @@ test('a transient scan read failure falls back to the current snapshot without a
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${NFC_ENTRY_C}`);
-  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Reconnecting' })).toHaveCount(0);
   expect(stateReads).toBe(1);
   await context.close();
@@ -987,8 +987,8 @@ test('process death after accepted completion reuses the journaled completion id
   }, { onScanRequest: (request) => requestOrder.push(request.fn) });
   const first = await context.newPage();
   await first.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
-  await first.getByText('Something needs attention', { exact: true }).click();
-  await first.locator('input[name="services"]').first().check();
+  await first.getByLabel('Full cleaning finished',{exact:true}).check();
+  await first.locator('input[name="attention_needed"][value="no"]').check();
   await first.getByRole('button', { name: 'Finish' }).click({ noWaitAfter: true });
   await expect.poll(() => first.evaluate((sessionId) => {
     const local = JSON.parse(localStorage.getItem(`session:${sessionId}`));
@@ -1051,7 +1051,8 @@ test('process death after accepted start recovers the same journal identity and 
   });
   const first = await context.newPage();
   await first.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_C}`);
-  await first.getByRole('button', { name: 'Start Cleaning' }).click({ noWaitAfter: true });
+  await expect(first).toHaveURL(/action=resume/);
+
   await expect.poll(async () => first.evaluate(() => {
     const key = Object.keys(localStorage).find((item) => item.startsWith('session:'));
     const session = key ? JSON.parse(localStorage.getItem(key)) : null;
@@ -1067,7 +1068,7 @@ test('process death after accepted start recovers the same journal identity and 
 
   const recovered = await context.newPage();
   await recovered.goto(resumeUrl);
-  await expect(recovered.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await expect(recovered.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   await expect.poll(async () => recovered.evaluate(() => {
     const key = Object.keys(localStorage).find((item) => item.startsWith('session:'));
     const session = key ? JSON.parse(localStorage.getItem(key)) : null;
@@ -1119,7 +1120,7 @@ test('crash after local start journal but before resume URL still replays the ex
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
-  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   await expect.poll(() => replay).toMatchObject({
     p_client_session_id: interruptedId,
     p_client_started_at: interruptedAt,
@@ -1178,7 +1179,7 @@ test('process death before JavaScript receives native start proof resumes the du
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
-  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   expect(await page.evaluate(() => window.__nativeStartInput)).toEqual(expect.objectContaining({
     clientSessionId: interruptedId,
     nativeScanEntryId: NFC_ENTRY_H,
@@ -1206,10 +1207,10 @@ test('fresh offline NFC uses only a current matching authority snapshot', async 
   await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => route.abort('internetdisconnected'));
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&source=native-nfc&entry_id=${NFC_ENTRY_D}`);
-  await expect(page.getByRole('heading', { name: 'Start Cleaning' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   await expect(page.getByText('Tammy Miller')).toBeVisible();
-  await page.getByRole('button', { name: 'Start Cleaning' }).click();
-  await expect(page.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   const session = await page.evaluate(() => {
     const key = Object.keys(localStorage).find((item) => item.startsWith('session:'));
     return JSON.parse(localStorage.getItem(key));
@@ -1243,7 +1244,7 @@ test('timer identity and elapsed time survive full WebView reconstruction', asyn
   await installCommonRoutes(context);
   const first = await context.newPage();
   await first.goto(`/index.html?code=TETM&device=${DEVICE_ID}&session_uuid=${SESSION_ID}&action=resume`);
-  await expect(first.getByRole('heading', { name: 'Cleaning In Progress' })).toBeVisible();
+  await expect(first.getByRole('heading', { name: 'Cleaning in Progress' })).toBeVisible();
   const before = await first.locator('#timer').textContent();
   await first.close();
   const rebuilt = await context.newPage();
@@ -1280,14 +1281,16 @@ test('two completed offline jobs stay saved while the employee moves to the next
   await seedOfflineAuthority(context);
   await context.route('https://memphis-zoo-mcp.onrender.com/**',route=>route.abort('internetdisconnected'));
   const page=await context.newPage();
+  await page.clock.install();
   for(const [startEntry,finishEntry] of [[NFC_ENTRY_A,NFC_ENTRY_B],[NFC_ENTRY_C,NFC_ENTRY_D]]){
     await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${startEntry}`);
-    await page.getByRole('button',{name:'Start Cleaning',exact:true}).click();
+
     await expect(page.getByRole('heading',{name:'Cleaning in Progress',exact:true})).toBeVisible();
+  await page.clock.fastForward(60_001);
     await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${finishEntry}`);
-    await expect(page.getByRole('heading',{name:'Finish Cleaning',exact:true})).toBeVisible();
-    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'How did it go?',exact:true})).toBeVisible();
     await page.getByLabel('Full cleaning finished',{exact:true}).check();
+    await page.locator('input[name="attention_needed"][value="no"]').check();
     await page.getByRole('button',{name:'Finish',exact:true}).click();
     await expect(page).toHaveURL(/employee-hub\.html/);
   }
@@ -1351,19 +1354,24 @@ test('offline completions upload automatically with exact identities after a los
     return json(route,200,{ok:true,data:{}});
   });
   const page=await context.newPage();
+  await page.clock.install();
   for(const [startEntry,finishEntry] of [[NFC_ENTRY_A,NFC_ENTRY_B],[NFC_ENTRY_C,NFC_ENTRY_D]]){
     await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${startEntry}`);
-    await page.getByRole('button',{name:'Start Cleaning',exact:true}).click();
+
     await expect(page.getByRole('heading',{name:'Cleaning in Progress',exact:true})).toBeVisible();
+  await page.clock.fastForward(60_001);
     await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}&source=native-nfc&entry_id=${finishEntry}`);
-    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'How did it go?',exact:true})).toBeVisible();
     await page.getByLabel('Full cleaning finished',{exact:true}).check();
+    await page.locator('input[name="attention_needed"][value="no"]').check();
     await page.getByRole('button',{name:'Finish',exact:true}).click();
     await expect(page).toHaveURL(/employee-hub\.html/);
   }
   expect(starts.size).toBe(0);expect(completions.size).toBe(0);
   const saved=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('session:')).map(k=>JSON.parse(localStorage.getItem(k))));
   expect(saved).toHaveLength(2);
+  await page.waitForFunction(()=>typeof window.MemphisScanSync?.completionDraftExists==='function');
+  await page.evaluate(()=>window.MemphisScanSync.ready);
   for(const row of saved)expect(await page.evaluate(id=>window.MemphisScanSync.completionDraftExists(id),row.client_session_id)).toBe(true);
   online=true;
   await page.evaluate(()=>{

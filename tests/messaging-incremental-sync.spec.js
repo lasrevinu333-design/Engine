@@ -1,4 +1,5 @@
-const { test, expect } = require('@playwright/test');
+const {currentLeadershipSession}=require('./helpers/current-leadership-session.cjs');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
 const USER_ID = '00000000-0000-4000-8000-000000000088';
 const THREAD_ID = '00000000-0000-4000-8000-000000000001';
@@ -24,10 +25,8 @@ async function originalGroupFixture(context, {employee=false} = {}) {
   const h={posts:[],directPosts:[],threadList:null,readThreads:null,sessionOverride:null,respond:async(route,body)=>fulfillJson(route,groupResult(body))};
   await context.route('https://memphis-zoo-mcp.onrender.com/**',async route=>{
     const request=route.request(),path=new URL(request.url()).pathname;
-    if(path==='/auth-api/session')return fulfillJson(route,{session:{token:'SYNTHETIC-GROUP-MANAGER',role:'ops_manager',roles:['OPS_MANAGER'],
-      manager_id:'00000000-0000-4000-8000-000000000070',credential_id:'SYNTHETIC-GROUP-CREDENTIAL',
-      device_id:DEVICE_ID,access_level:'full_access',read_only:false,expires_at:'2030-01-01T00:00:00.000Z',
-      permissions:{schema:'custodial.manager-permissions.v1',owner:true,read:true},...(h.sessionOverride??{})},trusted_device:{device_id:DEVICE_ID}});
+    if(path==='/custodial-leadership-api/session')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(currentLeadershipSession({deviceId:DEVICE_ID,
+      managerId:'00000000-0000-4000-8000-000000000070',credentialId:'00000000-0000-4000-8000-000000000902',accountId:USER_ID,displayName:'Synthetic selected Sync Tester',session:h.sessionOverride??{}}))});
     if(path==='/messaging-api/me/by-device')return fulfillJson(route,{...identity(),role:employee?'employee':'manager'});
     if(path==='/messaging-api/users')return fulfillJson(route,GROUP_MEMBERS.map((id,index)=>({id,display_name:`Recipient ${index+1}`,role:'employee',is_active:true})));
     if(path==='/messaging-api/threads')return h.readThreads?h.readThreads(route):fulfillJson(route,h.threadList??[threadRow()]);
@@ -60,34 +59,34 @@ async function originalGroupFixture(context, {employee=false} = {}) {
 // counter shared with unrelated initial drafts/reads. Missing source marker
 // or an overwritten fixture must fail phase evidence, not count as a pass.
 async function observeOriginalGroupEffects(page, phase = null) {
-  await page.evaluate(({key,device,phase})=>{
-    const remove=Storage.prototype.removeItem,set=Storage.prototype.setItem;
-    window.__groupEffectEvidence={removals:[],writes:[],phase:null,entered:false,settled:false};
-    Storage.prototype.removeItem=function(k){
-      if(k===key)window.__groupEffectEvidence.removals.push(this===localStorage?'local':'session');
-      return remove.call(this,k);
-    };
-    Storage.prototype.setItem=function(k,value){
-      if(k===key)window.__groupEffectEvidence.writes.push({area:this===localStorage?'local':'session',raw:String(value)});
-      return set.call(this,k,value);
-    };
-    if(!phase)return;
-    const fixture={native:true,ready:Promise.resolve(),getStatus:()=>({initialized:true,ready:true,available:true,deviceId:device,generation:1}),
-      mutateProtectedWork:async operation=>{
-        const source=String(operation);
-        const owning=phase==='cleanup'?source.includes('group cleanup not confirmed'):
-          source.includes('group original changed')&&source.includes('client_thread_id')&&source.includes('member_user_ids');
-        if(!owning)return operation({generation:1,deviceId:device,assertCurrent:()=>{}});
-        if(window.MemphisCustodialSecurity!==fixture)throw new Error('Group fixture replaced');
-        if(window.__groupEffectEvidence.entered)throw new Error('Duplicate group-owned mutation before settlement');
-        window.__groupEffectEvidence.phase=phase;window.__groupEffectEvidence.entered=true;
-        await new Promise(resolve=>{window.__releaseOwnedGroupMutation=resolve;});
-        try{return await operation({generation:1,deviceId:device,assertCurrent:()=>{}});}
-        finally{window.__groupEffectEvidence.settled=true;}
+  // Observe Chrome's real Storage events without replacing guarded prototypes.
+  const client=await page.context().newCDPSession(page);await client.send('DOMStorage.enable');
+  await page.evaluate(()=>{window.__groupEffectEvidence={removals:[],writes:[],phase:null,entered:false,settled:false};});
+  const observe=async(event,removed)=>{if(event.key!==GROUP_ORIGINAL_KEY)return;
+    await page.evaluate(({event,removed})=>{const e=window.__groupEffectEvidence;if(!e)return;
+      if(removed)e.removals.push(event.storageId.isLocalStorage?'local':'session');
+      else e.writes.push({area:event.storageId.isLocalStorage?'local':'session',raw:String(event.newValue)});
+    },{event,removed}).catch(()=>{});};
+  client.on('DOMStorage.domStorageItemAdded',event=>void observe(event,false));
+  client.on('DOMStorage.domStorageItemUpdated',event=>void observe(event,false));
+  client.on('DOMStorage.domStorageItemRemoved',event=>void observe(event,true));
+  if(!phase)return;
+  await page.evaluate(({device,phase})=>{
+    // Explicit unit ports around the current private wrapper, not native ACK or
+    // enrollment proof. This fixture has no other pending work or open thread.
+    const principal={schema_version:'custodial-protected-principal.v1',device_id:device,employee_id:'00000000-0000-4000-8000-000000000088',credential_id:'00000000-0000-4000-8000-000000000902',credential_operation_id:'00000000-0000-4000-8000-000000000903',assignment_epoch:1,installation_seal:'synthetic-group-unit-seal',enrolled_at:'2026-08-01T00:00:00Z'};
+    const fixture={native:true,ready:Promise.resolve(),getStatus:()=>({initialized:true,ready:true,available:true,quarantined:false,deviceId:device,generation:1,principal:{...principal}}),
+      mutateProtectedWork:async(operation,options)=>{
+        if(options?.requireEnrollment!==true||options.expectedGeneration!==1)throw Error('Missing current unit mutation fence');
+        const e=window.__groupEffectEvidence;
+        const owning=!e.entered&&(phase==='admission'||window.__groupProtectedCleanupReady===true);
+        if(owning){if(window.MemphisCustodialSecurity!==fixture)throw Error('Original unit fixture replaced');e.phase=phase;e.entered=true;
+          await new Promise(resolve=>{window.__releaseOwnedGroupMutation=resolve;});}
+        let open=true;const context={generation:1,deviceId:device,assertCurrent:()=>{if(!open||window.MemphisCustodialSecurity!==fixture)throw Error('Original unit callback withdrawn');}};
+        try{return await operation(context);}finally{open=false;if(owning)e.settled=true;}
       }};
-    window.MemphisCustodialSecurity=fixture;
-    if(window.MemphisCustodialSecurity!==fixture)throw new Error('Group fixture did not install');
-  },{key:GROUP_ORIGINAL_KEY,device:DEVICE_ID,phase});
+    window.MemphisMobile={principalIdentity:()=>JSON.stringify(principal)};window.MemphisCustodialSecurity=fixture;
+  },{device:DEVICE_ID,phase});
 }
 
 async function expectOriginalGroupDenial(page) {
@@ -279,28 +278,18 @@ test('GROUP_ORIGINAL_NEW changed legacy bytes before reply cannot clean either c
   }finally{await context.close();}
 });
 
-test('GROUP_ORIGINAL_NEW owner change in deferred cleanup preserves exact matched original',async({browser})=>{
-  const context=await browser.newContext();
-  try{
-    const h=await originalGroupFixture(context),raw=JSON.stringify(groupOriginal());
-    let currentGroupReads=0;
-    h.readThreads=route=>{
-      if(h.posts.length===1)currentGroupReads++;
-      return fulfillJson(route,h.threadList??[threadRow()]);
-    };
-    const page=await pageWithStorage(context,[[GROUP_ORIGINAL_KEY,raw]]);await h.open(page);
-    await observeOriginalGroupEffects(page,'cleanup');
-    await page.getByRole('button',{name:'Create',exact:true}).click();
-    await expect.poll(()=>page.evaluate(()=>typeof window.__releaseOwnedGroupMutation)).toBe('function');
-    expect(h.posts).toEqual([groupOriginal()]);expect(currentGroupReads).toBeGreaterThan(0);
-    expect(await page.evaluate(()=>window.__groupEffectEvidence)).toEqual({removals:[],writes:[],phase:'cleanup',entered:true,settled:false});
-    h.sessionOverride={device_id:'REPLACEMENT_DEVICE'};
-    await page.evaluate(()=>{window.MemphisAuth.readSession().device_id='REPLACEMENT_DEVICE';window.__releaseOwnedGroupMutation();});
-    await expect.poll(()=>page.evaluate(()=>window.__groupEffectEvidence.settled)).toBe(true);
-    expect(await page.evaluate(key=>[localStorage.getItem(key),sessionStorage.getItem(key)],GROUP_ORIGINAL_KEY)).toEqual([raw,null]);
-    expect(await page.evaluate(()=>window.__groupEffectEvidence.removals)).toEqual([]);expect(h.posts).toEqual([groupOriginal()]);
-    await expectOriginalGroupDenial(page);
-  }finally{await context.close();}
+test('GROUP_ORIGINAL_NEW a new native writer cannot inherit a web owner or retire its exact accepted original',async({browser})=>{
+ const context=await browser.newContext();try{
+  const h=await originalGroupFixture(context),raw=JSON.stringify(groupOriginal());let currentGroupReads=0;
+  h.readThreads=route=>{if(h.posts.length===1)currentGroupReads++;return fulfillJson(route,h.threadList??[threadRow()]);};
+  const page=await pageWithStorage(context,[[GROUP_ORIGINAL_KEY,raw]]);await h.open(page);await observeOriginalGroupEffects(page,'cleanup');
+  await page.getByRole('button',{name:'Create',exact:true}).click();await expectOriginalGroupDenial(page);
+  // The current original-web-owner fence refuses the newly injected native
+  // facade before readback/cleanup; caller DATA cannot promote that facade.
+  expect(h.posts).toEqual([groupOriginal()]);expect(currentGroupReads).toBe(0);
+  expect(await page.evaluate(()=>window.__groupEffectEvidence)).toEqual({removals:[],writes:[],phase:null,entered:false,settled:false});
+  expect(await page.evaluate(key=>[localStorage.getItem(key),sessionStorage.getItem(key)],GROUP_ORIGINAL_KEY)).toEqual([raw,null]);
+ }finally{await context.close();}
 });
 
 test('GROUP_ORIGINAL_NEW direct success preserves a pending legacy group',async({browser})=>{
@@ -318,40 +307,15 @@ test('GROUP_ORIGINAL_NEW direct success preserves a pending legacy group',async(
   }finally{await context.close();}
 });
 
-test('GROUP_ORIGINAL_NEW permission changes during header admission send no group request',async({browser})=>{
-  const context=await browser.newContext();
-  try{
-    const h=await originalGroupFixture(context),raw=JSON.stringify(groupOriginal());
-    const page=await pageWithStorage(context,[[GROUP_ORIGINAL_KEY,raw]]);await h.open(page);
-    await observeOriginalGroupEffects(page);
-    await page.evaluate(()=>{
-      const normal=window.MemphisAuth.requireOpsManagerSession;
-      window.__groupHeaderHeld=true;window.__groupHeaderReleases=[];
-      window.MemphisAuth.requireOpsManagerSession=async options=>{
-        const session=await normal(options);
-        if(window.__groupHeaderHeld)await new Promise(resolve=>{window.__groupHeaderReleases.push(resolve);});
-        return session;
-      };
-      window.__releaseOriginalGroupAuth=()=>{
-        window.__groupHeaderHeld=false;window.MemphisAuth.requireOpsManagerSession=normal;
-        for(const resolve of window.__groupHeaderReleases.splice(0))resolve();
-      };
-    });
-    await page.getByRole('button',{name:'Create',exact:true}).click();
-    await expect(page.getByText('Creating conversation…',{exact:true})).toBeVisible();
-    await expect.poll(()=>page.evaluate(()=>window.__groupHeaderReleases.length)).toBeGreaterThan(0);
-    expect(h.posts).toHaveLength(0);
-    h.sessionOverride={read_only:true,access_level:'read_only',permissions:{schema:'custodial.manager-permissions.v1',owner:false,read:true}};
-    await page.evaluate(()=>{window.MemphisAuth.readSession().read_only=true;window.__releaseOriginalGroupAuth();});
-    await expect.poll(()=>page.evaluate(()=>window.__groupHeaderReleases.length)).toBe(0);
-    expect(h.posts).toHaveLength(0);
-    expect(await page.evaluate(key=>[localStorage.getItem(key),sessionStorage.getItem(key)],GROUP_ORIGINAL_KEY)).toEqual([raw,null]);
-    expect(await page.evaluate(()=>window.__groupEffectEvidence.removals)).toEqual([]);
-    await expectOriginalGroupDenial(page);
-    expect(h.posts).toHaveLength(0);
-    expect(await page.evaluate(key=>[localStorage.getItem(key),sessionStorage.getItem(key)],GROUP_ORIGINAL_KEY)).toEqual([raw,null]);
-    expect(await page.evaluate(()=>window.__groupEffectEvidence.removals)).toEqual([]);
-  }finally{await context.close();}
+test('GROUP_ORIGINAL_NEW permission withdrawal during original admission sends no group headers',async({browser})=>{
+ const context=await browser.newContext();try{
+  const h=await originalGroupFixture(context),raw=JSON.stringify(groupOriginal());const page=await pageWithStorage(context,[[GROUP_ORIGINAL_KEY,raw]]);await h.open(page);await observeOriginalGroupEffects(page,'admission');
+  await page.getByRole('button',{name:'Create',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.__releaseOwnedGroupMutation)).toBe('function');expect(h.posts).toHaveLength(0);
+  await page.evaluate(()=>{window.MemphisAuth.readSession().read_only=true;window.__releaseOwnedGroupMutation();});
+  await expect.poll(()=>page.evaluate(()=>window.__groupEffectEvidence.settled)).toBe(true);await expectOriginalGroupDenial(page);
+  expect(h.posts).toHaveLength(0);expect(await page.evaluate(key=>[localStorage.getItem(key),sessionStorage.getItem(key)],GROUP_ORIGINAL_KEY)).toEqual([raw,null]);
+  expect(await page.evaluate(()=>window.__groupEffectEvidence.removals)).toEqual([]);
+ }finally{await context.close();}
 });
 
 test('GROUP_ORIGINAL_NEW retired dialog cannot clean the original after a late response',async({browser})=>{
@@ -1219,7 +1183,7 @@ test('a failed message blocks only later messages in the same conversation', asy
       if (body.client_message_id === firstId && failFirst) {
         return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'temporary first-message failure' }) });
       }
-      return fulfillJson(route, sendReceipt(body));
+      return fulfillJson(route, sendReceipt(body,url.pathname.split('/')[3]));
     }
     if (url.pathname.endsWith('/updates')) {
       await new Promise((resolve) => setTimeout(resolve, 250));
@@ -1280,12 +1244,13 @@ test('a queued message owned by another signed-in user is preserved byte for byt
   await context.close();
 });
 
-test('a delivered message survives a security-generation transition and retries with one stable id', async ({ browser }) => {
+test('a delivered original stays held across a generation change without resend or relabeling', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const nativeDeviceId = 'KIOSK_08';
   const page = await pageWithStorage(context, []);
   await page.addInitScript(({ deviceId: authoritativeDeviceId }) => {
     window.__messagingSecurityGeneration = 1;
+    const principal={schema_version:'custodial-protected-principal.v1',device_id:authoritativeDeviceId,employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',credential_operation_id:'00000000-0000-4000-8000-000000000811',assignment_epoch:1,installation_seal:'synthetic-generation-unit-seal',enrolled_at:'2026-08-01T00:00:00Z'};
     window.MemphisCustodialSecurity = {
       native: true,
       ready: Promise.resolve(),
@@ -1297,6 +1262,7 @@ test('a delivered message survives a security-generation transition and retries 
         quarantined: false,
         deviceId: authoritativeDeviceId,
         generation: window.__messagingSecurityGeneration,
+        principal:{...principal},
       }),
       mutateProtectedWork: async (operation, options = {}) => {
         const current = window.__messagingSecurityGeneration;
@@ -1305,7 +1271,8 @@ test('a delivered message survives a security-generation transition and retries 
           error.code = 'custodial_security_generation_changed';
           throw error;
         }
-        return operation({ generation: current });
+        let open=true;const context={generation:current,deviceId:authoritativeDeviceId,assertCurrent(){if(!open||window.__messagingSecurityGeneration!==current)throw Object.assign(Error('Original callback withdrawn'),{code:'custodial_security_generation_changed'});}};
+        try{return await operation(context);}finally{open=false;}
       },
     };
     window.MemphisMobile = {
@@ -1314,6 +1281,8 @@ test('a delivered message survives a security-generation transition and retries 
       deviceId: () => authoritativeDeviceId,
       authoritativeDeviceId: async () => authoritativeDeviceId,
       employeeDeviceAuthority: true,
+      principalIdentity:()=>JSON.stringify(principal),
+      profileMatchesPrincipal:p=>p?.employee_id===principal.employee_id&&p?.credential_id===principal.credential_id&&p?.assignment_epoch===principal.assignment_epoch&&p?.canonical_device_id===principal.device_id,
       requestEnvelope: async (path, { method = 'GET', body, signal } = {}) => {
         const response = await fetch(`https://memphis-zoo-mcp.onrender.com${path}`, {
           method,
@@ -1332,7 +1301,7 @@ test('a delivered message survives a security-generation transition and retries 
     window.MemphisMobileBuildIdentity = { edition: 'custodial' };
   }, { deviceId: nativeDeviceId });
 
-  const attempts = [];
+  const attempts = [],attemptPaths=[];let responseReturned=false;
   const committed = new Set();
   let releaseFirstResponse;
   const firstResponseGate = new Promise((resolve) => { releaseFirstResponse = resolve; });
@@ -1344,17 +1313,19 @@ test('a delivered message survives a security-generation transition and retries 
       return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'No manager session' }) });
     }
     if (url.pathname === '/scan-api/rpc') return fulfillJson(route, []);
-    if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, { ...identity(), canonical_device_id: nativeDeviceId });
+    if (url.pathname === '/messaging-api/me/by-device') return fulfillJson(route, {...identity(),authenticated:true,read_only:false,canonical_device_id:nativeDeviceId,employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1});
     if (url.pathname === '/messaging-api/threads') return fulfillJson(route, [threadRow()]);
     if (url.pathname === `/messaging-api/thread/${THREAD_ID}/messages`) {
       return fulfillJson(route, [message(FIRST_ID, 'Initial message', '2026-07-18T12:00:00.000Z')]);
     }
-    if (url.pathname === `/messaging-api/thread/${THREAD_ID}/message` && request.method() === 'POST') {
+    if ([`/messaging-api/thread/${THREAD_ID}/message`,`/messaging-api/thread/${THREAD_ID}/message/original-outcome`].includes(url.pathname) && request.method()==='POST') {
       const body = request.postDataJSON();
-      attempts.push(body.client_message_id);
-      committed.add(body.client_message_id);
+      attempts.push(body.client_message_id);attemptPaths.push(url.pathname);
+      if(!url.pathname.endsWith('/original-outcome'))committed.add(body.client_message_id);else expect(committed.has(body.client_message_id)).toBe(true);
       if (attempts.length === 1) await firstResponseGate;
-      return fulfillJson(route, sendReceipt(body));
+      const now=new Date().toISOString(),result={...sendReceipt(body),metadata_json:{client_message_id:body.client_message_id},created_at:now,sent_at:now,updated_at:now,is_deleted:false,deleted_at:null,deleted_by_user_id:null,purge_after:null};
+      const original={device_id:body.device_id,expected_employee_id:body.expected_employee_id,expected_credential_id:body.expected_credential_id,expected_assignment_epoch:body.expected_assignment_epoch,user_id:body.sender_user_id,thread_id:THREAD_ID,body:body.body,message_type:'text',metadata_json:{},client_message_id:body.client_message_id};
+      const delivered=fulfillJson(route,result,{original_outcome:{schema:'custodial.employee-original-message-outcome.v1',state:'ORIGINAL_TRANSACTION_OUTCOME_RECORDED',request_fingerprint:'a'.repeat(64),original_command:'employee_message_original_send',original_actor:{device_pk:'00000000-0000-4000-8000-000000000808',device_id:body.device_id,employee_id:body.expected_employee_id,credential_id:body.expected_credential_id,assignment_epoch:body.expected_assignment_epoch,user_id:body.sender_user_id},original_outcome_recorded:true,original_request:original,result,recorded_at:now,inventory_acknowledged:false,finalizer_allowed:false,key_removal:false}});await delivered;responseReturned=true;return;
     }
     if (url.pathname.endsWith('/read')) return fulfillJson(route, { marked: true });
     if (url.pathname.endsWith('/updates')) {
@@ -1372,16 +1343,23 @@ test('a delivered message survives a security-generation transition and retries 
   await expect.poll(() => attempts.length).toBe(1);
   await page.evaluate(() => { window.__messagingSecurityGeneration = 2; });
   releaseFirstResponse();
-  await expect(page.getByText('Your message is saved. Server confirmation is still pending.', { exact: true })).toBeVisible();
+  await expect.poll(()=>responseReturned).toBe(true);
   const queuedKey = await page.evaluate(() => Object.keys(localStorage).find((key) => key.startsWith('mz_chatscope_outbox:')) || '');
   expect(queuedKey).not.toBe('');
   expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).security_generation, queuedKey)).toBe(1);
 
-  await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect.poll(() => attempts.length).toBe(2);
-  expect(attempts[1]).toBe(attempts[0]);
-  expect(committed.size).toBe(1);
-  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), queuedKey)).toBeNull();
+  const originalBytes=await page.evaluate(key=>localStorage.getItem(key),queuedKey);
+  // A fresh profile does not grant a successor generation authority over this
+  // original. Reboot exceptions remain Eric's backend reconciliation workflow.
+  await page.addInitScript(()=>{window.__messagingSecurityGeneration=2;});await page.reload();
+  await page.evaluate(()=>{window.dispatchEvent(new Event('online'));window.dispatchEvent(new Event('pageshow'));});
+  await page.waitForTimeout(300);
+  expect(attempts).toHaveLength(1);expect(committed.size).toBe(1);
+  expect(attemptPaths).toEqual([`/messaging-api/thread/${THREAD_ID}/message`]);
+  expect(await page.evaluate(key=>localStorage.getItem(key),queuedKey)).toBe(originalBytes);
+  const original=JSON.parse(originalBytes);expect(original.security_generation).toBe(1);
+  expect(original.expected_employee_id).toBe('00000000-0000-4000-8000-000000000809');
+  expect(original.expected_credential_id).toBe('00000000-0000-4000-8000-000000000810');
   await context.close();
 });
 
@@ -1404,8 +1382,9 @@ test('custodial restore quarantine freezes the message outbox across retry event
   const page = await pageWithStorage(context, [[`mz_chatscope_outbox:${queuedId}`, queuedBytes]]);
   await page.addInitScript(() => {
     window.MemphisCustodialSecurity = {
+      native:true,mutateProtectedWork:async()=>{throw Error('Quarantined unit must never mutate');},
       ensureSecurityState: async () => {},
-      getStatus: () => ({ initialized: true, available: true, quarantined: true, reason: 'restored_operational_state' }),
+      getStatus: () => ({initialized:true,ready:false,available:false,quarantined:true,state:'quarantined',generation:1,reason:'restored_operational_state'}),
     };
   });
 
@@ -1435,3 +1414,4 @@ test('custodial restore quarantine freezes the message outbox across retry event
   expect(messagePosts).toBe(0);
   await context.close();
 });
+

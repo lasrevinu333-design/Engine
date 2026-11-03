@@ -56,6 +56,19 @@ final class NativeOriginalInventorySeparationApprovalWire {
         }catch(Exception malformed){throw invalid();}
         finally{if(!returned)result.close();}
     }
+    /** Representation of the SAME already checked current observation used
+     * for one durable command birth. Retains sub-millisecond monotonic time;
+     * millisecond flooring must not place it before approved_at. DATA only. */
+    static String originalCommandObservationInstant(long started,long elapsedNanos,long observed)throws VaultFailure {
+        try{
+            if(elapsedNanos<0||observed<started)throw invalid();
+            civilMicros(started);civilMicros(observed);
+            long micros=Math.max(Math.multiplyExact(observed,1000L),Math.addExact(Math.multiplyExact(started,1000L),elapsedNanos/1000L));
+            String text=DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSSSSS'Z'",Locale.ROOT).withZone(ZoneOffset.UTC)
+                .format(Instant.ofEpochSecond(Math.floorDiv(micros,1000000L),Math.floorMod(micros,1000000L)*1000L));
+            NativeSameOriginalRecoveryPreparationWire.instantMicros(text);return text;
+        }catch(Exception malformed){throw invalid();}
+    }
     private static long civilMicros(long epochMillis)throws Exception {
         // The existing instantMicros uses Gregorian year 1, NOT Unix epoch.
         // Fixed UTC formatting is lossless for integer millisecond inputs and

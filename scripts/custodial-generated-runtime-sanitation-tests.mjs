@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import {join} from 'node:path';
 import { assertEmbeddedRuntimeAssets } from '../mobile/scripts/verify-custodial-android-release.mjs';
 import { inspectSourceRuntimeRecords } from './lib/runtime-sanitation-policy.mjs';
 
@@ -197,9 +198,26 @@ function digest(source, kind, changedPolicy) {
     'policyPath', 'forwardRecoveryPolicyPath', 'hostToolPolicyPath', 'bootstrapPath', 'releaseVerifierPath'];
   const context = Object.fromEntries(names.map(name => [name, '/synthetic/' + name]));
   context.runtimeSanitationPolicyPath = '/synthetic/scripts/lib/runtime-sanitation-policy.mjs';
+  // Current verifier digests also bind the exact frozen callback source tree.
+  // Supply those real source-only dependencies to this synthetic digest VM;
+  // the policy mutation remains the only changed input under comparison.
+  const boundaryBytes=readFileSync(new URL('../mobile/release-policies/custodial-callback-reference-source.json',import.meta.url));
+  Object.assign(context, {repositoryRoot:'/synthetic/repository',mobileRoot:'/synthetic/repository/mobile',join,SHA256:/^[a-f0-9]{64}$/,
+    cleaningSourceBytes:()=>boundaryBytes,
+    parseDeterministicJson:bytes=>JSON.parse(bytes.toString('utf8')),
+    frozenCallbackSourceBytes:path=>{
+      const prefix='/synthetic/repository/mobile/callback-reference-source/';
+      assert.ok(path.startsWith(prefix));
+      return readFileSync(new URL('../mobile/callback-reference-source/'+path.slice(prefix.length),import.meta.url));
+    }});
   Object.assign(context, { Buffer, URL, fileURLToPath, createHash, sha256: sha,
-    readFileSync(path) { return Buffer.from(String(path).endsWith('/scripts/lib/runtime-sanitation-policy.mjs')
-      ? (changedPolicy ? 'changed synthetic policy' : 'original synthetic policy') : 'unchanged:' + path); } });
+    readFileSync(path) {
+      if(String(path).endsWith('/release-policies/custodial-callback-reference-source.json'))return boundaryBytes;
+      const prefix='/synthetic/repository/mobile/callback-reference-source/';
+      if(String(path).startsWith(prefix))return readFileSync(new URL('../mobile/callback-reference-source/'+String(path).slice(prefix.length),import.meta.url));
+      return Buffer.from(String(path).endsWith('/scripts/lib/runtime-sanitation-policy.mjs')
+        ? (changedPolicy ? 'changed synthetic policy' : 'original synthetic policy') : 'unchanged:' + path);
+    } });
   return vm.runInNewContext(source.replaceAll('import.meta.url', '"file:///synthetic/mobile/scripts/admit-custodial-codemagic-build.mjs"')
     + `\n${kind}();`, context, { timeout: 1000 });
 }

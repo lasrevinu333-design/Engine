@@ -104,9 +104,9 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
         return path.startsWith('/device-auth/status') ? identity() : { fixture: 'snapshot' };
       } },
   };
-  const context = { window, document: { getElementById: element }, navigator: { onLine: connected }, console,
+  const context = { window, document: { getElementById: element }, navigator: { onLine: connected }, console,queueMicrotask,
     sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
-    classifyReadiness, createReadinessObservation, readinessPresentation, installHourlyForecastKeyboard, installHomeFacts: () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; } }),
+    classifyReadiness, createReadinessObservation, readinessPresentation, installHourlyForecastKeyboard, installHomeFacts: () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; }, async restoreProfileFacts() { return true; } }),
     Network: { addListener: async (name, fn) => listeners.set(name, fn) }, App: { addListener: async (name, fn) => listeners.set(name, fn) }, StatusBar: { hide: async () => {} } };
   vm.createContext(context);
   vm.runInContext(app.replace(/^import .*;\s*$/gm, '').replace('void (async () => {', 'globalThis.__startup = (async () => {'), context);

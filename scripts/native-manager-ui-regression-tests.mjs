@@ -16,10 +16,9 @@ const [eventsAdmin, messages, chatCss, mobileOverrides, nativeLayout, notificati
   readFile('mobile/src/manager/index.html', 'utf8'),
   readFile('mobile/src/custodial/index.html', 'utf8'),
 ]);
-assert.match(eventsAdmin, /object-fit:contain/);
-assert.match(eventsAdmin, /flex:0 0 76px/);
-assert.match(eventsAdmin, /max-width:min\(620px,100%\)/);
-assert.match(eventsAdmin, /overflow-wrap:anywhere/);
+assert.match(eventsAdmin, /href="\.\/events\.html"/);
+assert.match(eventsAdmin, /window\.location\.replace/);
+assert.doesNotMatch(eventsAdmin, /<form|<input|<button|admin-api|fetch\(/);
 assert.match(messages, /chatscope-messenger\.css/);
 assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
 assert.match(messages, /chatscope-messenger\.js/);
@@ -86,7 +85,7 @@ assert.equal(notificationRoutes[0], 'https://lasrevinu333-design.github.io/messa
 assert.equal(routeNotificationAction({ notification: { data: { route: 'https://example.invalid/messages-chatscope.html?thread_id=thread-42' } } }), false);
 assert.equal(notificationRoutes.length, 1, 'notification actions must reject off-origin routes');
 
-async function exercisePhoneAssignment({ initialAssignment, actualAssignment, includeAssignmentField = true }) {
+async function exercisePhoneAssignment({ initialAssignment, actualAssignment, includeAssignmentField = true, canWrite = true }) {
   const calls = [];
   const listeners = new Map();
   const nextEmployee = '00000000-0000-4000-8000-000000000202';
@@ -142,6 +141,7 @@ async function exercisePhoneAssignment({ initialAssignment, actualAssignment, in
       },
     },
     window: {
+      MemphisAuth: { hasPermission: action => canWrite && action === 'write' },
       MemphisMobile: {
         requestEnvelope: async (path, options = {}) => {
           if (options.method === 'GET') return { data };
@@ -177,4 +177,6 @@ assert.match(staleAssigned.rowStatus.textContent, /assignment changed/i);
 const unknownAssignment = await exercisePhoneAssignment({ initialAssignment: null, actualAssignment: null, includeAssignmentField: false });
 assert.equal(unknownAssignment.post, undefined, 'omitted assignment state must not be converted into expected null');
 assert.match(unknownAssignment.toast.textContent, /unavailable.*refresh/i);
+const delegate = await exercisePhoneAssignment({ initialAssignment: null, actualAssignment: null, canWrite: false });
+assert.equal(delegate.post, undefined, 'a read-only delegate must never send the owner-only assignment write');
 console.log('NATIVE_MANAGER_UI_REGRESSION_PASS');

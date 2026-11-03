@@ -17,15 +17,15 @@ async function configure(page,{staff=false,status=200}={}) {
 for(const staff of [false,true]) for(const viewport of [{width:1440,height:900},{width:412,height:915},{width:915,height:412}]) {
   test(`${staff?'staff':'manager'} shared scrolling page ${viewport.width}x${viewport.height}`,async({page})=>{
     await page.setViewportSize(viewport);await configure(page,{staff});await page.goto('/events.html');
-    await expect(page.locator('.boardCard')).toHaveCount(8);await expect(page.locator('#events-back')).toHaveText(staff?'Back to Home':'Back to Map');
+    await expect(page.locator('#events-content article[data-event-id]')).toHaveCount(8);await expect(page.locator('#events-back')).toHaveText(staff?'Back to Home':'Back to Map');
     await expect(page.locator('#events-status')).toContainText('Outlook collection completeness is not verified');
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.locator('#events-pause').click();await expect(page.locator('#events-pause')).toHaveAttribute('aria-pressed','true');
     await page.locator('#events-content').evaluate(el=>{el.scrollTop=100;});await page.waitForTimeout(150);
     expect(await page.locator('#events-content').evaluate(el=>el.scrollTop)).toBeGreaterThanOrEqual(99);
     await page.evaluate(()=>{window.__eventFixture.revoked=true;window.dispatchEvent(new Event('memphis:custodial-security-state'));});
-    await expect(page.locator('.boardCard')).toHaveCount(0);
+    await expect(page.locator('#events-content article[data-event-id]')).toHaveCount(0);
   });
 }
 test('unavailable source is not presented as empty events',async({page})=>{await configure(page,{status:503});await page.goto('/events.html');await expect(page.locator('#events-status')).toContainText('Events could not update');await expect(page.locator('#events-content')).toBeEmpty();});
-test('reduced motion starts paused',async({page})=>{await page.emulateMedia({reducedMotion:'reduce'});await configure(page);await page.goto('/events.html');await expect(page.locator('.boardCard')).toHaveCount(8);await expect(page.locator('#events-pause')).toHaveAttribute('aria-pressed','true');});
+test('reduced motion starts paused',async({page})=>{await page.emulateMedia({reducedMotion:'reduce'});await configure(page);await page.goto('/events.html');await expect(page.locator('#events-content article[data-event-id]')).toHaveCount(8);await expect(page.locator('#events-pause')).toHaveAttribute('aria-pressed','true');});

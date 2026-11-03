@@ -182,6 +182,8 @@ definitions:
         npx --no-install playwright install chromium
         npm run --silent build:chatscope
         git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
+        node scripts/custodial-core-release-gate-tests.mjs
+        node scripts/custodial-core-release-gate.mjs
         npm run --silent test:mobile
         npm run --silent test:batch-0a
         node scripts/native-mobile-build-contract-tests.mjs
@@ -979,11 +981,7 @@ workflows:
           [[ "$MZ_TEST_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$MZ_TEST_SOURCE_COMMIT"
           test -z "$(git status --porcelain --untracked-files=normal)"
-          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
-          test "$(node --version)" = v22.23.4
-          test "$(npm --version)" = 11.17.0
-          npm ci --ignore-scripts --no-audit --no-fund
-          node scripts/refresh-frontend-release-manifest.mjs --check
+      - *install
       - *custodial_android_toolchain
       - name: Build and sign full-workflow TEST APK with retained fleet identity
         script: |

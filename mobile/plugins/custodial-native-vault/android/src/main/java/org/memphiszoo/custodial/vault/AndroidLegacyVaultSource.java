@@ -55,6 +55,7 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
     private final AndroidProtectedWorkPreferences work;
     private final VaultClock clock;
     private KeyStore keyStore;
+    private CustodialEnrollmentApplication retainedApplication;
     private LegacyCleanupSnapshotGuard.Captured lastSuccessfulRead;
     private LegacyMaterial lastSuccessfulReadMaterial;
 
@@ -62,6 +63,7 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
         this(context.getApplicationContext().getSharedPreferences(V1_PREFERENCES,Context.MODE_PRIVATE),
             context.getApplicationContext().getSharedPreferences(SECURE_PREFERENCES,Context.MODE_PRIVATE),clock,
             AndroidOfflineAuthorityTimeStore.bindOrdinaryAdmission(context));
+        if(context.getApplicationContext() instanceof CustodialEnrollmentApplication app)retainedApplication=app;
     }
 
     /** Fixed raw-preferences fixture seam, not a Context/key/auth substitute.
@@ -164,6 +166,7 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
             // authority; this scope neither widens the aliases nor thaws WORK.
             return work.withOrdinaryWriteAdmission(()->{
                 original.requireEmpty(v1.getAll(),secure.getAll());
+                if(hasRetainedOriginalKeyDependencies())return null;
                 try{
                     KeyStore store=store();
                     for(String alias:SECURE_ALIASES)if(store.containsAlias(alias))store.deleteEntry(alias);
@@ -180,6 +183,9 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
         SharedPreferences secure=securePreferences;
         if (!v1.getAll().isEmpty()) return false;
         for (String alias : SECURE_ALIASES) if (secure.contains(alias)) return false;
+        // Empty CURRENT namespaces are logically migrated while old enrollment
+        // keys remain required by the authenticated retained-original chain.
+        if(hasRetainedOriginalKeyDependencies())return true;
         try {
             KeyStore store = store();
             if (store.containsAlias(V1_ALIAS)) return false;
@@ -188,6 +194,10 @@ final class AndroidLegacyVaultSource implements LegacyVaultSource {
         } catch (Exception error) {
             throw new VaultFailure("custodial_native_legacy_cleanup_failed", error);
         }
+    }
+
+    private boolean hasRetainedOriginalKeyDependencies()throws VaultFailure {
+        return retainedApplication!=null&&retainedApplication.hasRetainedOriginalKeyDependencies();
     }
 
     private LegacyMaterial readFirstPartyV1() throws VaultFailure {

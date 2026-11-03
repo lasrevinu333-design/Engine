@@ -1,23 +1,9 @@
-const { test, expect } = require('@playwright/test');
+const {currentLeadershipSession}=require('./helpers/current-leadership-session.cjs');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
 const OUTPUT = '/build/batch-0b-shell-browser/manager/index.html';
 
-function sessionEnvelope() {
-  return {
-    ok: true,
-    data: {
-      session: {
-        token: 'manager-home-session',
-        manager_id: '00000000-0000-4000-8000-000000000001',
-        manager_display_name: 'Operations Manager',
-        roles: ['CUSTODIAL_MANAGER'],
-        device_id: 'manager-home-browser',
-        expires_at: '2036-09-14T00:00:00.000Z',
-      },
-      manager: { display_name: 'Operations Manager', job_title: 'Operations Leadership' },
-    },
-  };
-}
+function sessionEnvelope(){return currentLeadershipSession({displayName:'Operations Manager',deviceId:'manager-home-browser'});}
 
 async function fulfill(route, data, status = 200) {
   await route.fulfill({
@@ -27,7 +13,7 @@ async function fulfill(route, data, status = 200) {
   });
 }
 
-function summary(overdue, dueSoon, inProgress, openProblems, snapshotAt = '2026-09-14T14:15:00.000Z') {
+function summary(overdue, dueSoon, inProgress, openProblems, snapshotAt = new Date().toISOString()) {
   return { snapshot: {
     overdue_locations: overdue,
     due_soon_locations: dueSoon,
@@ -40,13 +26,14 @@ function summary(overdue, dueSoon, inProgress, openProblems, snapshotAt = '2026-
 test('actual manager Home renders live Today counts, exact zeros, attendance provenance, and preserved drilldowns', async ({ page }) => {
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/auth-api/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionEnvelope()) });
+    if(path==='/admin-api/custodial/open-problems')return fulfill(route,{schema:'custodial.open-problems.v1',generated_at:new Date().toISOString(),total:4,items:[]});
+    if (path === '/custodial-leadership-api/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionEnvelope()) });
     if (path === '/dashboard-api/summary') return fulfill(route, summary(3, 0, 2, 4));
     if (path === '/dashboard-api/current-attendance') return fulfill(route, {
       attendance: 0,
       planned: 1250,
       stale: false,
-      source_timestamp: '2026-09-14T14:10:00.000Z',
+      source_timestamp: new Date().toISOString(),
     });
     return fulfill(route, {});
   });
@@ -58,25 +45,26 @@ test('actual manager Home renders live Today counts, exact zeros, attendance pro
   await expect(page.locator('#today-in-progress')).toHaveText('2');
   await expect(page.locator('#today-open-problems')).toHaveText('4');
   await expect(page.locator('#today-guest-count')).toHaveText('0');
-  await expect(page.locator('#today-guest-meta')).toContainText('Gate feed');
-  await expect(page.locator('#today-guest-meta')).toContainText('planned 1250');
+  await expect(page.locator('#today-guest-meta')).toContainText('Cumulative guest entries');
+  await expect(page.locator('#today-guest-meta')).toContainText('Planned 1,250');
   await expect(page.locator('#today-source')).toContainText('Operational snapshot');
   await expect(page.locator('a[href="./dashboard.html#overdue"]')).toHaveCount(1);
   await expect(page.locator('a[href="./dashboard.html#due-soon"]')).toHaveCount(1);
   await expect(page.locator('a[href="./dashboard.html#being-cleaned"]')).toHaveCount(1);
-  await expect(page.locator('a[href="./dashboard.html#tickets-section"]')).toHaveCount(2);
+  await expect(page.locator('a[href="./dashboard.html#tickets-section"]')).toHaveCount(1);
 });
 
 test('summary failure cannot hide a stale but available guest gate feed', async ({ page }) => {
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/auth-api/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionEnvelope()) });
+    if(path==='/admin-api/custodial/open-problems')return fulfill(route,null,503);
+    if (path === '/custodial-leadership-api/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionEnvelope()) });
     if (path === '/dashboard-api/summary') return fulfill(route, null, 503);
     if (path === '/dashboard-api/current-attendance') return fulfill(route, {
       attendance: 17,
       planned: null,
       stale: true,
-      source_timestamp: '2026-09-14T12:00:00.000Z',
+      source_timestamp: new Date().toISOString(),
     });
     return fulfill(route, {});
   });
@@ -87,13 +75,14 @@ test('summary failure cannot hide a stale but available guest gate feed', async 
   await expect(page.locator('#today-source')).toHaveText('Operational summary unavailable.');
   await expect(page.locator('#today-guest-count')).toHaveText('17');
   await expect(page.locator('#today-guest-count')).toHaveAttribute('data-state', 'stale');
-  await expect(page.locator('#today-guest-meta')).toContainText('Stale gate feed');
+  await expect(page.locator('#today-guest-meta')).toContainText('Last update');
 });
 
 test('attendance failure cannot hide current operational counts and missing fields never become zero', async ({ page }) => {
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/auth-api/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionEnvelope()) });
+    if(path==='/admin-api/custodial/open-problems')return fulfill(route,{schema:'custodial.open-problems.v1',generated_at:new Date().toISOString(),total:1,items:[]});
+    if (path === '/custodial-leadership-api/session') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionEnvelope()) });
     if (path === '/dashboard-api/summary') return fulfill(route, summary('8', null, 'bad', 1));
     if (path === '/dashboard-api/current-attendance') return fulfill(route, null, 502);
     return fulfill(route, {});
@@ -115,16 +104,19 @@ test('a slower older refresh cannot overwrite the newest manager snapshot', asyn
   const olderGate = new Promise((resolve) => { releaseOlder = resolve; });
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/auth-api/session') {
+    if(path==='/admin-api/custodial/open-problems')return fulfill(route,{schema:'custodial.open-problems.v1',generated_at:new Date().toISOString(),total:0,items:[]});
+    if (path === '/custodial-leadership-api/session') {
       authCalls += 1;
-      if (authCalls === 2) await olderGate;
+
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionEnvelope()) });
     }
     if (path === '/dashboard-api/summary') {
       summaryCalls += 1;
-      return fulfill(route, summary(summaryCalls === 1 ? 1 : 9, 0, 0, 0));
+      const count=summaryCalls===3?9:1;
+      if(summaryCalls===2)await olderGate;
+      return fulfill(route, summary(count, 0, 0, 0));
     }
-    if (path === '/dashboard-api/current-attendance') return fulfill(route, { attendance: 5, stale: false, source_timestamp: '2026-09-14T14:10:00.000Z' });
+    if (path === '/dashboard-api/current-attendance') return fulfill(route, { attendance: 5, stale: false, source_timestamp: new Date().toISOString() });
     return fulfill(route, {});
   });
 
@@ -132,11 +124,12 @@ test('a slower older refresh cannot overwrite the newest manager snapshot', asyn
   await expect(page.locator('#today-overdue')).toHaveText('1');
   await page.evaluate(() => {
     document.getElementById('refresh').click();
-    document.getElementById('refresh').click();
   });
+  await expect.poll(()=>summaryCalls).toBe(2);
+  await page.locator('#refresh').click();
   await expect(page.locator('#today-overdue')).toHaveText('9');
   releaseOlder();
   await page.waitForTimeout(150);
   await expect(page.locator('#today-overdue')).toHaveText('9');
-  expect(summaryCalls).toBe(2);
+  expect(summaryCalls).toBe(3);
 });

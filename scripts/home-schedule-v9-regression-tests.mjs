@@ -1,3 +1,4 @@
+import {createSyntheticNativeHome} from './fixtures/native-home-mutation-context.mjs';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
 import {fixture,payload,day,key,id} from './employee-schedule-convergence-race-tests.mjs';
@@ -14,14 +15,16 @@ async function withHome(work){
  try{
   const memory=new Map(),events=new Map(),nodes=new Map(),el=k=>{if(!nodes.has(k))nodes.set(k,{textContent:'',innerHTML:'',dataset:{}});return nodes.get(k);};
   const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(2),employee_name:'Fixture',credential_id:id(3),assignment_epoch:7};
-  const healthy=()=>({ready:true,available:true,quarantined:false}),security={native:true,getStatus:healthy,mutateProtectedWork:async fn=>fn()};
-  const mobile={principalIdentity:()=> 'v9-dom',profileMatchesPrincipal:()=>true},access={profile:()=>profile,device:()=> 'KIOSK_08'};
+  const nativeFixture=createSyntheticNativeHome('v9-dom'),nativeBinding=nativeFixture.binding;
+  const healthy=nativeFixture.status,security={native:true,getStatus:healthy,mutateProtectedWork:nativeFixture.mutate};
+  const mobile={principalIdentity:()=> nativeBinding,profileMatchesPrincipal:()=>true},access={profile:()=>profile,device:()=> 'KIOSK_08'};
   globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:mobile};
+  globalThis.window.MemphisCustodialSecurity=security;
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
   globalThis.setInterval=()=>1;globalThis.clearInterval=()=>{};globalThis.fetch=async()=>{throw Error('external facts offline');};
   app=installHomeFacts({getProfile:()=>access.profile(),getDeviceId:()=>access.device(),isVisible:()=>true,security,requestJson:async()=>legacy(zooServiceDate())});
   await app.update(true);assert.equal(el('home-shift').textContent,'7:00 AM–4:00 PM');
-  await work({app,el,events,security,mobile,access,healthy,key:'mz_employee_schedule_snapshot:v9-dom'});
+  await work({app,el,events,security,mobile,access,healthy,key:'mz_employee_schedule_snapshot:'+encodeURIComponent(nativeBinding)});
  }finally{app?.stop();for(const[k,v]of saved){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
 }
 const fail=()=>{throw Error('synthetic identity read failure');};
@@ -70,7 +73,7 @@ for(const interrupted of [true,false])await test('V8-04 '+(interrupted?'actual H
  // This is deterministic source-interleaving evidence, not browser proof.
  const oldLocks=globalThis.navigator.locks,immediate={request:(_name,_options,work)=>Promise.resolve(work())};
  Object.defineProperty(globalThis.navigator,'locks',{configurable:true,value:immediate});f.context.window.navigator.locks=immediate;
- const owner=createScheduleHomeConvergence({identity:()=>who,storage:f.context.localStorage,mutate:f.context.window.MemphisCustodialSecurity.mutateProtectedWork,matches:()=>true,now:()=>Date.parse(day+'T17:00:00Z')});
+ const owner=createScheduleHomeConvergence({identity:()=>who,storage:f.context.localStorage,mutate:operation=>f.context.window.MemphisCustodialSecurity.mutateProtectedWork(operation,{requireEnrollment:true,expectedGeneration:f.context.window.MemphisCustodialSecurity.getStatus().generation}),matches:()=>true,now:()=>Date.parse(day+'T17:00:00Z')});
  let armed=false,began=null,cancelled=false;
  try{
   if(interrupted){const api=f.context.window.MemphisRecurringScheduleTarget;

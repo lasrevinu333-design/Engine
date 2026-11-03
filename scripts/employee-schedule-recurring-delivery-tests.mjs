@@ -3,8 +3,11 @@ import {scheduleLocks} from './synthetic-schedule-locks.mjs';
 import {webcrypto,createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {createSyntheticScheduleSecurity} from './synthetic-schedule-security.mjs';
 const html=readFileSync(new URL('../employee-schedule.html',import.meta.url),'utf8');
-const inline=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
+const inline=process.argv.includes('--native-runtime')
+ ?readFileSync(new URL('../mobile/src/custodial/employee-schedule-runtime.js',import.meta.url),'utf8').replace(/^export /m,'')+'\ninstallEmployeeSchedule();'
+ :[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
 const helper=readFileSync(new URL('../memphis-recurring-schedule-target.js',import.meta.url),'utf8');
 const id=n=>`94000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const sha=s=>createHash('sha256').update(s).digest('hex');
@@ -37,8 +40,7 @@ const context={Date:FixedDate,Intl,URL,console,crypto:webcrypto,TextEncoder,Abor
  fetch:async()=>{fetchCount++;return{ok:true,json:async()=>({ok:true,data:structuredClone(next)})};},
  setTimeout:()=>1,clearTimeout(){},setInterval:()=>2,clearInterval(){}};
 context.window={navigator:{locks:scheduleLocks},crypto:webcrypto,addEventListener:(name,fn)=>events.set(name,fn),
- MemphisCustodialSecurity:{native:true,getStatus:()=>({deviceId:'KIOSK_08',principal:nativePrincipal,ready:true,available:true,quarantined:false}),
-  mutateProtectedWork:async fn=>{mutationHook();return fn();}},
+ MemphisCustodialSecurity:createSyntheticScheduleSecurity(nativePrincipal,{before:()=>mutationHook()}),
  MemphisMobile:{ready:Promise.resolve(),deviceId:()=> 'KIOSK_08',principalIdentity:()=>identity,
   profileMatchesPrincipal:d=>d.employee_id===principal.employeeId&&d.credential_id===principal.credentialId&&d.assignment_epoch===7,
   requestJson:async(path,options)=>{calls.push({path,options});return{};}}};

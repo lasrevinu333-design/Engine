@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdtempSync,rmSync,readdirSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -23,9 +23,10 @@ const source=`public class MainActivity {
  static class LegacyCustodialNfcUrl {static String normalize(String url){return url;}}
  static class NativeNfcScanHandoff {
   static final String QUERY_PARAMETER="mz_nfc_handoff";
-  static class ReadResult {final String handoffId;final boolean durable;ReadResult(String id,boolean durable){this.handoffId=id;this.durable=durable;}}
+  static class ReadResult {final String handoffId;final boolean durable,ignored;ReadResult(String id,boolean durable){this(id,durable,false);}ReadResult(String id,boolean durable,boolean ignored){this.handoffId=id;this.durable=durable;this.ignored=ignored;}}
   static ReadResult recordPhysicalRead(MainActivity activity,String url,String identity){
    activity.calls++;activity.lastIdentity=identity;
+   if(activity.mode.equals("ignored"))return new ReadResult("",false,true);
    if(activity.mode.equals("uncertain"))return new ReadResult(activity.calls==1?"retained-entry":"",false);
    return new ReadResult(activity.mode.equals("durable")?"durable-entry":"",activity.mode.equals("durable"));
   }
@@ -62,13 +63,21 @@ const source=`public class MainActivity {
   MainActivity c=new MainActivity();c.mode="durable";
   c.dispatchPhysicalNfcUrlFromReader("memphiszoo://scan?code=NOCX","");
   check(c.calls==0&&c.navigation==0&&c.current.data==null,"missing identity cannot reach native persistence or navigation");
+  MainActivity d=new MainActivity();d.mode="ignored";Intent active=d.current;
+  for(int i=0;i<4;i++)d.dispatchPhysicalNfcUrlFromReader("memphiszoo://scan?code=NOCX","nfc-a.v1:04010203040506");
+  check(d.current==active&&d.navigation==0&&d.notices==0,"ignored first-minute reads leave Active untouched, without failure toast or pending intent");
+  d.mode="durable";check(d.navigation==0,"elapsed time alone causes no replay");
+  d.dispatchPhysicalNfcUrlFromReader("memphiszoo://scan?code=NOCX","nfc-a.v1:04010203040506");
+  check(d.navigation==1&&d.notices==0,"fresh admitted scan alone navigates normally");
   System.out.println("PASS: "+assertions+" assertions using actual generated record/dispatch methods; controlled native-result/UI/URI/Toast adapters. No physical, Android lifecycle, KeyStore or process-death PASS.");
  }
 }`;
-const owned=mkdtempSync(join(tmpdir(),'custodial-nfc-persistence-ui-'));
+const supplied=process.argv.includes('--scratch')?resolve(process.argv[process.argv.indexOf('--scratch')+1]):null;
+if(supplied)assert.ok(statSync(supplied).isDirectory()&&readdirSync(supplied).length===0,'root-provided scratch must be empty');
+const owned=supplied||mkdtempSync(join(tmpdir(),'custodial-nfc-persistence-ui-'));
 try{
  writeFileSync(join(owned,'MainActivity.java'),source);
  for(const [command,args]of[['javac',['-d',owned,join(owned,'MainActivity.java')]],['java',['-cp',owned,'MainActivity']]]){
   const r=spawnSync(command,args,{stdio:'inherit',timeout:15000});if(r.error)throw r.error;assert.equal(r.status,0,command);
  }
-}finally{rmSync(owned,{recursive:true,force:true});}
+}finally{if(supplied){for(const name of readdirSync(owned))rmSync(join(owned,name),{recursive:true,force:true});assert.equal(readdirSync(owned).length,0);}else rmSync(owned,{recursive:true,force:true});}

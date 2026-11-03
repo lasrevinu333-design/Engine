@@ -55,6 +55,46 @@
     focusTarget: els.evidenceHeading, readEnvelope: readCompletionEnvelope,
     }) : null;
 
+  let correctionPanel=null,correctionModule=null;
+  const correctionBinding=()=>{
+    const session=window.MemphisAuth?.readSession?.();
+    return session?JSON.stringify([session.role,session.manager_id,session.credential_id,session.device_id,session.token,session.expires_at,session.auth_mode]):null;
+  };
+  const canCorrect=()=>{
+    const session=window.MemphisAuth?.readSession?.();
+    return session?.role==='ops_manager'&&session.read_only===false&&Date.parse(session.expires_at)>Date.now()&&window.MemphisAuth?.canMutateOpsManagerSurface?.(session)===true;
+  };
+  async function correctionEnvelope(path,{method='GET',body,operationId,contract='cleaning-truth.v1'}={}) {
+    if(!canCorrect())throw new Error('Current full manager access is required.');
+    const owner=correctionBinding(),headers=await window.MemphisAuth.opsManagerAuthHeaders();
+    if(owner!==correctionBinding())throw new Error('Manager access changed.');
+    const session=window.MemphisAuth.readSession();
+    if(headers.Authorization!==`Bearer ${session.token}`||headers['X-Device-Id']!==session.device_id)throw new Error('Manager access changed.');
+    if(body)headers['Content-Type']='application/json';if(operationId)headers['Idempotency-Key']=operationId;
+    const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),10000);
+    try {
+      const response=await fetch(`${API}${path}`,{method,headers,body:body?JSON.stringify(body):undefined,credentials:'include',cache:'no-store',redirect:'error',signal:abort.signal});
+      const result=await response.json();
+      if(owner!==correctionBinding()||!canCorrect())throw new Error('Manager access changed.');
+      if(!response.ok)throw Object.assign(new Error(response.status===409?'The record changed since preview.':'The correction service could not confirm this request.'),{status:response.status});
+      if(result?.ok!==true||result.contract_version!==contract||!result.data||typeof result.data!=='object')throw new Error('Correction readback unavailable.');
+      return result.data;
+    } finally {clearTimeout(timer);}
+  }
+  async function openCorrection(row) {
+    const owner=correctionBinding();
+    correctionModule ||= import('./manager-cleaning-correction.mjs');
+    const {createCleaningCorrectionPanel}=await correctionModule;
+    if(owner!==correctionBinding()||!canCorrect())throw new Error('Manager access changed.');
+    correctionPanel ||= createCleaningCorrectionPanel({document,panel:document.getElementById('cleaning-correction-panel'),status:document.getElementById('cleaning-correction-status'),content:document.getElementById('cleaning-correction-content'),binding:correctionBinding,canWrite:canCorrect,api:{
+      truth:id=>correctionEnvelope(`/admin-api/custodial/cleaning-sessions/${encodeURIComponent(id)}/truth`),
+      choices:()=>correctionEnvelope('/admin-api/custodial/cleaning-correction-choices',{contract:'cleaning-correction-choices.v1'}),
+      save:(id,operationId,body)=>correctionEnvelope(`/admin-api/custodial/cleaning-sessions/${encodeURIComponent(id)}/corrections`,{method:'POST',operationId,body}),
+      status:(id,operationId)=>correctionEnvelope(`/admin-api/custodial/cleaning-sessions/${encodeURIComponent(id)}/corrections/${encodeURIComponent(operationId)}`),
+    }});
+    await correctionPanel.open(row);
+  }
+
   function safe(error) {
     const raw = error instanceof Error ? error.message : String(error || 'Unknown error');
     if (/failed to fetch|network|load failed|internet/i.test(raw)) return 'The service could not be reached. Your selections were kept; retry when the connection returns.';
@@ -191,6 +231,7 @@
 
   function fillSelect(select, options, placeholder) {
     const current = select.value;
+    if (current && !options.some(([id]) => id === current)) options.push([current, select.selectedOptions?.[0]?.textContent || 'Selected filter']);
     select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>` + options.map(([id, label]) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join('');
     if (options.some(([id]) => id === current)) select.value = current;
   }
@@ -299,6 +340,7 @@
         <div class="dataAction">
           <span class="scorePill ${scoreClass(score)}">${scoreKnown ? `${number(score)}%` : scoreUnknown}</span>
           <small class="uxMuted">Historical inspection records only; new recording is retired.</small>
+          ${canCorrect() && window.MemphisCompletionEvidence?.canReadRow(row) ? `<button class="uxButton compact" type="button" data-cleaning-correction data-session-uuid="${escapeHtml(row.session_uuid)}">Review correction</button>` : ''}
           ${evidenceView && window.MemphisCompletionEvidence.canReadRow(row) ? `<button class="uxButton compact" type="button" data-completion-evidence data-session-uuid="${escapeHtml(row.session_uuid)}">View completion record</button>` : `<small class="uxMuted">${evidenceView ? 'Exact session identity unavailable.' : 'Exact completion view unavailable; existing history is preserved.'}</small>`}
         </div>
       </article>`;
@@ -378,68 +420,58 @@
     renderInspections();
   }
 
-  async function loadPerformance() {
-    state.performanceAvailable = false;
-    state.performance = rows(await request(query('/analytics-api/cleaning-performance', {
-      employee_id: els.performanceEmployee.value,
-      location_id: els.performanceLocation.value,
-      minimum_cleanings: els.performanceMinimum.value || 1,
-      limit: 500,
-    })));
-    state.performanceAvailable = true;
+  const generations = {}, filters = {
+    performance: () => ({employee_id:els.performanceEmployee.value,location_id:els.performanceLocation.value,minimum_cleanings:els.performanceMinimum.value||1,limit:500}),
+    cleanings: () => ({employee_id:els.cleaningsEmployee.value,location_id:els.cleaningsLocation.value,date_from:els.cleaningsFrom.value,date_to:els.cleaningsTo.value,limit:500}),
+    tickets: () => ({window_days:state.ticketWindow,minimum_count:state.ticketWindow===7?2:1,limit:500}),
+    inspections: () => ({limit:300}), inspectionCoverage: () => ({}),
+  };
+  let statusGeneration = 0, pageClosed = false;
+  const principal = () => {
+    const s=window.MemphisAuth?.readSession?.() || window.MemphisMobile?.readSession?.();
+    return s ? JSON.stringify([s.role,s.manager_id,s.credential_id,s.device_id,s.token,s.expires_at,s.auth_mode]) : null;
+  };
+  const paths={performance:'/analytics-api/cleaning-performance',cleanings:'/analytics-api/session-facts',tickets:'/analytics-api/ticket-trends',inspections:'/analytics-api/inspections',inspectionCoverage:'/analytics-api/inspection-coverage'};
+  function withdraw(kind) {
+    generations[kind]=(generations[kind]||0)+1;
+    if(kind==='inspectionCoverage')state.inspectionCoverage=null;
+    else {state[kind+'Available']=false;state[kind]=[];}
+    if(kind==='cleanings')evidenceView?.clear();
+  }
+  async function load(kind) {
+    withdraw(kind);
+    const generation=generations[kind], parameters=filters[kind](), fingerprint=JSON.stringify(parameters);
+    const current=()=>!pageClosed && generation===generations[kind] && fingerprint===JSON.stringify(filters[kind]());
     renderAll();
+    try {
+      // The first real page read establishes its signed browser session here.
+      // Capture the original principal after that authentication has completed.
+      await authHeaders();if(!current())return false;
+      const owner=principal();
+      const value=await request(query(paths[kind],parameters));
+      if(!current())return false;
+      if(owner!==principal())throw new Error('Current Custodial Manager session changed. Refresh with the current session.');
+      state[kind]=kind==='inspectionCoverage' ? value || null : rows(value);
+      if(kind!=='inspectionCoverage')state[kind+'Available']=true;
+      renderAll();return true;
+    } catch(error) {if(!current())return false;throw error;}
   }
-
-  async function loadCleanings() {
-    evidenceView?.clear();
-    state.cleaningsAvailable = false;
-    state.cleanings = rows(await request(query('/analytics-api/session-facts', {
-      employee_id: els.cleaningsEmployee.value,
-      location_id: els.cleaningsLocation.value,
-      date_from: els.cleaningsFrom.value,
-      date_to: els.cleaningsTo.value,
-      limit: 500,
-    })));
-    state.cleaningsAvailable = true;
-    renderAll();
+  const loadPerformance=()=>load('performance'), loadCleanings=()=>load('cleanings'), loadTickets=()=>load('tickets');
+  async function action(loader,loading,complete) {
+    const sequence=++statusGeneration;
+    setStatus(loading,'info');
+    try {if(await loader() && sequence===statusGeneration)setStatus(complete,'ok');}
+    catch(error){if(sequence===statusGeneration)setStatus(safe(error),'error');}
   }
-
-  async function loadTickets() {
-    state.ticketsAvailable = false;
-    state.tickets = rows(await request(query('/analytics-api/ticket-trends', {
-      window_days: state.ticketWindow,
-      minimum_count: state.ticketWindow === 7 ? 2 : 1,
-      limit: 500,
-    })));
-    state.ticketsAvailable = true;
-    renderAll();
-  }
-
-  async function loadInspections() {
-    state.inspectionsAvailable = false;
-    state.inspections = rows(await request('/analytics-api/inspections?limit=300'));
-    state.inspectionsAvailable = true;
-    renderAll();
-  }
-
-  async function loadInspectionCoverage() {
-    state.inspectionCoverage = await request('/analytics-api/inspection-coverage') || null;
-    renderSummary();
-  }
-
   async function loadAll() {
-    els.refresh.disabled = true;
-    setStatus('Loading operational evidence…', 'info');
-    const results = await Promise.allSettled([loadPerformance(), loadCleanings(), loadTickets(), loadInspections(), loadInspectionCoverage()]);
-    const failures = results.filter((result) => result.status === 'rejected');
-    els.refresh.disabled = false;
-    if (failures.length) {
-      renderAll();
-      setStatus(failures.map((result) => safe(result.reason)).filter((value, index, array) => array.indexOf(value) === index).join(' '), 'error');
-    } else {
-      const current = `Current through ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`;
-      setStatus(current, 'ok');
-    }
+    const sequence=++statusGeneration;
+    els.refresh.disabled=true;setStatus('Loading operational evidence…','info');
+    const results=await Promise.allSettled(Object.keys(paths).map(load));
+    els.refresh.disabled=false;
+    if(sequence!==statusGeneration || pageClosed)return;
+    const failures=results.filter(result=>result.status==='rejected');
+    if(failures.length)setStatus(failures.map(result=>safe(result.reason)).filter((v,i,a)=>a.indexOf(v)===i).join(' '),'error');
+    else if(results.every(result=>result.value===true))setStatus('Operational evidence loaded for the displayed filters.','ok');
   }
 
   els.tabs.forEach((tab, index) => {
@@ -455,24 +487,24 @@
       els.tabs[nextIndex].focus();
     });
   });
-  els.ticketButtons.forEach((button) => button.addEventListener('click', async () => {
-    state.ticketWindow = Number(button.dataset.window);
-    els.ticketButtons.forEach((candidate) => candidate.classList.toggle('active', candidate === button));
-    setStatus(`Loading ${state.ticketWindow}-day ticket trends…`, 'info');
-    try { await loadTickets(); setStatus('Ticket trends current.', 'ok'); } catch (error) { setStatus(safe(error), 'error'); }
+  els.ticketButtons.forEach(button=>button.addEventListener('click',()=>{
+    state.ticketWindow=Number(button.dataset.window);
+    els.ticketButtons.forEach(candidate=>candidate.classList.toggle('active',candidate===button));
+    void action(loadTickets,`Loading ${state.ticketWindow}-day ticket trends…`,'Ticket trends loaded for the selected window.');
   }));
-  els.refresh.addEventListener('click', () => void loadAll());
-  els.applyPerformance.addEventListener('click', async () => {
-    setStatus('Applying performance filters…', 'info');
-    try { await loadPerformance(); setStatus('Performance comparison current.', 'ok'); } catch (error) { setStatus(safe(error), 'error'); }
-  });
-  els.applyCleanings.addEventListener('click', async () => {
-    setStatus('Applying cleaning filters…', 'info');
-    try { await loadCleanings(); setStatus('Cleaning facts current.', 'ok'); } catch (error) { setStatus(safe(error), 'error'); }
-  });
+  els.refresh.addEventListener('click',()=>void loadAll());
+  els.applyPerformance.addEventListener('click',()=>void action(loadPerformance,'Applying performance filters…','Performance comparison loaded for the displayed filters.'));
+  els.applyCleanings.addEventListener('click',()=>void action(loadCleanings,'Applying cleaning filters…','Cleaning facts loaded for the displayed filters.'));
+  for(const [kind,controls] of [['performance',[els.performanceEmployee,els.performanceLocation,els.performanceMinimum]],['cleanings',[els.cleaningsEmployee,els.cleaningsLocation,els.cleaningsFrom,els.cleaningsTo]]]) {
+    for(const control of controls)control.addEventListener('change',()=>{
+      statusGeneration+=1;withdraw(kind);renderAll();setStatus('Selections changed. Apply filters to load matching evidence.','info');
+    });
+  }
   // Historical inspection records stay read-only. Do not create, mutate or
   // delete any legacy browser draft while removing the retired entry surface.
   els.cleaningsList.addEventListener('click', event => {
+    const correctionButton=event.target.closest('[data-cleaning-correction]');
+    if(correctionButton){const card=correctionButton.closest('[data-session-id]');const matches=state.cleanings.filter(row=>row.session_id===card?.dataset.sessionId&&row.session_uuid===correctionButton.dataset.sessionUuid);if(matches.length!==1){setStatus('Exact record selection changed. Refresh cleaning facts.','error');return;}void openCorrection(matches[0]).catch(error=>setStatus(safe(error),'error'));return;}
     const button = event.target.closest('[data-completion-evidence]');
     if (!button) return;
     if (!evidenceView) { setStatus('Exact completion view unavailable. No record was changed.', 'error'); return; }
@@ -482,8 +514,15 @@
     void evidenceView.open(rows[0], button);
   });
   els.closeEvidence?.addEventListener('click', () => evidenceView?.clear({returnToSelection:true}));
-  window.addEventListener('pagehide', () => evidenceView?.clear());
+  window.addEventListener('focus',()=>correctionPanel?.revalidate());
+  window.addEventListener('storage',()=>correctionPanel?.revalidate());
+  document.addEventListener?.('visibilitychange',()=>correctionPanel?.revalidate());
+  window.addEventListener('beforeunload',event=>{if(correctionPanel?.hasUnresolved()){event.preventDefault();event.returnValue='';}});
+  window.addEventListener('pagehide', () => {correctionPanel?.retire();pageClosed=true;statusGeneration+=1;Object.keys(paths).forEach(withdraw);evidenceView?.clear();});
+  window.addEventListener('pageshow', () => {correctionPanel?.resume();if(pageClosed){pageClosed=false;void loadAll();}});
   window.addEventListener('online', () => { if (state.activeTab) setStatus('Connection restored. Refresh operational evidence.', 'ok'); });
 
+  const hashTab = () => {const name=String(window.location?.hash || '').replace(/^#panel-/, '');if(els.tabs.some(tab=>tab.dataset.tab===name))setTab(name);};
+  window.addEventListener('hashchange', hashTab);hashTab();
   void loadAll();
 })();

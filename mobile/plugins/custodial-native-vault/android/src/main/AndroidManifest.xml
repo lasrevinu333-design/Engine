@@ -3,7 +3,7 @@
          type/exported owner. Runtime still requires qualified release inputs. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <application>
+    <application android:name="org.memphiszoo.custodial.vault.CustodialEnrollmentApplication">
         <!-- Explicit operator-only foreground preparation; no BROWSABLE,
              launcher, startup, employee bridge or newly granted permission. -->
         <activity
@@ -39,6 +39,14 @@
             <intent-filter>
                 <action android:name="org.memphiszoo.custodial.ACTIVATE_ASSIGNED_DEVICE" />
                 <action android:name="org.memphiszoo.custodial.ASSIGNED_ACTIVATION_STATUS" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name="org.memphiszoo.custodial.vault.RetainedEnrollmentMaintenanceReceiver"
+            android:exported="true" android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="org.memphiszoo.custodial.VERIFY_RETAINED_ENROLLMENT" />
+                <action android:name="org.memphiszoo.custodial.REPORT_RETAINED_ENROLLMENT" />
+                <action android:name="org.memphiszoo.custodial.FINISH_RETAINED_ENROLLMENT" />
             </intent-filter>
         </receiver>
     </application>

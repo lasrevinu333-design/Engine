@@ -1,28 +1,7 @@
-const { test, expect } = require('@playwright/test');
+const {currentLeadershipSession}=require('./helpers/current-leadership-session.cjs');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
-const managerSession = {
-  ok: true,
-  data: {
-    session: {
-      token: 'attendance-browser-test-token',
-      role: 'ops_manager',
-      roles: ['CUSTODIAL_MANAGER'],
-      manager_id: '00000000-0000-4000-8000-000000000901',
-      manager_display_name: 'Attendance Test Manager',
-      manager_job_title: 'Custodial Manager',
-      credential_id: '00000000-0000-4000-8000-000000000902',
-      device_id: 'attendance-browser',
-      access_level: 'full_access',
-      read_only: false,
-      trusted_device: true,
-      expires_at: '2036-07-18T00:00:00.000Z',
-    },
-    trusted_device: {
-      credential_id: '00000000-0000-4000-8000-000000000902',
-      device_id: 'attendance-browser',
-    },
-  },
-};
+const managerSession=currentLeadershipSession({deviceId:'attendance-browser',managerId:'00000000-0000-4000-8000-000000000901',credentialId:'00000000-0000-4000-8000-000000000902',displayName:'Synthetic Attendance Manager'});
 
 async function installRuntime(context, attendance, requestPaths) {
   await context.addInitScript(() => {
@@ -41,7 +20,7 @@ async function installRuntime(context, attendance, requestPaths) {
   await context.route('https://memphis-zoo-mcp.onrender.com/**', (route) => {
     const url = new URL(route.request().url());
     requestPaths.push(url.pathname);
-    if (url.pathname === '/auth-api/session') {
+    if (url.pathname === '/custodial-leadership-api/session') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(managerSession) });
     }
     if (url.pathname === '/version') {
@@ -77,14 +56,14 @@ test('manager Home shows attendance source time and stale state', async ({ brows
     planned: 1200,
     last_year: 1100,
     yesterday_plan: 1180,
-    source_timestamp: '2026-07-29T15:30:00.000Z',
+    source_timestamp: new Date().toISOString(),
     stale: true,
   }, requestPaths);
   const page = await context.newPage();
   await page.goto('/start_page1.html');
-  await expect(page.locator('#access-mode')).toContainText('Full-access Ops Manager · Attendance Test Manager');
+  await expect(page.locator('#access-mode')).toContainText('Leadership management · self-asserted name');
   await expect(page.locator('#attendance-value')).toHaveText('1,087');
-  await expect(page.locator('#attendance-meta')).toContainText('Stale gate count · source');
+  await expect(page.locator('#attendance-meta')).toHaveText(/Stale gate count · Planned 1,200 · source .+ Central/);
   await expect(page.locator('#attendance-meta')).toHaveClass(/stale/);
   expect(requestPaths).toContain('/dashboard-api/current-attendance');
   await context.close();

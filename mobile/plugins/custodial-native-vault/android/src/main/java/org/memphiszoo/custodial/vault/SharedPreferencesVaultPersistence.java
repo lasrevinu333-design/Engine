@@ -185,7 +185,7 @@ final class SharedPreferencesVaultPersistence implements VaultPersistence {
                 // installing our marker. No namespace call intervenes between
                 // that marker and the ONE existing commit/readback primitive.
                 control.beginCommitAttempt();
-                pending = new PendingCommit(original.revision, terminalValue, true);
+                pending = new PendingCommit(original.revision, terminalValue, true, control);
                 UNCERTAIN.put(preferences, pending);
                 commitAndVerifyLocked(terminalValue, terminalBytes, terminal);
                 held.requireForPersistence(this, control);
@@ -202,7 +202,9 @@ final class SharedPreferencesVaultPersistence implements VaultPersistence {
                 if (!Arrays.equals(terminalBytes, readbackBytes) || !Arrays.equals(canonical, readbackBytes)
                     || !terminal.equals(decoded)) throw new VaultFailure("custodial_native_vault_readback_failed");
                 held.requireForPersistence(this, control);
-                control.observeCommittedSnapshot(decoded);
+                pending.activeFinalizationAdapterReadback=true;
+                try{control.observeCommittedSnapshot(decoded);}
+                finally{pending.activeFinalizationAdapterReadback=false;}
                 held.requireForPersistence(this, control);
                 if (UNCERTAIN.get(preferences) != pending
                     || !NativeProtectedWorkSnapshot.exactRawEquals(expected, preferences.getAll()))
@@ -304,6 +306,25 @@ final class SharedPreferencesVaultPersistence implements VaultPersistence {
         }
     }
 
+    @Override public void requireUnambiguousOriginalFinalizationRead(
+        VaultEngine.NativeOriginalInventoryFinalizationRestoredRead original)throws VaultFailure {
+        synchronized(COMMIT_LOCK){
+            if(original==null||workAdmission==null)throw finalizationReadbackUnavailable();
+            original.requirePersistenceOwner(this);
+            if(UNCERTAIN.containsKey(preferences))throw new VaultFailure(DURABILITY_UNCONFIRMED);
+        }
+    }
+    @Override public void requireOriginalFinalizationOwnedReadback(
+        VaultEngine.NativeOriginalInventoryFinalizationRestoredRead original,
+        VaultEngine.NativeOriginalInventoryFinalizationControl control)throws VaultFailure {
+        synchronized(COMMIT_LOCK){
+            if(original==null||control==null||workAdmission==null)throw finalizationReadbackUnavailable();
+            original.requirePersistenceOwner(this);PendingCommit pending=UNCERTAIN.get(preferences);
+            if(pending==null||!pending.originalInventoryFinalization||pending.originalFinalizationOwner!=control
+                ||!pending.activeFinalizationAdapterReadback||pending.ownerThread!=Thread.currentThread())
+                throw new VaultFailure(DURABILITY_UNCONFIRMED);
+        }
+    }
     private static VaultFailure finalizationReadbackUnavailable() {
         return new VaultFailure("custodial_native_original_inventory_finalization_readback_unavailable");
     }
@@ -380,10 +401,18 @@ final class SharedPreferencesVaultPersistence implements VaultPersistence {
         final long expectedRevision;
         final String encodedValue;
         final boolean originalInventoryFinalization;
+        final VaultEngine.NativeOriginalInventoryFinalizationControl originalFinalizationOwner;
+        final Thread ownerThread;
+        boolean activeFinalizationAdapterReadback;
         PendingCommit(long expectedRevision, String encodedValue) {
             this(expectedRevision, encodedValue, false);
         }
-        private PendingCommit(long expectedRevision, String encodedValue, boolean originalInventoryFinalization) {
+        private PendingCommit(long expectedRevision,String encodedValue,boolean originalInventoryFinalization){
+            this(expectedRevision,encodedValue,originalInventoryFinalization,null);
+        }
+        private PendingCommit(long expectedRevision, String encodedValue, boolean originalInventoryFinalization,
+            VaultEngine.NativeOriginalInventoryFinalizationControl owner) {
+            originalFinalizationOwner=owner;ownerThread=Thread.currentThread();
             this.expectedRevision = expectedRevision;
             this.encodedValue = encodedValue;
             this.originalInventoryFinalization = originalInventoryFinalization;

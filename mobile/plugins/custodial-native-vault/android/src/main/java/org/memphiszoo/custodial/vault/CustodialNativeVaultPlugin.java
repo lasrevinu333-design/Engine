@@ -497,7 +497,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         String entryId = String.valueOf(handoff.get("entry_id"));
         boolean allowCreate = "pending".equals(handoff.get("state"));
         Map<String, Object> entry = createScanEntry(
-            String.valueOf(handoff.get("url")), "native-nfc", entryId, allowCreate, PhysicalNfcTagIdentity.fromRecord(handoff)
+            String.valueOf(handoff.get("url")), "native-nfc", entryId, allowCreate, PhysicalNfcTagIdentity.fromRecord(handoff),
+            number(handoff.get("created_elapsed_ms")), (int)number(handoff.get("boot_count"))
         );
         NativeNfcScanHandoff.markClaimed(getContext(), handoffId, entryId);
         return entry;
@@ -768,6 +769,21 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         persistScanEntriesLocked(previous);
     }
 
+    private void rejectIgnoredFinishScan(String deviceId, String locationCode, String sessionId,
+        String startedAt, String entryId) throws VaultFailure {
+        Map<String,Object> entry;
+        try { entry = requireScanEntry(entryId); }
+        catch (VaultFailure error) {
+            if ("custodial_native_scan_entry_missing".equals(error.code)) return; // Existing exact frozen-proof recovery owns this path.
+            throw error;
+        }
+        if (requireOfflineAuthorityTime().ignoresFinishScan(deviceId, locationCode, sessionId, startedAt,
+            number(entry.get("created_elapsed_ms")), (int)number(entry.get("boot_count")))) {
+            retireCapturedFinishEntry(entryId);
+            throw new VaultFailure("custodial_native_initial_scan_ignored");
+        }
+    }
+
     @PluginMethod
     public void captureOfflineCompletionTime(PluginCall call) {
         execute(call, () -> {
@@ -777,6 +793,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
             String endedAt;
             synchronized (scanEntries) {
+                rejectIgnoredFinishScan(deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId);
                 boolean verified = bindFinishScanIfPresent(entryId, sessionId, locationCode, deviceId);
                 endedAt = requireOfflineAuthorityTime().completeOccurrenceFromScan(
                     deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified,
@@ -799,6 +816,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             String sessionId = call.getString("client_session_id");
             String entryId = canonicalUuid(call.getString("native_finish_scan_entry_id"));
             synchronized (scanEntries) {
+                rejectIgnoredFinishScan(deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId);
                 boolean verified = bindFinishScanIfPresent(entryId, sessionId, locationCode, deviceId);
                 String endedAt = requireOfflineAuthorityTime().completeOccurrenceFromScan(
                     deviceId, locationCode, sessionId, call.getString("client_started_at"), entryId, verified,
@@ -1221,6 +1239,12 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     Map<String, Object> createScanEntry(String value, String source, String requestedEntryId,
         boolean allowCreate, String identity) throws VaultFailure {
+        return createScanEntry(value, source, requestedEntryId, allowCreate, identity,
+            SystemClock.elapsedRealtime(), currentBootCount());
+    }
+
+    private Map<String, Object> createScanEntry(String value, String source, String requestedEntryId,
+        boolean allowCreate, String identity, long observedElapsed, int observedBoot) throws VaultFailure {
         if (!identity.isEmpty()) PhysicalNfcTagIdentity.require(identity);
         Map<String, Object> state = engine.getState();
         Object installationValue = state.get("installation");
@@ -1230,8 +1254,10 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         Object deviceValue = ((Map<?, ?>) installationValue).get("device_id");
         String deviceId = deviceValue == null ? "" : deviceValue.toString();
         long now = System.currentTimeMillis();
-        long elapsed = SystemClock.elapsedRealtime();
-        int bootCount = currentBootCount();
+        long elapsed = observedElapsed;
+        int bootCount = observedBoot;
+        if (elapsed < 0 || bootCount < 0 || bootCount != currentBootCount()
+            || elapsed > SystemClock.elapsedRealtime()) throw new VaultFailure("custodial_native_scan_intent_refused");
         String locationCode = locationCodeFromScanUrl(value);
         if (locationCode.isEmpty()) throw new VaultFailure("custodial_native_scan_intent_refused");
         String entryId = canonicalUuid(requestedEntryId);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>Feedback</title>
+  <meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Feedback</title>
   <style>
     :root{--text:#fff;--muted:#e5edf5;--panel:rgba(5,15,22,.91);--line:rgba(255,255,255,.25);--green:#b7e66a}
     *{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#101827}body{background-image:linear-gradient(rgba(3,9,18,.54),rgba(3,9,18,.69)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-attachment:fixed}
@@ -15,7 +15,7 @@
 <body data-memphis-context="employee">
   <main>
     <header><a class="back" data-mz-back href="./index.html">Back</a><h1>Feedback</h1><p class="sub">Get help with this phone or app</p></header>
-    <form id="form">
+    <form id="form" data-mz-protect-unsaved="true">
       <div class="choices" role="radiogroup" aria-label="What happened">
         <label class="choice"><input type="radio" name="category" value="app_problem" required><span>Something is broken</span></label>
         <label class="choice"><input type="radio" name="category" value="need_help" required><span>I need help</span></label>
@@ -101,6 +101,7 @@
         const original=pendingSubmission,operation=original.operation_id;
         const save=window.MemphisMobile?.saveEmployeeFeedback;if(typeof save!=='function')throw new Error('not_ready');
         await save(original);
+        window.MemphisUI?.markSaved?.(els.form);
         statusOperation=operation;setStatus('Saved on this phone. It will retry automatically.','info');
         // Prefer the exact protected persisted body, including original actor pins.
         if(await recover())void sync().catch(()=>{});

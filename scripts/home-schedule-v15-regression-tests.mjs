@@ -1,3 +1,4 @@
+import {createSyntheticNativeHome} from './fixtures/native-home-mutation-context.mjs';
 import assert from 'node:assert/strict';
 import {fixture,payload,key,id} from './employee-schedule-convergence-race-tests.mjs';
 import {installHomeFacts} from '../mobile/src/custodial/home-facts-dom.js';
@@ -14,10 +15,12 @@ async function homeStoppedRecovery(site,throwOld,hide){
   const events=new Map(),nodes=new Map(),memory=new Map(),timers=new Set();let seq=0,nested=0,armed=false,schedules=0,infos=0;
   const el=k=>{if(!nodes.has(k))nodes.set(k,{textContent:'',innerHTML:'',dataset:{}});return nodes.get(k);};
   const hook=name=>{if(armed&&!nested&&name===site){nested++;globalThis.document.hidden=hide;events.get('pagehide')();if(throwOld)throw Error('retired callback');}};
+  const nativeFixture=createSyntheticNativeHome('v15-dom'),nativeBinding=nativeFixture.binding;
   const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(2),employee_name:'Fixture',credential_id:id(3),assignment_epoch:7};
-  const healthy=()=>({ready:true,available:true,quarantined:false});
-  const security={get native(){hook('native');return true;},getStatus(){hook('status');return healthy();},mutateProtectedWork:async fn=>fn()};
-  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=>{hook('principal');return'v15-dom';},profileMatchesPrincipal:()=>{hook('matches');return true;}}};
+  const healthy=nativeFixture.status;
+  const security={get native(){hook('native');return true;},getStatus(){hook('status');return healthy();},mutateProtectedWork:nativeFixture.mutate};
+  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=>{hook('principal');return nativeBinding;},profileMatchesPrincipal:()=>{hook('matches');return true;}}};
+  globalThis.window.MemphisCustodialSecurity=security;
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
   globalThis.setInterval=()=>{const n=++seq;timers.add(n);return n;};globalThis.clearInterval=n=>timers.delete(n);
   globalThis.fetch=async()=>{infos++;throw Error('informational offline');};
@@ -59,7 +62,7 @@ for(const event of ['online','memphis:schedule-refresh','memphis:native-notifica
   f.context.window.MemphisRecurringScheduleTarget={...target,withScheduleLock:(principal,operation)=>target.withScheduleLock(principal,()=>{
    inLock=true;try{return operation();}finally{inLock=false;}
   })};
-  security.mutateProtectedWork=fn=>{mutations++;return mutate(fn);};
+  security.mutateProtectedWork=(fn,options)=>{mutations++;return mutate(fn,options);};
   security.getStatus=()=>{const value=original(),stack=new Error().stack;
    if(armed&&!nested&&(site==='native'?stack.includes('at native ('):inLock)){
     nested++;requestsAt=f.calls.length;mutationsAt=mutations;f.context.window.MemphisMobile.ready=new Promise(()=>{});f.events.get(event)();if(throwOld)throw Error('retired status failure');
@@ -78,7 +81,7 @@ for(const event of ['online','memphis:schedule-refresh','memphis:native-notifica
  const f=fixture();try{
   await f.load();let calls=0,nested=0,oldRow,oldAvailability,oldDisplay,oldRequests,oldMutations,mutations=0;
   const security=f.context.window.MemphisCustodialSecurity,original=security.getStatus,mutate=security.mutateProtectedWork;
-  security.mutateProtectedWork=fn=>{mutations++;return mutate(fn);};
+  security.mutateProtectedWork=(fn,options)=>{mutations++;return mutate(fn,options);};
   security.getStatus=()=>{const value=original();if(++calls===at){nested++;
    oldRow=f.stored.get(key);oldAvailability=f.stored.get(availabilityKey);oldDisplay=display(f);oldRequests=f.calls.length;oldMutations=mutations;
    f.context.window.MemphisMobile.ready=new Promise(()=>{});f.events.get(event)();if(throwOld)throw Error('retired status capture');

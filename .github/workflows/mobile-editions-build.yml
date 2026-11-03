@@ -25,6 +25,7 @@ on:
       - '.node-version'
       - '.nvmrc'
       - '.npmrc'
+      - 'scripts/**'
       - 'scripts/refresh-frontend-release-manifest.mjs'
       - 'scripts/runtime-manifest-contract-tests.mjs'
       - 'scripts/batch-0a-baseline-contract-tests.mjs'
@@ -57,6 +58,7 @@ on:
       - '.node-version'
       - '.nvmrc'
       - '.npmrc'
+      - 'scripts/**'
       - 'scripts/refresh-frontend-release-manifest.mjs'
       - 'scripts/runtime-manifest-contract-tests.mjs'
       - 'scripts/batch-0a-baseline-contract-tests.mjs'
@@ -174,6 +176,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/custodial-core-release-gate-tests.mjs
+          node scripts/custodial-core-release-gate.mjs
           npm run --silent test:mobile
           npm run --silent test:batch-0a
           npm run --silent test:batch-1-notifications

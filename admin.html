@@ -6,7 +6,7 @@
   <meta name="referrer" content="no-referrer">
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   />
   <title>Memphis Zoo Custodial Admin</title>
   <style>
@@ -507,7 +507,7 @@
           </div>
           <div class="actionRow">
             <button id="unlock-btn" class="button" type="button">Reconnect Manager Hub</button>
-            <button id="forget-key-btn" class="button dark" type="button">Clear Local Session</button>
+            <button id="forget-key-btn" class="button dark" type="button">Clear Console Access</button>
           </div>
           <div class="statusLine">
             <span id="connection-pill" class="pill info">Connecting...</span>
@@ -738,7 +738,7 @@
       els.forgetKeyBtn.addEventListener("click", () => {
         clearManagerSession();
         setConnection(navigator.onLine ? "Ready" : "Offline", navigator.onLine ? "good" : "warn");
-        setMessage("Local session cleared.", "info");
+        setMessage("Console access cleared. Browser enrollment is unchanged.", "info");
       });
       els.modalCancelBtn.addEventListener("click", () => {
         if (!state.releaseActionPending) closeActionModal();
@@ -819,7 +819,7 @@
         await refreshAdmin("Manager Hub connected", false);
       } catch (err) {
         clearManagerSession();
-        renderLockedState(`Access denied: ${safeError(err)}`);
+        renderLockedState(`Admin access could not be verified: ${safeError(err)}`);
       }
     }
 
@@ -1016,7 +1016,7 @@
     function clearManagerSession() {
       state.managerSession = null;
       state.managerSessionVerified = false;
-      window.MemphisAuth?.clearSession?.();
+      // Reset this console only. A failed read must never revoke browser enrollment.
       setAuthState(false);
       renderReleaseCanaryControls();
     }

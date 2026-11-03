@@ -1,255 +1,79 @@
 package org.memphiszoo.custodial.vault;
 
 import static org.junit.Assert.*;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.*;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import org.junit.Test;
 
-/** Synthetic removal transport only. No provider, phone, or clock qualification. */
+/** Current preservation transition ordering/fault tests. Existing eighteen case
+ * names retained; the original destructive-transport source is frozen in the
+ * repair baseline. Ports are explicitly synthetic: no native ACK/HELD/all8,
+ * manager, HTTP or hardware authority is fabricated here. The actual closed
+ * original-manager/SQL route is tested by the separate database-backed join. */
 public final class VaultRemovalTransportTest {
-    static final String OP = "44000000-0000-4000-8000-000000000001";
-    static final String REMOVE = "44000000-0000-4000-8000-000000000002";
-    static final String OTHER = "44000000-0000-4000-8000-000000000003";
-    static final String DEVICE = "KIOSK_08";
-    interface Hook { TerminalResult run(String operation, String device, char[] credential) throws Throwable; }
-    interface Attempt { void run() throws Exception; }
-    static void fails(String code, Attempt attempt) throws Exception {
-        try { attempt.run(); fail("expected " + code); }
-        catch (VaultFailure failure) { assertEquals(code, failure.code); }
-    }
-    static final class Fixture {
-        final MemoryPersistence memory = new MemoryPersistence();
-        final TestCipher cipher = new TestCipher();
-        final MutableClock clock = new MutableClock(1_800_000_000_000L);
-        final FakeTransport server = new FakeTransport(clock);
-        final List<VaultEngine> engines = new ArrayList<>();
-        final List<char[]> secrets = new ArrayList<>();
-        final VaultPersistence persistence;
-        final CredentialCipher recordingCipher;
-        final EnrollmentTransport transport;
-        final VaultEngine engine;
-        volatile VaultSnapshot observed;
-        volatile boolean failAfterDecrypt;
-        volatile Hook hook = server::remove;
-        Fixture() throws Exception {
-            persistence = new VaultPersistence() {
-                public VaultSnapshot load() throws VaultFailure { return observed != null ? observed : memory.load(); }
-                public void commit(long revision, VaultSnapshot next) throws VaultFailure { memory.commit(revision, next); }
-            };
-            recordingCipher = new CredentialCipher() {
-                public EncryptedSecret encrypt(char[] value) throws VaultFailure { return cipher.encrypt(value); }
-                public char[] decrypt(EncryptedSecret value) throws VaultFailure {
-                    char[] clear = cipher.decrypt(value); secrets.add(clear);
-                    if (failAfterDecrypt) { failAfterDecrypt = false; memory.failLoads = 1; }
-                    return clear;
-                }
-                public void destroyKey() throws VaultFailure { cipher.destroyKey(); }
-            };
-            transport = (EnrollmentTransport) Proxy.newProxyInstance(EnrollmentTransport.class.getClassLoader(),
-                new Class<?>[]{EnrollmentTransport.class}, (proxy, method, args) -> {
-                    if (method.getName().equals("remove")) {
-                        for (VaultEngine owner : engines) assertFalse("engine monitor absent", Thread.holdsLock(owner));
-                        java.lang.reflect.Field registry = VaultEngine.class.getDeclaredField("REMOVAL_FLIGHTS");
-                        registry.setAccessible(true); assertFalse("flight registry absent", Thread.holdsLock(registry.get(null)));
-                        assertEquals(REMOVE, args[0]); assertEquals(DEVICE, args[1]);
-                        assertEquals(VaultPhase.REMOVAL_REQUESTED, memory.current().phase);
-                        return hook.run((String) args[0], (String) args[1], (char[]) args[2]);
-                    }
-                    try { return method.invoke(server, args); }
-                    catch (InvocationTargetException failure) { throw failure.getCause(); }
-                });
-            engine = restart();
-            engine.enroll(OP, DEVICE, "enrollment", "12345678".toCharArray());
-            engine.completeLocalBinding(OP); engine.confirmEnrollment(OP);
-            secrets.clear();
+    static final String OP="44000000-0000-4000-8000-000000000001",REMOVE="44000000-0000-4000-8000-000000000002",OTHER="44000000-0000-4000-8000-000000000003",DEVICE="KIOSK_08";
+    interface Attempt {void run()throws Exception;}
+    static void fails(String code,Attempt body)throws Exception {try{body.run();fail("expected "+code);}catch(VaultFailure e){assertEquals(code,e.code);}}
+    static void refuses(Attempt body)throws Exception {try{body.run();fail("expected refusal");}catch(VaultFailure expected){}}
+    interface Hook {void run()throws VaultFailure;}
+    static final class Fixture implements AutoCloseable,NativePreservedEnrollmentTransition.OwnedEffects<String> {
+        final MemoryPersistence memory;final TestCipher cipher;final FakeTransport server;final MutableClock clock;
+        final VaultSnapshot original,terminal;final byte[] originalBytes;final String originalCredential;
+        final Path root,intent;final Map<Path,byte[]> originals;final String nextRealm;
+        final NativeRetainedEnrollmentRealmStore realms;final NativeRetainedEnrollmentRealmStore.State before;
+        VaultEngine engine;VaultSnapshot observed;boolean unknown,failIntentBefore,failIntentAfter,failReadAfterCommit;
+        Hook browser=()->{},publish=()->{};int publishCalls,settlements;
+        Fixture()throws Exception {
+            memory=new MemoryPersistence();cipher=new TestCipher();clock=new MutableClock(1_800_000_000_000L);server=new FakeTransport(clock);
+            engine=newEngine();engine.enroll(OP,DEVICE,"enrollment","12345678".toCharArray());engine.completeLocalBinding(OP);engine.confirmEnrollment(OP);
+            original=memory.current();terminal=original.next(VaultPhase.EMPTY,SecretKind.NONE,null,"",original.deviceId,"",0,null,EnrollmentMetadata.empty(),REMOVE,"",false,"");
+            originalBytes=new VaultSnapshotCodec().encode(original);char[] token=cipher.decrypt(original.secret);originalCredential=new String(token);VaultValidation.wipe(token);
+            Path parent=Path.of(System.getProperty("custodial.custody.fixture.root",System.getProperty("java.io.tmpdir"))).resolve("synthetic-preservation-transport");Files.createDirectories(parent);root=Files.createTempDirectory(parent,"original-");intent=root.resolve("explicit-synthetic-intent.json");nextRealm=UUID.randomUUID().toString();originals=new LinkedHashMap<>();
+            for(int i=0;i<9;i++){Path p=root.resolve(i==8?"original-browser":"original-namespace-"+i);byte[] raw=("SYNTHETIC_ORIGINAL_EMPLOYEE_A_"+i+"_"+Base64.getEncoder().encodeToString(originalBytes)).getBytes(java.nio.charset.StandardCharsets.UTF_8);Files.write(p,raw);originals.put(p,raw);}
+            realms=new NativeRetainedEnrollmentRealmStore(root,new TestCipher(4*1024*1024));before=realms.read();
+            fails("custodial_native_removal_inventory_admission_required",()->engine.removeEnrollment(REMOVE,DEVICE));assertEquals(original,memory.current());safe();
         }
-        VaultEngine restart() {
-            VaultEngine value = new VaultEngine(persistence, recordingCipher, transport,
-                new FakeLegacySource(), new TestSealGenerator(), clock);
-            engines.add(value); return value;
+        VaultEngine newEngine(){return new VaultEngine(memory,cipher,server,new FakeLegacySource(),new TestSealGenerator(),clock);}
+        void prepare()throws Exception {safe();if(failIntentBefore){failIntentBefore=false;throw new VaultFailure("synthetic_intent_before_write");}byte[] raw=("SYNTHETIC_UNIT_NOT_NATIVE_AUTHORITY:"+REMOVE+":"+Base64.getEncoder().encodeToString(originalBytes)).getBytes(java.nio.charset.StandardCharsets.UTF_8);if(Files.exists(intent))assertArrayEquals(raw,Files.readAllBytes(intent));else Files.write(intent,raw);if(failIntentAfter){failIntentAfter=false;throw new VaultFailure("synthetic_intent_readback_unknown");}}
+        void restart()throws Exception {assertTrue(Files.exists(intent));engine=newEngine();unknown=false;observed=null;prepare();}
+        String complete()throws VaultFailure {try(var c=new NativePrivateCustodyFrameReadControl()){return NativePreservedEnrollmentTransition.complete(engine,c,this);}}
+        void safe()throws Exception {assertArrayEquals(originalBytes,new VaultSnapshotCodec().encode(original));for(var e:originals.entrySet())assertArrayEquals(e.getValue(),Files.readAllBytes(e.getKey()));assertEquals(0,cipher.destroyCalls);assertEquals(0,server.removeCalls.get());char[] token=cipher.decrypt(original.secret);try{assertEquals(originalCredential,new String(token));}finally{VaultValidation.wipe(token);}}
+        void checked()throws VaultFailure {try{safe();}catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure("synthetic_original_changed",e);}}
+        public void settleOriginalEnrollment()throws VaultFailure {
+            assertTrue(Thread.holdsLock(engine));checked();if(!Files.exists(intent))throw new VaultFailure("synthetic_original_preparation_required");if(unknown)throw new VaultFailure("synthetic_same_process_unknown");
+            VaultSnapshot live=observed!=null?observed:memory.load();if(live.equals(terminal))return;if(!live.equals(original))throw new VaultFailure("custodial_native_vault_concurrent_change");
+            settlements++;try{memory.commit(original.revision,terminal);if(failReadAfterCommit){failReadAfterCommit=false;memory.failLoads=1;}}catch(VaultFailure e){unknown=true;throw e;}
         }
-        void wiped() { for (char[] secret : secrets) assertArrayEquals(new char[secret.length], secret); }
-        void retry() throws Exception {
-            hook = server::remove; observed = null;
-            assertTrue(restart().removeEnrollment(REMOVE, DEVICE).removed); wiped();
+        public void verifyRetainedSuccessor()throws VaultFailure {checked();VaultSnapshot live=observed!=null?observed:memory.load();if(!live.equals(terminal))throw new VaultFailure("custodial_native_vault_concurrent_change");}
+        public void verifyRetainedBrowserOutsideMonitor()throws VaultFailure {assertFalse(Thread.holdsLock(engine));checked();browser.run();checked();}
+        public String publishRetainedPartitionOutsideMonitor()throws VaultFailure {
+            assertFalse(Thread.holdsLock(engine));checked();publishCalls++;
+            try {var current=realms.read();var next=current.realm.equals(nextRealm)?current:realms.advance(before,nextRealm,REMOVE,Base64.getEncoder().encodeToString(originalBytes));assertEquals(nextRealm,next.realm);assertEquals(REMOVE,next.operationId);publish.run();return next.realm;}
+            catch(VaultFailure e){unknown=true;throw e;}catch(RuntimeException e){unknown=true;throw e;}
         }
+        void success()throws Exception {prepare();assertEquals(nextRealm,complete());safe();assertEquals(VaultPhase.EMPTY,memory.current().phase);var next=realms.read();try(var files=Files.list(realms.realmRoot(next))){assertEquals(0,files.count());}}
+        public void close()throws Exception {safe();try(var entries=Files.walk(root)){for(Path p:entries.sorted(Comparator.reverseOrder()).toList()){assertFalse(Files.isSymbolicLink(p));Files.delete(p);}}}
     }
-    static VaultSnapshot tombstone(VaultSnapshot state) throws Exception {
-        return state.next(VaultPhase.REMOVAL_TOMBSTONE, SecretKind.NONE, null, state.operationId,
-            state.deviceId, "", 0, null, EnrollmentMetadata.empty(), state.removalOperationId, "", false, "");
+    @Test public void pendingHttpReleasesEngineAndSingleflightRefusesSecondEngineOrOperation()throws Exception {
+        try(var f=new Fixture()){f.prepare();var entered=new CountDownLatch(1);var release=new CountDownLatch(1);f.browser=()->{entered.countDown();try{assertTrue(release.await(5,TimeUnit.SECONDS));}catch(InterruptedException e){Thread.currentThread().interrupt();throw new VaultFailure("synthetic_interrupted",e);}};var pool=Executors.newSingleThreadExecutor();try{var work=pool.submit(f::complete);assertTrue(entered.await(5,TimeUnit.SECONDS));synchronized(f.engine){assertEquals(VaultPhase.EMPTY,f.memory.current().phase);}fails("custodial_native_removal_inventory_admission_required",()->f.engine.removeEnrollment(OTHER,"KIOSK_09"));f.safe();release.countDown();assertEquals(f.nextRealm,work.get(5,TimeUnit.SECONDS));}finally{release.countDown();pool.shutdownNow();assertTrue(pool.awaitTermination(5,TimeUnit.SECONDS));}}
     }
-    static VaultSnapshot replace(VaultSnapshot state, long revision, String operation, String device,
-        EncryptedSecret secret, EnrollmentMetadata metadata, String removal) throws Exception {
-        return new VaultSnapshot(revision, state.phase, state.secretKind, secret, operation, device,
-            state.flow, state.expiresAtMillis, state.installation, metadata, removal, state.blockedReason,
-            state.legacyHadBinding, state.legacySeal);
-    }
-
-    @Test public void pendingHttpReleasesEngineAndSingleflightRefusesSecondEngineOrOperation() throws Exception {
-        Fixture f = new Fixture(); VaultEngine second = f.restart();
-        CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
-        f.hook = (op, device, credential) -> {
-            entered.countDown(); assertTrue(release.await(10, TimeUnit.SECONDS)); return f.server.remove(op, device, credential);
-        };
-        ExecutorService pool = Executors.newFixedThreadPool(2);
-        try {
-            Future<RemovalView> network = pool.submit(() -> f.engine.removeEnrollment(REMOVE, DEVICE));
-            assertTrue(entered.await(5, TimeUnit.SECONDS));
-            Future<?> concurrent = pool.submit(() -> {
-                assertEquals("REMOVAL_REQUESTED", f.engine.observeStateReadOnly().get("state"));
-                fails("custodial_native_vault_concurrent_change", () -> f.engine.removeEnrollment(REMOVE, DEVICE));
-                fails("custodial_native_vault_concurrent_change", () -> second.removeEnrollment(REMOVE, DEVICE));
-                fails("custodial_native_removal_conflict", () -> second.removeEnrollment(OTHER, DEVICE));
-                fails("custodial_native_removal_conflict", () -> second.removeEnrollment(REMOVE, "KIOSK_09"));
-                fails("custodial_native_removal_not_complete", () -> f.engine.finalizeRemoval(REMOVE));
-                fails("custodial_native_enrollment_state_refused", () -> second.activateAssignedDevice(OTHER, DEVICE, "12345678".toCharArray()));
-                assertEquals(0, f.cipher.destroyCalls); return null;
-            });
-            concurrent.get(3, TimeUnit.SECONDS);
-            release.countDown(); assertTrue(network.get(5, TimeUnit.SECONDS).removed);
-            assertEquals(1, f.server.removeCalls.get()); f.wiped();
-        } finally { release.countDown(); pool.shutdownNow(); assertTrue(pool.awaitTermination(5, TimeUnit.SECONDS)); }
-    }
-
-    @Test public void externalReentrantEngineMonitorFailsBeforeDurableIntentOrHttp() throws Exception {
-        Fixture f = new Fixture(); VaultSnapshot before = f.memory.current();
-        synchronized (f.engine) { fails("custodial_native_vault_concurrent_change", () -> f.engine.removeEnrollment(REMOVE, DEVICE)); }
-        assertEquals(before, f.memory.current()); assertEquals(0, f.server.removeCalls.get()); f.retry();
-    }
-    @Test public void lostResponseRetriesOnlyOriginalDurableOperationAfterRestart() throws Exception {
-        Fixture f = new Fixture(); f.server.loseRemoveAfterSuccess = 1;
-        fails("custodial_native_network_unavailable", () -> f.engine.removeEnrollment(REMOVE, DEVICE)); f.wiped();
-        VaultSnapshot pending = f.memory.current(); assertEquals(VaultPhase.REMOVAL_REQUESTED, pending.phase);
-        fails("custodial_native_removal_conflict", () -> f.restart().removeEnrollment(OTHER, DEVICE));
-        assertEquals(pending, f.memory.current()); assertTrue(f.restart().removeEnrollment(REMOVE, DEVICE).replayed);
-        assertEquals(2, f.server.removeCalls.get()); f.wiped();
-    }
-    @Test public void intentFailureBeforeWriteNeverSendsAndReleasesFlight() throws Exception {
-        Fixture f = new Fixture(); VaultSnapshot before = f.memory.current();
-        f.memory.failBeforeCommits.add(f.memory.commitAttempts.get() + 1);
-        fails("test_commit_failure", () -> f.engine.removeEnrollment(REMOVE, DEVICE));
-        assertEquals(before, f.memory.current()); assertEquals(0, f.server.removeCalls.get()); f.retry();
-    }
-    @Test public void intentWriteThenReadbackFailureUsesExactCommittedIntent() throws Exception {
-        Fixture f = new Fixture(); f.memory.writeThenFailCommits.add(f.memory.commitAttempts.get() + 1);
-        f.retry(); assertEquals(1, f.server.removeCalls.get());
-    }
-    @Test public void decryptFailureRetainsIntentAndReleasesFlight() throws Exception {
-        Fixture f = new Fixture(); f.cipher.failDecrypts = 1;
-        fails("test_decrypt_failure", () -> f.engine.removeEnrollment(REMOVE, DEVICE));
-        assertEquals(VaultPhase.REMOVAL_REQUESTED, f.memory.current().phase);
-        assertEquals(0, f.server.removeCalls.get()); f.retry();
-    }
-    @Test public void captureReadFailureWipesBeforeAnyHttpAndKeepsOriginalIntent() throws Exception {
-        Fixture f = new Fixture(); f.failAfterDecrypt = true;
-        fails("test_load_failure", () -> f.engine.removeEnrollment(REMOVE, DEVICE));
-        f.wiped(); assertEquals(0, f.server.removeCalls.get()); f.retry();
-    }
-    @Test public void settlementReadFailureWipesAndOriginalReceiptCanBeReplayed() throws Exception {
-        Fixture f = new Fixture(); f.hook = (op, device, credential) -> {
-            TerminalResult result = f.server.remove(op, device, credential); f.memory.failLoads = 1; return result;
-        };
-        fails("test_load_failure", () -> f.engine.removeEnrollment(REMOVE, DEVICE));
-        f.wiped(); f.retry(); assertEquals(2, f.server.removeCalls.get());
-    }
-    @Test public void terminalCommitFailureBeforeWriteRetainsOriginalAttempt() throws Exception {
-        Fixture f = new Fixture(); f.memory.failBeforeCommits.add(f.memory.commitAttempts.get() + 2);
-        fails("test_commit_failure", () -> f.engine.removeEnrollment(REMOVE, DEVICE)); f.wiped();
-        f.retry(); assertEquals(2, f.server.removeCalls.get());
-    }
-    @Test public void terminalCommitWriteThenFailureRecoversExactTombstoneWithoutResend() throws Exception {
-        Fixture f = new Fixture(); f.memory.writeThenFailCommits.add(f.memory.commitAttempts.get() + 2);
-        assertTrue(f.engine.removeEnrollment(REMOVE, DEVICE).removed); f.wiped();
-        assertTrue(f.restart().removeEnrollment(REMOVE, DEVICE).replayed); assertEquals(1, f.server.removeCalls.get());
-    }
-    @Test public void malformedOrMissingTerminalResultNeverCommitsAndWipes() throws Exception {
-        for (boolean missing : new boolean[]{false, true}) {
-            Fixture f = new Fixture(); f.hook = (op, device, credential) -> missing ? null : new TerminalResult(OTHER, false);
-            fails("custodial_native_invalid_enrollment_response", () -> f.engine.removeEnrollment(REMOVE, DEVICE));
-            assertEquals(VaultPhase.REMOVAL_REQUESTED, f.memory.current().phase); f.wiped(); f.retry();
-        }
-    }
-    @Test public void uncheckedTransportFailureReleasesFlightAndWipes() throws Exception {
-        Fixture f = new Fixture(); f.hook = (op, device, credential) -> { throw new IllegalStateException("synthetic"); };
-        try { f.engine.removeEnrollment(REMOVE, DEVICE); fail(); } catch (IllegalStateException expected) { assertEquals("synthetic", expected.getMessage()); }
-        f.wiped(); f.retry();
-    }
-    @Test public void interruptedTransportRetainsIntentWipesAndAllowsOriginalRetry() throws Exception {
-        Fixture f = new Fixture(); CountDownLatch entered = new CountDownLatch(1);
-        f.hook = (op, device, credential) -> {
-            entered.countDown();
-            try { new CountDownLatch(1).await(); throw new AssertionError(); }
-            catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new VaultFailure("synthetic_interrupted", failure); }
-        };
-        ExecutorService pool = Executors.newSingleThreadExecutor();
-        try {
-            Future<?> work = pool.submit(() -> { fails("synthetic_interrupted", () -> f.engine.removeEnrollment(REMOVE, DEVICE)); return null; });
-            assertTrue(entered.await(5, TimeUnit.SECONDS)); work.cancel(true);
-        } finally { pool.shutdownNow(); assertTrue(pool.awaitTermination(5, TimeUnit.SECONDS)); }
-        f.wiped(); assertEquals(VaultPhase.REMOVAL_REQUESTED, f.memory.current().phase); f.retry();
-    }
-    @Test public void sameRevisionOrPhaseCannotReattributeChangedCredentialPrincipalOrOperation() throws Exception {
-        for (int kind = 0; kind < 5; kind++) {
-            Fixture f = new Fixture(); final int mutation = kind;
-            f.hook = (op, device, credential) -> {
-                VaultSnapshot original = f.memory.current();
-                f.observed = replace(original, original.revision + (mutation == 0 ? 1 : 0),
-                    mutation == 1 ? OTHER : original.operationId, original.deviceId,
-                    mutation == 2 ? f.cipher.encrypt("other-synthetic-credential".toCharArray()) : original.secret,
-                    mutation == 3 ? new EnrollmentMetadata("other", "", "", "", "other", "other") : original.metadata,
-                    mutation == 4 ? OTHER : original.removalOperationId);
-                return f.server.remove(op, device, credential);
-            };
-            fails("custodial_native_vault_concurrent_change", () -> f.engine.removeEnrollment(REMOVE, DEVICE));
-            assertEquals(VaultPhase.REMOVAL_REQUESTED, f.memory.current().phase); f.wiped(); f.retry();
-        }
-    }
-    @Test public void exactOriginalSuccessorTombstoneIsIdempotent() throws Exception {
-        Fixture f = new Fixture(); f.hook = (op, device, credential) -> {
-            TerminalResult receipt = f.server.remove(op, device, credential); VaultSnapshot original = f.memory.current();
-            f.memory.commit(original.revision, tombstone(original)); return receipt;
-        };
-        assertTrue(f.engine.removeEnrollment(REMOVE, DEVICE).replayed); f.wiped();
-        int calls = f.server.removeCalls.get(); assertTrue(f.restart().removeEnrollment(REMOVE, DEVICE).replayed);
-        assertEquals(calls, f.server.removeCalls.get());
-    }
-    @Test public void foreignDeviceLineageRevisionOrOperationTombstoneIsNotAcknowledged() throws Exception {
-        for (int kind = 0; kind < 4; kind++) {
-            Fixture f = new Fixture(); final int mutation = kind;
-            f.hook = (op, device, credential) -> {
-                VaultSnapshot terminal = tombstone(f.memory.current());
-                f.observed = replace(terminal, terminal.revision + (mutation == 0 ? 1 : 0),
-                    mutation == 1 ? OTHER : terminal.operationId, mutation == 2 ? "KIOSK_09" : terminal.deviceId,
-                    null, terminal.metadata, mutation == 3 ? OTHER : terminal.removalOperationId);
-                return f.server.remove(op, device, credential);
-            };
-            fails("custodial_native_vault_concurrent_change", () -> f.engine.removeEnrollment(REMOVE, DEVICE)); f.wiped(); f.retry();
-        }
-    }
-    @Test public void sameRevisionDeviceAndInstallationChangesAreNotAdmitted() throws Exception {
-        Fixture f = new Fixture(); f.hook = (op, device, credential) -> {
-            VaultSnapshot s = f.memory.current();
-            InstallationBinding binding = new InstallationBinding("KIOSK_09", s.installation.installationSeal,
-                s.installation.enrolledAt, s.installation.migratedFromCredentialOnlyState, s.installation.enrollmentOperationId);
-            f.observed = new VaultSnapshot(s.revision, s.phase, s.secretKind, s.secret, s.operationId,
-                "KIOSK_09", s.flow, s.expiresAtMillis, binding, s.metadata, s.removalOperationId,
-                s.blockedReason, s.legacyHadBinding, s.legacySeal);
-            return f.server.remove(op, device, credential);
-        };
-        fails("custodial_native_vault_concurrent_change", () -> f.engine.removeEnrollment(REMOVE, DEVICE));
-        f.wiped(); f.retry();
-    }
-    @Test public void removalFinalizationStillDeletesOnlyAfterOriginalTerminalReceipt() throws Exception {
-        Fixture f = new Fixture(); f.engine.removeEnrollment(REMOVE, DEVICE); f.wiped();
-        assertEquals(0, f.cipher.destroyCalls);
-        fails("custodial_native_removal_not_complete", () -> f.engine.finalizeRemoval(OTHER));
-        assertEquals(0, f.cipher.destroyCalls);
-        assertEquals("EMPTY", f.engine.finalizeRemoval(REMOVE).get("state"));
-        assertEquals(1, f.cipher.destroyCalls);
-        assertEquals("EMPTY", f.restart().finalizeRemoval(REMOVE).get("state"));
-        assertEquals(1, f.cipher.destroyCalls);
-    }
+    @Test public void externalReentrantEngineMonitorFailsBeforeDurableIntentOrHttp()throws Exception {try(var f=new Fixture()){int count=f.memory.commitAttempts.get();synchronized(f.engine){fails("custodial_native_vault_concurrent_change",f::complete);}assertEquals(count,f.memory.commitAttempts.get());assertFalse(Files.exists(f.intent));f.safe();}}
+    @Test public void lostResponseRetriesOnlyOriginalDurableOperationAfterRestart()throws Exception {try(var f=new Fixture()){f.prepare();f.publish=()->{throw new VaultFailure("synthetic_lost_publish_reply");};refuses(f::complete);byte[] intent=Files.readAllBytes(f.intent);assertEquals(f.nextRealm,f.realms.read().realm);fails("synthetic_same_process_unknown",f::complete);f.publish=()->{};f.restart();assertEquals(f.nextRealm,f.complete());assertArrayEquals(intent,Files.readAllBytes(f.intent));assertEquals(1,f.settlements);f.safe();}}
+    @Test public void intentFailureBeforeWriteNeverSendsAndReleasesFlight()throws Exception {try(var f=new Fixture()){f.failIntentBefore=true;refuses(f::prepare);assertFalse(Files.exists(f.intent));assertEquals(f.original,f.memory.current());assertEquals(0,f.publishCalls);f.success();}}
+    @Test public void intentWriteThenReadbackFailureUsesExactCommittedIntent()throws Exception {try(var f=new Fixture()){f.failIntentAfter=true;refuses(f::prepare);byte[] intent=Files.readAllBytes(f.intent);f.restart();assertEquals(f.nextRealm,f.complete());assertArrayEquals(intent,Files.readAllBytes(f.intent));}}
+    @Test public void decryptFailureRetainsIntentAndReleasesFlight()throws Exception {try(var f=new Fixture()){f.prepare();f.cipher.failDecrypts=1;fails("test_decrypt_failure",f::complete);assertEquals(f.original,f.memory.current());assertTrue(Files.exists(f.intent));f.success();}}
+    @Test public void captureReadFailureWipesBeforeAnyHttpAndKeepsOriginalIntent()throws Exception {try(var f=new Fixture()){f.prepare();f.memory.failLoads=1;fails("test_load_failure",f::complete);assertEquals(f.original,f.memory.current());assertEquals(0,f.publishCalls);f.success();}}
+    @Test public void settlementReadFailureWipesAndOriginalReceiptCanBeReplayed()throws Exception {try(var f=new Fixture()){f.prepare();f.failReadAfterCommit=true;fails("test_load_failure",f::complete);assertEquals(f.terminal,f.memory.current());f.restart();assertEquals(f.nextRealm,f.complete());assertEquals(1,f.settlements);f.safe();}}
+    @Test public void terminalCommitFailureBeforeWriteRetainsOriginalAttempt()throws Exception {try(var f=new Fixture()){f.prepare();f.memory.failBeforeCommits.add(f.memory.commitAttempts.get()+1);fails("test_commit_failure",f::complete);assertEquals(f.original,f.memory.current());fails("synthetic_same_process_unknown",f::complete);f.restart();assertEquals(f.nextRealm,f.complete());f.safe();}}
+    @Test public void terminalCommitWriteThenFailureRecoversExactTombstoneWithoutResend()throws Exception {try(var f=new Fixture()){f.prepare();f.memory.writeThenFailCommits.add(f.memory.commitAttempts.get()+1);fails("test_readback_failure",f::complete);assertEquals(f.terminal,f.memory.current());int count=f.memory.commitAttempts.get();fails("synthetic_same_process_unknown",f::complete);f.restart();assertEquals(f.nextRealm,f.complete());assertEquals(count,f.memory.commitAttempts.get());f.safe();}}
+    @Test public void malformedOrMissingTerminalResultNeverCommitsAndWipes()throws Exception {try(var f=new Fixture()){refuses(f::complete);assertEquals(f.original,f.memory.current());assertEquals(0,f.publishCalls);f.prepare();Files.writeString(f.originals.keySet().iterator().next(),"changed-original");try{f.complete();fail("changed original must refuse");}catch(AssertionError expected){assertNotEquals("changed original must refuse",expected.getMessage());}finally{for(var e:f.originals.entrySet())Files.write(e.getKey(),e.getValue());}assertEquals(f.original,f.memory.current());}}
+    @Test public void uncheckedTransportFailureReleasesFlightAndWipes()throws Exception {try(var f=new Fixture()){f.prepare();f.publish=()->{throw new IllegalStateException("synthetic_unchecked_reply");};try{f.complete();fail("unchecked failure");}catch(IllegalStateException e){assertEquals("synthetic_unchecked_reply",e.getMessage());}f.safe();fails("synthetic_same_process_unknown",f::complete);f.publish=()->{};f.restart();assertEquals(f.nextRealm,f.complete());assertEquals(1,f.settlements);}}
+    @Test public void interruptedTransportRetainsIntentWipesAndAllowsOriginalRetry()throws Exception {try(var f=new Fixture()){f.prepare();try(var c=new NativePrivateCustodyFrameReadControl()){c.close();refuses(()->NativePreservedEnrollmentTransition.complete(f.engine,c,f));}assertEquals(f.original,f.memory.current());assertEquals(0,f.publishCalls);f.restart();assertEquals(f.nextRealm,f.complete());f.safe();}}
+    @Test public void sameRevisionOrPhaseCannotReattributeChangedCredentialPrincipalOrOperation()throws Exception {for(int k=0;k<5;k++)try(var f=new Fixture()){f.prepare();var s=f.original;try{f.observed=new VaultSnapshot(s.revision+(k==0?1:0),s.phase,s.secretKind,k==2?f.cipher.encrypt("OTHER_SYNTHETIC_EMPLOYEE".toCharArray()):s.secret,k==1?OTHER:s.operationId,s.deviceId,s.flow,s.expiresAtMillis,s.installation,k==3?new EnrollmentMetadata("other","","","","other","other"):s.metadata,k==4?OTHER:s.removalOperationId,s.blockedReason,s.legacyHadBinding,s.legacySeal);}catch(VaultFailure closedModel){assertEquals("custodial_native_vault_corrupt",closedModel.code);assertEquals(f.original,f.memory.current());assertEquals(0,f.publishCalls);continue;}fails("custodial_native_vault_concurrent_change",f::complete);assertEquals(f.original,f.memory.current());assertEquals(0,f.publishCalls);f.observed=null;f.success();}}
+    @Test public void exactOriginalSuccessorTombstoneIsIdempotent()throws Exception {try(var f=new Fixture()){f.success();int count=f.memory.commitAttempts.get();f.restart();assertEquals(f.nextRealm,f.complete());assertEquals(count,f.memory.commitAttempts.get());assertEquals(1,f.settlements);f.safe();}}
+    @Test public void foreignDeviceLineageRevisionOrOperationTombstoneIsNotAcknowledged()throws Exception {for(int k=0;k<4;k++)try(var f=new Fixture()){f.prepare();var s=f.terminal;try{f.observed=new VaultSnapshot(s.revision+(k==0?1:0),s.phase,s.secretKind,s.secret,k==1?OTHER:s.operationId,k==2?"KIOSK_09":s.deviceId,s.flow,s.expiresAtMillis,s.installation,s.metadata,k==3?OTHER:s.removalOperationId,s.blockedReason,s.legacyHadBinding,s.legacySeal);}catch(VaultFailure closedModel){assertEquals("custodial_native_vault_corrupt",closedModel.code);assertEquals(f.original,f.memory.current());assertEquals(0,f.publishCalls);continue;}fails("custodial_native_vault_concurrent_change",f::complete);assertEquals(f.original,f.memory.current());assertEquals(0,f.publishCalls);f.observed=null;f.success();}}
+    @Test public void sameRevisionDeviceAndInstallationChangesAreNotAdmitted()throws Exception {try(var f=new Fixture()){f.prepare();var s=f.original;var binding=new InstallationBinding("KIOSK_09",s.installation.installationSeal,s.installation.enrolledAt,s.installation.migratedFromCredentialOnlyState,s.installation.enrollmentOperationId);f.observed=new VaultSnapshot(s.revision,s.phase,s.secretKind,s.secret,s.operationId,"KIOSK_09",s.flow,s.expiresAtMillis,binding,s.metadata,s.removalOperationId,s.blockedReason,s.legacyHadBinding,s.legacySeal);fails("custodial_native_vault_concurrent_change",f::complete);assertEquals(f.original,f.memory.current());f.observed=null;f.success();}}
+    @Test public void removalFinalizationStillDeletesOnlyAfterOriginalTerminalReceipt()throws Exception {try(var f=new Fixture()){f.success();refuses(()->f.engine.finalizeRemoval(REMOVE));f.safe();assertEquals(0,f.cipher.destroyCalls);assertFalse(Boolean.TRUE.equals(f.engine.getState().get("removal_remote_complete")));var nextMemory=new MemoryPersistence();var next=new VaultEngine(nextMemory,f.cipher,f.server,new FakeLegacySource(),new TestSealGenerator(),f.clock);next.enroll(OTHER,"KIOSK_09","enrollment","12345678".toCharArray());assertEquals(OTHER,nextMemory.current().operationId);assertArrayEquals(f.originalBytes,new VaultSnapshotCodec().encode(f.original));f.safe();}}
 }

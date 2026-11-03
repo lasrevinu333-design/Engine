@@ -312,30 +312,41 @@
     } catch { return false; }
   }
 
-  function recoverUnindexedScanSessions(deviceId) {
+  function recoverUnindexedScanSessions(deviceId, repairIndex = true) {
     const normalizedDevice = normalizePhoneDeviceId(deviceId);
     if (!normalizedDevice) return { state: "none", sessions: [] };
     const originalIndex = localStorage.getItem(scanResumeKey(normalizedDevice));
     const sessions = [];
+    const quarantined = [];
     const seen = new Set();
     try {
       for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
         if (!key?.startsWith("session:")) continue;
+        // Preserve each unknown original in place. One malformed row must not
+        // hide another valid cleaning, and it must never become empty storage.
+        const raw = localStorage.getItem(key);
         let candidate;
         try {
-          candidate = JSON.parse(localStorage.getItem(key) || "null");
+          candidate = JSON.parse(raw || "null");
         } catch {
-          return { state: "corrupted", sessions: [] };
+          quarantined.push({ key, reason: "malformed_session" });
+          continue;
+        }
+        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)
+          || scanSessionId(candidate) !== key.slice("session:".length).toLowerCase()) {
+          quarantined.push({ key, reason: "invalid_session_binding" });
+          continue;
         }
         const status = String(candidate?.status || "").trim().toLowerCase();
         if (!OPEN_SCAN_STATUSES.has(status)) continue;
+        if (window.MemphisScanSync?.isLocallyCompleted?.(candidate) === true) continue;
         const entry = scanIndexEntry(
           candidate,
           status.includes("pending") ? "complete" : "timer",
           candidate,
         );
-        if (!entry) return { state: "corrupted", sessions: [] };
+        if (!entry) { quarantined.push({ key, reason: "invalid_active_session" }); continue; }
         if (entry.device_id !== normalizedDevice) continue;
         if (seen.has(entry.session_uuid)) return { state: "corrupted", sessions: [] };
         seen.add(entry.session_uuid);
@@ -344,13 +355,13 @@
     } catch {
       return { state: "corrupted", sessions: [] };
     }
-    if (sessions.length === 0) return { state: "none", sessions: [] };
-    if (sessions.length !== 1) return { state: "ambiguous", sessions: [] };
+    if (sessions.length === 0) return { state: quarantined.length ? "corrupted" : "none", sessions: [], quarantined };
+    if (sessions.length !== 1) return { state: "ambiguous", sessions: [], quarantined };
     // Native synchronous recovery is a provisional read, not an admitted
     // protected write or durable-index acknowledgement.
-    if (isNativeCustodialAuthority()) return { state: "provisional", sessions };
-    if (!mutateScanIndex(normalizedDevice, sessions.map(entry => entry.session_uuid), () => sessions, originalIndex)) return { state: "provisional", sessions };
-    return { state: "indexed", sessions };
+    if (!repairIndex || quarantined.length || isNativeCustodialAuthority()) return { state: "provisional", sessions, quarantined };
+    if (!mutateScanIndex(normalizedDevice, sessions.map(entry => entry.session_uuid), () => sessions, originalIndex)) return { state: "provisional", sessions, quarantined };
+    return { state: "indexed", sessions, quarantined };
   }
 
   function indexScanSession(session, view = "timer", context = {}) {
@@ -422,23 +433,33 @@
       for (const entry of index.sessions) {
         let saved;
         try { saved = JSON.parse(localStorage.getItem(`session:${entry.session_uuid}`) || "null"); }
-        catch { return {state:"corrupted",session:null}; }
+        catch { continue; } // Full inventory below retains and reports this malformed original.
         if (!owner && window.MemphisScanSync?.isLocallyCompleted?.(saved) === true && !retireCompletedScanView(saved))
           return {state:"corrupted",session:null};
       }
       if (owner) {
-        const sessions = index.sessions.filter(entry =>
-          window.MemphisScanSync?.isLocallyCompleted?.(JSON.parse(localStorage.getItem(`session:${entry.session_uuid}`) || "null")) !== true);
+        const sessions = index.sessions.filter(entry => {
+          try { return window.MemphisScanSync?.isLocallyCompleted?.(JSON.parse(localStorage.getItem(`session:${entry.session_uuid}`) || "null")) !== true; }
+          catch { return true; } // Inventory isolates bad JSON; the durable pointer is unchanged.
+        });
         index = { state: sessions.length ? "indexed" : "none", sessions };
       }
       else index = readScanIndex(normalizedDevice);
     }
-    if (index.state === "none") index = recoverUnindexedScanSessions(normalizedDevice);
     if (index.state === "corrupted") return { state: "corrupted", session: null };
-    if (index.state === "ambiguous") return { state: "ambiguous", session: null };
-    if (index.sessions.length === 0) return { state: "none", session: null };
-    if (index.sessions.length !== 1) return { state: "ambiguous", session: null };
-    const entry = index.sessions[0];
+    // The durable pointer is useful metadata, not an exhaustive inventory: a
+    // session write can survive an unconfirmed index update. All valid contexts
+    // must agree before Home or Scan chooses one original.
+    const inventory = recoverUnindexedScanSessions(normalizedDevice, index.state === "none");
+    const quarantined = inventory.quarantined || [];
+    if (["corrupted", "ambiguous"].includes(inventory.state)) return { state: inventory.state, session: null, quarantined };
+    if (inventory.sessions.length === 0) return { state: index.sessions.length ? "corrupted" : "none", session: null, quarantined };
+    const discovered = inventory.sessions[0];
+    // Ignore only explicitly quarantined rows for this read. Preserve their raw
+    // bytes AND durable index entries for recovery; never select or overwrite them.
+    index = { ...index, sessions: index.sessions.filter(entry => !quarantined.some(row => row.key === `session:${entry.session_uuid}`)) };
+    if (index.sessions.some(entry => entry.session_uuid !== discovered.session_uuid)) return { state: "corrupted", session: null, quarantined };
+    const entry = index.sessions.find(entry => entry.session_uuid === discovered.session_uuid) || discovered;
     let session;
     try {
       session = JSON.parse(localStorage.getItem(`session:${entry.session_uuid}`) || "null");
@@ -451,7 +472,7 @@
       || verified.device_id !== normalizedDevice
       || verified.location_code !== entry.location_code) return { state: "corrupted", session: null };
     requireScanWriterOwner(owner);
-    return { state: "open", session: { ...session, ...verified, view: entry.view } };
+    return { state: "open", session: { ...session, ...verified, view: entry.view }, quarantined };
     } catch { return { state: "corrupted", session: null }; }
   }
 

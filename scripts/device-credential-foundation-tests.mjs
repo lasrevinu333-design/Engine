@@ -510,7 +510,6 @@ assert.equal(identity.source, 'url_canonical');
 const protectedPages = [
   'employee-hub.html',
   'employee-schedule.html',
-  'events.html',
   'index.html',
   'messages.html',
 ];
@@ -522,6 +521,10 @@ for (const page of protectedPages) {
   if (appVersion) assert.equal(importedRelease, appVersion, `${page} must load device identity from its declared app release`);
   if (page === 'index.html') assert.equal(importedRelease, releaseManifest.release_id, 'the scan page must load device identity from the coordinated release');
 }
+const sharedEvents=read('events.html'), sharedEventsOwner=read('events-view.js');
+assert.match(sharedEvents,/src="\.\/events-view\.js"/);
+assert.match(sharedEventsOwner,/requireOpsManagerSession/);
+assert.match(sharedEventsOwner,/MemphisCustodialSecurity/,'The shared event board must retain native authority rather than a URL identity hint');
 const legacyThread = read('thread.html');
 assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/, 'legacy thread links must redirect into the protected Messenger shell');
 assert.match(legacyThread, /searchParams\.set\(key,value\)/, 'legacy thread redirects must retain device and thread query parameters');
@@ -559,7 +562,8 @@ assert.match(managerHub, /id="device-security-link"/);
 assert.match(managerHub, /device-security\.html/);
 assert.match(managerHub, /id="manager-access-link"/);
 assert.match(managerHub, /manager-access\.html/);
-assert.match(managerHubScript, /isReadOnlySession/);
+assert.match(managerHubScript, /canMutateOpsManagerSurface/);
+assert.match(managerHubScript, /requireOpsManagerSession\(\{accessLevel:'full_access'/);
 assert.match(managerHubScript, /showAccessRequired/);
 assert.match(managerHubScript, /window\.location\.replace/);
 assert.match(managerHubScript, /deviceSecurityLink/);

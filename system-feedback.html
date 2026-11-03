@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
   <meta name="referrer" content="no-referrer">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#081422">
   <title>Program Feedback</title>
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
@@ -75,7 +75,7 @@
       <div class="feedbackInboxHead">
         <div><div class="uxEyebrow">Manager triage</div><h2>Feedback inbox</h2></div>
         <div class="feedbackInboxTools">
-          <select id="feedback-inbox-status" class="uxSelect"><option value="new">New</option><option value="acknowledged">Acknowledged</option><option value="">All</option></select>
+          <select aria-label="Filter feedback by status" id="feedback-inbox-status" class="uxSelect"><option value="new">New</option><option value="acknowledged">Acknowledged</option><option value="">All</option></select>
           <button id="feedback-inbox-refresh" class="uxButton compact" type="button">Refresh</button>
           <button id="feedback-original-status" class="uxButton compact" type="button" hidden disabled>Check original action status</button>
         </div>
@@ -225,7 +225,7 @@
         ||!TRIAGE_UUID.test(s.credential_id||'')||typeof s.token!=='string'||!s.token||typeof s.device_id!=='string'||!s.device_id
         ||!(Date.parse(s.expires_at)>Date.now())||p?.schema!=='custodial.manager-permissions.v1'||p.read!==true)throw Error('Current named-manager access is unavailable.');
       return {manager_id:s.manager_id,credential_id:s.credential_id,device_id:s.device_id,token:s.token,expires_at:s.expires_at,
-        write:s.read_only===false&&s.access_level!=='read_only'&&p.owner===true};
+        write:s.read_only===false&&s.access_level!=='read_only'&&(p.owner===true||window.MemphisAuth.isCustodialManagementAdmin?.(s)===true)};
     }
     function sameInboxActor(a,b) {return !!a&&!!b&&Object.keys(a).every(k=>a[k]===b[k]);}
     function stopInbox() {
@@ -504,6 +504,19 @@
           }}));
       return feedbackSubmitterPromise;
     }
+    async function restorePendingFeedback() {
+      // Read the existing original into this form only for its current owner.
+      // Do not replace edits made while current authority is being checked.
+      const before={message:els.message.value,category:els.category.value,blocking:els.blocking.checked};
+      const sender=await managerFeedbackSubmitter(),original=await sender.readPending();
+      if(!original)return;
+      if(!before.message&&els.message.value===before.message&&els.category.value===before.category&&els.blocking.checked===before.blocking){
+        els.message.value=original.message;els.category.value=original.category;els.blocking.checked=original.priority==='urgent';
+      }
+      // The existing button can retry the retained original even with no new text.
+      els.message.required=false;els.send.textContent='Retry Feedback';
+      setStatus('Previous feedback is awaiting confirmation. Send retries that same feedback.','info');
+    }
     async function submit(event) {
       event.preventDefault();if(els.send.disabled)return;
       // Capture form DATA before any asynchronous identity or module operation.
@@ -514,13 +527,23 @@
         const sender=await managerFeedbackSubmitter();
         if(!draft.message&&!sender.hasPending())throw Error('Describe what happened.');
         if(!serializedBodyFits(JSON.stringify(draft)))throw Error('This feedback is too large to send safely. Shorten the message.');
-        await sender.submit(draft);
-        els.form.reset();window.MemphisUI?.markSaved?.(els.form);setStatus('Saved in the program.','ok');
+        const accepted=await sender.submit(draft),submitted=accepted.submittedDraft;
+        const unchanged=String(els.message.value||'').trim()===submitted.message
+          &&(els.category.value||'other')===submitted.category
+          &&(els.blocking.checked?'urgent':'normal')===submitted.priority;
+        els.message.required=true;els.send.textContent='Send Feedback';
+        if(unchanged){
+          els.form.reset();window.MemphisUI?.markSaved?.(els.form);setStatus('Saved in the program.','ok');
+        }else setStatus('Saved in the program. Your newer draft is still here and has not been sent.','ok');
       }catch(error){setStatus(safe(error),'error');}
       finally{els.send.disabled=false;}
     }
     els.form.addEventListener('submit', submit);
-    void resolve().then(() => initManagerInbox()).catch((error) => setStatus(safe(error), 'error'));
+    els.send.disabled=true;
+    void resolve().then(async() => {
+      await initManagerInbox();
+      if(state.hub==='manager'&&!isNativeCustodialAuthority())await restorePendingFeedback();
+    }).catch((error) => setStatus(safe(error), 'error')).finally(()=>{els.send.disabled=false;});
   })();
   </script>
 </body>

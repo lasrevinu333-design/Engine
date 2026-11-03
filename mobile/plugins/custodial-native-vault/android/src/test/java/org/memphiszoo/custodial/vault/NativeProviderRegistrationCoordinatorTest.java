@@ -82,7 +82,7 @@ public final class NativeProviderRegistrationCoordinatorTest {
         assertEquals(1, x.f.opened);
     }
     @Test public void removalDuringHttpCannotConfirmAndPersistsOriginalIdentityRetirement() throws Exception {
-        Fixture x = new Fixture(false); x.f.onResponse = () -> x.f.engine.removeEnrollment(NativeProviderHttpTest.RID, NativeProviderHttpTest.DEVICE);
+        Fixture x = new Fixture(false); x.f.onResponse = () -> NativeProviderHttpTest.preserveSyntheticOriginal(x.f);
         x.owner = x.make(x.f.http());
         ProviderRecordStoreTest.failure("custodial_native_vault_concurrent_change", () -> x.owner.register(x.f.attempt, false));
         assertEquals("REMOVED", x.meta().getString("availability"));
@@ -134,7 +134,7 @@ public final class NativeProviderRegistrationCoordinatorTest {
     @Test public void tokenReadCannotSurviveRemovalAssignmentChangeOrJournalEpochRoundtrip() throws Exception {
         for (String transition : new String[]{"remove", "assignment", "unavailable", "token"}) {
             Fixture x = new Fixture(false); NativeProviderRegistrationCoordinator.TokenRead read = x.owner.beginTokenRead();
-            if (transition.equals("remove")) x.f.engine.removeEnrollment(NativeProviderHttpTest.RID, NativeProviderHttpTest.DEVICE);
+            if (transition.equals("remove")) NativeProviderHttpTest.preserveSyntheticOriginal(x.f);
             else if (transition.equals("assignment")) x.changeAssignment();
             else if (transition.equals("unavailable")) { x.f.provider.journal().observeUnavailable(); x.f.provider.journal().observeActivePrincipal(x.f.principal); }
             else x.f.provider.journal().captureToken("other-native-owner");
@@ -165,7 +165,7 @@ public final class NativeProviderRegistrationCoordinatorTest {
         x.jobs.accepted = false; x.owner.requestReconcile(); assertEquals(1, x.jobs.scheduled);
         assertEquals(before + 1, x.meta().getLong("recovery_epoch"));
         x.jobs.accepted = true; x.owner.requestReconcile(); x.owner.requestReconcile(); assertEquals(2, x.jobs.scheduled);
-        x.f.engine.removeEnrollment(NativeProviderHttpTest.RID, NativeProviderHttpTest.DEVICE); x.owner.requestReconcile();
+        NativeProviderHttpTest.preserveSyntheticOriginal(x.f); x.owner.requestReconcile();
         assertEquals(2, x.jobs.scheduled);
     }
     @Test public void canceledAttemptPerformsNoNetworkAndDoesNotLeakBusyLease() throws Exception {

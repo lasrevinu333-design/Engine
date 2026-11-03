@@ -3,6 +3,8 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {principalIdentity} from '../mobile/src/custodial/protected-principal.js';
 import {createSyntheticScheduleLocks} from './synthetic-schedule-locks.mjs';
+import {FixtureStorage,assertOwnerContextClosed} from './scan-owner-vm-context.mjs';
+const importBrowserAdmission=specifier=>{assert.equal(specifier,'./mobile/src/custodial/protected-browser-admission.js');return import('../mobile/src/custodial/protected-browser-admission.js');};
 if(process.argv.includes('--completion-draft-owner-only')) {
  await completionDraftOwnerCases();
 } else if(process.argv.includes('--interrupted-start-queue-owner-only')) {
@@ -71,10 +73,12 @@ async function completionDraftOwnerCases(){
    tx.objectStore=()=>store;transactions.push(tx);return tx;
   }};
   const indexedDB={open(){const req={result:db,error:null};queueMicrotask(()=>{hooks.open?.();req.onsuccess?.({target:req});});return req;}};
-  const scope={console,Date,JSON,Map,Set,Object,Number,Promise,AggregateError,structuredClone,state:{deviceId:device},
-   window:{indexedDB,MemphisCustodialSecurity:security,MemphisMobile:mobile,setTimeout:fn=>{timers.push(fn);return timers.length;}},
+  const localStorage=new FixtureStorage(),navigator={locks:createSyntheticScheduleLocks()};
+  const scope={console,Date,JSON,Map,Set,Object,Number,Promise,AggregateError,structuredClone,state:{deviceId:device},localStorage,navigator,
+   window:{localStorage,navigator,indexedDB,MemphisCustodialSecurity:security,MemphisMobile:mobile,setTimeout:fn=>{timers.push(fn);return timers.length;}},
    indexedDB,sha256:async text=>(await import('node:crypto')).createHash('sha256').update(text).digest('hex')};
-  vm.runInNewContext(implementation+'\nthis.save=saveCompletionDraft;this.remove=deleteCompletionDraft;this.record=completionDraftRecord;',scope);
+  assertOwnerContextClosed(implementation,scope,'completion draft owner');
+  vm.runInNewContext(implementation+'\nthis.save=saveCompletionDraft;this.remove=deleteCompletionDraft;this.record=completionDraftRecord;',scope,{importModuleDynamically:importBrowserAdmission});
   const terminal=(tx,kind=tx.aborted?'abort':'complete')=>{
    tx.done=true;if(kind==='complete'&&!tx.aborted)for(const [type,v] of tx.staged){if(type==='put')rows.set(v.session_uuid,structuredClone(v));else rows.delete(v);}
    tx['on'+kind]?.({target:tx});hooks.terminal?.(tx);
@@ -389,11 +393,13 @@ async function interruptedStartQueueOwnerCases(){
   const mobile={principalIdentity:()=>principalIdentity(livePrincipal)};
   const locks=createSyntheticScheduleLocks(),requestLock=locks.request;
   locks.request=function(...args){hooks.onLock?.();return requestLock.apply(this,args);};
-  const scope={console,Date,JSON,Map,Set,Object,Number,Promise,AggregateError,structuredClone,state,
-   window:{MemphisCustodialSecurity:security,MemphisMobile:mobile,setTimeout:fn=>{timers.push(fn);return timers.length;}},
-   navigator:{locks},ensureWorkerReady:async()=>{if(hooks.ready)await hooks.ready();},
+  const localStorage=new FixtureStorage(),navigator={locks};
+  const scope={console,Date,JSON,Map,Set,Object,Number,Promise,AggregateError,structuredClone,state,localStorage,
+   window:{localStorage,navigator,MemphisCustodialSecurity:security,MemphisMobile:mobile,setTimeout:fn=>{timers.push(fn);return timers.length;}},
+   navigator,ensureWorkerReady:async()=>{if(hooks.ready)await hooks.ready();},
    recoverOrphanedClaims:async()=>0,exactSessionForPayload:()=>null};
-  vm.runInNewContext(implementation+'\nthis.retire=retirePreservedInterruptedStart;this.normalize=normalizeRecord;this.stored=storageRecord;this.canonical=canonicalRows;',scope);
+  assertOwnerContextClosed(implementation,scope,'interrupted start owner');
+  vm.runInNewContext(implementation+'\nthis.retire=retirePreservedInterruptedStart;this.normalize=normalizeRecord;this.stored=storageRecord;this.canonical=canonicalRows;',scope,{importModuleDynamically:importBrowserAdmission});
   rows.set(1,JSON.parse(JSON.stringify(scope.stored({id:1,type:'start_session',client_id:sessionId,operation_id:sessionId,
    logical_identity:sessionId,logical_key:'start_session:'+sessionId,created_at:1234,recoverable:true,state:'pending',schema_version:6,
    forward_replay_contract:'scan.v4.snapshot-bound-authority',forward_action_type:'start_session',

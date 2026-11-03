@@ -8,7 +8,18 @@ import {createRequire} from 'node:module';
 const fixtureRoot=dirname(fileURLToPath(import.meta.url));
 const baseline=resolve(fixtureRoot,'..');
 const require=createRequire(baseline+'/mobile/package.json');
-const {transformSync}=require('esbuild');
+// Fixture compiler ownership: esbuild's worker service is unref'ed and its
+// stop() does not join worker termination. Its supported synchronous path
+// uses execFileSync, so every transform child exits before this call returns.
+// This process-local loader choice is restored before any fixture executes.
+const esbuild=(()=>{
+ const prior=process.env.ESBUILD_WORKER_THREADS;
+ process.env.ESBUILD_WORKER_THREADS='0';
+ try{return require('esbuild');}
+ finally{if(prior===undefined)delete process.env.ESBUILD_WORKER_THREADS;else process.env.ESBUILD_WORKER_THREADS=prior;}
+})();
+const {transformSync}=esbuild;
+try {
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const pins=new Map();
 const syntheticLocksPath=baseline+'/scripts/synthetic-schedule-locks.mjs';
@@ -213,3 +224,7 @@ const result={status:'PASS_SOURCE_SYNTHETIC_NORMAL_FACTORY_TYPED_RENDER_DATA',gr
  scope:'Actual normal29-module constructors with explicit synthetic enrolled native/HTTP/DOM/vendor ports; no actual Engine/backend/Android/OS or receipt authority',
  receipt:false,OS_settlement:false,writer_exclusion:false,currentness_grant:false};
 console.log(JSON.stringify({...result,pins:undefined}));
+
+} finally {
+ await esbuild.stop();
+}

@@ -17,6 +17,7 @@ import { StatusBar } from '@capacitor/status-bar';
     '/schedule-api/',
   ];
   const rawFetch = window.fetch.bind(window);
+  const centralAuth=window.MemphisAuth,centralRefresh=centralAuth?.refreshLeadershipSession?.bind(centralAuth),centralHeaders=centralAuth?.opsManagerAuthHeaders?.bind(centralAuth),centralRevoke=centralAuth?.clearSession?.bind(centralAuth),centralSecuritySession=centralAuth?.deviceSecuritySession?.bind(centralAuth),centralSecurityHeaders=centralAuth?.deviceSecurityAuthHeaders?.bind(centralAuth),centralSecurityUnlock=centralAuth?.unlockDeviceSecurity?.bind(centralAuth),centralSecurityLock=centralAuth?.lockDeviceSecurity?.bind(centralAuth);
   const hideNativeStatusBar = () => { void StatusBar.hide().catch(() => {}); };
   hideNativeStatusBar();
   window.addEventListener('focus', hideNativeStatusBar, { passive: true });
@@ -50,21 +51,9 @@ import { StatusBar } from '@capacitor/status-bar';
     if (inFlight) return inFlight;
     inFlight = (async () => {
       try {
-        const response = await rawFetch(`${API}/auth-api/session?access_level=full_access`, {
-          method: 'GET',
-          cache: 'no-store',
-          credentials: 'include',
-          signal: AbortSignal.timeout(10000),
-          headers: canonicalDeviceId() ? { 'X-Device-Id': canonicalDeviceId() } : {},
-        });
-        const payload = await response.json().catch(() => null);
-        if (!response.ok || !payload?.ok || !payload.data?.session?.token) {
-          const error = new Error(payload?.error || `Manager access update failed (${response.status}).`);
-          error.status = response.status;
-          throw error;
-        }
-        lastRefreshError = null;
-        return storeSession(payload.data.session);
+        if(!centralRefresh)throw new Error('Leadership manager session adapter unavailable.');
+        const session=await centralRefresh();
+        lastRefreshError=null;return storeSession(session);
       } catch (error) {
         lastRefreshError = error instanceof Error ? error : new Error(String(error || 'Manager access update failed.'));
         if (lastRefreshError.status === 401 || lastRefreshError.status === 403) storeSession(null);
@@ -77,10 +66,8 @@ import { StatusBar } from '@capacitor/status-bar';
   async function authHeaders(options = {}) {
     const session = await refresh(options);
     if (!session) throw lastRefreshError || new Error('This app installation is not enrolled.');
-    return {
-      Authorization: `Bearer ${session.token}`,
-      'X-Device-Id': canonicalDeviceId(session),
-    };
+    if(!centralHeaders)throw new Error('Leadership authentication headers unavailable.');
+    return centralHeaders();
   }
 
   function wait(milliseconds) { return new Promise((resolve) => setTimeout(resolve, milliseconds)); }
@@ -172,39 +159,18 @@ import { StatusBar } from '@capacitor/status-bar';
     return response;
   }
 
-  async function deviceSecuritySession() {
-    try {
-      return await requestJson('/admin-api/device-security/session');
-    } catch (error) {
-      return { configured: true, unlocked: false, error: error?.message || String(error) };
-    }
+  async function deviceSecuritySession(){
+    if(!centralSecuritySession)return{configured:false,unlocked:false,error:'Server security adapter unavailable.'};
+    return centralSecuritySession();
   }
-
-  async function unlockDeviceSecurity(password) {
-    const data = await requestJson('/admin-api/device-security/unlock', {
-      method: 'POST',
-      body: { password: String(password || '') },
-    });
-    deviceSecurityCsrfToken = String(data?.csrf_token || '');
-    return data;
+  async function unlockDeviceSecurity(password){
+    if(!centralSecurityUnlock)throw new Error('Server security adapter unavailable.');return centralSecurityUnlock(password);
   }
-
-  async function lockDeviceSecurity() {
-    try {
-      await requestJson('/admin-api/device-security/lock', {
-        method: 'POST',
-        headers: deviceSecurityCsrfToken ? { 'X-Device-Security-CSRF': deviceSecurityCsrfToken } : {},
-      });
-      return true;
-    } catch { return false; }
-    finally { deviceSecurityCsrfToken = ''; }
+  async function lockDeviceSecurity(){
+    if(!centralSecurityLock)throw new Error('Server security adapter unavailable.');return centralSecurityLock();
   }
-
-  async function deviceSecurityAuthHeaders() {
-    return {
-      ...(await authHeaders()),
-      ...(deviceSecurityCsrfToken ? { 'X-Device-Security-CSRF': deviceSecurityCsrfToken } : {}),
-    };
+  async function deviceSecurityAuthHeaders(){
+    if(!centralSecurityHeaders)throw new Error('Server security headers unavailable.');return centralSecurityHeaders();
   }
 
   async function listOpsManagerTrustedDevices() {
@@ -259,8 +225,8 @@ import { StatusBar } from '@capacitor/status-bar';
     auth.isReadOnlySession = (session = auth.readSession()) => Boolean(session?.read_only || session?.access_level === 'read_only');
     auth.canMutateOpsManagerSurface = (session = auth.readSession()) => Boolean(auth.isOpsManager(session) && !auth.isReadOnlySession(session));
     auth.hasRole = (role, session = auth.readSession()) => Boolean(session && Array.isArray(session.roles) && session.roles.map((value) => String(value).toUpperCase()).includes(String(role).toUpperCase()));
-    auth.redirectToManagerHub = () => window.location.assign('./start_page1.html');
-    auth.clearSession = async () => { storeSession(null); lastRefreshError = null; };
+    auth.redirectToManagerHub = () => window.location.assign('./ops-manager-hub.html');
+    auth.clearSession = async () => {if(!centralRevoke)throw new Error('Browser revocation adapter unavailable.');await centralRevoke();storeSession(null);lastRefreshError=null;};
     return true;
   }
 

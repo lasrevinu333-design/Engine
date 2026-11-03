@@ -67,11 +67,11 @@ async function refreshReadiness() {
     managerRequired: readinessManagerRequired, queue, nativeState, localReadinessUnavailable,
     sessionState: window.MemphisUI?.resolveOpenScanSession?.(deviceId())?.state });
 }
-function invalidateReadiness() {
+function invalidateReadiness({refresh=true}={}) {
   readinessObservation.invalidate();
   // Remove a positive label synchronously, before any asynchronous native read.
   paintReadiness({ security: security.getStatus(), managerRequired: readinessManagerRequired });
-  void refreshReadiness();
+  if(refresh)void refreshReadiness();
 }
 const homeFactsUI=installHomeFacts({getProfile:()=>profile,getDeviceId:deviceId,isVisible:()=>!els.home.hidden,security,
   requestJson:(path,options)=>window.MemphisMobile.requestJson(path,options)});
@@ -213,7 +213,7 @@ function showHome(value = profile) {
   showOnly(els.home);
   if (phoneUnlockedSinceWake()) hidePhoneLock();
   else showPhoneLock(value);
-  homeFactsUI.update();
+  // The existing restore coordinator starts optional facts after its last pass.
   return true;
 }
 function reportUnresolvedProtectedRecovery(status) {
@@ -338,6 +338,14 @@ function restore(options = {}) {
   if (restoreRunning) { restoreAgain = true; return restoreRunning; }
   restoreRunning = (async () => {
     do { restoreAgain = false; await restoreNow(options); } while (restoreAgain);
+    // A startup security notification can queue another authenticated restore.
+    // Starting facts in each intermediate pass retires their own queued writes.
+    // Only the final current Home starts its optional reads; cleaning is unchanged.
+    if (!els.home.hidden && profile && currentProfile(profile)) {
+      const currentHome = profile;
+      await homeFactsUI.restoreProfileFacts(currentHome);
+      if (!els.home.hidden && profile === currentHome && currentProfile(currentHome)) homeFactsUI.update();
+    }
   })().finally(() => { restoreRunning = null; });
   return restoreRunning;
 }
@@ -348,7 +356,7 @@ security.subscribe((status) => {
   const changed = assignmentState !== previousAssignmentState;
   previousAssignmentState = assignmentState;
   if (changed) {
-    invalidateReadiness();
+    invalidateReadiness({refresh:false});
     profile = null;
     els.name.textContent = ''; els.role.textContent = ''; els.phoneLockName.textContent = '';
     els.activeCleaning.hidden = true;
@@ -361,7 +369,13 @@ security.subscribe((status) => {
     showAssignmentNeeded('', status);
   }
   else if (changed && status.state === 'enrolled' && status.ready === true && status.available === true) {
-    void restore({ quiet: !els.home.hidden });
+    // Let the original material ready event reach its remaining consumers
+    // before starting another private status-check generation. A successor
+    // publication retires this queued verification before it can begin.
+    queueMicrotask(()=>{
+      if(previousAssignmentState!==assignmentState)return;
+      void restore({quiet:!els.home.hidden});
+    });
   }
 });
 void Network.addListener('networkStatusChange', ({ connected }) => {

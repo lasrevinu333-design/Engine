@@ -19,10 +19,11 @@ assert.match(
 
 assert.match(chatScope, /if \(!thread \|\| thread\.shared\) return/);
 assert.match(chatScope, /mz_chatscope_delete_outbox:/);
-assert.match(chatScope, /setNotice\(EMPLOYEE_CONTEXT \? 'Deleted\.' : 'Conversation removed from your Messenger\.', 'ok'\)/);
+assert.match(chatScope, /setNotice\(employee \? 'Conversation removal is saved\. Server confirmation is still pending\.'/);
+assert.match(chatScope, /await deliverOriginalEmployeeDeletion[\s\S]*?assertDeleteOwner\(\);[\s\S]*?setNotice\('Conversation removed from your Messenger\.', 'ok'\)/);
 assert.match(chatScope, /\{!selectedThread\.shared && <button[^>]+onClick=\{\(\) => void deleteThread\(selectedThread\.id\)\}>Delete<\/button>\}/);
 assert.doesNotMatch(chatScope, /Delete [^`]* for everyone/);
-assert.match(chatScope, /if \(!EMPLOYEE_CONTEXT && !confirm\(/);
+assert.match(chatScope, /if \(!EMPLOYEE_CONTEXT\) \{[\s\S]*?assertManager\(\);\s*if \(!confirm\(/);
 assert.doesNotMatch(chatScope, /!selectedThread\.shared && !isMemphis\(selectedThread\)/);
 assert.match(chatScope, /\{ showLoading = false \}/);
 assert.match(chatScope, /!EMPLOYEE_CONTEXT \? rows\[0\] : null/);

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {createManagerFeedbackSubmitter} from '../manager-feedback-submit.mjs';
 
 // Execute the actual page handlers. DOM, storage bridge and HTTP are synthetic;
 // these checks cannot establish mail transport, inbox receipt or phone behavior.
@@ -73,11 +74,19 @@ for(const acceptsOriginal of [false,true]){
 }
 for(const scenario of ['accepted','rejected','response_lost']){
   let status='',posted=null,resets=0;
+  const saved=new Map(),manager={role:'ops_manager',access_level:'full_access',read_only:false,
+    manager_id:'11111111-1111-4111-8111-111111111111',credential_id:'22222222-2222-4222-8222-222222222222',device_id:'synthetic-manager'};
+  const sender=createManagerFeedbackSubmitter({uuid:()=>operation,current:async()=>manager,
+    storage:{getItem:key=>saved.get(key)??null,setItem:(key,value)=>saved.set(key,value),removeItem:key=>saved.delete(key)},
+    locks:{request:async(_name,_options,callback)=>callback()},
+    send:async(raw,id)=>{posted={body:JSON.parse(raw),headers:{'Idempotency-Key':id}};
+      if(scenario==='response_lost')throw Error('synthetic unknown outcome');
+      return scenario==='accepted'?{ok:true,data:{item:{id:'33333333-3333-4333-8333-333333333333',operation_id:id}}}:{ok:false};}});
   const context=vm.createContext({crypto:{randomUUID:()=>operation},API:'https://synthetic.invalid',location:{href:'synthetic'},document:{title:'Feedback'},
     state:{operationId:operation,hub:'manager',deviceId:null,image:{name:'photo.jpg',type:'image/jpeg',dataUrl:'synthetic-private-image'}},
     els:{message:{value:'Full manager feedback\nzero 0'},category:{value:'need_help'},blocking:{checked:false},send:{disabled:false},form:{reset(){resets++;}}},
     resolve:async()=>{},isNativeCustodialAuthority:()=>false,submittedBy:()=> 'Synthetic named manager',serializedBodyFits:value=>new TextEncoder().encode(value).byteLength<=4*1024*1024-64*1024,
-    managerHeaders:async()=>({'X-Synthetic-Manager':'not-a-credential'}),clearImage(){},window:{},safe:e=>e.message,
+    managerFeedbackSubmitter:async()=>sender,managerHeaders:async()=>({'X-Synthetic-Manager':'not-a-credential'}),clearImage(){},window:{},safe:e=>e.message,
     setStatus:value=>{status=value;},fetch:async(path,options)=>{posted={path,body:JSON.parse(options.body),headers:options.headers};
       if(scenario==='response_lost')throw Error('synthetic unknown outcome');
       return {ok:scenario==='accepted',status:scenario==='accepted'?201:503,json:async()=>({ok:scenario==='accepted',error:'synthetic rejected'})};}});
@@ -85,12 +94,13 @@ for(const scenario of ['accepted','rejected','response_lost']){
   check(posted.body.operation_id,operation,scenario+' manager operation retained');
   check(posted.headers['Idempotency-Key'],operation,scenario+' manager idempotency retained');
   check(posted.body.message,'Full manager feedback\nzero 0',scenario+' complete manager message');
-  check(posted.body.image_attachment,{name:'photo.jpg',type:'image/jpeg',data_url:'synthetic-private-image'},scenario+' retained legacy manager Source preserves its exact supplied image; not cleaning admission');
+  check(Object.hasOwn(posted.body,'image_attachment'),false,scenario+' current text-only submit never acquires a legacy image');
   if(scenario==='accepted'){
-    check(status,'Sent. Thank you.','retained manager Source copy is not proof of mail delivery or cleaning-page admission');check(resets,1,'accepted manager form resets once');
+    check(status,'Saved in the program.','current manager page reports program acceptance only');check(resets,1,'accepted manager form resets once');
+    check(saved.size,0,'only exact accepted original receipt retires manager journal');
   }else{
     check(/Received|Sent|Delivered/.test(status),false,scenario+' never claims acceptance/delivery');
-    check(vm.runInContext('state.operationId',context),operation,scenario+' same operation available for retry');check(resets,0,scenario+' form retained');
+    check(JSON.parse([...saved.values()][0]).body.operation_id,operation,scenario+' same journaled operation available for retry');check(resets,0,scenario+' form retained');
   }
 }
 // This retained full-system page test does not admit new cleaning feedback.

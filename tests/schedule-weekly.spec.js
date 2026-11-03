@@ -1,11 +1,11 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
 const SLOT_WORKING = '20000000-0000-4000-8000-000000000001';
 const SLOT_DEPARTED = '20000000-0000-4000-8000-000000000002';
 const SLOT_CONTRACTOR = '20000000-0000-4000-8000-000000000003';
 const PUBLICATION = '70000000-0000-4000-8000-000000000001';
 const VERSION = '60000000-0000-4000-8000-000000000001';
-const DRAFT_VERSION = '60000000-0000-4000-8000-000000000002';
+const PROJECTION = '80000000-0000-4000-8000-000000000001';
 const OPERATIONAL_NOW = '2026-08-12T18:00:00Z';
 
 async function installOperationalClock(page) {
@@ -24,6 +24,7 @@ function sessionPayload() {
     token: 'weekly-manager-browser-token', role: 'ops_manager', roles: ['CUSTODIAL_MANAGER'],
     manager_id: '10000000-0000-4000-8000-000000000001', manager_display_name: 'Scheduler Test Manager',
     credential_id: 'weekly-credential', device_id: 'weekly-device', access_level: 'full_access', read_only: false,
+    permissions: {schema:'custodial.manager-permissions.v1',read:true,owner:true,manage_absences:true,manage_coverall:true,regenerate_routes:true,close_scan_tickets:true},
     auth_mode: 'trusted_device', trusted_device: true, expires_at: '2036-08-10T00:00:00.000Z',
   } } };
 }
@@ -38,7 +39,7 @@ function schedulerFixture() {
   }
   const weekStaffing = (slotId) => availability.filter((row) => row.slot_id === slotId).map((row) => ({ ...row }));
   return {
-    schema: 'memphis-zoo.static-weekly-manager-snapshot.v1', week_start: '2026-08-10', week_end: '2026-08-16', authority_revision: 3,
+    schema: 'memphis-zoo.static-weekly-manager-snapshot.v1', current_service_date:'2026-08-12', week_start: '2026-08-10', week_end: '2026-08-16', authority_revision: 3,
     projection_status: 'current', projection_authority_revision: 3, staffing_authority_revision: null,
     sources: [{ source_id: '50000000-0000-4000-8000-000000000001', source_digest: 'a'.repeat(64), slot_count: 3 }],
     current_publication: { publication_id: PUBLICATION, version_id: VERSION, version_number: 1, effective_start: '2026-08-10' },
@@ -65,9 +66,9 @@ async function installRoutes(context, { failAtomicTurnover = false } = {}) {
   const fixture = schedulerFixture();
   const calls = [];
   const commitProjection = () => {
-    const workingSlot = fixture.roster.find((slot) => slot.week_staffing.some((row) => row.availability_state === 'working'))?.slot_id;
+    const workingSlot = fixture.roster.find((slot) => (slot.week_staffing||[]).some((row) => row.availability_state === 'working'))?.slot_id;
     fixture.latest_projection = {
-      publication_id: PUBLICATION,
+      projection_id: PROJECTION, publication_id: PUBLICATION, replay_digest:'c'.repeat(64),
       assignments: fixture.assignments.map((row) => ({
         plan_work_id: row.work_id,
         day_of_week: row.day_of_week,
@@ -84,6 +85,10 @@ async function installRoutes(context, { failAtomicTurnover = false } = {}) {
     fixture.projection_authority_revision = fixture.authority_revision;
   };
   commitProjection();
+  // Explicit legacy owner permission port for these four historical scheduler
+  // cases. Current selected-name leadership auth is tested in its owning suite.
+  const session = sessionPayload().data.session;
+  await context.route('**/memphis-auth.js*', route => route.fulfill({contentType:'application/javascript',body:'window.MemphisAuth=(()=>{const session='+JSON.stringify(session)+';return {readSession:()=>session,requireOpsManagerSession:async()=>session,opsManagerAuthHeaders:async()=>({Authorization:"Bearer "+session.token,"X-Device-Id":session.device_id}),getCSTDateString:()=>"2026-08-12",hasPermission:action=>session.permissions?.[action]===true,isCustodialManagementAdmin:()=>false,isReadOnlySession:()=>false};})();'}));
   await context.route('https://unpkg.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.lucide={createIcons(){}};' }));
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -97,17 +102,22 @@ async function installRoutes(context, { failAtomicTurnover = false } = {}) {
     if (request.method() === 'GET' && path === '/static-weekly/manager-snapshot') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: fixture }) });
     }
+    const json = data => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data})});
+    if(path==='/static-weekly/manual-activation/roster')return json({serviceDate:'2026-08-12',authorityRevision:fixture.authority_revision,approvedManualActivation:{schema:'custodial.approved-manual-activation-options.v2',serviceDate:'2026-08-12',authorityRevision:fixture.authority_revision,choices:[],active:null}});
+    if(path==='/static-weekly/approved-choices')return json({schema:'custodial.approved-schedule-choices.v1',initial:[{source_id:fixture.sources[0].source_id,template_id:'synthetic-approved-three',effective_start:fixture.week_start,staffing_count:3}]});
+    expect(request.method()).toBe('POST');
     calls.push({ path, body: request.postDataJSON(), authorization: await request.headerValue('authorization') });
     if (path === '/static-weekly/employees/departed' && failAtomicTurnover) {
       return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'No feasible schedule for current staffing.' }) });
     }
-    fixture.authority_revision += 1;
-    if (path === '/static-weekly/drafts/replacement') {
-      fixture.drafts = [{ version_id: DRAFT_VERSION, revision: 1, lifecycle_state: 'draft', effective_start: fixture.week_start }];
+    if (path === '/static-weekly/approved-initial/preview') {
+      const body=request.postDataJSON();expect(body.source_id).toBe(fixture.sources[0].source_id);expect(body.expected_revision).toBe(3);
+      return json({schema:'custodial.approved-static-initial-preview.v1',status:'PREVIEW_ONLY',published:false,solverInvoked:false,sourceId:body.source_id,templateId:'synthetic-approved-three',serviceDate:fixture.week_start,authorityRevision:3,previewDigest:'a'.repeat(64),mapping:{},lunch:{loans:[],responsibilities:[]},assignments:[{planWorkId:'fixture-work',serviceDate:'2026-08-11',status:'ASSIGNED',personId:'30000000-0000-4000-8000-000000000001',slotId:SLOT_WORKING,locationName:'Zoo Area 1',window:{start:'08:00',end:'10:00'}}],constraintView:{schema:'custodial.approved-static-constraint-view.v1',contract:'FIXED_APPROVED_PATTERN_COMPLETE_HARD_CONSTRAINTS_NOT_OPTIMALITY',hardConstraintDigest:'d'.repeat(64),physicalCoverageDigest:'e'.repeat(64),mappingDigest:'f'.repeat(64),hardConstraintCount:1,slotAvailability:[{slot_id:SLOT_WORKING,day_of_week:2}],projectionAvailability:[{serviceDate:'2026-08-11',slotId:SLOT_WORKING,incumbentPersonId:'30000000-0000-4000-8000-000000000001',incumbentName:'Karen Robinson',status:'working',shift:{start:'07:00',end:'16:00'},lunch:{start:'11:00',end:'12:00'}}],balance:{optimized:false},opening:{proven:false}}});
     }
-    if (path === `/static-weekly/drafts/${DRAFT_VERSION}/publish`) {
-      fixture.current_publication = { publication_id: PUBLICATION, version_id: DRAFT_VERSION, version_number: 2, effective_start: fixture.week_start };
-      fixture.drafts = [];
+    fixture.authority_revision += 1;
+    if (path === '/static-weekly/approved-initial/confirm') {
+      const body=request.postDataJSON();expect(body.preview_digest).toBe('a'.repeat(64));expect(body.assignments).toBeUndefined();expect(body.expected_revision).toBe(3);
+      commitProjection();return json({schema:'custodial.approved-static-initial-confirmation.v1',status:'PERSISTED_CURRENT',ok:true,persistence_status:'PERSISTED',solverInvoked:false,source_id:fixture.sources[0].source_id,publication_id:PUBLICATION,projection_id:PROJECTION,lunch_document_identity:'b'.repeat(64),authority_revision:fixture.authority_revision,previewDigest:'a'.repeat(64)});
     }
     if (path === '/static-weekly/day-changes/batch') {
       const body = request.postDataJSON();
@@ -143,7 +153,7 @@ async function installRoutes(context, { failAtomicTurnover = false } = {}) {
       for (const row of fixture.availability.filter((item) => item.slot_id === body.slot_id && item.service_date >= '2026-08-12')) row.availability_state = 'working';
     }
     commitProjection();
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { revision: fixture.authority_revision, data: { publication_id: PUBLICATION } } }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { revision: fixture.authority_revision, data: { publication_id: PUBLICATION, current_projection:{projection_id:PROJECTION,publication_id:PUBLICATION,week_start:fixture.week_start} } } }) });
   });
   return { calls, fixture };
 }
@@ -162,7 +172,7 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     await expect(page.getByText('CoverAll capacity 1', { exact: true })).toBeVisible();
     await expect(page.locator('#open-count')).toHaveText('0');
     await expect(page.locator('#service-date')).toHaveValue('2026-08-11');
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), JSON.stringify(await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(el=>({tag:el.tagName,id:el.id,cls:el.className,left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right,width:el.getBoundingClientRect().width})).filter(row=>row.right>innerWidth+2).slice(0,20)))).toBeLessThanOrEqual(2);
 
     if (viewport.name === 'desktop') {
       await page.evaluate(() => { window.location.hash = 'changes'; });
@@ -173,27 +183,32 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     if (viewport.name === 'desktop') await page.locator('#absence-type').selectOption('pto');
     await page.locator(`[data-callout-slot="${SLOT_WORKING}"]`).check();
     await page.locator(`[data-contractor-slot="${SLOT_CONTRACTOR}"]`).check();
-    await page.getByRole('button', { name: 'Apply Day Changes' }).click();
-    await confirmScheduleAction(page, 'Apply Changes');
+    const contractor=page.locator('[data-contractor-row]');
+    await contractor.locator('[data-shift-start]').fill('07:00');await contractor.locator('[data-shift-end]').fill('16:00');
+    await contractor.locator('[data-break-choice]').selectOption('SCHEDULED');await contractor.locator('[data-lunch-start]').fill('11:00');await contractor.locator('[data-lunch-end]').fill('12:00');
+    await page.locator('#apply-day-btn').click();
+    await confirmScheduleAction(page, 'Apply and Update Routes');
     await expect(page.getByText(viewport.name === 'desktop' ? 'PTO already applied' : 'Call-out already applied')).toBeVisible();
-    await expect(page.getByText('Contractor capacity already applied')).toBeVisible();
+    await expect(page.getByText('CoverAll already active for this day')).toBeVisible();
     expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/day-changes/batch']);
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
     expect(backend.calls[0].body.expected_revision).toBe(3);
-    expect(backend.calls[0].body.operations).toHaveLength(2);
+    expect(backend.calls[0].body.operations).toHaveLength(3);
+    expect(backend.calls[0].body.operations[2].exception_type).toBe('lunch');
     expect(backend.calls[0].body.operations[0].exception_type).toBe(viewport.name === 'desktop' ? 'pto' : 'daily_absence');
 
     await page.getByRole('tab', { name: 'Changes' }).click();
     const removeAbsence = page.getByRole('button', { name: viewport.name === 'desktop' ? 'Remove Pto' : 'Remove Daily Absence' });
     await removeAbsence.click();
-    await confirmScheduleAction(page, 'Remove Change');
+    await confirmScheduleAction(page, 'Remove and Update Routes');
     await expect(removeAbsence).toHaveCount(0);
     expect(backend.calls.map((call) => call.path)).toEqual([
       '/static-weekly/day-changes/batch',
-      '/static-weekly/exceptions',
+      '/static-weekly/day-changes/batch',
     ]);
-    expect(backend.calls[1].body.exception_type).toBe('reverse');
-    expect(backend.calls[1].body.reverses_exception_id).toBe('exception-4-0');
+    expect(backend.calls[1].body.operations).toHaveLength(1);
+    expect(backend.calls[1].body.operations[0].exception_type).toBe('reverse');
+    expect(backend.calls[1].body.operations[0].reverses_exception_id).toBe('exception-4-0');
     expect(backend.calls[1].body.expected_revision).toBe(4);
 
     await page.getByRole('button', { name: 'Add replacement for Departed Employee' }).click();
@@ -213,7 +228,7 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
     expect(backend.calls.at(-1).body.expected_revision).toBe(6);
     expect(backend.calls.at(-1).body).not.toHaveProperty('effective_start');
     expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), JSON.stringify(await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(el=>({tag:el.tagName,id:el.id,cls:el.className,left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right,width:el.getBoundingClientRect().width})).filter(row=>row.right>innerWidth+2).slice(0,20)))).toBeLessThanOrEqual(2);
     await page.screenshot({ path: `test-results/schedule-weekly-${viewport.name}.png`, fullPage: true });
     await context.close();
   });
@@ -226,27 +241,25 @@ test('draft and publication use deterministic in-page confirmation without dupli
   await installOperationalClock(page);
   await page.goto('/schedule-weekly.html?date=2026-08-11');
 
-  await page.getByRole('button', { name: 'Generate Draft' }).click();
-  await expect(page.getByRole('heading', { name: 'Generate weekly draft' })).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  expect(backend.calls).toHaveLength(0);
-
-  await page.getByRole('button', { name: 'Generate Draft' }).click();
-  await confirmScheduleAction(page, 'Generate Draft');
-  await expect(page.getByRole('button', { name: 'Publish Week' })).toBeEnabled();
-  expect(backend.calls.map((call) => call.path)).toEqual(['/static-weekly/drafts/replacement']);
-  expect(backend.calls[0].body.expected_revision).toBe(3);
-
-  await page.getByRole('button', { name: 'Publish Week' }).click();
-  await expect(page.getByRole('heading', { name: 'Publish weekly schedule' })).toBeVisible();
-  await confirmScheduleAction(page, 'Publish Week');
-  await expect.poll(() => backend.calls.length).toBe(2);
-  expect(backend.calls.map((call) => call.path)).toEqual([
-    '/static-weekly/drafts/replacement',
-    `/static-weekly/drafts/${DRAFT_VERSION}/publish`,
-  ]);
-  expect(backend.calls[1].body.expected_revision).toBe(4);
-  expect(backend.calls.every((call) => call.authorization === 'Bearer weekly-manager-browser-token')).toBe(true);
+  await page.locator('#approved-source').selectOption('50000000-0000-4000-8000-000000000001');
+  await page.locator('#generate-btn').click();
+  await expect(page.locator('#approved-preview-panel')).toBeVisible();
+  await expect(page.locator('#approved-preview-rows')).toContainText('Zoo Area 1');
+  expect(backend.calls.map(call=>call.path)).toEqual(['/static-weekly/approved-initial/preview']);
+  expect(backend.fixture.authority_revision).toBe(3);
+  await page.locator('#publish-btn').click();
+  await expect(page.getByRole('heading', { name: 'Publish approved pattern' })).toBeVisible();
+  await page.locator('#action-confirm-dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(backend.calls).toHaveLength(1);
+  expect(backend.fixture.authority_revision).toBe(3);
+  await page.locator('#publish-btn').click();
+  await confirmScheduleAction(page, 'Publish Reviewed Pattern');
+  await expect(page.locator('#revision-count')).toHaveText('4');
+  await expect(page.locator('#scheduler-pending-panel')).toBeHidden();
+  expect(backend.calls.map(call=>call.path)).toEqual(['/static-weekly/approved-initial/preview','/static-weekly/approved-initial/confirm']);
+  expect(backend.calls[1].body.expected_revision).toBe(3);
+  expect(backend.calls[1].body).not.toHaveProperty('assignments');
+  expect(backend.calls.every(call=>call.authorization==='Bearer weekly-manager-browser-token')).toBe(true);
   await context.close();
 });
 

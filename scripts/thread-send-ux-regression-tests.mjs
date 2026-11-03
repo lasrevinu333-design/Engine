@@ -27,9 +27,9 @@ assert.match(chatScope, /EMPLOYEE_CONTEXT\s*\? <button className="mz-chat-user"/
 assert.doesNotMatch(chatScope, /Create Group|selectedUserIds/, 'employee wording must not expose group-building controls');
 assert.match(chatScope, /Tap the person you want to message/);
 
-const optimisticIndex = chatScope.indexOf('setMessages((rows) => [...rows, optimistic])');
-const outboxIndex = chatScope.indexOf('localStorage.setItem(outboxKey(id), JSON.stringify(entry))');
-const flushCallIndex = chatScope.indexOf('await serializeDelivery(() => flushMessageOutbox())', outboxIndex);
+const optimisticIndex = chatScope.indexOf('publishMessages((rows) => [...rows, optimistic])');
+const outboxIndex = chatScope.indexOf('localStorage.setItem(outboxKey(id), encoded)');
+const flushCallIndex = chatScope.indexOf('await serializeDelivery(() => { assertManager(); return flushMessageOutbox(); })', outboxIndex);
 assert.ok(optimisticIndex >= 0, 'a sent message must appear immediately');
 assert.ok(outboxIndex >= 0 && outboxIndex < optimisticIndex, 'the durable outbox must exist before the optimistic local render');
 assert.ok(flushCallIndex > optimisticIndex, 'serialized network delivery must begin only after durable persistence and local render');
@@ -38,7 +38,9 @@ assert.match(chatScope, /const flushMessageOutbox = useCallback[\s\S]*await api\
 assert.match(chatScope, /client_message_id:\s*entry\.id/);
 assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(entry\.id\)\)/);
 assert.match(chatScope, /failed:\s*true,\s*optimistic:\s*false/);
-assert.match(chatScope, /No connection\. Your message is saved and will send later/);
+assert.match(chatScope, /Your message is saved\. Server confirmation is still pending\./);
+assert.match(chatScope,/Saved on this device/);
+assert.doesNotMatch(chatScope,/Your message is saved and will send later/,'pending work must not promise delivery');
 assert.match(chatScope, /Message was not saved\. Try again\./);
 assert.match(chatScope, /const serializeDelivery = useCallback/);
 assert.match(chatScope, /mz_chatscope_read_outbox:/);
@@ -65,19 +67,19 @@ const retryOutboxStart = chatScope.indexOf('const retryOutbox = useCallback');
 const retryOutboxEnd = chatScope.indexOf('const deleteThread = useCallback', retryOutboxStart);
 const retryOutboxSource = chatScope.slice(retryOutboxStart, retryOutboxEnd);
 assert.doesNotMatch(retryOutboxSource, /catch\s*(?:\([^)]*\))?\s*\{\s*break;/, 'one failed outbox entry must not block later queued messages');
-assert.match(chatScope, /retainOutboxFailure\(entry, error\)/, 'failed outbox entries must retain retry diagnostics without blocking the queue');
+assert.match(chatScope, /retainOutboxFailure\(entry, error, expectedBytes, assertManager\)/, 'failed outbox entries must retain retry diagnostics without blocking the queue');
 assert.match(chatScope, /retry_count:\s*Number\(entry\.retry_count \|\| 0\) \+ 1/);
-assert.match(chatScope, /generation !== Number\(entry\.security_generation\)[\s\S]*localStorage\.setItem\(outboxKey\(entry\.id\), JSON\.stringify\(entry\)\)/,
-  'a saved message must rebind to the current security generation before a retry');
+assert.match(chatScope, /!employee && Number\.isSafeInteger\(generation\)[\s\S]*generation !== Number\(entry\.security_generation\)[\s\S]*expectedBytes = JSON\.stringify\(entry\);[\s\S]*localStorage\.setItem\(outboxKey\(entry\.id\), expectedBytes\)/,
+  'a nonemployee message may rebind only through exact original-byte comparison; employee attribution remains fixed');
 assert.match(chatScope, /function expectedGenerationOptions\(securityGeneration\)[\s\S]*expectedGeneration:\s*isSecurityGeneration\(securityGeneration\) \? securityGeneration : null/,
   'the shared cleanup helper must retain the exact queued security generation');
-assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(entry\.id\)\), expectedGenerationOptions\(entry\.security_generation\)/,
+assert.match(chatScope, /localStorage\.removeItem\(outboxKey\(entry\.id\)\);[\s\S]*assertManager\(context\);[\s\S]*expectedGenerationOptions\(entry\.security_generation\)/,
   'a delivered message must be removed under the same security generation that sent it');
 assert.match(chatScope, /window\.addEventListener\('online', online\)/);
 assert.match(chatScope, /AbortController/);
 assert.match(chatScope, /controller\.signal\.aborted/);
 assert.match(chatScope, /wait_ms=20000/);
-assert.match(chatScope, /disabled=\{!selectedThread\.canSend\}/, 'read-only conversations must disable the composer');
+assert.match(chatScope, /disabled=\{!selectedThread\.canSend \|\| accessBlocked\}/, 'read-only conversations must disable the composer');
 assert.match(chatScope, /placeholder=\{selectedThread\.canSend \? 'Type a message' : 'Read-only conversation'\}/);
 assert.match(chatScope, /!thread \|\| thread\.shared/, 'the retired shared system room must not be deleted');
 assert.doesNotMatch(chatScope, /!thread \|\| thread\.shared \|\| isMemphis\(thread\)/, 'Memphis conversations must be removable by the current user');
@@ -115,3 +117,7 @@ console.log(JSON.stringify({
     'legacy_thread_redirect',
   ],
 }, null, 2));
+
+// Current optimistic render revalidates its captured owner before changing rows.
+assert.match(chatScope,/const publishMessages = \(update\) =>[\s\S]*setMessages\(\(rows\) =>[\s\S]*assertSendOwner\(\);[\s\S]*return update\(rows\)/);
+assert.match(chatScope,/localStorage\.setItem\(outboxKey\(id\), encoded\);[\s\S]*localStorage\.getItem\(outboxKey\(id\)\) !== encoded/);

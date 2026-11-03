@@ -8,7 +8,9 @@ if(process.argv[2]==='--receipt-original-owner-source-only'){
   queueEnqueueOwnedBoundarySourceCase().catch(error=>{console.error(error);process.exitCode=1;});
 }else{
 const { installNativeAcceptanceFixture } = require('./helpers/native-acceptance-fixture.cjs');
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
+test.afterEach(async({browser},info)=>{if(info.status===info.expectedStatus)return;const pages=[];for(const c of browser.contexts())for(const p of c.pages())pages.push(await p.evaluate(async()=>({url:location.href,online:navigator.onLine,body:document.body.innerText,queue:await window.MemphisScanSync?.listActions?.(),status:window.MemphisCustodialSecurity?.getStatus?.(),storage:Object.fromEntries(Object.keys(localStorage).map(k=>[k,localStorage.getItem(k)])),databases:await indexedDB.databases()})).catch(error=>({error:String(error)})));await info.attach('owned-synthetic-scan-failure-state',{body:JSON.stringify(pages),contentType:'application/json'});});
+
 const { createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
@@ -17,8 +19,9 @@ const DEVICE_ID = 'SCAN_SYNC_BROWSER_TEST';
 const SESSION_ID = '00000000-0000-4000-8000-000000000111';
 const COMPLETION_ID = '00000000-0000-4000-8000-000000000112';
 const FINISH_SCAN_ID = '00000000-0000-4000-8000-000000000119';
-// Candidate's isolated NORMAL catalog; browser execution remains a separate gate.
-const SCHEMA_FINGERPRINT = 'ce1406bf491d398acb0d9d81ce1ed8f5d9ad60f503bc27585b9991c93b1b6ee2';
+// Synthetic version response matches the unchanged declared runtime contract;
+// not a current308/hosted catalog measurement or release admission.
+const SCHEMA_FINGERPRINT = 'ff233923ac21cd46b70985a9eaeb20dbb2a4c0bdc6f69f527159d437ed893440';
 const PREVIOUS_SCHEMA_FINGERPRINT = '81b3fa4316a772ab7553956e5b5c29a04c3d5583c6f32b2917c30eb19a011c32';
 const ACCEPTED_BUILD_22_COMMIT = '23740cb0c50c4b80f78adbe9fa4f875707359483';
 const ACCEPTED_BUILD_22_WORKER_SHA256 = 'b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa';
@@ -371,24 +374,16 @@ async function exactQueueRecords(page) {
 }
 
 async function physicalDatabaseVersion(page) {
-  return page.evaluate(() => new Promise((resolve, reject) => {
-    const request = indexedDB.open('mz_scan_queue');
-    request.onsuccess = () => { const version = request.result.version; request.result.close(); resolve(version); };
-    request.onerror = () => reject(request.error);
-  }));
+  return page.evaluate(async()=>{
+    const existing=await indexedDB.databases();if(!existing.some(db=>db.name==='mz_scan_queue'))return null;
+    return new Promise((resolve,reject)=>{const request=indexedDB.open('mz_scan_queue');request.onupgradeneeded=()=>{request.transaction.abort();reject(new Error('Read-only fixture observer must not create a missing primary'));};request.onsuccess=()=>{const db=request.result;resolve(db.version);db.close();};request.onerror=()=>reject(request.error);});
+  });
 }
-
 async function downgradeBackupState(page) {
-  return page.evaluate(() => new Promise((resolve, reject) => {
-    const request = indexedDB.open('mz_scan_queue_v6_to_v4_backup');
-    request.onsuccess = () => {
-      const db = request.result;
-      const available = db.objectStoreNames.contains('metadata') && db.objectStoreNames.contains('actions');
-      db.close();
-      resolve(available);
-    };
-    request.onerror = () => reject(request.error);
-  }));
+  return page.evaluate(async()=>{
+    const existing=await indexedDB.databases();if(!existing.some(db=>db.name==='mz_scan_queue_v6_to_v4_backup'))return false;
+    return new Promise((resolve,reject)=>{const request=indexedDB.open('mz_scan_queue_v6_to_v4_backup');request.onupgradeneeded=()=>{request.transaction.abort();reject(new Error('Read-only fixture observer must not create a missing backup'));};request.onsuccess=()=>{const db=request.result;const available=db.objectStoreNames.contains('metadata')&&db.objectStoreNames.contains('actions');db.close();resolve(available);};request.onerror=()=>reject(request.error);});
+  });
 }
 
 function isRollbackFenced(rows) {
@@ -461,7 +456,7 @@ test('restore quarantine leaves the real IndexedDB queue and local work byte-for
   expect(await page.evaluate(() => window.MemphisScanSync.enqueue({ type: 'ping_device' })
     .then(() => 'changed', (error) => error.code))).toBe('custodial_restore_quarantine');
   expect(await page.evaluate(() => window.MemphisScanSync.recoverAllDeadLetters()
-    .then(() => 'changed', (error) => error.code))).toBe('custodial_restore_quarantine');
+    .then(() => 'changed', (error) => error.code))).toBe('custodial_security_state_unavailable');
   expect(backendRequests).toBe(0);
   await context.close();
 });
@@ -491,7 +486,7 @@ test('quarantine activated after queue startup pauses before claiming an action'
       waitForStableState: stable,
       mutateProtectedWork: async (operation) => {
         const current = await stable();
-        return operation({ deviceId: current.deviceId, generation: current.generation, state: current.state });
+        return operation({ deviceId: current.deviceId, generation: current.generation, state: current.state,assertCurrent(){if(window.__custodialQuarantined)throw Object.assign(new Error('Protected phone recovery is active.'),{code:'custodial_restore_quarantine'});} });
       },
       getStatus: status,
     };
@@ -910,7 +905,7 @@ test('a stale telemetry rejection cannot run before a frozen start and completio
       session_uuid: sessionId, client_session_id: sessionId, client_completion_id: completionId,
       context_id: contextValue, occurrence_id: occurrence, submission_proof: 'c'.repeat(64),
       offline_authority_snapshot_id: snapshot, offline_authority_employee_id: employee,
-      offline_authority_assignment_epoch: 7, status: 'pending_submit',
+      offline_authority_assignment_epoch: 7, status: 'pending_submit',device_id:'SCAN_SYNC_BROWSER_TEST',location_code:'TETM',started_at:'2026-07-19T12:00:00.000Z',
       native_finish_scan_entry_id: finishScan,
       native_completion_attestation_version: 'custodial-native-completion.v2',
       native_completion_attestation: 'b'.repeat(64),
@@ -1370,11 +1365,11 @@ test('rollback readiness fails closed when the browser cannot provide an atomic 
   });
   await installCompatibleVersionRoute(context);
   const page = await openHarness(context);
-  await expect(page.evaluate(() => window.MemphisScanSync.rollbackReadiness())).rejects.toThrow(/requires the browser Web Locks authority/i);
+  await expect(page.evaluate(() => window.MemphisScanSync.rollbackReadiness())).rejects.toThrow(/Protected scan queue admission is unavailable; original work is retained/i);
   await context.close();
 });
 
-test('fallback queue lock rejects same-worker reentry without reclaiming live work', async ({ browser }) => {
+test('missing atomic Web Lock refuses both reentry attempts and preserves original work', async ({ browser }) => {
   const context = await browser.newContext();
   await context.addInitScript(() => {
     Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
@@ -1401,9 +1396,9 @@ test('fallback queue lock rejects same-worker reentry without reclaiming live wo
     window.MemphisScanSync.sync(),
     window.MemphisScanSync.sync(),
   ]));
-  expect(results.sort()).toEqual([false, true]);
-  expect(pingCalls).toBe(1);
-  expect(await page.evaluate(() => window.MemphisScanSync.listActions())).toEqual([]);
+  expect(results).toEqual([false,false]);
+  expect(pingCalls).toBe(0);
+  expect(await exactQueueRecords(page)).toEqual([expect.objectContaining({id:1,type:'ping_device',operation_id:COMPLETION_ID,payload:{p_device_id:DEVICE_ID},state:'pending'})]);
   await context.close();
 });
 
@@ -1696,6 +1691,7 @@ test('localStorage deletion failure cannot acknowledge or discard a completed wo
 
 test('localStorage write failure cannot acknowledge a started occurrence', async ({ browser }) => {
   const context = await browser.newContext();
+  await context.addInitScript(()=>{window.__testFailSessionWrites=false;const original=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(window.__testFailSessionWrites&&String(key).startsWith('session:'))throw new Error('simulated localStorage write failure');return original.call(this,key,value);};});
   const employeeId = '00000000-0000-4000-8000-000000000115';
   const contextId = '00000000-0000-4000-8000-000000000116';
   const occurrenceId = '00000000-0000-4000-8000-000000000117';
@@ -1730,13 +1726,7 @@ test('localStorage write failure cannot acknowledge a started occurrence', async
       p_native_start_attestation_version: 'custodial-native-start.v1', p_native_start_attestation: 'a'.repeat(64),
     },
   }), { sessionId: SESSION_ID, snapshot: snapshotId, employee: employeeId });
-  await page.evaluate(() => {
-    const original = Storage.prototype.setItem;
-    Storage.prototype.setItem = function setItem(key, value) {
-      if (String(key).startsWith('session:')) throw new Error('simulated localStorage write failure');
-      return original.call(this, key, value);
-    };
-  });
+  await page.evaluate(()=>{window.__testFailSessionWrites=true;});
   await context.setOffline(false);
   await page.evaluate(() => window.MemphisScanSync.sync());
   await waitForQueue(page, (rows) => rows.length === 1 && rows[0].state === 'retrying');
@@ -1888,11 +1878,13 @@ test('SCAN_BOOTSTRAP_NEW source: native bootstrap refuses writers and opening be
   function fixture(globals = {}) {
     let opens = 0, transactions = 0;
     const indexedDB = { open() { opens++; throw new Error('unexpected_fixture_database_open'); } };
-    const window = { indexedDB, location: { href: 'https://source.invalid/tests/scan-sync-harness.html' },
+    const area=new class{constructor(){this.values=new Map();}getItem(k){return this.values.get(k)??null;}setItem(k,v){this.values.set(k,String(v));}};
+    const navigatorObject={onLine:false,locks:{request:async(name,_options,operation)=>operation({mode:'exclusive',name})}};
+    const window = {localStorage:area,navigator:navigatorObject,indexedDB, location: { href: 'https://source.invalid/tests/scan-sync-harness.html' },
       MemphisDeviceIdentity: { resolve: () => ({ deviceId: DEVICE_ID }) }, addEventListener() {}, ...globals };
-    const context = vm.createContext({ window, indexedDB, navigator: { onLine: false },
+    const context = vm.createContext({ window, indexedDB, navigator: navigatorObject,
       document: { addEventListener() {} }, crypto: require('node:crypto').webcrypto, URL, TextEncoder });
-    vm.runInContext(callbacks, context, { timeout: 1000, filename: 'memphis-scan-sync.js' });
+    vm.runInContext(callbacks, context, { timeout: 1000, filename: path.resolve(__dirname,'../memphis-scan-sync.js'),importModuleDynamically:vm.constants.USE_MAIN_CONTEXT_DEFAULT_LOADER });
     return { window, api: window.__bootstrapCallbacks, opens: () => opens, transactions: () => transactions,
       db: { transaction() { transactions++; throw new Error('unexpected_fixture_migration'); } } };
   }
@@ -1918,9 +1910,9 @@ test('SCAN_BOOTSTRAP_NEW source: native bootstrap refuses writers and opening be
     }
   }
   const legacy = fixture(); let legacyContext;
-  assert.equal(await legacy.api.mutateProtectedQueue(context => { legacyContext = context; return 'ordinary-web'; }), 'ordinary-web');
+  assert.equal(await legacy.api.mutateProtectedQueue(context => { legacyContext = context; legacy.api.queueOpeningCheckpoint(context); return 'ordinary-web'; }), 'ordinary-web');
   assert.equal(legacyContext.state, 'legacy'); assert.equal(legacyContext.generation, null);
-  legacy.api.queueOpeningCheckpoint(legacyContext);
+  assert.throws(() => legacy.api.queueOpeningCheckpoint(legacyContext), denied); // The original owner has closed.
   const webCapacitor = fixture({ Capacitor: { isNativePlatform: () => false } });
   assert.equal(await webCapacitor.api.mutateProtectedQueue(() => 'web-capacitor'), 'web-capacitor');
   // The same legacy asynchronous operation sees marker arrival before its next write.
@@ -1929,6 +1921,7 @@ test('SCAN_BOOTSTRAP_NEW source: native bootstrap refuses writers and opening be
     await new Promise(resolve => { resume = resolve; });
     legacy.api.queueOpeningCheckpoint(context); lateWrites++;
   });
+  for(let n=0;!resume&&n<20;n++)await new Promise(resolve=>setImmediate(resolve));assert.equal(typeof resume,'function');
   legacy.window.MemphisMobileBuildIdentity = { edition: 'custodial' }; resume();
   await assert.rejects(delayed, denied); assert.equal(lateWrites, 0);
   delete legacy.window.MemphisMobileBuildIdentity;

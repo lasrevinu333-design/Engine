@@ -231,7 +231,9 @@ const local = new TestStorage({
 const session = new TestStorage();
 const raw = createRawStorageAdapter(local);
 let status = { initialized: false, ready: false, available: true, quarantined: false };
-installCustodialStorageFirewall({ storage: local, getSecurityStatus: () => status });
+let ownsTestMutation=false;
+installCustodialStorageFirewall({ storage: local, getSecurityStatus: () => status,
+ requireProtectedWorkMutation(){if(!ownsTestMutation)throw Error('explicit_test_mutation_required');} });
 
 assert.throws(() => local.setItem('memphisAssignedDeviceId', 'KIOSK_08'), /cannot change/);
 assert.throws(() => local.removeItem('session:preserved'), /cannot change/);
@@ -257,7 +259,10 @@ assert.throws(() => local.removeItem('memphis_zoo_custodial_device_credential'),
 status = { initialized: true, ready: true, available: true, quarantined: false };
 assert.throws(() => local.setItem('mz_scan_device_id', 'KIOSK_08'), /cannot change/);
 assert.equal(local.getItem('mz_scan_device_id'), null);
-local.setItem('session:ready-work', 'ready-session');
+assert.throws(()=>local.setItem('session:ready-work','unowned'), /cannot change/);
+assert.equal(local.getItem('session:ready-work'),null);
+ownsTestMutation=true;
+try{local.setItem('session:ready-work', 'ready-session');}finally{ownsTestMutation=false;}
 assert.equal(local.getItem('session:ready-work'), 'ready-session');
 assert.throws(() => local.clear(), /cannot change/);
 

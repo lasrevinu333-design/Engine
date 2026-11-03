@@ -1,3 +1,4 @@
+import {normalizeCurrentApprovedPreservation} from './current-approved-preservation-source-boundary.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 const sha=value=>createHash('sha256').update(value).digest('hex');
@@ -12,6 +13,7 @@ export const locationCueWordingPins=Object.freeze({
 // successor. Unknown edits/paths remain unchanged and older strict guards
 // continue to reject them. Runtime never imports this module.
 export function normalizeCurrentLocationCueWording(name,source){
+  source=normalizeCurrentApprovedPreservation(name,source);
   const p=locationCueWordingPins;
   if(!(name===p.name||name.endsWith('/'+p.name))||sha(source)!==p.current_sha256)return source;
   assert.equal(source.split(p.after).length,2);

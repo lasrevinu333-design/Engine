@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <link rel="icon" href="./Zoo_Logo_ui.webp" type="image/webp">
-  <meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>Schedule</title>
+  <meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Schedule</title>
   <style>
     :root{--text:#fff;--muted:#e5edf5;--panel:rgba(5,15,22,.91);--line:rgba(255,255,255,.25);--green:#b7e66a}
     *{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;color:var(--text);background:#101827}body{background-image:linear-gradient(rgba(3,9,18,.54),rgba(3,9,18,.68)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-attachment:fixed}
@@ -13,17 +13,18 @@
 <body data-memphis-context="employee">
   <main>
     <header><a class="back" data-mz-back href="./index.html">Back</a><h1>Your areas now</h1><div id="employee" class="employee">Employee</div><div id="date" class="date"></div></header>
+    <section id="state" class="state" aria-live="polite"><span id="state-text">Loading…</span><button id="retry" class="retry" type="button" hidden>Try Again</button></section>
     <section id="notice" class="notice" hidden></section>
     <section id="content" class="content" hidden><h2>Regular areas</h2><ul id="areas" class="areas"></ul></section>
     <section id="lunch-content" class="content" hidden aria-label="Lunch coverage"><h2>Lunch coverage - on call</h2><ul id="lunch-areas" class="areas"></ul></section>
-    <section id="state" class="state" aria-live="polite"><span id="state-text">Loading…</span><button id="retry" class="retry" type="button" hidden>Try Again</button></section>
+    <section id="upcoming-content" class="content" hidden aria-label="Later today"><h2>Later today</h2><ul id="upcoming-areas" class="areas"></ul></section>
   </main>
   <script src="./memphis-auth.js?v=native-integration-20261006"></script><script src="./memphis-device-identity.js?v=release-2026.07.19.custodial-v3.12"></script><script src="./memphis-scan-sync.js?v=release-2026.07.19.custodial-v3.12"></script><script src="./memphis-device-reminders.js?v=release-2026.07.19.custodial-v3.12"></script>
   <script src="./memphis-recurring-schedule-target.js"></script>
   <script>
   (()=>{'use strict';
     const API='https://memphis-zoo-mcp.onrender.com/schedule-api',PREFIX='mz_employee_schedule_snapshot:',REFRESH_MS=60000;
-    const els={employee:document.getElementById('employee'),date:document.getElementById('date'),notice:document.getElementById('notice'),content:document.getElementById('content'),areas:document.getElementById('areas'),lunch:document.getElementById('lunch-content'),lunchAreas:document.getElementById('lunch-areas'),state:document.getElementById('state'),text:document.getElementById('state-text'),retry:document.getElementById('retry')};
+    const els={employee:document.getElementById('employee'),date:document.getElementById('date'),notice:document.getElementById('notice'),content:document.getElementById('content'),areas:document.getElementById('areas'),lunch:document.getElementById('lunch-content'),lunchAreas:document.getElementById('lunch-areas'),upcoming:document.getElementById('upcoming-content'),upcomingAreas:document.getElementById('upcoming-areas'),state:document.getElementById('state'),text:document.getElementById('state-text'),retry:document.getElementById('retry')};
     let loading=false,timer=0,boundary=0,lastView=null,loadVersion=0,shownPrincipal='',queued=false,paused=false,activeRequest=null;
     const volatile=new Map(),unavailableDays=new Map(),presentationFences=new WeakMap();let securityBlocked=false,securityGeneration=0,activeRender=null;
     const esc=(value)=>String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -244,7 +245,7 @@
         Promise.resolve(retry()).catch(()=>{});
       }catch{/* Missing/unavailable reconciliation cannot invent authority. */}
     }
-    function clearPresentation(){activeRender=null;clearTimeout(boundary);lastView=null;els.employee.textContent='Employee';els.date.textContent='';els.areas.innerHTML='';els.content.hidden=true;els.lunch.hidden=true;els.lunchAreas.innerHTML='';els.notice.textContent='';els.notice.hidden=true;reconcileAlerts();}
+    function clearPresentation(){activeRender=null;clearTimeout(boundary);lastView=null;els.employee.textContent='Employee';els.date.textContent='';els.areas.innerHTML='';els.content.hidden=true;els.lunch.hidden=true;els.lunchAreas.innerHTML='';if(els.upcoming)els.upcoming.hidden=true;if(els.upcomingAreas)els.upcomingAreas.innerHTML='';els.notice.textContent='';els.notice.hidden=true;reconcileAlerts();}
     function isRestroom(item){return item?.is_public_restroom===true||/restroom|bathroom|toilet|comfort station|family room/i.test(name(item));}
     // Display only published responsibility windows; never reset service/check clocks.
     function zooNow(){const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date());const get=key=>parts.find(part=>part.type===key).value;return {date:`${get('year')}-${get('month')}-${get('day')}`,seconds:Number(get('hour'))*3600+Number(get('minute'))*60+Number(get('second'))};}
@@ -262,10 +263,17 @@
     }
     function zooWideNow(data){const window=zooWideWindow(data),now=zooNow();return Boolean(window&&data.service_date===now.date&&window.start<=now.seconds&&now.seconds<window.end);}
     function currentItems(data){const clock=zooNow();if(data?.service_date!==clock.date||(data.projection_status&&data.projection_status!=='current'))return [];return publishedItems(data).map((item,index)=>({item,index})).filter(({item})=>{const start=timeSeconds(item.coverage_start),end=timeSeconds(item.coverage_end);if(isLunch(item)&&(!/^[a-f0-9]{64}$/.test(item.loan_id||'')||!data.employee_id||item.coverer_person_id!==data.employee_id||item.service_date!==data.service_date||!data.projection_id||item.projection_id!==data.projection_id))return false;return start!==null&&end!==null&&start<end&&start<=clock.seconds&&clock.seconds<end;}).sort((left,right)=>Number(isRestroom(right.item))-Number(isRestroom(left.item))||name(left.item).localeCompare(name(right.item),'en',{sensitivity:'base',numeric:true})||left.index-right.index).map(entry=>entry.item);}
+    function upcomingItems(data){
+      const clock=zooNow();if(data?.service_date!==clock.date||(data.projection_status&&data.projection_status!=='current'))return [];
+      return publishedItems(data).filter(item=>{const start=timeSeconds(item.coverage_start),end=timeSeconds(item.coverage_end);
+        if(isLunch(item)&&(!/^[a-f0-9]{64}$/.test(item.loan_id||'')||!data.employee_id||item.coverer_person_id!==data.employee_id||item.service_date!==data.service_date||!data.projection_id||item.projection_id!==data.projection_id))return false;
+        return start!==null&&end!==null&&clock.seconds<start&&start<end;
+      }).sort((a,b)=>timeSeconds(a.coverage_start)-timeSeconds(b.coverage_start)||name(a).localeCompare(name(b),'en',{sensitivity:'base',numeric:true}));
+    }
     function name(item){return String(item?.name||item?.location_name||item?.group_name||item?.group_code||'Assigned area').trim();}
     // Presentation only: original loan/occurrence rows remain in source and receipts.
     function displayRows(list){const seen=new Set();return list.filter(item=>{if(!isLunch(item))return true;const key=JSON.stringify([item.projection_id,item.location_group_id||item.group_code||'',name(item),timeSeconds(item.coverage_start),timeSeconds(item.coverage_end),details(item),Array.isArray(item.included_location_ids)?[...item.included_location_ids].sort():null]);if(seen.has(key))return false;seen.add(key);return true;});}
-    function details(item){const values=[];const locations=Array.isArray(item?.included_locations)?item.included_locations.map(String).filter(Boolean):[];if(locations.length)values.push(locations.join(', '));const purpose=String(item?.coverage_purpose||item?.purpose||'').toLowerCase();if(purpose==='lunch_coverage'){const start=timeSeconds(item.coverage_start),end=timeSeconds(item.coverage_end);values.push(start!==null&&end!==null&&start<end?`On call: ${friendlyTime(item.coverage_start)}–${friendlyTime(item.coverage_end)}`:'Lunch coverage');}else if(item.coverage_end)values.push(`Until ${friendlyTime(item.coverage_end)}`);return values.join(' · ');}
+    function details(item){const values=[];const locations=Array.isArray(item?.included_locations)?item.included_locations.map(String).filter(Boolean):[];if(locations.length)values.push(locations.join(', '));const purpose=String(item?.coverage_purpose||item?.purpose||'').toLowerCase();if(purpose==='lunch_coverage'){const covered=String(item.normal_owner_name||'').trim();if(covered)values.push(`Covering ${covered}`);const start=timeSeconds(item.coverage_start),end=timeSeconds(item.coverage_end);values.push(start!==null&&end!==null&&start<end?`On call: ${friendlyTime(item.coverage_start)}–${friendlyTime(item.coverage_end)}`:'Lunch coverage');}else if(item.coverage_end)values.push(`Until ${friendlyTime(item.coverage_end)}`);return values.join(' · ');}
     function friendlyTime(value){const seconds=timeSeconds(value);if(seconds===null)return String(value||'');if(seconds===86400)return 'Close';const h=Math.floor(seconds/3600),m=Math.floor(seconds%3600/60);return `${h%12||12}:${String(m).padStart(2,'0')} ${h<12?'AM':'PM'}`;}
     function date(value){if(!value)return '';const parsed=new Date(`${value}T12:00:00Z`);return Number.isNaN(parsed.getTime())?String(value):parsed.toLocaleDateString('en-US',{timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric'});}
     function canonical(value){if(value===null)return'null';if(typeof value==='string'||typeof value==='boolean'||typeof value==='number')return JSON.stringify(value);if(Array.isArray(value))return`[${value.map(canonical).join(',')}]`;return`{${Object.keys(value).sort().map(key=>`${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;}
@@ -325,8 +333,8 @@
         const blocked=data.schedule_delivery_mode==='RECURRING_TERMINAL';
         // Typed view has no stale field. Only transport/cache state supplied by
         // this consumer determines its offline or unconfirmed presentation.
-        data={service_date:data.service_date,employee_id:data.employee_id,projection_id:data.projection_id,employee_name:blocked?'Employee':data.employee_name,projection_status:data.projection_status,
-          raw_items:data.raw_items,full_day:true,shift:data.shift,publication_id:data.publication_id,zoo_wide_coverage:data.zoo_wide_coverage,stale:false,schedule_status:data.shift===null&&data.raw_items.length===0?'off':'on'};
+        data={service_date:data.service_date,employee_id:data.employee_id,...(blocked?{}:{projection_id:data.projection_id}),employee_name:blocked?'Employee':data.employee_name,projection_status:data.projection_status,
+          raw_items:data.raw_items,full_day:true,shift:data.shift,...(Object.hasOwn(data,'publication_id')?{publication_id:data.publication_id}:{}),...(Object.hasOwn(data,'zoo_wide_coverage')?{zoo_wide_coverage:data.zoo_wide_coverage}:{}),stale:false,schedule_status:data.shift===null&&data.raw_items.length===0?'off':'on'};
       }
       lastView={data,offline,cacheWarning};
       if(data?.projection_status==='blocked_recurring_authority'){
@@ -338,11 +346,13 @@
       }
       const items=currentItems(data),regular=items.filter(item=>!isLunch(item)),lunch=items.filter(isLunch),sameDay=data?.service_date===zooNow().date;
       const rows=list=>displayRows(list).map(item=>`<li class="area"><div class="areaName">${esc(name(item))}</div>${details(item)?`<div class="areaDetail">${esc(details(item))}</div>`:''}</li>`).join('');
-      els.employee.textContent=String(data?.employee_name||data?.employee?.display_name||'Employee');els.date.textContent=date(data?.service_date);
+      els.employee.textContent=String(data?.employee_name||data?.employee?.display_name||'Employee');els.date.textContent=date(data?.service_date)+(sameDay?` · ${friendlyTime(`${Math.floor(zooNow().seconds/3600)}:${String(Math.floor(zooNow().seconds%3600/60)).padStart(2,'0')}`)} Memphis time`:'');
       els.notice.textContent=!offline&&sameDay?String(data?.notice||''):'';els.notice.hidden=!els.notice.textContent;els.content.hidden=false;
       els.areas.innerHTML=regular.length&&zooWideNow(data)?'<li class="area"><div class="areaName">Zoo Wide Coverage</div></li>':regular.length?rows(regular):`<li class="area"><div class="areaName">${!sameDay?'Today’s schedule is unavailable.':offline&&!items.length?'No current areas can be confirmed from the saved schedule.':data?.schedule_status==='off'?'You are not scheduled today.':'No regular areas are active right now.'}</div></li>`;
       els.lunch.hidden=!lunch.length;els.lunchAreas.innerHTML=rows(lunch);
-      state(cacheWarning?'Schedule updated, but this phone could not save a copy. Ask a manager for help.':!offline&&data?.stale===true?'Showing the latest saved schedule.':'',cacheWarning);scheduleBoundary(data);
+      if(els.upcoming&&els.upcomingAreas){const upcoming=upcomingItems(data);els.upcoming.hidden=!upcoming.length;
+        els.upcomingAreas.innerHTML=displayRows(upcoming).map(item=>`<li class="area"><div class="areaName">${esc(name(item))}</div><div class="areaDetail">${esc(`Starts ${friendlyTime(item.coverage_start)} · ${details(item)}`)}</div></li>`).join('');}
+      state(cacheWarning?'This phone could not save a schedule copy. Ask a manager for help.':offline?'Showing a saved schedule. Could not check for changes.':data?.stale===true?'Showing the latest saved schedule.':'',offline||cacheWarning);scheduleBoundary(data);
       try{const committed=commitDisplayedBinding(selected,source,{owns:owned});if(committed===DISPLAY_SUPERSEDED)return null;reconcileAlerts(owned);return owned()?committed:null;
       }catch{if(!owned())return;clearPresentation();state('Schedule changed during display. Updating…',true);return;}
     }

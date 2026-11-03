@@ -8,7 +8,18 @@ import {createRequire} from 'node:module';
 const fixtureRoot=dirname(fileURLToPath(import.meta.url));
 const baseline=resolve(fixtureRoot,'..');
 const require=createRequire(baseline+'/mobile/package.json');
-const {transformSync}=require('esbuild');
+// Fixture compiler ownership: esbuild's worker service is unref'ed and its
+// stop() does not join worker termination. Its supported synchronous path
+// uses execFileSync, so every transform child exits before this call returns.
+// This process-local loader choice is restored before any fixture executes.
+const esbuild=(()=>{
+ const prior=process.env.ESBUILD_WORKER_THREADS;
+ process.env.ESBUILD_WORKER_THREADS='0';
+ try{return require('esbuild');}
+ finally{if(prior===undefined)delete process.env.ESBUILD_WORKER_THREADS;else process.env.ESBUILD_WORKER_THREADS=prior;}
+})();
+const {transformSync}=esbuild;
+try {
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const pins=new Map();
 const syntheticLocksPath=baseline+'/scripts/synthetic-schedule-locks.mjs';
@@ -183,15 +194,18 @@ function command(f,command,holdPhase){const before=f.posts.length,nonce=(phase++
  f.portEvents.get('message')({data:JSON.stringify({schema:'custodial.native-recurring-document-command.v1',command,
  grant_token:'a'.repeat(64),phase:nonce,...(holdPhase?{hold_phase:holdPhase}:{})})});
  return {phase:nonce,reply:f.posts.length>before?f.posts.at(-1):null};}
-async function ordinary(f,expectedType){
+async function waitForIdleWriters(f){
  // Genuine passive actual-writer observations only; one HOLD after bounded
  // quiescence, never repeated HOLD, fake state reset or new product deadline.
  let state=null;for(let i=0;i<16;i++){
   state=command(f,'OBSERVE_CALLBACK_WRITERS').reply;
   if(state?.active_writer_count===0&&state?.writer_unknown===false&&state?.snapshot_owners_ready===true)break;
-  await wait();
+  await new Promise(resolve=>setTimeout(resolve,10));
  }
  assert.equal(state?.active_writer_count,0);assert.equal(state?.writer_unknown,false);assert.equal(state?.snapshot_owners_ready,true);
+}
+async function ordinary(f,expectedType){
+ await waitForIdleWriters(f);
  const first=command(f,'HOLD_ORDINARY_DELIVERY_WRITERS');assert.equal(first.reply?.schema,'custodial.native-recurring-ordinary-held-data.v1');ordinaryChecks++;
  assert.equal(first.reply.receipt_eligible,false);assert.equal(first.reply.data.employee.original_typed_render.original_source.schedule_delivery_mode,expectedType);ordinaryChecks++;
  assert.equal(first.reply.data.selector.intent_id,first.reply.data.employee.original_typed_render.original_source.recurring_delivery.intentId);
@@ -215,6 +229,8 @@ assert.equal(first.original_source.recurring_delivery.viewJsonText,payload(19).r
 assert.equal(schedule.elements.get('areas').innerHTML.includes('Synthetic Restroom'),true);
 const ordinarySchedule=await ordinary(schedule,'RECURRING_SCHEDULE');assert.equal(ordinarySchedule.data.employee.original_typed_render.original_source.raw_items.length,1);ordinaryChecks++;
 assert.equal(Object.hasOwn(ordinarySchedule.data.employee.lastView.data,'projection_id'),true);
+assert.equal(ordinarySchedule.data.employee.lastView.data.publication_id,payload(19).publication_id);
+assert.equal(Object.hasOwn(ordinarySchedule.data.employee.lastView.data,'zoo_wide_coverage'),false);
 assert.equal(ordinarySchedule.data.employee.lastView.data.projection_id,payload(19).recurring_delivery.target.projectionId);ordinaryChecks++;
 // Normal online event begins actual new load and INVALIDATES old private DATA
 // before its pending actual native response returns. No private callback call.
@@ -230,6 +246,7 @@ const ordinaryBlocked=await ordinary(schedule,'RECURRING_TERMINAL');assert.equal
 // The real terminal contract has no projection ID. The normal display object
 // must omit that absent field, while retaining exact original typed Source.
 assert.equal(Object.hasOwn(ordinaryBlocked.data.employee.lastView.data,'projection_id'),false);
+for(const field of ['publication_id','zoo_wide_coverage'])assert.equal(Object.hasOwn(ordinaryBlocked.data.employee.lastView.data,field),false,'Absent optional terminal fields stay absent');
 assert.equal(Object.hasOwn(ordinaryBlocked.data.employee.original_typed_render.original_source,'projection_id'),false);
 assert.equal(JSON.stringify(ordinaryBlocked.data.employee.original_typed_render.original_source),originalBlockedText);ordinaryChecks++;
 const supportedEmployeeCopy=value=>{
@@ -252,6 +269,7 @@ for(let i=0;i<3;i++)await wait();assert.equal(schedule.posts.length,beforeClose)
 const large=await fixture({active:true,initial:payload(31,{oversized:true})});diagnosticOwner=large;
 await waitFor(()=>large.elements.get('areas')?.innerHTML.includes('S'.repeat(200)),'Oversized native DATA must preserve normal rendered view');
 assert.equal(rendered(large),null,'Over-bound private original source is never a copied projection');
+await waitForIdleWriters(large);
 const oversized=command(large,'HOLD_ORDINARY_DELIVERY_WRITERS');assert.equal(oversized.reply?.schema,'custodial.native-recurring-callback-refused-data.v1');assert.equal(oversized.reply.kind,'OBSERVATION_FAILED');command(large,'RELEASE_CALLBACK_WRITERS',oversized.phase);ordinaryChecks++;
 const dom=large.elements.get('areas').innerHTML,callCount=large.calls.length;
 for(let i=0;i<3;i++)observe(large);
@@ -265,3 +283,7 @@ const result={status:'PASS_SYNTHETIC_NORMAL_FACTORY_ORDINARY_FRAME_DATA',ordinar
  scope:'Actual normal29-module constructors with explicit synthetic enrolled native/HTTP/DOM/vendor ports; no actual Engine/backend/Android/opaque Java frame/OS or receipt authority',
  receipt:false,OS_settlement:false,writer_exclusion:false,currentness_grant:false};
 console.log(JSON.stringify({...result,pins:undefined}));
+
+} finally {
+ await esbuild.stop();
+}

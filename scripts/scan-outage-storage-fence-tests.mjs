@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 import {webcrypto} from 'node:crypto';
+import {createScanOwnerVm,closedScanOwnerSource,FixtureStorage} from './scan-owner-vm-context.mjs';
+import {createSyntheticScheduleLocks} from './synthetic-schedule-locks.mjs';
 import {createProtectedBrowserAdmission,PROTECTED_BROWSER_HOLD_KEY,PROTECTED_BROWSER_MUTATION_KEY}
   from '../mobile/src/custodial/protected-browser-admission.js';
 
@@ -625,12 +627,6 @@ async function scanIndexConfirmationCallers(){
 
 async function originalCompletionRecovery(){
   const failures=[],passed=[];
-  const implementation=[...(finishOwnerOnly?[slice('  function custodialSecurity(','  function dispatchSecurityPause('),
-    slice('  function queueOpeningCheckpoint(','  function queueOpeningConnection('),
-    slice('  function queueOpeningRowsMatch(','  function deleteDatabase(')]:[]),slice('  function sessionKey(','  function downgradeTransition('),
-    slice('  function claimNextAction(','  function parseRetryAfter('),
-    slice('  async function persistServerCompletionReceipt(','  async function reportDeviceSyncStatus('),
-    slice('  async function deleteCompletionDraft(','  async function verifyWorkerBackendCompatibility(')].join('\n');
   function fixture(){
     let clock=1780000000000,generation=4,mutations=0,captured=null,submitted=null,loseReply=false,ackHook=null,lookupHook=null,commitHook=null;
     const records=new Map(),sessions=new Map(),drafts=new Map(),recoveries=[];
@@ -655,7 +651,7 @@ async function originalCompletionRecovery(){
        const result=admissionTail.then(execute,execute);admissionTail=result.then(()=>undefined,()=>undefined);return result;
       }};
     const session=randomUUID(),completion=randomUUID(),employee=randomUUID(),occurrence=randomUUID();
-    const payload={p_client_session_id:session,p_client_completion_id:completion,p_device_id:finishOwnerOnly?'KIOSK_08':'SYNTHETIC_PHONE',
+    const payload={p_client_session_id:session,p_client_completion_id:completion,p_device_id:'KIOSK_08',
       p_location_code:'CHINA',p_client_started_at:'2026-05-28T10:00:00.000Z',p_client_ended_at:'2026-05-28T10:15:00.000Z',
       p_native_finish_scan_entry_id:randomUUID(),p_native_completion_attestation_version:'custodial-native-completion.v2',
       p_native_completion_attestation:'a'.repeat(64),p_scan_evidence:[],p_response_json:{work_result:'check_only',services_performed:[]}};
@@ -671,8 +667,11 @@ async function originalCompletionRecovery(){
       ended_at:payload.p_client_ended_at,native_finish_scan_entry_id:payload.p_native_finish_scan_entry_id,
       native_completion_attestation_version:payload.p_native_completion_attestation_version,
       native_completion_attestation:payload.p_native_completion_attestation};
+    nativeStatus.principal.employee_id=employee;nativeStatus.principal.assignment_epoch=8;
     sessions.set('session:'+session,JSON.stringify(local));
-    drafts.set(session,'original draft');
+    const protectedDraft={schema_version:1,contract_version:'scan.v4.snapshot-bound-authority',session_uuid:session,
+      client_completion_id:completion,device_id:'KIOSK_08',employee_id:employee,location_code:'CHINA',draft:{original:'original draft'}};
+    drafts.set(session,{...protectedDraft,integrity_sha256:'d'.repeat(64),saved_at:'2026-05-28T10:15:00.000Z'});
     const result={status:'closed',client_session_id:session,client_completion_id:completion,occurrence_id:occurrence,
       accepted_at:'2026-05-28T10:16:00.000Z'};
     // New-only terminal adapter extends this SAME fixture's Map transaction.
@@ -722,34 +721,32 @@ async function originalCompletionRecovery(){
       tx.abort=()=>{aborted=true;tx.onabort?.({target:tx});};
       queueMicrotask(()=>{try{if(map===records&&lookupHook){const hook=lookupHook;lookupHook=null;hook();}request?.onsuccess?.();if(!aborted){map.clear();for(const [k,v]of pending)map.set(k,v);if(map===records&&commitHook){const hook=commitHook;commitHook=null;hook();}tx.oncomplete?.({target:tx});}}
         catch(error){tx.error=error;tx.onabort?.({target:tx});}});return tx;}};}
-    const locals={get length(){return sessions.size;},key:i=>[...sessions.keys()][i],getItem:k=>sessions.get(k)??null,
-      setItem:(k,v)=>sessions.set(k,v),removeItem:k=>sessions.delete(k)};
+    const locals=new FixtureStorage();locals.rows=sessions;
     const mobile={getAuthenticatedCompletion:async args=>{recoveries.push(structuredClone(args));
       return captured?{found:true,result:structuredClone(captured)}:{found:false};},
       acknowledgeOfflineCompletion:async()=>{if(ackHook)await ackHook();return {acknowledged:true};}};
-    if(finishOwnerOnly){mobile.edition='custodial';mobile.principalIdentity=()=>JSON.stringify(nativeStatus.principal);}
-    const sandbox={CONFIG:{STORE_NAME:'actions',COMPLETION_DRAFT_STORE_NAME:'drafts',MAX_RETRIES:50,LEASE_MS:60000,
+    mobile.edition='custodial';mobile.principalIdentity=()=>JSON.stringify(nativeStatus.principal);
+    const sandbox={CONFIG:{STORE_NAME:'actions',COMPLETION_DRAFT_STORE_NAME:'drafts',COMPLETION_DRAFT_SCHEMA_VERSION:1,MAX_RETRIES:50,LEASE_MS:60000,
       SCHEMA_VERSION:6,REQUIRED_SCAN_CONTRACT_VERSION:'scan.v4.snapshot-bound-authority'},now:()=>clock,
       safeText:x=>String(x??'').trim(),isUuid:x=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x),
-      crypto:{randomUUID},structuredClone,localStorage:locals,window:{setTimeout:finishOwnerOnly?((fn,delay)=>{const timer=setTimeout(()=>{timers.delete(timer);fn();},delay);timers.add(timer);return timer;}):setTimeout,MemphisMobile:mobile,indexedDB:{},...(finishOwnerOnly?{MemphisCustodialSecurity:security}:{})},openCompletionDraftDb:async()=>db(drafts),
-      queueOpeningCheckpoint:context=>context.assertCurrent(),
-      queueMutationSecurity:()=>({getStatus:()=>({generation})}),
-      canonicalJson:x=>JSON.stringify(x),sha256:async()=> 'd'.repeat(64),
+      crypto:{randomUUID},structuredClone,localStorage:locals,window:{localStorage:locals,navigator:{locks:createSyntheticScheduleLocks()},setTimeout:finishOwnerOnly?((fn,delay)=>{const timer=setTimeout(()=>{timers.delete(timer);fn();},delay);timers.add(timer);return timer;}):setTimeout,MemphisMobile:mobile,indexedDB:{},MemphisCustodialSecurity:security},openCompletionDraftDb:async()=>db(drafts),
+      sha256:async value=>createHash('sha256').update(value).digest('hex'),
       storageFailure:(label,e)=>new Error(label+': '+e.message),
-      mutateProtectedQueue:async(operation,options={})=>{
-        if(options.expectedGeneration!=null&&options.expectedGeneration!==generation)
-          throw Object.assign(new Error('generation changed'),{code:'custodial_security_generation_changed'});
-        const original=generation;let open=true;
-        const context={generation,deviceId:payload.p_device_id,assertCurrent(){
-          if(!open||original!==generation)throw Object.assign(Error('original callback owner changed'),{code:'custodial_security_generation_changed'});}};
-        try{return await operation(context);}finally{open=false;}},
-      state:{workerId:'synthetic-worker',db:db(records)},Math:Object.assign(Object.create(Math),{random:()=>0}),
+      state:{workerId:'synthetic-worker',deviceId:'KIOSK_08',db:db(records)},Math:Object.assign(Object.create(Math),{random:()=>0}),
       rpc:async(name,args)=>{assert.equal(name,'tool_commit_cleaning_workflow');mutations++;submitted=structuredClone(args);captured=structuredClone(result);
         if(loseReply){loseReply=false;throw Object.assign(new Error('lost response'),{scanTransportFailure:true});}
         return structuredClone(result);}};
     let context;
-    function restart(){context=vm.createContext(sandbox);vm.runInContext(implementation,context);return context;}
-    restart();records.set(1,structuredClone(context.storageRecord(row)));
+    function restart(){
+      context=vm.createContext(sandbox);
+      const implementation=closedScanOwnerSource(source,['claimNextAction','finishClaim','processAction','recoverOrphanedClaims','storageRecord','normalizeRecord'],sandbox);
+      vm.runInContext(implementation,context,{importModuleDynamically:specifier=>{
+        assert.equal(specifier,'./mobile/src/custodial/protected-browser-admission.js');
+        return import('../mobile/src/custodial/protected-browser-admission.js');
+      }});return context;
+    }
+    restart();drafts.get(session).integrity_sha256=createHash('sha256').update(context.canonicalJson(protectedDraft)).digest('hex');
+    records.set(1,structuredClone(context.storageRecord(row)));
     return {row,local,result,payload,records,sessions,drafts,recoveries,mobile,restart,get c(){return context;},
       get mutations(){return mutations;},get submitted(){return submitted;},lose(){loseReply=true;},accepted(){captured=structuredClone(result);},
       security,nativeStatus,sandbox,timers,active:()=>admissionActive,
@@ -759,7 +756,7 @@ async function originalCompletionRecovery(){
       },
       finish(item,options){liveFinish=true;return context.finishClaim(item,options).finally(()=>{liveFinish=false;});},
       effects,events,terminalReady,setBehavior(value){behavior=value;},releaseTerminal(){terminalRelease?.();},afterDelete(fn){afterDelete=fn;},
-      legacy(){delete sandbox.window.MemphisCustodialSecurity;delete sandbox.window.MemphisMobile;},
+      legacy(){delete sandbox.window.MemphisCustodialSecurity;delete sandbox.window.MemphisMobile;restart();},
       async clean(){
        if(admissionActive)await new Promise(resolve=>setTimeout(resolve,0));
        assert.equal(admissionActive,false);assert.equal(timers.size,0);if(originalContext)assert.throws(()=>originalContext.assertCurrent());
@@ -776,7 +773,7 @@ async function originalCompletionRecovery(){
     if(process.argv.includes('--completion-frozen-evidence-only') && !name.startsWith('evidence:')) return;
     if(process.argv.includes('--completion-settlement-status-only') && !name.startsWith('settlement:')) return;
     if(process.argv.includes('--original-completion-recovery-only') && /^(await|evidence|settlement|owner-event):/.test(name)) return;
-    try{await fn();passed.push(name);}catch(e){failures.push({name,error:e.message});}
+    try{await fn();passed.push(name);}catch(e){failures.push({name,error:e.stack||e.message});}
   }
   await test('finish-original: mutable item before FIFO is refused without deleting successor',async()=>{
     const f=fixture(),item=await f.c.claimNextAction();const foreign=structuredClone(f.records.get(1));foreign.id=2;
@@ -860,7 +857,7 @@ async function originalCompletionRecovery(){
     assert.equal(f.events[0].active,true);assert.equal(f.events[0].contextCode,null);await f.clean();
     const legacy=fixture();legacy.legacy();const webItem=await legacy.c.claimNextAction();
     assert.equal(await legacy.finish(webItem,{succeeded:true,result:legacy.result}),true);
-    assert.equal(legacy.records.size,0);assert.equal(legacy.sessions.size,0);assert.equal(legacy.drafts.size,1);await legacy.clean();
+    assert.equal(legacy.records.size,0);assert.equal([...legacy.sessions.keys()].some(key=>key.startsWith('session:')),false);assert.equal(legacy.drafts.size,1);await legacy.clean();
   });
   await test('finish-original: original terminal reconciliation retains full payload without local acceptance',async()=>{
     const f=fixture(),item=await f.c.claimNextAction(),payload=JSON.stringify(item.payload),local=JSON.stringify([...f.sessions]);
@@ -893,7 +890,7 @@ async function originalCompletionRecovery(){
   await test('owner-event: withdrawn native generation before completion lookup cannot delete original',async()=>{
     const f=fixture(),item=await f.c.claimNextAction(),original=JSON.stringify(f.records.get(1)),session=JSON.stringify([...f.sessions]);
     f.beforeLookup(()=>f.rotate());
-    await assert.rejects(()=>f.c.finishClaim(item,{succeeded:true,result:f.result}),/owner changed|generation changed/);
+    await assert.rejects(()=>f.c.finishClaim(item,{succeeded:true,result:f.result}),{code:'custodial_security_state_unavailable'});
     assert.equal(JSON.stringify(f.records.get(1)),original);assert.equal(JSON.stringify([...f.sessions]),session);
   });
   await test('owner-event: healthy original completion settles and retains separate draft',async()=>{
@@ -916,7 +913,7 @@ async function originalCompletionRecovery(){
   });
   await test('owner-event: generation loss after actual fixture commit stays unknown without compensation',async()=>{
     const f=fixture(),item=await f.c.claimNextAction();f.afterCommit(()=>f.rotate());
-    await assert.rejects(()=>f.c.finishClaim(item,{succeeded:true,result:f.result}),/owner changed|generation changed/);
+    await assert.rejects(()=>f.c.finishClaim(item,{succeeded:true,result:f.result}),{code:'custodial_security_state_unavailable'});
     assert.equal(f.records.size,0,'already committed transaction is not falsely rolled back');
     assert.equal(f.sessions.size,0);assert.equal(f.drafts.size,1,'separate protected draft not deleted by queue settlement');
   });
@@ -1021,24 +1018,20 @@ async function originalCompletionRecovery(){
     limits:'Actual owning queue/session/process source; synthetic IDB, protected generation and native captured receipt/RPC. Not current SQL/principal, native lifecycle, actual browser crash durability or physical proof.'},null,2));
   if(failures.length)process.exitCode=1;
 }
-const implementation=[slice('  function operationIdFor(','  function downgradeTransition('),
-  slice('  function claimNextAction(','  function releaseClaimWithoutAttempt('),
-  slice('  function finishClaim(','  function parseRetryAfter(')].join('\n');
 let clock=1780000000000,checks=0,applied=0;
 const records=new Map();
-const context=vm.createContext({CONFIG:{STORE_NAME:'actions',MAX_RETRIES:50,LEASE_MS:60000,SCHEMA_VERSION:6,
+const context=createScanOwnerVm(source,['claimNextAction','finishClaim'],{CONFIG:{STORE_NAME:'actions',MAX_RETRIES:50,LEASE_MS:60000,SCHEMA_VERSION:6,
   REQUIRED_SCAN_CONTRACT_VERSION:'scan.v4.snapshot-bound-authority'},now:()=>clock,safeText:x=>String(x??'').trim(),
   isUuid:x=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x),
   crypto:{randomUUID},exactSessionForPayload:()=>null,
   isTerminalReconciliation:()=>false,applyProcessResult:()=>{applied++;},
-  mutateProtectedQueue:operation=>operation({generation:4}),
   state:{workerId:'synthetic-worker',db:{transaction(){let request;const tx={};
+    tx.abort=()=>queueMicrotask(()=>tx.onabort?.({target:tx}));
     tx.objectStore=()=>({get:id=>(request={result:structuredClone(records.get(id))}),
       getAll:()=>(request={result:[...records.values()].map(x=>structuredClone(x))}),
       put:row=>records.set(row.id,structuredClone(row)),delete:id=>records.delete(id)});
-    queueMicrotask(()=>{request.onsuccess();tx.oncomplete();});return tx;}}},
+    queueMicrotask(()=>{request.onsuccess({target:request});tx.oncomplete({target:tx});});return tx;}}},
   Math:Object.assign(Object.create(Math),{random:()=>0})});
-vm.runInContext(implementation,context);
 const original={id:1,type:'commit_workflow',operation_id:randomUUID(),client_id:randomUUID(),
   semantic_fingerprint:'b'.repeat(64),payload:{p_client_session_id:randomUUID(),p_device_id:'SYNTHETIC_PHONE',
     p_response_json:{work_result:'check_only',services_performed:[]}},created_at:clock,state:'pending'};

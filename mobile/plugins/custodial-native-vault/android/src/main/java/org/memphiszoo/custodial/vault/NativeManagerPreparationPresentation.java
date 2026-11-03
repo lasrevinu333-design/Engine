@@ -254,6 +254,19 @@ final class NativeManagerPreparationPresentation {
         catch(Exception malformed){throw invalidEnrollmentSeparationResult();}
     }
 
+    static String enrollmentPartitionPrepared(JSONObject result)throws VaultFailure {
+        try{
+            if(result==null||result.getClass()!=JSONObject.class||result.length()!=15
+                ||!"custodial.native-original-enrollment-successor-observation.v2".equals(result.get("schema"))
+                ||!Boolean.TRUE.equals(result.get("restart_required")))throw invalidEnrollmentSeparationResult();
+            String partition=result.getString("next_enrollment_partition");if(!UUID.matcher(partition).matches())throw invalidEnrollmentSeparationResult();
+            var legacy=new JSONObject(result.toString());legacy.remove("restart_required");legacy.remove("next_enrollment_partition");
+            legacy.put("schema","custodial.native-original-enrollment-successor-observation.v1");enrollmentSeparationObserved(legacy);
+            return "Original encrypted work and keys are retained. Restart Custodial before the next enrollment. "
+                +"Use returned-phone maintenance to verify the retained originals and record the small preservation receipt, then change the assignment. "
+                +"This does not submit or complete cleaning work.";
+        }catch(VaultFailure e){throw e;}catch(Exception e){throw invalidEnrollmentSeparationResult();}
+    }
     static String enrollmentSeparationUnknown() {
         return "Enrollment separation outcome is unconfirmed. Preserve all original work and keys and use retained local finalization status only. "
             +"Do not repeat separation or retry a write. No work acceptance, resend, replay, repeat finalization, key removal or phone release is authorized.";

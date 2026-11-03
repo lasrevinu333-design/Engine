@@ -1,4 +1,5 @@
-const { test, expect } = require('@playwright/test');
+const {currentLeadershipSession}=require('./helpers/current-leadership-session.cjs');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
 test('reassignment confirmation names pending work and prior-employee offline authority', async ({ page }) => {
   const currentEmployee = '00000000-0000-4000-8000-000000000201';
@@ -23,9 +24,15 @@ test('reassignment confirmation names pending work and prior-employee offline au
         offline_authority_expires_at: '2099-08-14T12:00:00.000Z',
       }],
     };
-    window.MemphisMobile = { requestEnvelope: async () => data };
+    window.__syntheticPhoneAssignmentData=data;
   }, { current: currentEmployee, next: nextEmployee, prior: priorEmployee });
 
+  await page.route('https://memphis-zoo-mcp.onrender.com/**',async route=>{
+    const path=new URL(route.request().url()).pathname;
+    if(path==='/custodial-leadership-api/session')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(currentLeadershipSession())});
+    expect(path).toBe('/leadership-api/phone-assignments');expect(route.request().method()).toBe('GET');
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,data:await page.evaluate(()=>window.__syntheticPhoneAssignmentData)})});
+  });
   await page.goto('/phone-assignments.html');
   await expect(page.locator('#phone-list .phoneRow')).toHaveCount(1);
   await expect(page.locator('.phoneOperationalWarning')).toContainText('2 pending phone items for Departed Prior Employee at assignment 7');

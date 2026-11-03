@@ -156,7 +156,7 @@ export function createScheduleHomeConvergence({identity,storage,mutate,captureMu
       if(storage.getItem(key(id))!==encoded)throw Error('schedule cache readback failed');
       if(observedAvailability)api.writeAvailability(storage,id.protectedBinding,day.service_date,'AVAILABLE',observedAvailability);
     });}catch(error){
-      if(error?.code?.startsWith('schedule_'))throw error;
+      if(error?.code?.startsWith('schedule_')&&error.code!=='schedule_cache_storage_unavailable')throw error;
       // Keep a validated terminal in this live page even if storage fails.
       // It is explicitly unconfirmed, never an applied receipt.
       assertCurrent();row.cache_unconfirmed=true;

@@ -8,9 +8,10 @@ const root=new URL('..',import.meta.url);
 const html=readFileSync(new URL('dashboard-map.html',root),'utf8');
 const authSource=readFileSync(new URL('memphis-auth.js',root),'utf8');
 const base='https://lasrevinu333-design.github.io/Engine/';
-const principal={role:'ops_manager',manager_id:'fixture-manager',credential_id:'fixture-credential',
-  device_id:'KIOSK_08',token:'SYNTHETIC-NOT-A-CREDENTIAL',access_level:'full_access',
-  expires_at:'2099-01-01T00:00:00.000Z'};
+const principal={role:'ops_manager',manager_id:'11000000-0000-4000-8000-000000000001',credential_id:'12000000-0000-4000-8000-000000000001',
+  device_id:'KIOSK_08',token:'SYNTHETIC-NOT-A-CREDENTIAL',access_level:'full_access',read_only:false,owner:false,custodial_management_admin:true,auth_mode:'custodial_leadership_pin',
+  expires_at:'2099-01-01T00:00:00.000Z',roles:['CUSTODIAL_MANAGER'],
+  permissions:{schema:'custodial.manager-permissions.v1',read:true,write:true,owner:false,custodialManagementAdmin:true,policyVersion:1}};
 const summary={meta:{contracts:{dashboard:'dashboard.v1'},generated_at:'2026-10-04T18:00:00.000Z'},restrooms:[],exhibits:[]};
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 let checks=0;
@@ -44,9 +45,9 @@ function fixture({query='?hub=manager&device=kiosk_08&origin=annie',session=prin
   const fetchImpl=async(url,options)=>{
     calls.push({url:String(url),method:options.method,credentials:options.credentials,headers:{...options.headers}});
     const parsed=new URL(url);
-    if(parsed.pathname==='/auth-api/session')return{ok:authStatus===200,status:authStatus,
-      async json(){return authStatus===200?{ok:true,data:{session:{...session},trusted_device:{device_id:session.device_id}}}:{ok:false,error:'Fixture denied'};}};
-    if(parsed.pathname==='/auth-api/ops/logout')return{ok:true,status:200};
+    if(parsed.pathname==='/custodial-leadership-api/session')return{ok:authStatus===200,status:authStatus,
+      async json(){return authStatus===200?{ok:true,enrolled:true,csrfToken:'fixture-csrf-only',session:{identityAssurance:'SELF_ASSERTED_NAME',registrationId:principal.credential_id,claimedAccount:{accountId:'13000000-0000-4000-8000-000000000001'},cohort:{principalId:principal.manager_id,policyVersion:1,permissions:['custodialManagementAdmin']},managerSession:structuredClone(session)}}:{ok:false,error:'Fixture denied'};}};
+    if(parsed.pathname==='/custodial-leadership-api/revoke')return{ok:true,status:200,json:async()=>({ok:true,revoked:true})};
     assert.equal(parsed.href,'https://memphis-zoo-mcp.onrender.com/dashboard-api/summary');
     return{ok:summaryStatus===200,status:summaryStatus,async json(){return {ok:summaryStatus===200,data:summary};}};
   };
@@ -73,13 +74,13 @@ await test('map outgoing links retain manager/device/Annie context even when sto
   }
   assert.equal(f.counts().accepted,1);f.close();
 });
-await test('real shared auth obtains the trusted full manager session and sends its exact summary headers',async()=>{
+await test('real shared auth obtains the shared-PIN cohort session and sends its exact summary headers',async()=>{
   const f=fixture();assert.equal(await f.controller.init(),true);await flush();
   assert.equal(f.calls.length,2);
-  assert.equal(f.calls[0].url,'https://memphis-zoo-mcp.onrender.com/auth-api/session?access_level=full_access');
-  assert.equal(f.calls[0].credentials,'include');assert.equal(f.calls[0].headers['X-Device-Id'],'KIOSK_08');
+  assert.equal(f.calls[0].url,'https://memphis-zoo-mcp.onrender.com/custodial-leadership-api/session');
+  assert.equal(f.calls[0].credentials,'include');assert.equal(f.calls[0].headers['X-Device-Id'],undefined);
   assert.equal(f.calls[1].headers.Authorization,`Bearer ${principal.token}`);
-  assert.equal(f.calls[1].headers['X-Device-Id'],principal.device_id);
+  assert.equal(f.calls[1].headers['X-Device-Id'],principal.device_id);assert.equal(f.calls[1].headers['X-CSRF-Token'],'fixture-csrf-only');
   assert.equal(f.calls[1].method,'GET');assert.equal(f.counts().accepted,1);f.close();
 });
 await test('canonical authenticated device wins over stale query; non-context parameters never propagate',async()=>{
@@ -114,7 +115,7 @@ await test('summary denial cannot become cleaning authority despite successful s
 await test('real shared-auth logout invalidates page and stops its owned listeners/timers',async()=>{
   const f=fixture();assert.equal(await f.controller.init(),true);await flush();
   await f.auth.clearSession();assert.equal(f.controller.checkPrincipal(),false);assert.equal(f.section.hidden,true);
-  assert.equal(f.calls.at(-1).url,'https://memphis-zoo-mcp.onrender.com/auth-api/ops/logout');
-  assert.equal(f.calls.at(-1).method,'POST');assert.equal(await f.controller.refresh(),false);f.close();
+  assert.equal(f.calls.at(-1).url,'https://memphis-zoo-mcp.onrender.com/custodial-leadership-api/revoke');
+  assert.equal(f.calls.at(-1).method,'POST');assert.equal(f.calls.at(-1).headers['X-CSRF-Token'],'fixture-csrf-only');assert.equal(await f.controller.refresh(),false);f.close();
 });
 console.log('PASS Dashboard Map connection/shared-auth',checks,'SOURCE_VM_NO_BROWSER_NO_LIVE_AUTH');

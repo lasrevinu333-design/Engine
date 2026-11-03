@@ -1,3 +1,6 @@
+import { attendanceFacts } from '../custodial/home-facts.js';
+import { installManagerWeather } from './home-weather.js';
+import { createManagerHomeContext } from './home-context.js';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
@@ -22,6 +25,10 @@ let manager = {};
 let currentSession = null;
 let statusTimer = null;
 let refreshGeneration = 0;
+const sessionBinding=s=>s&&JSON.stringify([s.role,s.manager_id,s.credential_id,s.device_id,s.token,s.expires_at,s.auth_mode]);
+const currentHome=()=>!document.hidden&&!els.hub.hidden&&!!currentSession&&sessionBinding(currentSession)===sessionBinding(window.MemphisAuth?.readSession?.())&&Date.parse(currentSession.expires_at)>Date.now();
+const managerWeather=installManagerWeather({document,isVisible:currentHome});
+const context=createManagerHomeContext({document,request,isCurrent:currentHome});
 
 async function hideSystemStatusBar() {
   try { await StatusBar.hide(); } catch {}
@@ -82,7 +89,7 @@ function renderAuthenticated(session, person = {}) {
   els.name.textContent = displayName;
   els.title.textContent = title;
   const roles = Array.isArray(session.roles) ? session.roles : [];
-  const custodialAdmin = roles.includes('CUSTODIAL_MANAGER');
+  const custodialAdmin = roles.includes('CUSTODIAL_MANAGER')||window.MemphisAuth?.isCustodialManagementAdmin?.(session)===true;
   if (els.insights) els.insights.hidden = !custodialAdmin;
   for (const tile of [els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
 }
@@ -90,6 +97,7 @@ function renderAuthenticated(session, person = {}) {
 function renderEnrollment(message = '') {
   manager = {};
   currentSession = null;
+  refreshGeneration+=1;managerWeather.stop();context.clear();
   window.MemphisMobile?.adoptSession?.(null);
   els.boot.hidden = true;
   els.enrollment.hidden = false;
@@ -109,15 +117,18 @@ function keepCurrentAccessDuringFailure(error) {
 }
 
 async function request(path, { method = 'GET', body = null } = {}) {
+  const original=sessionBinding(currentSession);
   let response;
   try {
+    const headers=await window.MemphisAuth.opsManagerAuthHeaders();
+    if(original!==sessionBinding(currentSession)||original!==sessionBinding(window.MemphisAuth.readSession()))throw new Error('Manager access changed.');
     response = await fetch(`${API}${path}`, {
       method,
       cache: 'no-store',
       credentials: 'include',
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
-        'X-Device-Id': deviceId(),
+        ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -128,6 +139,7 @@ async function request(path, { method = 'GET', body = null } = {}) {
     throw error;
   }
   const payload = await response.json().catch(() => null);
+  if(original!==sessionBinding(currentSession)||original!==sessionBinding(window.MemphisAuth.readSession()))throw new Error('Manager access changed.');
   if (!response.ok || !payload?.ok) {
     const error = new Error(payload?.error || `Request failed (${response.status}).`);
     error.status = response.status;
@@ -148,7 +160,7 @@ function nonNegativeInteger(value) {
 function sourceTime(value) {
   const parsed = Date.parse(String(value || ''));
   if (!Number.isFinite(parsed)) return '';
-  return new Date(parsed).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return new Date(parsed).toLocaleString([], { timeZone:'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 function setTodayValue(element, value, state = 'current') {
@@ -162,28 +174,22 @@ function renderOperationalSummary(data) {
   setTodayValue(els.todayOverdue, snapshot.overdue_locations);
   setTodayValue(els.todayDueSoon, snapshot.due_soon_locations);
   setTodayValue(els.todayInProgress, snapshot.in_progress_locations);
-  setTodayValue(els.todayOpenProblems, snapshot.open_ticket_count);
   const at = sourceTime(snapshot.snapshot_at);
   els.todaySource.textContent = at ? `Operational snapshot ${at}` : 'Operational snapshot time unavailable.';
 }
 
 function renderOperationalSummaryUnavailable() {
-  for (const element of [els.todayOverdue, els.todayDueSoon, els.todayInProgress, els.todayOpenProblems]) {
+  for (const element of [els.todayOverdue, els.todayDueSoon, els.todayInProgress]) {
     setTodayValue(element, null);
   }
   els.todaySource.textContent = 'Operational summary unavailable.';
 }
 
 function renderGuestAttendance(data) {
-  const stale = data?.stale === true;
-  setTodayValue(els.todayGuestCount, data?.attendance, stale ? 'stale' : 'current');
-  const at = sourceTime(data?.source_timestamp || data?.fetched_at || data?.updated_at);
-  const planned = nonNegativeInteger(data?.planned);
-  const parts = [stale ? 'Stale gate feed' : 'Gate feed'];
-  if (at) parts.push(`source ${at}`);
-  else parts.push('source time unavailable');
-  if (planned != null) parts.push(`planned ${planned}`);
-  els.todayGuestMeta.textContent = parts.join(' · ');
+  const facts=attendanceFacts(data?.available===false ? null : data);
+  els.todayGuestCount.textContent=facts.value;
+  els.todayGuestCount.dataset.state=facts.value==='Unavailable'?'unavailable':facts.stale?'stale':'current';
+  els.todayGuestMeta.textContent=['Cumulative guest entries',facts.detail,facts.comparison].filter(Boolean).join(' · ');
 }
 
 function renderGuestAttendanceUnavailable() {
@@ -205,14 +211,16 @@ async function refreshOperationalTruth(generation) {
   const attendance = request('/dashboard-api/current-attendance')
     .then((data) => { if (generation === refreshGeneration) renderGuestAttendance(data); })
     .catch(() => { if (generation === refreshGeneration) renderGuestAttendanceUnavailable(); });
-  await Promise.allSettled([summary, attendance]);
+  await Promise.allSettled([summary, attendance, context.refresh(), managerWeather.start()]);
 }
 
 async function refresh({ quiet = false } = {}) {
   const generation = ++refreshGeneration;
   if (!quiet && !currentSession) showBoot();
   try {
-    const data = await request('/auth-api/session?access_level=full_access');
+    const session=await window.MemphisAuth?.requireOpsManagerSession?.({forceRefresh:true,redirect:false,interactive:false,throwOnFailure:true});
+    if(!session)throw Object.assign(new Error('Leadership browser enrollment is required.'),{status:401});
+    const data={session};
     if (generation !== refreshGeneration) return false;
     adopt(data);
     await refreshOperationalTruth(generation);
@@ -231,33 +239,6 @@ async function refresh({ quiet = false } = {}) {
   }
 }
 
-async function enroll(event) {
-  event.preventDefault();
-  const code = String(els.code.value || '').replace(/[\s-]+/g, '');
-  if (!/^\d{8}$/.test(code)) return setEnrollStatus('Enter the eight-digit personal manager code.', true);
-  setEnrollStatus('Enrolling this phone…');
-  try {
-    const data = await request('/auth-api/ops/manager-codes/consume', {
-      method: 'POST',
-      body: {
-        manager_code: code,
-        device_id: deviceId(),
-        device_label: String(els.label.value || '').trim() || `${navigator.platform || 'Phone'} · Memphis Zoo Ops`,
-        access_level: 'full_access',
-      },
-    });
-    adopt(data);
-    const generation = ++refreshGeneration;
-    await refreshOperationalTruth(generation);
-    await installNotificationRouting();
-    void ensurePushRegistration({ requestPermission: true }).then((result) => {
-      if (result?.receive === 'granted') setHubStatus('Phone enrolled. Message notifications are enabled.', 'ok');
-    }).catch((error) => setHubStatus(`Phone enrolled. Notifications can be enabled later: ${error.message}`));
-    els.code.value = '';
-    setEnrollStatus('');
-  } catch (error) { setEnrollStatus(error.message, true); }
-}
-
 function setEnrollStatus(text, error = false) {
   els.enrollStatus.textContent = text || '';
   els.enrollStatus.className = `status${error ? ' error' : ''}`;
@@ -266,19 +247,18 @@ function setEnrollStatus(text, error = false) {
 async function logout() {
   try {
     await unregisterPushNotifications();
-    await request('/auth-api/ops/logout', { method: 'POST' });
+    await window.MemphisAuth.clearSession();
   } catch (error) {
     setHubStatus(`Could not remove this phone. Phone access was kept. ${error.message || ''}`.trim(), 'error');
     return false;
   }
-  renderEnrollment('This phone has been removed. A new personal code is required to enroll it again.');
+  renderEnrollment('This browser enrollment has been removed. Enroll again through the leadership entry.');
   return true;
 }
 
-els.form.addEventListener('submit', enroll);
 els.bootRetry.addEventListener('click', () => { showBoot('Trying again…'); void refresh(); });
 els.refresh.addEventListener('click', () => refresh().catch((error) => setHubStatus(error.message, 'error')));
-els.logout.addEventListener('click', () => { if (confirm('Remove this phone from your Memphis Zoo Ops account? You will need a new personal code to use it again.')) void logout(); });
+els.logout.addEventListener('click', () => { if (confirm('Remove leadership enrollment from this browser? Manager access will stop on this browser. You will need the current shared PIN to enroll again. Employee saved work will not be erased.')) void logout(); });
 void Network.addListener('networkStatusChange', ({ connected }) => {
   document.getElementById('offline-banner')?.remove();
   if (!connected) {
@@ -295,7 +275,8 @@ void App.addListener('resume', () => {
   void hideSystemStatusBar();
   void refresh({ quiet: Boolean(currentSession) });
 });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) void hideSystemStatusBar(); });
+document.addEventListener('visibilitychange', () => { if(document.hidden){managerWeather.stop({clear:false});context.clear();refreshGeneration+=1;}else{void hideSystemStatusBar();if(currentSession)void refresh({quiet:true});} });
+window.addEventListener('pagehide',()=>{managerWeather.stop();context.clear();refreshGeneration+=1;clearTimeout(statusTimer);});
 void (async () => {
   await hideSystemStatusBar();
   showBoot();

@@ -157,10 +157,65 @@ public final class NativeOriginalInventoryFinalizationIntentDataTest {
         System.arraycopy(raw,offset+4+length,forged,offset+4+name.length,raw.length-offset-4-length);
         snapshot(secret.fixed,"terminal",forged);denied(secret);
     }
+    private static Fixture durable(boolean legacy)throws Exception {
+        Fixture f=new Fixture();String parent="55555555-5555-4555-8555-555555555555",approval="66666666-6666-4666-8666-666666666666";
+        var command=new JSONObject().put("schema","custodial.original-inventory-separation-request.v1").put("request_id",OP)
+            .put("native_request_id",parent).put("expected_review_sha256","a".repeat(64)).put("expected_inventory_manifest_sha256","a".repeat(64))
+            .put("expected_registration_receipt_sha256","a".repeat(64)).put("expected_separation_authority_revision","1")
+            .put("expected_manager_id",approval).put("expected_manager_credential_id",ENROLL).put("expected_manager_device_id","synthetic-manager")
+            .put("decision","AUTHORIZE_EXACT_ORIGINAL_RETAINED_INVENTORY_SEPARATION")
+            .put("manager_confirmation","CONFIRM_LOGICAL_SEPARATION_KEEP_ALL_ORIGINAL_WORK_AND_KEYS");
+        var limits=new JSONObject().put("inventory_acknowledged",true).put("finalizer_allowed",true).put("work_accepted",false)
+            .put("replay_allowed",false).put("key_removal",false).put("phone_released",false);
+        var receipt=new JSONObject().put("schema","custodial.original-inventory-separation-receipt.v1")
+            .put("state","INVENTORY_ACK_RECORDED_LOGICAL_SEPARATION_ONLY").put("approval_id",approval).put("original_request",command)
+            .put("original_request_sha256","a".repeat(64)).put("original_target",new JSONObject(f.target.toString()))
+            .put("issuer",new JSONObject().put("manager_id",approval).put("manager_credential_id",ENROLL).put("manager_device_id","synthetic-manager"))
+            .put("inventory_manifest_sha256","a".repeat(64)).put("registration_receipt_sha256","a".repeat(64))
+            .put("approved_at","2026-11-01T00:00:00.000000Z").put("expires_at","2026-11-01T00:05:00.000000Z")
+            .put("receipt_sha256","a".repeat(64)).put("limits",limits).put("purpose_admission_id","exact-original-retained-inventory-separation.v1").put("retry_safe",false);
+        f.fixed.put("schema","custodial.original-inventory-enrollment-finalization-intent.v3")
+            .put("durable_command_purpose","COMPLETE_ONE_ORIGINAL_ENROLLMENT_SEPARATION_KEEP_ALL_ORIGINAL_WORK_AND_KEYS")
+            .put("storage_partition_id",ENROLL).put("storage_predecessor_realm","legacy").put("storage_predecessor_sha256","")
+            .put("inventory_native_request_id",parent).put("manager_approval_id",approval)
+            .put("manager_approval_response_base64",NativeRetainedAttempt.encodeBase64(new JSONObject().put("ok",true).put("data",receipt).toString().getBytes(StandardCharsets.UTF_8)))
+            .put("authorized_at","2026-11-01T00:00:00.000000Z");
+        if(legacy){
+            var old=f.original;var original=new VaultSnapshot(old.revision,old.phase,old.secretKind,old.secret,old.operationId,old.deviceId,old.flow,
+                old.expiresAtMillis,new InstallationBinding(old.deviceId,"legacy-seal","2026-01-01T00:00:00.000Z",true,""),EnrollmentMetadata.empty(),"","",false,"");
+            var terminal=original.next(VaultPhase.EMPTY,SecretKind.NONE,null,"",original.deviceId,"",0,null,EnrollmentMetadata.empty(),OP,"",false,"");
+            snapshot(f.fixed,"original",CODEC.encode(original));snapshot(f.fixed,"terminal",CODEC.encode(terminal));
+        }
+        return f;
+    }
+    private static void durableCommands()throws Exception {
+        for(boolean legacy:new boolean[]{false,true}){
+            Fixture f=durable(legacy);byte[] before=f.bytes();
+            try(var data=NativeOriginalInventoryFinalizationIntentData.decode(before)){
+                check(data.durableCommand&&data.storagePartitionId.equals(ENROLL)&&data.storagePredecessorRealm.equals("legacy"));
+                check(data.employeeId.equals(EMPLOYEE)&&data.credentialId.equals(CREDENTIAL));
+                check(data.originalSnapshotForOwningRead().metadata.employeeId.equals(legacy?"":EMPLOYEE));
+                check(Arrays.equals(before,f.bytes()));
+            }
+        }
+        for(String key:new String[]{"storage_partition_id","storage_predecessor_realm","inventory_native_request_id","manager_approval_id"}){
+            Fixture f=durable(false);f.fixed.put(key,"foreign");denied(f);
+        }
+        for(String at:new String[]{"2026-10-31T23:59:59.999999Z","2026-11-01T00:05:00.000000Z","invalid"}){
+            Fixture f=durable(false);f.fixed.put("authorized_at",at);denied(f);
+        }
+        Fixture purpose=durable(false);purpose.fixed.put("durable_command_purpose","new assignment");denied(purpose);
+        Fixture digest=durable(false);digest.fixed.put("storage_predecessor_sha256","a".repeat(64));denied(digest);
+        Fixture v2=durable(true);v2.fixed.put("schema","custodial.original-inventory-enrollment-finalization-intent.v2");denied(v2);
+        Fixture notLegacy=durable(false);var old=notLegacy.original;
+        var empty=new VaultSnapshot(old.revision,old.phase,old.secretKind,old.secret,old.operationId,old.deviceId,old.flow,old.expiresAtMillis,old.installation,EnrollmentMetadata.empty(),"","",false,"");
+        snapshot(notLegacy.fixed,"original",CODEC.encode(empty));snapshot(notLegacy.fixed,"terminal",CODEC.encode(empty.next(VaultPhase.EMPTY,SecretKind.NONE,null,"",empty.deviceId,"",0,null,EnrollmentMetadata.empty(),OP,"",false,"")));denied(notLegacy);
+        System.out.println("DATA_ONLY_V3_COMMAND_ORIGINAL_ATTRIBUTION_AND_BOUNDARIES_PASS; no effect authority minted");
+    }
     public static void main(String[] args)throws Exception {
         if(args.length!=1||!args[0].startsWith("--case="))throw new IllegalArgumentException("One new decoder DATA case only");
         String name=args[0].substring(7);
-        switch(name){case "roundtrip"->roundtrip();case "structure"->structure();case "parser"->parser();
+        switch(name){case "durable"->durableCommands();case "roundtrip"->roundtrip();case "structure"->structure();case "parser"->parser();
             case "integrity"->integrity();case "bindings"->bindings();case "terminal"->terminal();
             default->throw new IllegalArgumentException("Unknown new DATA case");}
         System.out.println("PASS_NEW_FINALIZATION_INTENT_DATA "+name);

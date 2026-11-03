@@ -1,0 +1,36 @@
+{
+  "scope": "PRIVATE_HEADLESS_FIXTURE_BROWSER_ONLY",
+  "productionWritten": false,
+  "genuineManagerBrowser": false,
+  "SQLExecuted": false,
+  "deviceProof": false,
+  "checks": [],
+  "source_head": "6dfd5f4 plus uncommitted frontend delta",
+  "fixtureTransformations": [
+    "Read-only display uses exact saved revision5 CURRENT_MANAGER_SNAPSHOT unchanged.",
+    "PTO lifecycle fixture rewinds only revision metadata to4 and removes second accepted PTO exception/target from revision5 snapshot for entry; this is not an actual pre-accept SQL snapshot.",
+    "PREPARED response is exact saved native response; ACCEPTED GET envelope is assembled from that response and exact accepted receipt. Unknown transport failure is synthetic."
+  ],
+  "sources": {
+    "schedule-weekly.js": {
+      "sha256": "2f6b7e18a8b70022ce226e0d69f602a6da94c4c0dd85c37a9deb7745492939cf",
+      "bytes": 122187
+    },
+    "memphis-scheduler-actions.js": {
+      "sha256": "0d03a4e45cf5032d225302c529a27c203bdf49b63d4f85c2a2da94b1def9d11a",
+      "bytes": 52056
+    },
+    "memphis-approved-schedule.js": {
+      "sha256": "9e6e9de95b072ff9abd0d05c2479f25e14000ab8f71d81d55963a0a1b471fdc4",
+      "bytes": 21100
+    },
+    "schedule-weekly.html": {
+      "sha256": "e36efdfb1a1fae708a22a9abccfd37981029da003eeb28ae6be2a94707630364",
+      "bytes": 11883
+    }
+  },
+  "status": "FAIL",
+  "error": "Error: The persisted staffing preview lacks its bound staged facts.\n    at Object.validateStaffingPreview (evalmachine.<anonymous>:154:9)\n    at /mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/manager-native-fixture-browser.cjs:66:35\n    at Object.<anonymous> (/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/manager-native-fixture-browser.cjs:101:3)\n    at Module._compile (node:internal/modules/cjs/loader:1781:14)\n    at Object..js (node:internal/modules/cjs/loader:1913:10)\n    at Module.load (node:internal/modules/cjs/loader:1505:32)\n    at Function._load (node:internal/modules/cjs/loader:1309:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)\n    at node:internal/main/run_main_module:36:49",
+  "browserClosed": true,
+  "calls": []
+}

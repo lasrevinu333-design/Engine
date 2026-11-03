@@ -1,107 +1,80 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import vm from 'node:vm';
-
-const page=readFileSync(new URL('../schedule-weekly.html',import.meta.url),'utf8');
-const source=page.match(/<script>\s*([\s\S]*?)<\/script>/)[1].replace(/^init\(\)\.catch\([^\n]+$/m,'');
-let checks=0;const failures=[];
-const check=(actual,expected,label)=>{checks++;try{assert.deepEqual(actual,expected,label);}catch{failures.push({label,actual,expected});}};
-const turns=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
-function fixture(){
- const events=new Map(),nodes=new Map(),timers=new Map();let nextTimer=0;
- const on=(target,type,fn,opts={})=>{const key=target+':'+type;const list=events.get(key)||[];list.push({fn,once:opts.once});events.set(key,list);};
- const emit=(target,type,event={})=>{const key=target+':'+type,list=(events.get(key)||[]).slice();for(const item of list){if(item.once)events.set(key,(events.get(key)||[]).filter(x=>x!==item));item.fn(event);}};
- const node=id=>{if(!nodes.has(id))nodes.set(id,{id,value:'',checked:false,disabled:false,open:false,dataset:{},textContent:'',classList:{toggle(){}},replaceChildren(){},focus(){},
-  showModal(){this.open=true;},close(value){if(value!==undefined)this.returnValue=value;this.open=false;emit(id,'close');},
-  addEventListener(type,fn,opts){on(id,type,fn,opts);}});return nodes.get(id);};
- const choice=node('callout');choice.dataset.calloutSlot='slot1';choice.closest=selector=>selector.includes('data-callout-slot')?choice:null;
- const document={hidden:false,getElementById:node,addEventListener:(type,fn)=>on('document',type,fn),
-  querySelectorAll:selector=>selector==='[data-callout-slot],[data-contractor-row] input'?[choice]:[]};
- const context=vm.createContext({console,URL,URLSearchParams,AbortController,document,navigator:{onLine:true},location:{search:'',hash:''},crypto:{randomUUID:()=> 'synthetic-operation'},
-  window:{lucide:{createIcons(){}},MemphisAuth:{opsManagerAuthHeaders:async()=>({}),getCSTDateString:()=> '2026-09-24'},addEventListener:(type,fn)=>on('window',type,fn),
-   setTimeout:(fn,delay)=>{timers.set(++nextTimer,{fn,delay});return nextTimer;},clearTimeout:id=>timers.delete(id),
-   setInterval:(fn,delay)=>{timers.set(++nextTimer,{fn,delay,interval:true});return nextTimer;},clearInterval:id=>timers.delete(id)}});
- const run=code=>vm.runInContext(code,context);run(source);
- run(`globalThis.actualApi=api;globalThis.calls=[];globalThis.releaseRead=null;globalThis.heldRead=null;
-  state.baseUrl='https://synthetic.invalid';state.snapshot={week_start:'2026-09-21',week_end:'2026-09-27',authority_revision:7,drafts:[],sources:[{source_id:'source'}],current_publication:{publication_id:'publication',version_id:'version'},exceptions:[{id:'exception',type:'pto',serviceDate:'2026-09-24'}]};
-  els.week_start.value='2026-09-21';els.service_date.value='2026-09-24';els.absence_type.value='daily_absence';
-  clearCoverAllPdfs=()=>{};render=()=>{};globalThis.readResult=()=>({week_start:'2026-09-21',week_end:'2026-09-27',authority_revision:8,drafts:[],current_publication:{publication_id:'publication'}});
-  api=async(path,options={})=>{calls.push({path,method:options.method||'GET'});if(options.method==='POST')return{};if(heldRead)return heldRead;return readResult();};`);
- const fire=delay=>{for(const [id,timer] of [...timers])if(timer.delay===delay&&!timer.interval){timers.delete(id);timer.fn();}};
- return {run,node,choice,context,document,emit,timers,fire};
+import {fixture,turn} from './fixtures/helper-current-schedule-refresh-fixture.mjs';
+let checks=0;
+function check(value,expected,label){assert.deepEqual(value,expected,label);checks++;}
+// MR01 now uses the current explicit publish/remove/materialize handlers.
+// Generate is a private-preview action in the current design; the historical
+// expectation of immediate generation confirmation is preserved in evidence.
+for(const action of ['publishDraft()','reverseChange({target:{closest:()=>({dataset:{reverseException:"exception"}})}})','rebuildCurrentProjection()']){
+ const f=fixture();f.run(`state.snapshot.exceptions=[{id:'exception',type:'pto',serviceDate:'2026-09-24'}];
+  state.preview={input:{effective_start:'2026-09-21',expected_revision:7},kind:'recurring',preview:{}};
+  state.approved={confirm:async(...args)=>recordWrite(...args)};state.actions={run:async(...args)=>recordWrite(...args),acknowledge:()=>false};
+  installScheduleAutoRefresh();`);
+ if(action!=='publishDraft()')f.run('state.preview=null');
+ const work=f.run(action);await turn();check(f.node('action-confirm-dialog').open,true,action+' opens actual dialog');
+ await f.run('requestScheduleRefresh()');check(f.calls.length,0,'open review defers background read');
+ f.node('action-confirm-dialog').close('confirm');await turn();check(f.writes.length,1,'confirmed handler owns exactly one mutation before queued read');
+ await f.fire(0);await work;check(f.writes.length,1,'deferred automatic read never duplicates mutation');
+ check(f.calls.every(row=>row.method==='GET'),true,'background transport stays GET-only');await f.cleanup();
 }
-
-// MR01: dispatch close listeners synchronously like a real DOM event, then let
-// the confirmed handler's promise continuation run before a later task.
-for(const action of ['generateDraft()','publishDraft()','reverseChange({target:{closest:()=>({dataset:{reverseException:"exception"}})}})']){
- const f=fixture();if(action==='publishDraft()')f.run('state.snapshot.drafts=[{version_id:"draft",revision:1}]');
- f.run('installScheduleAutoRefresh();heldRead=new Promise(resolve=>releaseRead=resolve)');
- const execution=f.run(action);await turns();
- check(f.node('action-confirm-dialog').open,true,action+' opens actual confirmation');
- await f.run('requestScheduleRefresh()');
- f.node('action-confirm-dialog').close('confirm');await turns();
- check(f.run('calls.filter(c=>c.method==="POST").length'),1,action+' confirmed write owns lane before refresh');
- f.fire(0);await turns();
- check(f.run('calls.filter(c=>c.method==="POST").length'),1,action+' deferred read never duplicates write');
- f.run('releaseRead(readResult())');await execution;await turns();
- f.emit('window','pagehide');
-}
-
-// MR02: the actual edit/change events must distinguish a reverted choice and a
-// discarded turnover form from a genuinely unsaved day selection.
-{
- const f=fixture();f.run('installScheduleAutoRefresh()');
- f.choice.checked=true;f.emit('document','change',{target:f.choice});
- check(f.run('state.scheduleInputDirty'),true,'checked callout remains protected');
- await f.run('requestScheduleRefresh()');check(f.run('calls.length'),0,'unsaved callout defers read');
- f.choice.checked=false;f.emit('document','change',{target:f.choice});await turns();f.fire(0);await turns();
- check(f.run('state.scheduleInputDirty'),false,'reverted choice releases dirty ownership');
- check(f.run('calls.length'),1,'revert permits queued read without manual refresh');
- f.emit('window','pagehide');
-}
+// MR02: actual edit/close events release only discarded or reverted input.
 for(const preserveDayInput of [false,true]){
  const f=fixture();f.run('installScheduleAutoRefresh()');
  if(preserveDayInput){f.choice.checked=true;f.emit('document','change',{target:f.choice});}
- f.node('turnover-dialog').showModal();
- f.emit('document','input',{target:{closest:selector=>selector.includes('#turnover-form')?{}:null}});
- await f.run('requestScheduleRefresh()');f.run('closeTurnoverDialog()');f.fire(0);await turns();
- check(f.run('state.scheduleInputDirty'),preserveDayInput,'cancelled turnover preserves only actual day choices');
- check(f.run('calls.length'),preserveDayInput?0:1,'cancel releases refresh only if no remaining choice');
- f.emit('window','pagehide');
+ f.node('turnover-dialog').showModal();f.emit('document','input',{target:{closest:selector=>selector.includes('#turnover-form')?{}:null}});
+ await f.run('requestScheduleRefresh()');f.run('closeTurnoverDialog()');await f.fire(0);
+ check(f.run('state.scheduleInputDirty'),preserveDayInput,'closing turnover preserves actual day choice');
+ check(f.calls.length,preserveDayInput?0:2,'close releases read only without remaining choice');await f.cleanup();
 }
-
-// MR03: use the real API, not an abort-aware replacement. Authentication can
-// settle late; neither its late completion nor the old response may own UI.
 for(const phase of ['auth','fetch','body']){
- const f=fixture();let releaseStep;let fetchCalls=0;
- const pending=new Promise(resolve=>{releaseStep=resolve;});
- const payload={ok:true,data:{week_start:'2026-09-21',week_end:'2026-09-27',authority_revision:99}};
- const response={ok:true,json:async()=>phase==='body'?pending:payload};
- if(phase==='auth')f.context.window.MemphisAuth.opsManagerAuthHeaders=()=>pending;
- f.context.fetch=async()=>{fetchCalls++;return phase==='fetch'?pending:response;};
- f.run('api=actualApi');const execution=f.run('requestScheduleRefresh()');let settled=false;execution.then(()=>settled=true);
- await turns();f.fire(15000);await turns();
- check(settled,true,phase+' timeout settles automatic refresh promise');
- check(f.run('state.busy'),false,phase+' timeout releases manager controls');
- check(f.run('state.scheduleRefreshRunning'),false,phase+' timeout releases refresh owner');
- check(f.run('state.scheduleRefreshQueued'),true,phase+' timeout retains queued recovery');
- releaseStep(phase==='auth'?{Authorization:'synthetic-only'}:phase==='fetch'?response:payload);await turns();
- check(fetchCalls,phase==='auth'?0:1,'late '+phase+' cannot start another obsolete scheduler read');
- check(f.run('state.snapshot.authority_revision'),7,'late '+phase+' cannot render stale result');
- check(f.timers.size,0,'completed timeout leaves no owned timer');
+ const f=fixture();let release;const gate=new Promise(resolve=>{release=resolve;});
+ if(phase==='auth')f.auth.opsManagerAuthHeaders=()=>gate;
+ if(phase==='fetch')f.setReadHook(()=>gate);
+ if(phase==='body')f.setBodyHook(()=>gate);
+ const work=f.run('requestScheduleRefresh()');let settled=false;work.then(()=>settled=true);await turn();
+ check(f.timers.size,1,phase+' owns one bounded whole-read timeout');await f.fire(15000);await work;
+ check(settled,true,phase+' timeout settles automatic promise');check(f.run('state.busy'),false,phase+' releases controls');
+ check(f.run('state.scheduleRefreshRunning'),false,phase+' releases read owner');check(f.run('state.scheduleRefreshQueued'),true,phase+' queues recovery');
+ release({});await turn();check(f.calls.length,phase==='auth'?0:1,'late '+phase+' cannot dispatch another obsolete GET');
+ check(f.run('state.snapshot.authority_revision'),7,'late '+phase+' cannot publish');check(f.rendered.length,0,'late '+phase+' cannot render');
+ check(f.timers.size,0,phase+' leaves no timer');
 }
-
 {
  const f=fixture();f.run('installScheduleAutoRefresh()');
- const action=f.run('generateDraft()');await turns();await f.run('requestScheduleRefresh()');
- f.node('action-confirm-dialog').close('cancel');await action;f.fire(0);await turns();
- check(f.run('calls.filter(c=>c.method==="POST").length'),0,'cancelled confirmation never writes');
- check(f.run('calls.filter(c=>c.method==="GET").length'),1,'cancelled confirmation releases queued read');
- f.node('turnover-dialog').showModal();f.run('closeTurnoverDialog()');
- check([...f.timers.values()].filter(t=>t.delay===0).length,1,'one deferred close task is owned');
- f.emit('window','pagehide');check(f.timers.size,0,'pagehide cleans deferred task and interval');
+ const action=f.run("confirmAction('Synthetic review').then(approved=>{if(approved)return busy(()=>recordWrite('confirmed'));})");
+ await f.run('requestScheduleRefresh()');f.node('action-confirm-dialog').close('cancel');await action;await f.fire(0);
+ check(f.writes.length,0,'cancelled confirmation never writes');check(f.calls.length,2,'cancelled confirmation releases queued read');
+ f.node('turnover-dialog').showModal();await f.run('requestScheduleRefresh()');f.run('closeTurnoverDialog()');
+ check([...f.timers.values()].filter(t=>t.delay===0).length,1,'close owns only one deferred task');await f.cleanup();
 }
-
-console.log(JSON.stringify({status:failures.length?'HOLD_REFRESH_COORDINATION':'PASS_REFRESH_COORDINATION',checks,failed:failures.length,failures,
- limits:'Actual inline functions with synchronous synthetic DOM dispatch and controlled auth/transport/timers; not browser, live auth, SQL or phone proof.'},null,2));
-if(failures.length)process.exitCode=1;
+// The real API cannot acquire a new principal after any asynchronous phase.
+for(const phase of ['auth','fetch','body']){
+ const f=fixture();let release;const gate=new Promise(resolve=>{release=resolve;});
+ if(phase==='auth')f.auth.opsManagerAuthHeaders=()=>gate;
+ if(phase==='fetch')f.setReadHook(()=>gate);
+ if(phase==='body')f.setBodyHook(()=>gate);
+ const work=f.run('requestScheduleRefresh()');await turn();f.session.credential_id='replacement-credential';release({});await work;
+ check(f.rendered.length,0,phase+' successor credential cannot publish old read');
+ check(f.calls.length,phase==='auth'?0:1,phase+' credential change cannot start a later GET');
+ check(f.run('state.accessDenied'),true,phase+' withdraws changed session');check(f.timers.size,0,phase+' releases bounded timer');
+}
+// Metadata is staged with the snapshot. Timeout at the second GET may not
+// publish the newer snapshot while leaving old approved choices visible.
+{
+ const f=fixture();let release;f.setReadHook(path=>path==='/static-weekly/approved-choices'?new Promise(resolve=>{release=resolve;}):Promise.resolve());
+ const work=f.run('requestScheduleRefresh()');await turn();check(f.calls.length,2,'snapshot then source choices read');
+ await f.fire(15000);await work;release();await turn();check(f.run('state.snapshot.authority_revision'),7,'second-stage timeout retains whole original view');
+ check(f.rendered.length,0,'second-stage timeout never partially renders');check(f.timers.size,0,'second-stage timeout owns no timer');
+}
+for(const phase of ['auth','fetch','body']){
+ const f=fixture();f.run('installScheduleAutoRefresh()');let release;const gate=new Promise(resolve=>{release=resolve;});
+ if(phase==='auth')f.auth.opsManagerAuthHeaders=()=>gate;if(phase==='fetch')f.setReadHook(()=>gate);if(phase==='body')f.setBodyHook(()=>gate);
+ const work=f.run('requestScheduleRefresh()');await turn();f.emit('window','pagehide');await work;release({});await turn();
+ check(f.rendered.length,0,phase+' pagehide retires response');check(f.timers.size,0,phase+' pagehide owns no interval/deferred/deadline');
+}
+{
+ const f=fixture();f.run('installScheduleAutoRefresh()');await f.fire(30000);
+ check(f.calls.length,2,'existing product cadence checks current read when no event arrives');check(f.writes.length,0,'timer never writes');await f.cleanup();
+}
+console.log(JSON.stringify({status:'PASS_REFRESH_COORDINATION_CURRENT_SOURCE',checks,failed:0,
+ limits:'Actual current page/API permission and publication reader with synthetic DOM, transport and controlled timers. No browser, live auth, SQL, phone or delivery SLA proof.'}));

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join,resolve} from 'node:path';import vm from 'node:vm';
 import {createHash} from 'node:crypto';
+import {createMessageHistory} from '../mobile/src/chatscope/message-history.mjs';
 
 // Native Source fixtures must cross the same real profile producer callback as
 // the app. These recording response/status ports remain synthetic; no private
@@ -75,7 +76,8 @@ async function managerOutboxSessionCases(){
   const storage={get length(){return values.size;},key:i=>[...values.keys()][i]??null,getItem:k=>values.get(k)??null,
    setItem(k,v){writes.push(['set',k]);values.set(k,String(v));onSet?.(x,k,v);},removeItem(k){onRemove?.(x,k);writes.push(['remove',k]);values.delete(k);}};
   const auth={readSession(){sessionReads.push(true);return current;},getDeviceId:()=>saved.device_id,
-   async requireOpsManagerSession(){if(onAuth)await onAuth(x);return current;},isReadOnlySession:()=>current?.read_only===true};
+   async requireOpsManagerSession(){if(onAuth)await onAuth(x);return current;},isReadOnlySession:()=>current?.read_only===true,
+   async opsManagerAuthHeaders(){const session=await auth.requireOpsManagerSession();return {Authorization:'Bearer '+session.token,'X-Device-Id':session.device_id};}};
   const window={MemphisAuth:auth,dispatchEvent(){}};
   const envelope=read?{ok:true,data:1}:action==='send'||producer?{ok:true,data:{...correct,body:saved.body}}:{ok:true,data:{ok:true,deleted:true,thread_id:T,user_id:U,operation_id:M,deletion_scope:'user',deleted_at:'2026-10-15T01:00:00Z',deleted_through:'2026-10-15T01:00:00Z'}};
   const scope=vm.createContext({localStorage:storage,navigator:{onLine:true},window,EMPLOYEE_CONTEXT:false,
@@ -88,6 +90,7 @@ async function managerOutboxSessionCases(){
    setIdentity:value=>views.push(['identity',value]),setThreads:value=>views.push(['threads',value]),setMessages:value=>views.push(['messages',value]),
    setSelectedId:value=>views.push(['selected',value]),setLoadingMessages:value=>views.push(['loading',value]),setMobileThread:value=>views.push(['mobile',value]),
    threadsRef:{current:[{id:T,title:'SYNTHETIC THREAD',canSend:true}]},mobileThreadRef:{current:true},messageLoadSequence:{current:0},
+   historyRef:{current:null},createMessageHistory,setHasOlderMessages:()=>{},setLoadingOlderMessages:()=>{},
    location:{href:'https://source.invalid/messages.html?thread_id='+T},URL,document:{visibilityState:'visible'},
    isRetiredThread:()=>false,normalizedThread:row=>row,compareThreads:()=>0,mergePendingMessages:rows=>rows,
    markRead:async(...args)=>{autoReads.push(args);},

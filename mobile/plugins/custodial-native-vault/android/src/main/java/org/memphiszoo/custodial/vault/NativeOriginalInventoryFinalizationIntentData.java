@@ -14,6 +14,10 @@ final class NativeOriginalInventoryFinalizationIntentData implements AutoCloseab
     final String operationId, planSha256, originalGenerationId, valuesSha256;
     final String nativeFrameSha256, browserFrameSha256, browserPartSetSha256, deviceId, credentialId, employeeId, separationId, principalDigest;
     final long originalRevision, terminalRevision;
+    // DATA only. A mounted resume still requires the actual native GCM file,
+    // same root/HELD/all8 owner and an unambiguous exact predecessor/successor.
+    final boolean durableCommand;
+    final String storagePartitionId,storagePredecessorRealm,storagePredecessorSha256,inventoryNativeRequestId,managerApprovalId;
     private VaultSnapshot original, terminal;
 
     private NativeOriginalInventoryFinalizationIntentData(JSONObject target, JSONObject fixed,
@@ -27,6 +31,28 @@ final class NativeOriginalInventoryFinalizationIntentData implements AutoCloseab
         employeeId = text(target, "employee_id");separationId = text(target, "separation_id");
         principalDigest = text(target, "principal_digest");
         originalRevision = original.revision;terminalRevision = terminal.revision;
+        durableCommand="custodial.original-inventory-enrollment-finalization-intent.v3".equals(text(fixed,"schema"));
+        if(durableCommand){
+            literal(fixed,"durable_command_purpose","COMPLETE_ONE_ORIGINAL_ENROLLMENT_SEPARATION_KEEP_ALL_ORIGINAL_WORK_AND_KEYS");
+            storagePartitionId=NativeNfcOriginalWriteAttempt.uuid(text(fixed,"storage_partition_id"));
+            storagePredecessorRealm=text(fixed,"storage_predecessor_realm");storagePredecessorSha256=fixed.getString("storage_predecessor_sha256");
+            if("legacy".equals(storagePredecessorRealm)){if(!storagePredecessorSha256.isEmpty())throw invalid();}
+            else{NativeNfcOriginalWriteAttempt.uuid(storagePredecessorRealm);sha(fixed,"storage_predecessor_sha256");}
+            if(storagePartitionId.equals(storagePredecessorRealm))throw invalid();
+            inventoryNativeRequestId=NativeNfcOriginalWriteAttempt.uuid(text(fixed,"inventory_native_request_id"));
+            managerApprovalId=NativeNfcOriginalWriteAttempt.uuid(text(fixed,"manager_approval_id"));
+            byte[] expected=target.toString().getBytes(StandardCharsets.UTF_8),response=null;
+            try{
+                response=NativeRetainedAttempt.base64(text(fixed,"manager_approval_response_base64"),24576);
+                try(var decoded=NativeOriginalInventorySeparationApprovalWire.decode(expected,inventoryNativeRequestId,
+                    text(fixed,"inventory_manifest_sha256"),text(fixed,"registration_receipt_sha256"),200,response)){
+                    var approved=decoded.json();if(!managerApprovalId.equals(approved.getString("approval_id")))throw invalid();
+                    long authorized=NativeSameOriginalRecoveryPreparationWire.instantMicros(text(fixed,"authorized_at"));
+                    if(authorized<NativeSameOriginalRecoveryPreparationWire.instantMicros(approved.getString("approved_at"))
+                        ||authorized>=NativeSameOriginalRecoveryPreparationWire.instantMicros(approved.getString("expires_at")))throw invalid();
+                }
+            }finally{Arrays.fill(expected,(byte)0);if(response!=null)Arrays.fill(response,(byte)0);}
+        }else{storagePartitionId=storagePredecessorRealm=storagePredecessorSha256=inventoryNativeRequestId=managerApprovalId="";}
         this.original = original;this.terminal = terminal;
     }
 
@@ -42,15 +68,19 @@ final class NativeOriginalInventoryFinalizationIntentData implements AutoCloseab
             Object value = document.get("finalization");
             if (!(value instanceof JSONObject)) throw invalid();
             JSONObject fixed = (JSONObject)value;
-            NativeRetainedAttempt.keys(fixed, "schema", "state", "original_target",
+            boolean v3="custodial.original-inventory-enrollment-finalization-intent.v3".equals(text(fixed,"schema"));
+            java.util.List<String> fixedKeys=new java.util.ArrayList<>(java.util.Arrays.asList("schema", "state", "original_target",
                 "inventory_manifest_sha256", "registration_receipt_sha256", "original_decision_disk_sha256",
                 "original_decision_document_sha256", "original_decision_response_sha256",
                 "original_vault_revision", "terminal_vault_revision",
                 "original_vault_snapshot_sha256", "terminal_vault_snapshot_sha256",
                 "original_vault_snapshot_base64", "terminal_vault_snapshot_base64",
                 "original_native_values_sha256", "original_browser_frame_sha256", "original_browser_part_set_sha256",
-                "keep_all_original_work", "keep_all_existing_keys", "work_accepted", "resend_allowed", "phone_released");
-            literal(fixed, "schema", "custodial.original-inventory-enrollment-finalization-intent.v2");
+                "keep_all_original_work", "keep_all_existing_keys", "work_accepted", "resend_allowed", "phone_released"));
+            if(v3)fixedKeys.addAll(java.util.Arrays.asList("durable_command_purpose","storage_partition_id","storage_predecessor_realm",
+                "storage_predecessor_sha256","inventory_native_request_id","manager_approval_id","manager_approval_response_base64","authorized_at"));
+            NativeRetainedAttempt.keys(fixed,fixedKeys.toArray(new String[0]));
+            if(!v3)literal(fixed, "schema", "custodial.original-inventory-enrollment-finalization-intent.v2");
             literal(fixed, "state", "ORIGINAL_LOCAL_ENROLLMENT_TRANSITION_OUTCOME_UNKNOWN");
             for (String key : new String[]{"keep_all_original_work", "keep_all_existing_keys"})
                 if (!Boolean.TRUE.equals(fixed.get(key))) throw invalid();
@@ -86,8 +116,7 @@ final class NativeOriginalInventoryFinalizationIntentData implements AutoCloseab
                 || original.phase != VaultPhase.ACTIVE || !original.hasCredential()
                 || original.revision != originalRevision || terminal.revision != terminalRevision
                 || !original.deviceId.equals(text(target, "canonical_device_id"))
-                || !original.metadata.credentialId.equals(text(target, "credential_id"))
-                || !original.metadata.employeeId.equals(text(target, "employee_id"))) throw invalid();
+                || !matchesOriginalIdentity(original,text(target,"credential_id"),text(target,"employee_id"),v3)) throw invalid();
             VaultSnapshot expected = original.next(VaultPhase.EMPTY, SecretKind.NONE, null, "", original.deviceId,
                 "", 0, null, EnrollmentMetadata.empty(), text(target, "operation_id"), "", false, "");
             if (!expected.equals(terminal)) throw invalid();
@@ -101,6 +130,13 @@ final class NativeOriginalInventoryFinalizationIntentData implements AutoCloseab
             if (originalCanonical != null) Arrays.fill(originalCanonical, (byte)0);
             if (terminalCanonical != null) Arrays.fill(terminalCanonical, (byte)0);
         }
+    }
+
+    private static boolean matchesOriginalIdentity(VaultSnapshot original,String credential,String employee,boolean v3){
+        boolean legacy=v3&&original.installation!=null&&original.installation.migratedFromCredentialOnlyState
+            &&original.installation.enrollmentOperationId.isEmpty();
+        return (original.metadata.credentialId.equals(credential)||(legacy&&original.metadata.credentialId.isEmpty()))
+            &&(original.metadata.employeeId.equals(employee)||(legacy&&original.metadata.employeeId.isEmpty()));
     }
 
     synchronized VaultSnapshot originalSnapshotForOwningRead() throws VaultFailure {

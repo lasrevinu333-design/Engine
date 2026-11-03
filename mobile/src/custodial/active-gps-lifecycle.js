@@ -1,4 +1,7 @@
 const ACTIVE_STATUSES = new Set(['active', 'server-active', 'offline-provisional']);
+// Match the existing GPS evaluator/path-model and backend default clock lead.
+// This local guard supplements, and cannot replace, the server's clock policy.
+const FUTURE_TOLERANCE_MS = 30000;
 
 const clean = (value) => String(value || '').trim();
 const uuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clean(value));
@@ -63,6 +66,7 @@ export function createActiveGpsLifecycle({
   enqueue,
   geolocation,
   randomUuid = () => crypto.randomUUID(),
+  now = () => Date.now(),
   setTimer = (fn, ms) => setInterval(fn, ms),
   clearTimer = (id) => clearInterval(id),
   intervalMs = 30000,
@@ -127,7 +131,16 @@ export function createActiveGpsLifecycle({
       }
       const started=Date.parse(requested.startedAt||'');
       if(Number.isFinite(started)&&sample.timestamp<started){onStatus({state:'stale_capture',sessionId:requested.clientSessionId});return Object.freeze({state:'stale_capture'});}
-      if (lastSessionId === requested.clientSessionId && sample.timestamp <= lastObservedAt) {
+      const nowMs = now();
+      if (!Number.isFinite(nowMs) || nowMs <= 0 || sample.timestamp > nowMs + FUTURE_TOLERANCE_MS) {
+        onStatus({ state: 'gps_future_clock', sessionId: requested.clientSessionId });
+        return Object.freeze({ state: 'gps_future_clock' });
+      }
+      // A corrected phone clock must not let a previously accepted, now-future
+      // watermark suppress every fresh capture. Keep the original queued event;
+      // replace the local watermark only after this new durable enqueue succeeds.
+      const watermarkInCurrentClock = lastObservedAt <= nowMs + FUTURE_TOLERANCE_MS;
+      if (lastSessionId === requested.clientSessionId && watermarkInCurrentClock && sample.timestamp <= lastObservedAt) {
         return Object.freeze({ state: 'duplicate_capture' });
       }
       const eventId = `gps:${requested.clientSessionId}:${randomUuid()}`;

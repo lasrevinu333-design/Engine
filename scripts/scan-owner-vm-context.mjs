@@ -64,6 +64,8 @@ export function closedScanOwnerSource(source,entries,context){
 }
 export class FixtureStorage{
   constructor(){this.rows=new Map();}
+  get length(){return this.rows.size;}
+  key(index){return [...this.rows.keys()][index]??null;}
   getItem(key){return this.rows.get(String(key))??null;}
   setItem(key,value){this.rows.set(String(key),String(value));}
   removeItem(key){this.rows.delete(String(key));}
@@ -80,9 +82,9 @@ export function createScanOwnerVm(source,entries,bindings,{onMutationOptions=()=
   const window=context.window||{},storage=context.localStorage||window.localStorage||new FixtureStorage();
   const owner=createProtectedBrowserAdmission({storage,locks:createSyntheticScheduleLocks()});
   const security={native:false,
-    getStatus(){try{owner.requireAdmission();return {ready:true,available:true,quarantined:false};}catch{return {ready:false,available:false,quarantined:true};}},
+    getStatus(){try{owner.requireAdmission();return {generation:4,ready:true,available:true,quarantined:false};}catch{return {generation:4,ready:false,available:false,quarantined:true};}},
     async waitForStableState(){owner.requireAdmission();return security.getStatus();},
-    mutateProtectedWork(operation,options){onMutationOptions(options);return owner.mutate(()=>operation(Object.freeze({assertCurrent:()=>owner.requireMutation()})));}};
+    mutateProtectedWork(operation,options){onMutationOptions(options);return owner.mutate(()=>operation(Object.freeze({generation:4,assertCurrent:()=>owner.requireMutation()})));}};
   Object.assign(window,{localStorage:storage,MemphisCustodialSecurity:security});
   window.setTimeout??=setTimeout;window.clearTimeout??=clearTimeout;
   Object.assign(context,{window,localStorage:storage});

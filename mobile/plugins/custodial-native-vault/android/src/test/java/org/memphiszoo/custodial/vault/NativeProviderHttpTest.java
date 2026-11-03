@@ -60,6 +60,7 @@ public final class NativeProviderHttpTest {
         final VaultEngine engine;
         final TestCipher cipher;
         final MemoryPersistence persistence;
+        final FakeTransport enrollmentTransport;
         final NativeProviderJournalTest.Fixture provider = new NativeProviderJournalTest.Fixture();
         final NativeProviderPrincipal principal;
         final NativeProviderJournal.Prepared prepared;
@@ -69,12 +70,14 @@ public final class NativeProviderHttpTest {
         Fixture(boolean v2) throws Exception {
             if (v2) {
                 legacy = new NativeLegacyLineageJournalTest.Fixture(true); legacy.activate(NativeLegacyLineageJournalTest.OP); legacy.finish(NativeLegacyLineageJournalTest.OP);
+                enrollmentTransport=legacy.delegate;
                 engine = legacy.engine(); legacyJournal = legacy.journal(); cipher = legacy.cipher; persistence = legacy.persistence;
                 principal = NativeProviderPrincipal.fromNativeJournal(engine.readLegacyPrincipal(legacyJournal));
             } else {
                 legacy = null; legacyJournal = new NativeLegacyLineageJournal(new NativeLegacyLineageJournalTest.Store());
                 MutableClock clock = new MutableClock(NOW); cipher = new TestCipher(); persistence = new MemoryPersistence();
-                engine = new VaultEngine(persistence, cipher, new FakeTransport(clock), new FakeLegacySource(), new TestSealGenerator(), clock);
+                enrollmentTransport=new FakeTransport(clock);
+                engine = new VaultEngine(persistence, cipher, enrollmentTransport, new FakeLegacySource(), new TestSealGenerator(), clock);
                 engine.enroll(OP, DEVICE, "enrollment", "12345678".toCharArray()); engine.completeLocalBinding(OP); engine.confirmEnrollment(OP);
                 Map<String, Object> state = engine.getState();
                 new NativePrincipalJournalTest().capture(principalJournal, state, new NativePrincipalJournalTest().data().put("credential_id", state.get("active_credential_id")));
@@ -132,9 +135,26 @@ public final class NativeProviderHttpTest {
         assertEquals(revision, f.persistence.current().revision); assertTrue(f.connection.disconnects > 0);
     }
     @Test public void engineRemovalDuringNetworkIsNotLockedOutAndResponseCannotConfirm() throws Exception {
-        Fixture f = new Fixture(false); f.onResponse = () -> {
-            Thread removal = new Thread(() -> { try { f.engine.removeEnrollment(RID, DEVICE); } catch (Exception error) { throw new AssertionError(error); } });
+        Fixture f = new Fixture(false);
+        final VaultSnapshot original=f.persistence.current();final byte[] originalBytes=new VaultSnapshotCodec().encode(original);
+        final VaultSnapshot terminal=original.next(VaultPhase.EMPTY,SecretKind.NONE,null,"",original.deviceId,"",0,null,EnrollmentMetadata.empty(),RID,"",false,"");
+        final java.util.concurrent.atomic.AtomicReference<Throwable> failure=new java.util.concurrent.atomic.AtomicReference<>();
+        // Explicit synthetic owned-effects port: exercises shipping transition ordering,
+        // not private native ACK, browser HELD, all-writer or physical preservation authority.
+        final var effects=new NativePreservedEnrollmentTransition.OwnedEffects<String>() {
+            public void settleOriginalEnrollment()throws VaultFailure {assertTrue(Thread.holdsLock(f.engine));f.persistence.commit(original.revision,terminal);}
+            public void verifyRetainedSuccessor()throws VaultFailure {assertEquals(terminal,f.persistence.current());assertArrayEquals(originalBytes,new VaultSnapshotCodec().encode(original));assertEquals(0,f.cipher.destroyCalls);}
+            public void verifyRetainedBrowserOutsideMonitor(){assertFalse(Thread.holdsLock(f.engine));}
+            public String publishRetainedPartitionOutsideMonitor(){assertFalse(Thread.holdsLock(f.engine));return "SYNTHETIC_ORIGINAL_PARTITION_RETAINED";}
+        };
+        ProviderRecordStoreTest.failure("custodial_native_removal_inventory_admission_required",()->f.engine.removeEnrollment(RID,DEVICE));
+        assertEquals(original,f.persistence.current());
+        f.onResponse = () -> {
+            Thread removal = new Thread(() -> {try(var control=new NativePrivateCustodyFrameReadControl()) {
+                assertEquals("SYNTHETIC_ORIGINAL_PARTITION_RETAINED",NativePreservedEnrollmentTransition.complete(f.engine,control,effects));
+            }catch(Throwable error){failure.set(error);}});
             removal.start(); removal.join(1500); assertFalse("HTTP must not hold engine monitor", removal.isAlive());
+            if(failure.get()!=null)throw new AssertionError(failure.get());
         };
         ProviderRecordStoreTest.failure("custodial_native_vault_concurrent_change", () -> f.send(false, f.http()));
         assertTrue(f.connection.disconnects > 0); assertFalse(f.engine.getState().get("active").equals(true));
@@ -288,4 +308,28 @@ public final class NativeProviderHttpTest {
             assertEquals(1, f.provider.journal().pendingEvents(f.principal, 16).events.size()); assertTrue(f.connection.disconnects > 0);
         }
     }
+    /** Explicit unit owned-effects port. No private native ACK, all8/browser
+     * HELD or manager authority is created. Retains exact original envelope and
+     * key; separate disk/SQL fixtures verify their own independent boundaries. */
+    static final class SyntheticPreservation {
+        final VaultEngine engine;final MemoryPersistence memory;final TestCipher cipher;
+        final VaultSnapshot original,terminal;final byte[] originalBytes;
+        boolean unknown;Hook afterPublish=()->{};
+        SyntheticPreservation(VaultEngine engine,MemoryPersistence memory,TestCipher cipher,VaultSnapshot original)throws VaultFailure {
+            this.engine=engine;this.memory=memory;this.cipher=cipher;this.original=original;originalBytes=new VaultSnapshotCodec().encode(original);
+            terminal=original.next(VaultPhase.EMPTY,SecretKind.NONE,null,"",original.deviceId,"",0,null,EnrollmentMetadata.empty(),RID,"",false,"");
+        }
+        void safe()throws VaultFailure {assertArrayEquals(originalBytes,new VaultSnapshotCodec().encode(original));assertEquals(0,cipher.destroyCalls);char[] retained=cipher.decrypt(original.secret);try{assertTrue(retained.length>0);}finally{VaultValidation.wipe(retained);}}
+        void complete()throws VaultFailure {
+            var effects=new NativePreservedEnrollmentTransition.OwnedEffects<String>(){
+                public void settleOriginalEnrollment()throws VaultFailure {assertTrue(Thread.holdsLock(engine));safe();if(unknown)throw new VaultFailure("synthetic_same_process_unknown");var current=memory.load();if(current.equals(terminal))return;if(!current.equals(original))throw new VaultFailure("custodial_native_vault_concurrent_change");try{memory.commit(original.revision,terminal);}catch(VaultFailure e){unknown=true;throw e;}}
+                public void verifyRetainedSuccessor()throws VaultFailure {safe();assertEquals(terminal,memory.current());}
+                public void verifyRetainedBrowserOutsideMonitor()throws VaultFailure {assertFalse(Thread.holdsLock(engine));safe();}
+                public String publishRetainedPartitionOutsideMonitor()throws VaultFailure {assertFalse(Thread.holdsLock(engine));safe();try{afterPublish.run();}catch(Exception e){unknown=true;if(e instanceof VaultFailure)throw(VaultFailure)e;throw new VaultFailure("synthetic_publish_reply_unknown",e);}return "SYNTHETIC_RETAINED_ORIGINAL_PARTITION";}
+            };
+            try(var control=new NativePrivateCustodyFrameReadControl()){assertEquals("SYNTHETIC_RETAINED_ORIGINAL_PARTITION",NativePreservedEnrollmentTransition.complete(engine,control,effects));}
+        }
+    }
+    static void preserveSyntheticOriginal(Fixture f)throws Exception {new SyntheticPreservation(f.engine,f.persistence,f.cipher,f.persistence.current()).complete();}
+
 }

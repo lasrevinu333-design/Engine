@@ -814,8 +814,9 @@ try {
       };
     });
     await page.addScriptTag({ content: implementation });
-    await page.waitForFunction(() => document.getElementById('lock-readiness').textContent.startsWith('Ready for work — Last confirmed'));
-    assert.equal(await page.locator('#lock-readiness').isVisible(), true);
+    await page.locator('#phone-lock').waitFor({state:'visible'});
+    assert.equal(await page.locator('#lock-readiness').isVisible(), false, 'approved ordinary Ready presentation stays quiet');
+    assert.equal(await page.locator('#lock-readiness').textContent(), '');
     const unlockBox = await page.locator('#phone-unlock').boundingBox();
     assert.ok(unlockBox && unlockBox.x >= 0 && unlockBox.x + unlockBox.width <= viewport.width && unlockBox.y + unlockBox.height <= viewport.height, `Unlock remains reachable at ${viewport.width}`);
     await page.locator('#phone-unlock').click();
@@ -828,9 +829,12 @@ try {
       assert.equal(await page.locator(target).getAttribute('role'), 'status');
       results.push({ viewport: viewport.width, label, passed: true });
     }
-    await verify('Ready for work');
+    assert.equal(await page.locator('#home-readiness').isVisible(),false,'ordinary Ready does not advertise a connection status');
+    results.push({viewport:viewport.width,label:'Ready presentation quiet',passed:true});
     await page.evaluate(() => readinessFixture.pending());
-    await verify('Needs internet');
+    await page.waitForFunction(() => JSON.parse(readinessFixture.bytes()).length===1);
+    assert.equal(await page.locator('#home-readiness').isVisible(),false,'ordinary pending transport stays quiet without promoting it to accepted');
+    results.push({viewport:viewport.width,label:'Pending originals retained and presentation quiet',passed:true});
     const saved = await page.evaluate(() => readinessFixture.bytes());
     assert.equal(await page.locator('#active-cleaning').isVisible(), true);
     assert.equal(await page.locator('#active-cleaning-text').textContent(), 'You are cleaning Original Place. Tap the same physical tag when you are done.');

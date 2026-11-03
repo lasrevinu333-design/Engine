@@ -62,5 +62,11 @@ assert.match(build, /await installWebAppFiles\(\);\s*\nawait buildRoleShell\(\);
 
 const viewer = await read('src/viewer/app.js');
 assert.doesNotMatch(viewer, /method\s*:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/i);
-assert.doesNotMatch(viewer, /feedback-api|manager|credential|enrollment/i);
+// `credentials:'omit'` is the required privacy boundary, not credential use.
+// Assert the actual allowed calls and transport rather than rejecting that
+// protective Fetch option merely because its name contains 'credential'.
+assert.match(viewer,/method:\s*'GET',credentials:\s*'omit',cache:\s*'no-store',redirect:\s*'error'/);
+assert.deepEqual([...viewer.matchAll(/getJson\('([^']+)'\)/g)].map(match=>match[1]),
+  ['/viewer-api/dashboard','/viewer-api/events?days=90']);
+assert.doesNotMatch(viewer, /feedback-api|admin-api|manager-api|messaging-api|credential-api|enrollment-api|authorization|from\s+['"][^'"]*\/manager\//i);
 console.log('WEB_INSTALL_CONTRACT_TESTS_PASS');

@@ -7,7 +7,7 @@ import vm from 'node:vm';
 import './synthetic-schedule-locks.mjs';
 import {installHomeFacts} from '../mobile/src/custodial/home-facts-dom.js';
 import {installHourlyForecastKeyboard} from '../mobile/src/custodial/hourly-forecast-keyboard.js';
-import {classifyReadiness,createReadinessObservation} from '../mobile/src/custodial/readiness.js';
+import {classifyReadiness,createReadinessObservation,readinessPresentation} from '../mobile/src/custodial/readiness.js';
 import {principalIdentity,profileMatchesPrincipal,protectedPrincipal} from '../mobile/src/custodial/protected-principal.js';
 import {zooServiceDate} from '../mobile/src/custodial/home-facts.js';
 import * as keys from '../mobile/src/custodial/security-keys.js';
@@ -22,11 +22,14 @@ const cases=['fresh-browser','fresh-native-status-refresh','optional-cache-write
   'response-generation-change','response-principal-rotation','response-revocation',
   'cache-generation-change','cache-principal-rotation','cache-revocation','cache-unavailable','cache-profile-mutation',
   'startup-recovery-failure','startup-manager-required',
-  'handshake-stale-generation','handshake-wrong-principal','handshake-missing-proof','handshake-reentry','handshake-exception'];
+  'handshake-stale-generation','handshake-wrong-principal','handshake-missing-proof','handshake-reentry','handshake-exception','unowned-protected-original'];
 if(!process.argv.includes('--case')){
   const results=cases.map(name=>{
     const child=spawnSync(process.execPath,[fileURLToPath(import.meta.url),'--case',name],{encoding:'utf8',timeout:15000,maxBuffer:1024*1024});
-    return {name,passed:child.status===0,receipt:child.stdout.trim(),error:child.status===0?null:child.stderr.trim()};
+    const receipt=child.stdout.trim();let completed=false;
+    try{const result=JSON.parse(receipt);completed=result.name===name&&Number.isSafeInteger(result.checks)&&result.checks>0;}catch{}
+    const passed=child.status===0&&completed;
+    return {name,passed,receipt,error:passed?null:child.stderr.trim()||'Child did not return its completed assertion receipt'};
   });
   console.log(JSON.stringify({scope:'Actual app, credential store, material security events, authenticated bridge transport/cache, and Home controller; synthetic memory/HTTP/DOM only',passed:results.filter(r=>r.passed).length,failed:results.filter(r=>!r.passed).length,results},null,2));
   if(results.some(r=>!r.passed))process.exitCode=1;
@@ -46,7 +49,7 @@ async function run(name){
     constructor(entries=[]){this.data=new Map(entries);}get length(){return this.data.size;}key(n){return [...this.data.keys()][n]??null;}
     getItem(k){return this.data.get(k)??null;}setItem(k,v){this.data.set(k,String(v));}removeItem(k){this.data.delete(k);}clear(){this.data.clear();}
   }
-  const retained=[['mz_scan_completion_draft:synthetic','{"original":"finish-draft"}'],['mz_native_notification_outbox:synthetic','{"original":"uncertain-receipt"}']];
+  const retained=[['mz_scan_completion_draft:synthetic','{"original":"finish-draft"}'],['mz_native_notification_outbox:synthetic',JSON.stringify({original:'uncertain-receipt',...(name==='unowned-protected-original'?{}:{device_id:P.device_id})})]];
   const local=new MemoryStorage([...keys.CUSTODIAL_DEVICE_KEYS.map(k=>[k,P.device_id]),[keys.CUSTODIAL_INSTALLATION_MARKER_KEY,P.installation_seal],...retained]);
   const secure=new Map([[keys.CUSTODIAL_INSTALLATION_RECORD_KEY,record(P)]]);
   let secureUnavailable=false,authCount=0,rotated=false,changed=false,controller,inHandshake=false;
@@ -123,7 +126,7 @@ async function run(name){
       },readCustodialHomeCache:actualBridge.readCustodialHomeCache,
       requestJson:async(path,options)=>(await actualBridge.requestEnvelope(path,options)).data},
   };
-  const context={window,document,navigator:{onLine:false},sessionStorage,console,Date,Error,Promise,classifyReadiness,createReadinessObservation,installHourlyForecastKeyboard,
+  const context={window,document,navigator:{onLine:false},sessionStorage,console,Date,Error,Promise,classifyReadiness,createReadinessObservation,readinessPresentation,installHourlyForecastKeyboard,
     installHomeFacts:options=>{
       controller=installHomeFacts(options);
       // Observe the actual local method; only hostile boundary cases alter its
@@ -162,6 +165,7 @@ async function run(name){
       if(name.startsWith('cache-'))eq(saveGenerations.length>0,true,'actual cache await was reached');
       if(['response-generation-change','response-principal-rotation','response-revocation'].includes(name))eq(authCount>0,true,'response crossed actual dispatch capability');
       if(['http403-operational','http500-cached','network-cached','malformed-profile-cached'].includes(name))eq(security.getStatus().quarantined,false,'noncanonical rejection does not invent revocation');
+      if(name==='unowned-protected-original')eq(security.getStatus().reason,'preserved_identity_mismatch','unclassified retained work must still block startup');
       if(name==='http401-canonical')eq(security.getStatus().quarantined,true,'only canonical credential denial enters actual quarantine');
       // Neither a page timer nor healthy status polling can manufacture the
       // absent authenticated handoff after a failed or cached restore.

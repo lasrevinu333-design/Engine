@@ -1,0 +1,31 @@
+{
+  "schema": "custodial.exact-historical-notification-predecessors.v2",
+  "scope": "Two distinct original Git preimages for two separately introduced historical counterexamples; never current authority, SQL recovery, production or device evidence",
+  "local_repository": "/home/eric/Documents/Codex/2026-09-13/i-x20/work/autonomous-repair-20260923/overnight-readiness-20261006/lean-held-correction-integration-20261011/frontend",
+  "files": [
+    {
+      "file": "read-before.js",
+      "bytes": 18737,
+      "sha256": "c1fd4eed4bc849f3c8c983225b628be728ee8df2d1c07d31e616514fc08cde57",
+      "git_blob": "349140464afccefb4097a394966faef7d0038eef",
+      "source_path": "mobile/src/custodial/notification-schedule-authority.js",
+      "fix_commit": "3c8369a12fd711b81d59989a65c7ae4c1c34a84a",
+      "actual_parent_commit": "5ececb4ada6b7adfbf35f694c696bcd090fc7ece",
+      "counterexample_case": "READ original-retained-map-counterexample",
+      "introducing_test_blob": "a9805e36ad32233cd87e6dc1972325d88858ec33"
+    },
+    {
+      "file": "origin-before.js",
+      "bytes": 21871,
+      "sha256": "2d5b4ace347bdb9b88fac83bd31cdbc186f4b113713d85f5cdbd7e4178248d2b",
+      "git_blob": "ceafe8ef9db898e016d892c5ce41e4c9e1dceec6",
+      "source_path": "mobile/src/custodial/notification-schedule-authority.js",
+      "fix_commit": "0b5a6b1ad51c5eec14fa3a7db042d1856d443b2c",
+      "actual_parent_commit": "6224c9f66ea93a408db9e5bb4c47ba3e25fa3735",
+      "counterexample_case": "ORIGIN old-credential-epoch-source-counterexample",
+      "introducing_test_blob": "2261352b4046381ae32a313dff49af5946f488f0"
+    }
+  ],
+  "production": false,
+  "release_admission": false
+}

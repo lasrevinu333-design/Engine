@@ -31,15 +31,15 @@ function extractFunctionSource(source, name) {
 }
 
 assert.equal(manifest.release_id, 'release-2026.07.19.custodial-v3.12');
-// The same exact isolated252 Source capture governs this declared Source
-// contract and runtime-manifest-contract-tests. It is not a current291/live,
-// production, independent review, release or frontend-pair admission receipt.
-const declaredSchemaCaptureBytes = fs.readFileSync(path.resolve(root, 'scripts/fixtures/current-schema-capture-binding.json'));
-assert.equal(createHash('sha256').update(declaredSchemaCaptureBytes).digest('hex'), 'ff671755afde209c927a85f5a0c5b9c3a7f17675cee12d6dc9ff55976559a656');
+// The current compatibility declaration is bound to actual isolated304
+// schema evidence. This does not grant production, review or pair admission.
+const declaredSchemaCaptureBytes = fs.readFileSync(path.resolve(root, 'scripts/fixtures/current304-schema-source-binding.json'));
+assert.equal(createHash('sha256').update(declaredSchemaCaptureBytes).digest('hex'), '7dff142e97c38f786b733f95a600838d72637da2d407b44f49e59043c55dd928');
 const declaredSchemaCapture = JSON.parse(declaredSchemaCaptureBytes);
-assert.equal(declaredSchemaCapture.schema, 'custodial.isolated-normal-canonical-source-binding.v1');
-assert.equal(declaredSchemaCapture.source_commit, '9a0da26eb3e0d0052227da15224cbc78ee8705c0');
-assert.equal(declaredSchemaCapture.migration_count, 252);
+assert.equal(declaredSchemaCapture.schema, 'custodial.frontend-retained-source304-binding.v1');
+assert.equal(declaredSchemaCapture.canonical_source_count, 304);
+assert.equal(declaredSchemaCapture.actual_isolated_fresh_schema_observed, true);
+assert.equal(declaredSchemaCapture.retained_source304_successor.expected_fingerprint_authority, null);
 for (const field of ['production', 'independent_review', 'release_admission', 'frontend_pair_admission']) {
   assert.equal(declaredSchemaCapture[field], false);
 }
@@ -70,7 +70,23 @@ assert.doesNotMatch(extractFunctionSource(scan, 'finishSessionMaybeQueued'), /rp
 
 assert.match(sharedSync, /tool_start_offline_occurrence/);
 assert.match(sharedSync, /case 'start_session':[\s\S]*rpc\('tool_start_offline_occurrence', payload\)/);
-assert.match(sharedSync, /assignment_epoch: Number\(supplied\.assignment_epoch \?\? local\?\.offline_authority_assignment_epoch \?\? payload\.p_snapshot_assignment_epoch\)/);
+// Actual shipping replay binding: absent optional epoch stays lossless null;
+// supplied/retained/payload precedence and malformed non-null values are preserved.
+const bindingStart=sharedSync.indexOf('  function replayBindingFor('),bindingEnd=sharedSync.indexOf('\n  function ',bindingStart+5);
+assert.ok(bindingStart>0&&bindingEnd>bindingStart);
+const bindingSource=sharedSync.slice(bindingStart,bindingEnd);
+let retained=null;
+const binding=Function('exactSessionForPayload','safeText','return ('+bindingSource+');')(()=>retained,v=>String(v??'').trim());
+assert.equal(binding({}).assignment_epoch,null);
+assert.equal(binding({replay_binding:{assignment_epoch:null}}).assignment_epoch,null);
+assert.equal(binding({payload:{p_snapshot_assignment_epoch:5}}).assignment_epoch,5);
+retained={offline_authority_assignment_epoch:7};
+assert.equal(binding({payload:{p_snapshot_assignment_epoch:5}}).assignment_epoch,7);
+assert.equal(binding({replay_binding:{assignment_epoch:'9'},payload:{p_snapshot_assignment_epoch:5}}).assignment_epoch,9);
+assert.equal(Number.isNaN(binding({replay_binding:{assignment_epoch:'unknown'}}).assignment_epoch),true,'Malformed supplied data must not silently use another epoch');
+assert.equal(binding({replay_binding:{assignment_epoch:Infinity}}).assignment_epoch,Infinity,'Do not silently replace malformed non-null originals');
+retained=null;
+
 assert.match(sharedSync, /Number\(result\.assignment_epoch\) !== expected\.assignment_epoch/);
 assert.match(sharedSync, /__custodial_offline_reconciliation_v1/);
 assert.doesNotMatch(sharedSync, /rpc\('tool_record_scan_event'/);

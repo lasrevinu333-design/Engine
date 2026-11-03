@@ -70,10 +70,10 @@ function unpublishedCancellationFixture(initial='PREPARING'){
   setState:v=>state=v,setMode:v=>mode=v,setHook:v=>hook=v,setReadPatch:v=>readPatch=v,setReplyPatch:v=>replyPatch=v,setDialog:v=>dialog=v,
   dialogs:()=>dialogs,marker:()=>observedMarker,cancels:()=>f.trace.filter(t=>t.route.endsWith('/cancel')),
   raw:()=>[...f.map.values()][0],resume:()=>f.page.resumeStaffingPreview(),
-  useAfterApiHook:fn=>{const actions=A.create({auth:f.auth,storage:f.storage,baseUrl:f.page.state.baseUrl,
-   api:async(...args)=>{const value=await f.page.api(...args);fn(value);return value;},
+  useAfterApiHook:async fn=>{let armed=false;const actions=A.create({auth:f.auth,storage:f.storage,baseUrl:f.page.state.baseUrl,
+   api:async(...args)=>{const value=await f.page.api(...args);if(armed)fn(value);return value;},
    onState:r=>{f.page.state.pending=r;vm.runInContext('renderPending()',f.context);}});
-   f.page.state.actions=actions;return actions;},
+   f.page.state.actions=actions;await actions.reviewStaffing();armed=true;return actions;},
  };
 }
 for(const phase of ['PREPARING','PREPARED'])test('UNPUBLISHED_PREPARATION_CANCEL_NEW: deliberate '+phase+' cancel is one original POST and independent GET before local retirement',async()=>{
@@ -176,7 +176,7 @@ test('UNPUBLISHED_PREPARATION_CANCEL_NEW: live form Source and selection changes
 });
 test('UNPUBLISHED_PREPARATION_CANCEL_NEW: last API-to-consumer view change cannot retire the verified original',async()=>{
  const f=unpublishedCancellationFixture();await f.start();const original=f.actions.pending();
- f.useAfterApiHook(value=>{if(value.state==='CANCELLED')f.changeSelection();});
+ await f.useAfterApiHook(value=>{if(value.state==='CANCELLED')f.changeSelection();});
  await assert.rejects(f.cancel(),/view or manager changed/);assert.equal(f.map.size,1);assert.equal(f.page.state.actions.pending().encoded,original.encoded);
  assert.ok(f.page.state.actions.pending().command.cancellationAttempt);assert.equal(f.cancels().length,1);
 });
@@ -224,7 +224,7 @@ function missingPatternFixture(){
  const prepared=()=>{const b=originalBody(),binding={weekStart:'2026-10-05',publicationId:SOURCE,versionId:PID,authorityRevision:42};return{
   operation_id:f.operation,expected_revision:42,prepared_by_manager_id:MID,
   semantic_body:{commandKind:'absence',employeeId:MID,startDate:b.start_date,endDate:b.end_date,absenceKind:'daily_absence',targetAbsenceId:null},
-  semantic_digest:'a'.repeat(64),state:'PREPARED',preview_digest:'b'.repeat(64),input_digest:'c'.repeat(64),candidate_set_digest:'d'.repeat(64),
+  semantic_digest:'a'.repeat(64),state:'PREPARED',current_service_date:'2026-10-06',preview_digest:'b'.repeat(64),input_digest:'c'.repeat(64),candidate_set_digest:'d'.repeat(64),
   publication_vector:{expectedRevision:42,weeks:[binding]},preview:{schema:'memphis-zoo.staffing-command-preview.v1',weeks:[{
    week_start:binding.weekStart,publicationId:SOURCE,versionId:PID,database_projection_identity:'e'.repeat(64),replayDigest:'f'.repeat(64),
    compilerVersion:'UNIT-inert-only',sourceDigest:'c'.repeat(64),sourceDigestBasis:'envelope.authority.inputDigest',
@@ -393,7 +393,7 @@ function unresolvedPreviewFixture(){
  const f=datedPreviewFixture(),operation='17000000-0000-4000-8000-000000000001',trace=[];
  f.page.els.service_date.value='2026-10-06';f.page.els.absence_type.value='daily_absence';
  f.context.document.getElementById('absence-end-date').value='2026-10-06';
- Object.assign(f.page.state.snapshot,{projection_status:'current',latest_projection:{projection_id:PID},
+ Object.assign(f.page.state.snapshot,{current_service_date:'2026-10-06',projection_status:'current',latest_projection:{projection_id:PID},
   current_publication:{publication_id:SOURCE,version_id:PID},
   assignments:[{service_date:'2026-10-06',plan_work_id:'2:known-parent',work_snapshot:{workId:'2:known-parent',locationNameSnapshot:'Current known room'}}]});
  f.page.state.snapshot.availability.push({...f.page.state.snapshot.availability[0],day_of_week:2});
@@ -413,7 +413,7 @@ function unresolvedPreviewFixture(){
   if(route===A.staffingCommandPath){assert.equal(options.method,'POST');return response({operation_id:operation,expected_revision:42,semantic_digest:'a'.repeat(64)});}
   if(route===A.staffingCommandPath+'/'+operation){if(readData)return response(structuredClone(value));const original=JSON.parse(trace.find(t=>t.route===A.staffingCommandPath).options.body);return response({operation_id:operation,expected_revision:42,prepared_by_manager_id:MID,
    semantic_body:{commandKind:'absence',employeeId:MID,startDate:original.start_date,endDate:original.end_date,absenceKind:'daily_absence',targetAbsenceId:null},
-   semantic_digest:'a'.repeat(64),state:'PREPARING'});}
+   semantic_digest:'a'.repeat(64),state:'PREPARING',current_service_date:'2026-10-06'});}
   if(route===A.staffingCommandPath+'/'+operation+'/prepare'){
    assert.equal(options.method,'POST');assert.equal(options.body,'{}');awaitHook('fetch');if(gate)await gate;
    return {ok:status===200,status,json:async()=>{awaitHook('json');if(jsonGate)await jsonGate;const dto=structuredClone(value);patch(dto);
@@ -685,7 +685,7 @@ test('audit A1: delegated multiweek absence preserves full dates and refuses unb
  assert.deepEqual(JSON.parse(calls[0].options.body),request);assert.equal(actions.pending().weekBindings.length,2);
  assert.equal(A.authorized(f.auth,A.staffingCommandPath,{command_kind:'vacate_roster_slot'}),false);
  const other=fixture(),a=A.create({auth:other.auth,storage:other.storage,baseUrl:'https://fixture.invalid',api:async()=>{throw Error('Must not send');}});
- await assert.rejects(a.prepareStaffing(request,{...basis,weeks:basis.weeks.slice(0,1)}),/EVERY/);assert.equal(other.map.size,0);
+ await assert.rejects(a.prepareStaffing(request,{...basis,weeks:basis.weeks.slice(0,1)}),/complete remaining staffing range is not covered/);assert.equal(other.map.size,0);
  other.patch({permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:false,manage_absences:false}});
  await assert.rejects(a.prepareStaffing(request,basis),/absence permission/);assert.equal(other.map.size,0);
 });
@@ -777,7 +777,7 @@ test('staffing cancellation: missing server civil day refuses without device-clo
 });
 test('staffing cancellation: missing current future-week publication refuses WHOLE window before BEGIN, never truncates',async()=>{
  const f=cancellationFixture();f.setMissingBasis();await f.page.reverseChange(f.event);
- assert.equal(f.requests.some(x=>x.options.method==='POST'),false);assert.equal(f.map.size,0);assert.match(f.page.els.status.textContent,/entire cancellation.*not shortened/);
+ assert.equal(f.requests.some(x=>x.options.method==='POST'),false);assert.equal(f.map.size,0);assert.match(f.page.els.status.textContent,/EVERY remaining week; no first-week substitution/);
 });
 test('staffing cancellation: missing second prepared week refuses confirmation and preserves original full body',async()=>{
  const f=cancellationFixture();f.patchRead(value=>{if(value.state==='PREPARED')value.preview.weeks.pop();});await f.page.reverseChange(f.event);
@@ -795,7 +795,7 @@ test('staffing cancellation: unknown confirmation reload resumes GET-only origin
 });
 test('staffing cancellation: server civil day advancement during reviewed confirmation refuses instead of changing original start',async()=>{
  const f=cancellationFixture();await f.page.reverseChange(f.event);f.context.confirmAction=async()=>{f.setToday('2026-10-15');return true;};
- await f.nodes.get('staffing-confirm-btn').listeners.get('click')();assert.equal(f.confirmationCount(),0);assert.equal(f.actions.pending().body.start_date,'2026-10-14');assert.match(f.page.els.status.textContent,/server civil date advanced/i);
+ await f.nodes.get('staffing-confirm-btn').listeners.get('click')();assert.equal(f.confirmationCount(),0);assert.equal(f.actions.pending().body.start_date,'2026-10-14');assert.match(f.page.els.status.textContent,/original staffing dates have elapsed or the current server service date is unavailable/i);
 });
 test('staffing cancellation: legacy UUID-only accepted exception still uses its existing reverse batch',async()=>{
  const f=cancellationFixture(),legacy={id:SOURCE,type:'daily_absence',serviceDate:'2026-10-13',payload:{slotId:CID}};
@@ -811,7 +811,7 @@ test('staffing cancellation: corrupt original-target metadata on reload refuses 
 test('staffing cancellation: awaited original metadata or credential change refuses before BEGIN',async()=>{
  for(const change of ['metadata','credential']){const f=cancellationFixture();
   if(change==='metadata')f.row.staffingEndDate='2026-10-21';
-  else{let release;f.setBlocked(new Promise(r=>release=r));const work=f.page.reverseChange(f.event);f.patch({credential_id:SOURCE});release();await work;
+  else{let release;f.setBlocked(new Promise(r=>release=r));const work=f.page.reverseChange(f.event);f.patch({credential_id:SOURCE});release();await assert.rejects(work,/Manager access changed/);
    assert.equal(f.requests.some(x=>x.options.method==='POST'),false);assert.equal(f.map.size,0);continue;}
   await f.page.reverseChange(f.event);assert.equal(f.requests.some(x=>x.options.method==='POST'),false);assert.equal(f.map.size,0);assert.match(f.page.els.status.textContent,/target changed/);
  }
@@ -855,7 +855,7 @@ test('staffing original list: awaited original actor/kind/range drift or manager
  for(const change of ['actor','kind','range','credential']){
   const f=originalAbsenceListFixture();
   if(change==='actor')f.sourceRow.actorId=PID;if(change==='kind')f.sourceRow.absenceKind='unavailable';if(change==='range')f.sourceRow.staffingEndDate='2026-10-21';
-  if(change==='credential'){let release;f.setBlocked(new Promise(r=>release=r));const work=f.page.reverseChange(f.event);f.patch({credential_id:SOURCE});release();await work;}
+  if(change==='credential'){let release;f.setBlocked(new Promise(r=>release=r));const work=f.page.reverseChange(f.event);f.patch({credential_id:SOURCE});release();await assert.rejects(work,/Manager access changed/);}
   else await f.page.reverseChange(f.event);
   assert.equal(f.requests.some(x=>x.options.method==='POST'),false);assert.equal(f.map.size,0);assert.equal(f.confirmationCount(),0);
  }
@@ -878,7 +878,7 @@ test('staffing original list: ordinary delegates cannot cancel original target a
  delegate.page.renderChanges(delegate.page.state.snapshot);assert.match(delegate.page.els.changes_list.innerHTML,/hidden/);
  await assert.rejects(delegate.page.reverseChange(delegate.event),/not available for your manager session/i);assert.equal(delegate.requests.length,0);
  const f=originalAbsenceListFixture();f.setMissingBasis();await f.page.reverseChange(f.event);
- assert.equal(f.requests.some(x=>x.options.method==='POST'),false);assert.equal(f.map.size,0);assert.match(f.page.els.status.textContent,/entire cancellation.*not shortened/);
+ assert.equal(f.requests.some(x=>x.options.method==='POST'),false);assert.equal(f.map.size,0);assert.match(f.page.els.status.textContent,/EVERY remaining week; no first-week substitution/);
 });
 test('staffing original list: ambiguous confirmation stays exact original operation and recovers through GET-only all-week readback',async()=>{
  const f=originalAbsenceListFixture();await f.page.reverseChange(f.event);const original=f.actions.pending().encoded;
@@ -943,7 +943,7 @@ function privatePreviewFixture(){
   if(path==='/static-weekly/approved-choices')return{schema:'custodial.approved-schedule-choices.v1',initial:[]};
   throw Error('Unexpected new staffing route '+path);
  };
- const before={week_start:vector.weekStart,week_end:'2026-10-18',authority_revision:prepared.expected_revision,projection_status:'current',
+ const before={week_start:vector.weekStart,week_end:'2026-10-18',current_service_date:prepared.current_service_date,authority_revision:prepared.expected_revision,projection_status:'current',
   current_publication:{publication_id:vector.publicationId,version_id:vector.versionId},latest_projection:{projection_id:SOURCE},
   roster:record.input.slots.map(slot=>({slot_id:slot.id,slot_label:slot.label,contractor_capacity:slot.kind==='CONTRACTOR_CAPACITY',
    incumbencies:(slot.incumbencies||[]).map(person=>({person_id:person.personId,person_name:person.displayName,effective_start:person.effectiveStart,effective_end:person.effectiveEnd}))})),
@@ -1038,7 +1038,7 @@ test('staffing private preview: actual persisted Task7 DTO binds and renders wit
    previewDigest:value.preview_digest,inputDigest:value.input_digest,candidateSetDigest:value.candidate_set_digest,
    projectionIdentity:week.database_projection_identity,replayDigest:week.replayDigest,confirmationAttempted:false,confirmationKey:null}};
  f.patch({manager_id:record.managerId});f.page.state.pending=record;f.page.state.principal=A.principal(f.auth);
- f.page.state.snapshot={week_start:week.week_start,authority_revision:request.expectedRevision,current_publication:{publication_id:week.publicationId,version_id:week.versionId}};
+ f.page.state.snapshot={week_start:week.week_start,week_end:'2026-10-18',current_service_date:value.current_service_date,authority_revision:request.expectedRevision,current_publication:{publication_id:week.publicationId,version_id:week.versionId}};
  f.page.els.week_start.value=week.week_start;f.page.els.service_date.value=request.startDate;
  assert.equal(A.validateStaffingPreview(value,record).operation_id,join.operationId);
  f.context.inputPrepared=value;vm.runInContext('state.staffingPreview={value:inputPrepared,context:staffingContext()};renderApprovedPreview();',f.context);
@@ -1046,7 +1046,7 @@ test('staffing private preview: actual persisted Task7 DTO binds and renders wit
  assert.equal(f.nodes.get('approved-preview-capacity-rows').children.length,week.projectionAvailability.length);
  assert.match(f.nodes.get('approved-preview-summary').textContent,new RegExp(String(week.metrics.weekly.normalizedInequity)));
  assert.match(f.nodes.get('approved-preview-summary').textContent,new RegExp(week.geographyDigest));
- assert.equal(f.nodes.get('staffing-confirm-btn').disabled,false);assert.equal(f.requests,undefined,'no helper HTTP/SQL/confirmation was invoked');
+ assert.equal(f.nodes.get('staffing-confirm-btn').disabled,false);assert.equal(f.requests,undefined,'render-only seam: no helper HTTP/SQL/confirmation was invoked');
  assert.equal(join.confirmationCalls,1);assert.equal(join.realManagerBrowserProven,false);assert.equal(join.phoneDeliveryProven,false);
 });
 test('staffing private preview: date or publication change during confirmation dialog sends nothing',async()=>{
@@ -1056,7 +1056,7 @@ test('staffing private preview: date or publication change during confirmation d
   assert.match(f.page.els.status.textContent,/changed/);
  }
 });
-test('read-only manager gets only the intended UI capabilities',()=>{const f=fixture();assert.deepEqual(A.permissions(f.auth),{read:true,owner:false,absences:true,coverall:true,routes:true,closeScanTickets:true});f.patch({permissions:{schema:'wrong',read:true,owner:true}});assert.equal(A.permissions(f.auth).owner,false);});
+test('read-only manager gets only the intended UI capabilities',()=>{const f=fixture();assert.deepEqual(A.permissions(f.auth),{read:true,owner:false,managementAdmin:false,management:false,absences:true,coverall:true,routes:true,closeScanTickets:true});f.patch({permissions:{schema:'wrong',read:true,owner:true}});assert.equal(A.permissions(f.auth).owner,false);});
 test('exact request is durable before network dispatch',async()=>{const f=fixture(),a=f.create();await a.run(path,body);assert.equal(f.map.size,1);assert.equal(a.pending().encoded,f.calls[0].options.body);assert.equal(a.pending().state,'ACCEPTED');assert.equal(a.acknowledge(snapshot),true);assert.equal(f.map.size,0);});
 test('unknown outcome preserves identical body/key across reload and retry',async()=>{const f=fixture(),a=f.create();f.setMode('offline');await assert.rejects(a.run(path,body));assert.equal(a.pending().state,'PENDING');f.setMode('accept');await f.create().retry();assert.equal(f.calls[0].options.body,f.calls[1].options.body);assert.equal(JSON.parse(f.calls[1].options.body).idempotency_key,'stable-fixture');});
 test('unresolved request prevents a second mutation',async()=>{const f=fixture(),a=f.create();f.setMode('offline');await assert.rejects(a.run(path,body));await assert.rejects(a.run(path,{...body,idempotency_key:'different'}));assert.equal(f.calls.length,1);});
@@ -1292,11 +1292,13 @@ test('ORIGINAL_CONFIRMATION_RESUME_NEW: unchanged original reload reads GET only
 });
 
 function pageFixture(){
- const nodes=new Map(),node=()=>({set id(value){this._id=value;nodes.set(value,this);},get id(){return this._id;},value:'',hidden:false,textContent:'',children:[],listeners:new Map(),focus(){},scrollIntoView(){},append(x){this.children.push(x);},replaceChildren(...items){this.children=items;},add(x){this.children.push(x);},get options(){return this.children;},set selectedIndex(i){this.value=this.children[i]?.value||'';},addEventListener(type,fn){this.listeners.set(type,fn);}});
- const document={getElementById:id=>{if(!id||id==='staffing-confirm-btn'&&!nodes.has(id))return null;if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);},createElement:node,querySelectorAll:()=>[],querySelector:id=>document.getElementById(id)};
+ let rootNode;
+ const nodes=new Map(),node=()=>({set id(value){this._id=value;nodes.set(value,this);},get id(){return this._id;},get ownerDocument(){return document;},get parentNode(){return rootNode;},value:'',hidden:false,textContent:'',children:[],attributes:new Map(),listeners:new Map(),focus(){},scrollIntoView(){},append(...items){this.children.push(...items);},insertBefore(item,before){const index=this.children.indexOf(before);if(index<0)this.children.push(item);else this.children.splice(index,0,item);},replaceChildren(...items){this.children=items;},setAttribute(key,value){this.attributes.set(key,String(value));},add(x){this.children.push(x);},get options(){return this.children;},set selectedIndex(i){this.value=this.children[i]?.value||'';},addEventListener(type,fn){this.listeners.set(type,fn);}});
+ const document={getElementById:id=>{if(!id||id==='staffing-confirm-btn'&&!nodes.has(id))return null;if(!nodes.has(id)){const item=node();item.id=id;rootNode.append(item);}return nodes.get(id);},createElement:node,createTextNode:text=>({textContent:text}),querySelectorAll:()=>[],querySelector:id=>id==='#manual-activation-panel [role=status]'?nodes.get('manual-activation-panel')?.children.find(item=>item.attributes?.get('role')==='status'):document.getElementById(id)};
+ rootNode=node();
  const f=fixture();f.patch({read_only:false,permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:true}});
  f.auth.getCSTDateString=()=> '2026-10-05';f.auth.requireOpsManagerSession=async()=>{};
- const context=vm.createContext({document,window:{MemphisSchedulerActions:{...A,create:o=>A.create({...o,storage:f.storage})},MemphisApprovedSchedule:{...P,create:o=>P.create({...o,storage:f.storage,nonce:()=>CID})},MemphisAuth:f.auth,addEventListener(){}},location:{search:'',hash:''},Option:class{constructor(text,value){this.textContent=text;this.value=value;}},crypto:webcrypto,AbortSignal,TextEncoder,setInterval:()=>1,clearInterval(){},URL,URLSearchParams,Date,Set,Map,console});
+ const context=vm.createContext({document,window:{MemphisSchedulerActions:{...A,create:o=>A.create({...o,storage:f.storage})},MemphisApprovedSchedule:{...P,create:o=>P.create({...o,storage:f.storage,nonce:()=>CID}),mountManualActivation:o=>P.mountManualActivation({...o,storage:f.storage,nonce:()=>CID})},MemphisAuth:f.auth,addEventListener(){}},location:{search:'',hash:''},Option:class{constructor(text,value){this.textContent=text;this.value=value;}},crypto:webcrypto,AbortSignal,TextEncoder,setInterval:()=>1,clearInterval(){},URL,URLSearchParams,Date,Set,Map,console});
  const source=fs.readFileSync(new URL('../schedule-weekly.js',import.meta.url),'utf8');
  const startup="init().catch((error)=>setStatus(`Scheduler unavailable: ${safe(error)}`,'error'));";
  assert.equal(source.split(startup).length,2);vm.runInContext(source.replace(startup,''),context);
@@ -1512,7 +1514,7 @@ test('scheduler integration: preview does not relabel a historical person or an 
  f.page.renderApprovedPreview();const rows=f.nodes.get('approved-preview-rows').children;assert.equal(rows[0].children[1].textContent,'Bound historical worker');assert.equal(rows[1].children[1].textContent,'Open');
 });
 for(const change of ['preview','revision','week','capability'])test(`scheduler integration: publication rechecks ${change} after review dialog`,async()=>{
- const f=pageFixture();let sent=0;f.page.state.snapshot={week_start:'2026-10-05',authority_revision:42};
+ const f=pageFixture();let sent=0;f.page.state.snapshot={week_start:'2026-10-05',week_end:'2026-10-11',authority_revision:42};
  f.page.state.preview={kind:'recurring',input:{effective_start:'2026-10-05',expected_revision:42},preview:{previewDigest:'a'.repeat(64)}};
  f.page.state.approved={confirm:async()=>{sent++;}};
  vm.runInContext('busy=async(work)=>work();refreshSnapshot=async()=>{};',f.context);
@@ -1520,7 +1522,7 @@ for(const change of ['preview','revision','week','capability'])test(`scheduler i
  f.page.els.week_start.value='2026-10-05';await assert.rejects(f.page.publishDraft());assert.equal(sent,0);
 });
 test('scheduler integration: unchanged reviewed pattern still confirms its exact original selection',async()=>{
- const f=pageFixture(),calls=[];f.page.state.snapshot={week_start:'2026-10-05',authority_revision:42};f.page.els.week_start.value='2026-10-05';
+ const f=pageFixture(),calls=[];f.page.state.snapshot={week_start:'2026-10-05',week_end:'2026-10-11',authority_revision:42};f.page.els.week_start.value='2026-10-05';
  const choice={kind:'recurring',input:{effective_start:'2026-10-05',expected_revision:42},preview:{previewDigest:'a'.repeat(64)}};f.page.state.preview=choice;
  f.page.state.approved={confirm:async(...args)=>calls.push(args)};vm.runInContext('busy=async(work)=>work();refreshSnapshot=async()=>{};',f.context);f.context.confirmAction=async()=>true;
  await f.page.publishDraft();assert.equal(calls.length,1);assert.deepEqual(calls[0],[choice.kind,choice.preview,choice.input]);
@@ -1533,8 +1535,8 @@ test('scheduler preview: source-timed capacity and own lunch never turn workload
  const f=pageFixture();
  const p1='15000000-0000-4000-8000-000000000001',p2='15000000-0000-4000-8000-000000000002';
  const view={projectionAvailability:[
-  {serviceDate:'2026-10-05',slotId:CID,incumbentPersonId:p1,incumbentName:'Monday worker',status:'working',shift:{start:'07:00',end:'16:00'},lunch:{start:'11:00',end:'11:30'},blockedWindows:[{start:'11:15',end:'12:00'}],productiveCapacityProvenance:'Accepted dated shift/lunch'},
-  {serviceDate:'2026-10-06',slotId:CID,incumbentPersonId:p2,incumbentName:'Tuesday worker',status:'working',shift:{start:'08:00',end:'13:00'},lunch:{start:'12:00',end:'12:30'},blockedWindows:[],productiveCapacityProvenance:'Accepted dated shift/lunch'},
+  {serviceDate:'2026-10-05',slotId:CID,incumbentPersonId:p1,incumbentName:'Monday worker',status:'working',shift:{start:'07:00',end:'16:00'},lunch:{start:'11:00',end:'12:00'},blockedWindows:[{start:'11:15',end:'12:00'}],productiveCapacityProvenance:'Accepted dated shift/lunch'},
+  {serviceDate:'2026-10-06',slotId:CID,incumbentPersonId:p2,incumbentName:'Tuesday worker',status:'working',shift:{start:'08:00',end:'13:00'},lunch:{start:'12:00',end:'13:00'},blockedWindows:[],productiveCapacityProvenance:'Accepted dated shift/lunch'},
   {serviceDate:'2026-10-07',slotId:SOURCE,incumbentPersonId:p2,incumbentName:'Wednesday worker',status:'working'}
  ]};
  const assignments=[
@@ -1543,12 +1545,12 @@ test('scheduler preview: source-timed capacity and own lunch never turn workload
   {planWorkId:'wrong-person',serviceDate:'2026-10-05',personId:p2,slotId:CID,status:'ASSIGNED',serviceEffortMinutes:99,locationNameSnapshot:'Must not borrow another incumbent'},
   {planWorkId:'wed-duty',serviceDate:'2026-10-07',personId:p2,slotId:SOURCE,status:'ASSIGNED',locationNameSnapshot:'Wednesday duty'}
  ];
- f.page.state.preview={preview:{templateId:'approved-six',authorityRevision:42,assignments,lunch:{responsibilities:[{service_date:'2026-10-05',normal_owner_person_id:p2,coverer_person_id:p1,coverer_slot_id:CID,coverage_purpose:'lunch_coverage',coverage_start:'12:30',coverage_end:'13:00'},{service_date:'2026-10-06',coverer_person_id:p2,coverer_slot_id:CID,coverage_purpose:'lunch_coverage'}]},constraintView:view}};
+ f.page.state.preview={preview:{templateId:'approved-six',authorityRevision:42,assignments,lunch:{responsibilities:[{service_date:'2026-10-05',normal_owner_person_id:p2,coverer_person_id:p1,coverer_slot_id:CID,coverage_purpose:'lunch_coverage',coverage_start:'12:30',coverage_end:'13:30'},{service_date:'2026-10-06',coverer_person_id:p2,coverer_slot_id:CID,coverage_purpose:'lunch_coverage'}]},constraintView:view}};
  f.page.renderApprovedPreview();const rows=f.nodes.get('approved-preview-capacity-rows').children;
  assert.equal(rows.length,3);assert.match(rows[0].children[0].textContent,/2026-10-05/);assert.match(rows[0].children[1].textContent,/Monday worker/);assert.match(rows[0].children[2].textContent,/07:00–16:00/);
  assert.match(rows[0].children[2].textContent,/480 min available before assigned work/);assert.match(rows[0].children[3].textContent,/Monday duty 07:00–08:00 · 30 workload points/);assert.doesNotMatch(rows[0].children[3].textContent,/Must not borrow/);
- assert.match(rows[0].children[4].textContent,/Own lunch 11:00–11:30/);assert.match(rows[0].children[4].textContent,/Covering lunch 12:30–13:00/);assert.match(rows[0].children[5].textContent,/Unknown.*work.*travel/);assert.doesNotMatch(rows[0].children[5].textContent,/450|30 min/);
- assert.match(rows[1].children[1].textContent,/Tuesday worker/);assert.match(rows[1].children[2].textContent,/08:00–13:00.*270 min available/);assert.match(rows[1].children[3].textContent,/Tuesday duty 08:00–09:45/);assert.doesNotMatch(rows[1].children[3].textContent,/Monday duty/);assert.match(rows[1].children[4].textContent,/Own lunch 12:00–12:30.*Covering lunch Time unavailable/);
+ assert.match(rows[0].children[4].textContent,/Own lunch 11:00–12:00/);assert.match(rows[0].children[4].textContent,/Full-hour lunch relief 12:30–13:30/);assert.match(rows[0].children[5].textContent,/Unknown.*work.*travel/);assert.doesNotMatch(rows[0].children[5].textContent,/450|30 min/);
+ assert.match(rows[1].children[1].textContent,/Tuesday worker/);assert.match(rows[1].children[2].textContent,/08:00–13:00.*240 min available/);assert.match(rows[1].children[3].textContent,/Tuesday duty 08:00–09:45/);assert.doesNotMatch(rows[1].children[3].textContent,/Monday duty/);assert.match(rows[1].children[4].textContent,/Own lunch 12:00–13:00.*Full-hour lunch relief Time unavailable/);
  assert.match(rows[2].children[2].textContent,/Time unavailable.*Available time unknown/);assert.match(rows[2].children[3].textContent,/Wednesday duty Time unavailable/);assert.match(rows[2].children[4].textContent,/Own lunch Time unavailable/);assert.match(rows[2].children[5].textContent,/Unknown/);
  assert.match(f.nodes.get('approved-preview-summary').textContent,/optimized balance and opening readiness are not established/);
 });
@@ -1604,13 +1606,14 @@ test('scheduler current-date: staffing pattern link opens ordinary current-date 
   if(path===P.paths.recurring+'/confirm'){confirms++;const body=JSON.parse(options.body);assert.equal(body.preview_digest,f.value.previewDigest);assert.equal(body.expected_revision,42);return approvedReceipt('recurring');}
   throw Error('Unexpected route '+path);
  };
- await f.page.init();assert.equal(f.page.els.week_start.value,'2026-10-05');assert.equal(f.page.els.service_date.value,'2026-10-07');
+ await f.page.init();assert.equal(f.page.els.week_start.value,'2026-10-07');assert.equal(f.page.els.service_date.value,'2026-10-07');
+ assert.equal(f.page.state.snapshot.week_start,'2026-10-05','The server-selected accepted period remains the publication authority');
  await f.page.generateDraft();assert.equal(previews,1);assert.equal(f.page.state.preview.preview.templateId,'approved-six');
- f.context.confirmAction=async()=>true;await f.page.publishDraft();assert.equal(confirms,1);assert.equal(f.page.state.approvedPending,null);assert.equal(f.map.size,0);assert.equal(f.page.els.service_date.value,'2026-10-07');
+ f.context.confirmAction=async()=>true;await f.page.publishDraft();assert.equal(confirms,1,f.page.els.status.textContent);assert.equal(f.page.state.approvedPending,null);assert.equal(f.map.size,0);assert.equal(f.page.els.service_date.value,'2026-10-07');
 });
-test('scheduler current-date: change during confirmation refuses generated preview without saving or posting',async()=>{
+for(const change of ['availability','selection-within-accepted-week'])test('scheduler current-date: '+change+' during confirmation refuses generated preview without saving or posting',async()=>{
  const f=datedPreviewFixture();f.context.api=async()=>f.value;await f.page.generateDraft();let sent=0;
- f.page.state.approved={confirm:async()=>{sent++;}};f.context.confirmAction=async()=>{f.page.state.snapshot.availability[0].shift_end='13:00';return true;};
+ f.page.state.approved={confirm:async()=>{sent++;}};f.context.confirmAction=async()=>{if(change==='availability')f.page.state.snapshot.availability[0].shift_end='13:00';else f.page.els.week_start.value='2026-10-06';return true;};
  await f.page.publishDraft();assert.equal(sent,0);assert.equal(f.map.size,0);assert.match(f.page.els.status.textContent,/changed/);
 });
 test('scheduler date-controls: explicit week and valid dated query keep the requested day; invalid controls stay visibly unsubmitted',async()=>{
@@ -1646,7 +1649,8 @@ for(const action of ['applyDayChanges','rebuildCurrentProjection'])for(const cha
   if(change==='revision')f.page.state.snapshot.authority_revision=43;if(change==='publication')f.page.state.snapshot.current_publication.version_id=SOURCE;
   if(change==='availability')f.page.state.snapshot.availability[0].shift_end='13:00';if(change==='staffing')f.page.state.snapshot.roster[0].incumbencies[0].person_id=SOURCE;
   if(change==='pending')f.page.state.approvedPending={state:'PENDING'};if(change==='credential')f.patch({credential_id:SOURCE});return true;};
- await f.page[action]();assert.equal(f.calls.length,0);assert.equal(f.map.size,0);assert.match(f.page.els.status.textContent,/changed|saved|access|selected week/i);
+ if(change==='credential')await assert.rejects(f.page[action](),/Manager access changed/);else await f.page[action]();
+ assert.equal(f.calls.length,0);assert.equal(f.map.size,0);if(change!=='credential')assert.match(f.page.els.status.textContent,/changed|saved|access|selected week/i);
 });
 for(const change of ['slots','absence-type','coverall-shift'])test(`scheduler dated-review: batch refuses changed ${change} without a saved command`,async()=>{
  const f=datedDialogFixture();f.selectContractors();if(change!=='coverall-shift')f.selectCallouts([{dataset:{calloutSlot:CID}}]);f.context.confirmAction=async()=>{if(change==='slots')f.selectCallouts([{dataset:{calloutSlot:SOURCE}}]);if(change==='absence-type')f.page.els.absence_type.value='pto';if(change==='coverall-shift')f.clock.value='09:00';return true;};
@@ -1683,7 +1687,8 @@ for(const change of ['selected-date','revision','publication','removed-exception
   if(change==='removed-exception')f.page.state.snapshot.exceptions=f.page.state.snapshot.exceptions.filter(r=>r.id!==f.coverall.id);
   if(change==='reversed-exception')f.page.state.snapshot.exceptions.push({id:PID,type:'reverse',serviceDate:f.coverall.serviceDate,payload:{reversesExceptionId:f.coverall.id}});
   if(change==='linked-lunch')f.lunch.endsAt='12:30';if(change==='credential')f.patch({credential_id:SOURCE});if(change==='pending')f.page.state.approvedPending={state:'PENDING'};return true;};
- await f.page.reverseChange(f.event);assert.equal(f.calls.length,0);assert.equal(f.map.size,0);assert.match(f.page.els.status.textContent,/changed|saved|access/);
+ if(change==='credential')await assert.rejects(f.page.reverseChange(f.event),/Manager access changed/);else await f.page.reverseChange(f.event);
+ assert.equal(f.calls.length,0);assert.equal(f.map.size,0);if(change!=='credential')assert.match(f.page.els.status.textContent,/changed|saved|access/);
 });
 test('scheduler reverse-review: stale remove button cannot reverse an already withdrawn exception',async()=>{
  const f=reversalFixture();f.page.state.snapshot.exceptions.push({id:PID,type:'reverse',serviceDate:f.coverall.serviceDate,payload:{reversesExceptionId:f.coverall.id}});let dialogs=0;
@@ -2372,11 +2377,11 @@ async function printFixture({entryRevision=43,readbackRevision=43,corrupt=false,
  const f=fixture();f.auth.opsManagerAuthHeaders=async()=>({Authorization:'fixture only'});f.auth.requireOpsManagerSession=async()=>{};f.auth.getCSTDateString=()=> '2026-10-06';
  const bytes=Buffer.from('%PDF synthetic route fixture'),hash=v=>createHash('sha256').update(v).digest('hex'),text='Synthetic English / Español route',docHash='d'.repeat(64);
  class PrintURL extends URL{static createObjectURL(blob){const url='blob:fixture-'+created.length;created.push(url);blobs.push(blob);return url;}static revokeObjectURL(url){revoked.push(url);}}
- const context=vm.createContext({document,MemphisAuth:f.auth,MemphisSchedulerActions:A,URL:PrintURL,URLSearchParams,AbortController,setTimeout,clearTimeout,AbortSignal,Blob,TextEncoder,Uint8Array,crypto:webcrypto,atob:value=>Buffer.from(value,'base64').toString('binary'),location:{search:search??('?date=2026-10-06'+(pin?'&expected_revision=43&projection_id='+PID:''))},addEventListener:(name,fn)=>events.set(name,fn),setInterval:()=>1,clearInterval:()=>{},fetch:async value=>{
+ const context=vm.createContext({document,localStorage:f.storage,MemphisAuth:f.auth,MemphisSchedulerActions:A,URL:PrintURL,URLSearchParams,AbortController,setTimeout,clearTimeout,AbortSignal,Blob,TextEncoder,Uint8Array,crypto:webcrypto,atob:value=>Buffer.from(value,'base64').toString('binary'),location:{search:search??('?date=2026-10-06'+(pin?'&expected_revision=43&projection_id='+PID:''))},addEventListener:(name,fn)=>events.set(name,fn),setInterval:()=>1,clearInterval:()=>{},fetch:async value=>{
   const url=new URL(value);requests.push(url);let data;
   if(url.pathname==='/scheduler-runtime-config')data={public_url:'https://scheduler.onrender.com'};
-  else if(url.pathname==='/static-weekly/manager-snapshot'){reads++;if(denied)return{ok:false,status:403,json:async()=>({ok:false,error:'Current manager access denied'})};data={...snapshot,latest_projection:{...snapshot.latest_projection,replay_digest:'a'.repeat(64)},authority_revision:reads===1?entryRevision:readbackRevision,...(reads>1?readbackPatch:{})};}
-  else if(url.pathname==='/static-weekly/coverall-print'){const revision=Number(url.searchParams.get('expected_revision'));const files=['en','es','en-es'].map(language=>{const content=distinctLanguages?Buffer.from('%PDF synthetic '+language+' route fixture'):bytes;return{language,filename:`CoverAll_2026-10-06_r${revision}_${language}.pdf`,sha256:corrupt?'e'.repeat(64):hash(content),base64:content.toString('base64')};});data={schema:'custodial.coverall-pdf-pair.v1',document:{serviceDate:'2026-10-06',authorityRevision:revision,publicationId:SOURCE,replayDigest:'a'.repeat(64),projectionId:PID,managerContact:{managerId:MID},documentDigest:docHash,contractors:[{name:'Manual CoverAll'}],...documentPatch},files:files.slice(0,2),bilingualFile:files[2],texts:[{language:'en-es',documentDigest:docHash,text,sha256:hash(text)}]};}
+  else if(url.pathname==='/static-weekly/manager-snapshot'){reads++;if(denied)return{ok:false,status:403,json:async()=>({ok:false,error:'Current manager access denied'})};data={...snapshot,week_end:'2026-10-11',latest_projection:{...snapshot.latest_projection,replay_digest:'a'.repeat(64)},authority_revision:reads===1?entryRevision:readbackRevision,...(reads>1?readbackPatch:{})};}
+  else if(url.pathname==='/static-weekly/coverall-print'){const revision=Number(url.searchParams.get('expected_revision'));const files=['en','es','en-es'].map(language=>{const content=distinctLanguages?Buffer.from('%PDF synthetic '+language+' route fixture'):bytes;return{language,filename:`CoverAll_2026-10-06_r${revision}_${language}.pdf`,sha256:corrupt?'e'.repeat(64):hash(content),base64:content.toString('base64')};});data={schema:'custodial.coverall-pdf-pair.v1',document:{serviceDate:'2026-10-06',authorityRevision:revision,publicationId:SOURCE,replayDigest:'a'.repeat(64),projectionId:PID,managerContact:{managerId:MID},documentDigest:docHash,contractors:[{slotId:CID,name:'Manual CoverAll'}],...documentPatch},files:files.slice(0,2),bilingualFile:files[2],texts:[{language:'en-es',documentDigest:docHash,text,sha256:hash(text)}]};}
   else throw Error('Unexpected fixture route '+url.pathname);
   return{ok:true,json:async()=>({ok:true,data})};
  }});
@@ -2390,7 +2395,7 @@ async function printFixture({entryRevision=43,readbackRevision=43,corrupt=false,
  // Preserve the complete actual init/catch body and all refusal/currentness
  // guards. Capture only its original promise; never call init a second time.
  vm.runInContext(source,context);await context.fixtureInit;
- return{nodes,requests,created,revoked,events,blobs,prepare:()=>nodes.get('prepare').listeners.get('click')()};
+ return{nodes,requests,created,revoked,events,blobs,prepare:()=>{assert.equal(typeof nodes.get('prepare').listeners.get('click'),'function',nodes.get('status').textContent);return nodes.get('prepare').listeners.get('click')();}};
 }
 test('scheduler workflow: pinned PDFs refuse changed entry or verification-time revision before issuing links',{timeout:2000},async()=>{
  for(const options of [{entryRevision:44},{readbackRevision:44}]){const f=await printFixture(options);await f.prepare();assert.equal(f.created.length,0);assert.equal(f.nodes.get('downloads').hidden,true);assert.match(f.nodes.get('status').textContent,/schedule changed/i);}
@@ -2421,6 +2426,7 @@ for(const dateQuery of ['', 'date=&'])test('contractor source binding: pinned '+
 test('contractor source binding: current explicit dated selection issues distinct verified EN and ES bytes from one accepted source',{timeout:2000},async()=>{
  const f=await printFixture({distinctLanguages:true});await f.prepare();assert.equal(f.created.length,3);assert.equal(f.nodes.get('downloads').hidden,false);assert.deepEqual(await Promise.all(f.blobs.map(blob=>blob.text())),['en','es','en-es'].map(language=>'%PDF synthetic '+language+' route fixture'));
  assert.deepEqual(f.nodes.get('downloads').children.map(link=>link.download),['en','es','en-es'].map(language=>`CoverAll_2026-10-06_r43_${language}.pdf`));
- const reads=f.requests.filter(url=>url.pathname==='/static-weekly/manager-snapshot');assert.equal(reads.length,2);assert.ok(reads.every(url=>url.searchParams.get('week_start')==='2026-10-05'));
+ const reads=f.requests.filter(url=>url.pathname==='/static-weekly/manager-snapshot');assert.equal(reads.length,2);
+ assert.deepEqual(reads.map(url=>url.searchParams.get('week_start')),['2026-10-06','2026-10-05'],'Resolve the selected date to its accepted publication period, then verify that same period');
  const query=f.requests.find(url=>url.pathname==='/static-weekly/coverall-print').searchParams;assert.equal(query.get('service_date'),'2026-10-06');assert.equal(query.get('expected_revision'),'43');assert.equal(query.get('projection_id'),PID);assert.equal(f.requests.some(url=>url.pathname.includes('confirm')),false);
 });

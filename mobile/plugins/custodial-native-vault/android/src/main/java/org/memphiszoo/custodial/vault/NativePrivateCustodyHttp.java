@@ -514,6 +514,36 @@ final class NativePrivateCustodyHttp {
     }
     // Private shared lifetime only AFTER an actual engine-minted typed take.
     // Neither callers nor plugins can supply arbitrary requests/path/cap here.
+    /** Exact idempotent preservation FACT only, never a work resend. Its body
+     * and original actor come from the native encrypted partition journal. */
+    org.json.JSONObject reportLocalEnrollmentRetention(NativeLocalEnrollmentRetentionReport original,char[] credential,
+        NativePrivateCustodyFrameReadControl control)throws VaultFailure {
+        AuthorizedRequest request=null;NativeRetainedHttp.Attempt piece=null;Exchange response=null;byte[] bytes=null;
+        try{
+            if(original==null||control==null)throw unknown();control.check();original.requireCurrent();
+            request=original.requestForFixedTransport(credential,clock.nowMillis());piece=control.beginPiece();
+            response=sendOwned(request,original.deviceForFixedTransport(),credential,piece,NativeLocalEnrollmentRetentionReport.PATH,
+                NativeLocalEnrollmentRetentionReport.MAX_BODY,System.nanoTime(),control::check);
+            bytes=response.response();control.check();original.requireCurrent();
+            if(response.status!=200)throw unknown();var wrapper=ProviderWireJson.object(bytes,8192);
+            NativeRetainedAttempt.keys(wrapper,"ok","data");if(!Boolean.TRUE.equals(wrapper.get("ok")))throw unknown();
+            var receipt=wrapper.getJSONObject("data");
+            NativeRetainedAttempt.keys(receipt,"schema","realm_id","operation_id","inventory_native_request_id","credential_id","employee_id",
+                "canonical_device_id","report_sha256","recorded_at","work_accepted","key_removal","phone_released");
+            if(!"custodial.local-enrollment-retention-receipt.v1".equals(receipt.get("schema"))
+                ||!original.realmForFixedReceipt().equals(receipt.get("realm_id"))
+                ||!original.operationForFixedReceipt().equals(receipt.get("operation_id"))
+                ||!original.deviceForFixedTransport().equals(receipt.get("canonical_device_id"))
+                ||!NativeRetainedAttempt.hash(request.body).equals(receipt.get("report_sha256")))throw unknown();
+            for(String field:new String[]{"work_accepted","key_removal","phone_released"})if(!Boolean.FALSE.equals(receipt.get(field)))throw unknown();
+            NativeNfcOriginalWriteAttempt.uuid(receipt.getString("employee_id"));NativeNfcOriginalWriteAttempt.uuid(receipt.getString("credential_id"));
+            NativeNfcOriginalWriteAttempt.uuid(receipt.getString("inventory_native_request_id"));
+            NativeSameOriginalRecoveryPreparationWire.instantMicros(receipt.getString("recorded_at"));
+            original.requireCurrent();control.check();return receipt;
+        }catch(VaultFailure e){throw e;}catch(Exception e){throw unknown();}
+        finally{if(bytes!=null)Arrays.fill(bytes,(byte)0);if(request!=null)Arrays.fill(request.body,(byte)0);
+            if(response!=null)response.close();if(piece!=null)control.endPiece(piece);}
+    }
     private Exchange sendOwned(AuthorizedRequest request,String device,char[] credential,NativeRetainedHttp.Attempt attempt,
         String expectedPath,int maximumBody,long started)throws VaultFailure {
         return sendOwned(request,device,credential,attempt,expectedPath,maximumBody,started,null);

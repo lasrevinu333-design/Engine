@@ -20,12 +20,9 @@ assert.equal(isMemphisMapDashboardSession({ auth_mode: 'trusted_device', access_
 
 const app = readFileSync(new URL('../mobile/src/manager/app.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../mobile/src/manager/index.html', import.meta.url), 'utf8');
-assert.match(app, /currentMemphisMapAccessToken\(\)/);
-assert.match(app, /request\('\/auth-api\/map-session'/);
-assert.match(app, /Authorization: `Bearer \$\{currentSession\.token\}`/);
-assert.match(app, /els\.decisions\.hidden = mapDashboard/);
-assert.match(app, /els\.more\.hidden = mapDashboard/);
-assert.match(app, /Close Custodial Dashboard Session/);
-assert.match(html, /id="map-signin-link"/);
-assert.match(html, /current Memphis Map sign-in is checked automatically/);
-console.log('MANAGER_MAP_SESSION_TESTS_PASS');
+// The independent Map helper above remains unchanged. Custodial management no
+// longer imports it or consumes Map/provider/personal-code credentials.
+assert.doesNotMatch(app,/currentMemphisMapAccessToken|auth-api\/map-session|manager-codes\/consume/);
+assert.match(app,/window\.MemphisAuth\?\.requireOpsManagerSession/);assert.match(app,/window\.MemphisAuth\.clearSession/);
+assert.match(html,/ops-manager-hub\.html/);assert.doesNotMatch(html,/map-signin-link|personal eight-digit code/i);
+console.log('SEPARATE_MAP_HELPER_AND_CUSTODIAL_DECOUPLING_TESTS_PASS');

@@ -382,3 +382,7 @@ h2{font-size:clamp(1.25rem,5vw,1.7rem);line-height:1.1;letter-spacing:-.02em}
 .saveBar{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:rgba(13,26,42,.96);backdrop-filter:blur(14px)}
 .saveBar .status{margin:0;flex:1 1 220px}
 .appNav a.active,.appNav a[aria-current="page"]{background:var(--green-soft);color:#eaffd5}
+
+/* Text-only navigation labels are labels, not the larger icon slot. */
+.appNav a{min-height:48px;align-content:center}
+.appNav a>span:only-child{font-size:.72rem;line-height:1.2;overflow-wrap:anywhere}

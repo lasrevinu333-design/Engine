@@ -1,30 +1,10 @@
-const { test, expect } = require('@playwright/test');
+const {currentLeadershipSession}=require('./helpers/current-leadership-session.cjs');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
 const managerId = '00000000-0000-4000-8000-000000000901';
 const credentialId = '00000000-0000-4000-8000-000000000902';
 
-function sessionPayload() {
-  return {
-    ok: true,
-    data: {
-      session: {
-        token: 'unity-polish-browser-test-token',
-        role: 'ops_manager',
-        roles: ['CUSTODIAL_MANAGER', 'SECURITY_ADMIN'],
-        manager_id: managerId,
-        manager_display_name: 'Unity Test Manager',
-        manager_job_title: 'Custodial Manager',
-        credential_id: credentialId,
-        device_id: 'unity-browser',
-        access_level: 'full_access',
-        read_only: false,
-        trusted_device: true,
-        expires_at: '2036-07-18T00:00:00.000Z',
-      },
-      trusted_device: { credential_id: credentialId, device_id: 'unity-browser' },
-    },
-  };
-}
+function sessionPayload(){return currentLeadershipSession({deviceId:'unity-browser',managerId,credentialId,accountId:'00000000-0000-4000-8000-000000000904',displayName:'Unity Test Manager',session:{token:'unity-polish-browser-test-token'}});}
 
 async function mockBackend(context) {
   for (const externalCdn of [
@@ -45,7 +25,7 @@ async function mockBackend(context) {
   await context.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.pathname === '/auth-api/session') {
+    if (url.pathname === '/custodial-leadership-api/session') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sessionPayload()) });
       return;
     }
@@ -53,7 +33,7 @@ async function mockBackend(context) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ok: true, data: { msg_user_id: managerId, user_id: managerId, display_name: 'Unity Test Manager', role: 'manager', role_title: 'Custodial Manager', identity_source: 'trusted_manager_session' } }),
+        body: JSON.stringify({ ok: true, data: { canonical_device_id:'unity-browser',msg_user_id:'00000000-0000-4000-8000-000000000904',user_id:'00000000-0000-4000-8000-000000000904', display_name: 'Unity Test Manager', role: 'manager', role_title: 'Custodial Manager', identity_source: 'trusted_manager_session' } }),
       });
       return;
     }
@@ -86,7 +66,7 @@ const pageMatrix = [
   ['dashboard.html', 'Back', /start_page1\.html$/],
   ['device-security.html', 'Back', /start_page1\.html$/],
   ['employee-schedule.html?hub=employee&device=KIOSK_01', 'Back', /employee-hub\.html\?device=KIOSK_01&hub=employee$/],
-  ['events.html?hub=manager', 'Back', /start_page1\.html$/],
+  ['events.html?hub=manager', 'Back to Map', /operations-dashboard\.html\?hub=manager&device=unity-browser$/],
   ['gemini-admin.html', 'Back', /start_page1\.html$/],
   ['guest-issues.html', 'Back', /start_page1\.html$/],
   ['manager-access.html', 'Back', /start_page1\.html$/],
@@ -107,7 +87,7 @@ for (const viewport of [
     const page = await context.newPage();
     for (const [route, label, destination] of pageMatrix) {
       await page.goto(`/${route}`, { waitUntil: 'domcontentloaded' });
-      const back = page.locator('[data-mz-back]');
+      const back = page.locator(route.startsWith('events.html')?'#events-back':'[data-mz-back]');
       await expect(back, route).toHaveCount(1);
       await expect(back, route).toBeVisible();
       await expect(back, route).toHaveAccessibleName(label);

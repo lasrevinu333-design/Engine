@@ -3,9 +3,12 @@ import {scheduleLocks} from './synthetic-schedule-locks.mjs';
 import { webcrypto } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import {createSyntheticScheduleSecurity} from './synthetic-schedule-security.mjs';
 
 const html=readFileSync(new URL('../employee-schedule.html',import.meta.url),'utf8');
-const inline=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)?.[1]||'';
+const inline=process.argv.includes('--native-runtime')
+  ?readFileSync(new URL('../mobile/src/custodial/employee-schedule-runtime.js',import.meta.url),'utf8').replace(/^export /m,'')+'\ninstallEmployeeSchedule();'
+  :[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)?.[1]||'';
 const now=Date.parse('2026-09-21T18:00:00Z');
 const FixedDate=class extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}};
 const elements=new Map();const element=id=>{if(!elements.has(id))elements.set(id,{textContent:'',innerHTML:'',hidden:false,dataset:{},addEventListener(){}});return elements.get(id);};
@@ -22,8 +25,8 @@ const context={Date:FixedDate,Intl,URL,console,crypto:webcrypto,TextEncoder,Abor
   localStorage:{getItem:key=>stored.get(key)??null,setItem:(key,value)=>stored.set(key,value)},
   fetch:async()=>({ok:true,json:async()=>({ok:true,data})}),
   setTimeout:()=>1,clearTimeout(){},setInterval:()=>2,clearInterval(){}};
-context.window={navigator:{locks:scheduleLocks},addEventListener(){},MemphisCustodialSecurity:{native:true,getStatus:()=>({deviceId:'KIOSK_08',ready:true,available:true,quarantined:false}),
-  mutateProtectedWork:async operation=>operation()},MemphisMobile:{ready:Promise.resolve(),deviceId:()=> 'KIOSK_08',
+context.window={navigator:{locks:scheduleLocks},addEventListener(){},MemphisCustodialSecurity:createSyntheticScheduleSecurity({
+  employee_id:data.employee_id,credential_id:'31000000-0000-4000-8000-000000000099',assignment_epoch:7}),MemphisMobile:{ready:Promise.resolve(),deviceId:()=> 'KIOSK_08',
   principalIdentity:()=> 'KIOSK_08|credential|employee|7',profileMatchesPrincipal:()=>true,
   requestJson:async(path,options)=>{calls.push({path,options,storedAtCall:new Map(stored)});return{};}}};
 vm.createContext(context);vm.runInContext(readFileSync(new URL('../memphis-recurring-schedule-target.js',import.meta.url),'utf8'),context);vm.runInContext(inline,context);

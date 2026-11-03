@@ -1,4 +1,6 @@
-const { test, expect } = require("@playwright/test");
+const {installKioskRuntime}=require('./helpers/synthetic-kiosk-runtime.cjs');
+const {currentLeadershipSession}=require('./helpers/current-leadership-session.cjs');
+const { test, expect } = require("./helpers/isolated-browser-test.cjs");
 const AxeBuilder = require("@axe-core/playwright").default;
 const baseline = require("../quality/baselines/accessibility-serious-critical-2026-07-23.json");
 
@@ -11,8 +13,8 @@ const SYNTHETIC_MESSAGE_ID = "00000000-0000-4000-8000-000000000906";
 const SYNTHETIC_LOCATION_ID = "00000000-0000-4000-8000-000000000907";
 const SYNTHETIC_SESSION_ID = "00000000-0000-4000-8000-000000000908";
 const SYNTHETIC_NFC_ENTRY_ID = "00000000-0000-4000-8000-000000000911";
-// Candidate's isolated NORMAL catalog; browser execution remains a separate gate.
-const REQUIRED_SCHEMA_FINGERPRINT = "ce1406bf491d398acb0d9d81ce1ed8f5d9ad60f503bc27585b9991c93b1b6ee2";
+// Synthetic version DATA matches the unchanged declared runtime; not an actual308/hosted catalog measurement.
+const REQUIRED_SCHEMA_FINGERPRINT = "ff233923ac21cd46b70985a9eaeb20dbb2a4c0bdc6f69f527159d437ed893440";
 
 function violationKey(item) {
   return JSON.stringify({
@@ -33,30 +35,7 @@ function normalizeViolations(result) {
     .sort((a, b) => violationKey(a).localeCompare(violationKey(b)));
 }
 
-function managerSessionPayload() {
-  return {
-    ok: true,
-    data: {
-      session: {
-        token: "batch-0a-accessibility-session",
-        role: "ops_manager",
-        roles: ["CUSTODIAL_MANAGER", "SECURITY_ADMIN"],
-        manager_id: "00000000-0000-4000-8000-000000000901",
-        manager_display_name: "Synthetic Manager",
-        manager_job_title: "Custodial Manager",
-        device_id: "KIOSK_04",
-        credential_id: "00000000-0000-4000-8000-000000000902",
-        access_level: "full_access",
-        read_only: false,
-        expires_at: "2036-07-23T00:00:00.000Z",
-      },
-      trusted_device: {
-        credential_id: "00000000-0000-4000-8000-000000000902",
-        device_id: "KIOSK_04",
-      },
-    },
-  };
-}
+function managerSessionPayload(){return currentLeadershipSession({deviceId:'KIOSK_04',managerId:'00000000-0000-4000-8000-000000000901',credentialId:'00000000-0000-4000-8000-000000000902',accountId:SYNTHETIC_MESSAGE_USER_ID,displayName:'Synthetic Manager',session:{token:'batch-0a-accessibility-session'}});}
 
 function jsonEnvelope(data, meta = {}) {
   return { ok: true, data, meta };
@@ -226,6 +205,7 @@ function backendPayload(request, entry) {
       },
     };
   }
+  if(pathname==='/scheduler-runtime-config')return jsonEnvelope({public_url:'https://scheduler-fixture.onrender.com'});
   if (pathname === "/dashboard-api/current-attendance") {
     return jsonEnvelope({
       attendance: 1234,
@@ -243,19 +223,7 @@ function backendPayload(request, entry) {
     });
   }
   if (pathname === "/dashboard-api/work-session-alerts") return jsonEnvelope([]);
-  if (pathname === "/dashboard-api/events") {
-    return jsonEnvelope([{
-      event_id: "00000000-0000-4000-8000-000000000910",
-      event_name: "Synthetic Conservation Briefing",
-      display_location: "Teton Trek",
-      event_date: "2030-07-24",
-      end_date: "2030-07-24",
-      start_time: "09:00:00",
-      end_time: "10:00:00",
-      attendee_count: 12,
-      notes: "Synthetic accessibility fixture.",
-    }]);
-  }
+  if (pathname === "/dashboard-api/events-feed") return {ok:true,feed:{schema:'custodial.events-feed.v1',timezone:'America/Chicago',source:'events_app_events',state:'snapshot',coverage:'published_records_only',mailbox_completeness_verified:false,generated_at:new Date().toISOString(),rows:[{id:'00000000-0000-4000-8000-000000000910',revision:1,timezone:'America/Chicago',name:'Synthetic Conservation Briefing',location:'Teton Trek',date:'2099-07-24',end_date:'2099-07-24',start_time:'09:00:00',end_time:'10:00:00',status:'SCHEDULED',attendees:12,requirements:[],custodial_notes:'Synthetic accessibility fixture.'}]},meta:{manager_id:'00000000-0000-4000-8000-000000000901',credential_id:'00000000-0000-4000-8000-000000000902'}};
   if (pathname === "/schedule-api/my-day-summary") {
     return jsonEnvelope({
       employee_id: SYNTHETIC_EMPLOYEE_ID,
@@ -354,6 +322,8 @@ function backendPayload(request, entry) {
   if (pathname.startsWith("/schedule-api/")) return jsonEnvelope(schedulePayload(url));
   if (pathname === "/scan-api/rpc") {
     const rpc = request.postDataJSON?.() || {};
+    if(rpc.fn==='tool_get_offline_scan_authority_snapshot')return jsonEnvelope({schema_version:'offline-scan-snapshot.v2',contract_version:'scan.v4.snapshot-bound-authority',snapshot_id:'a'.repeat(64),canonical_device_id:'KIOSK_04',employee_id:SYNTHETIC_EMPLOYEE_ID,credential_id:'40000000-0000-4000-8000-000000000004',employee_name:'Synthetic Employee',assignment_epoch:3,generated_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),locations:[{location_code:'TETM',location_name:"Teton Men's Restroom",location_type:'restroom',form_type:'restroom'}]});
+    if(rpc.fn==='tool_start_offline_occurrence')return jsonEnvelope({client_session_id:rpc.args.p_client_session_id,canonical_location_code:'TETM',started_at:rpc.args.p_client_started_at,context_id:'00000000-0000-4000-8000-000000000451',occurrence_id:'00000000-0000-4000-8000-000000000452',snapshot_id:rpc.args.p_snapshot_id,employee_id:rpc.args.p_snapshot_employee_id,assignment_epoch:rpc.args.p_snapshot_assignment_epoch,submission_proof:'f'.repeat(64)});
     if (rpc.fn === "tool_get_system_settings") return jsonEnvelope({ system_enabled: true });
     if (rpc.fn === "tool_get_location_scan_state") {
       return jsonEnvelope({
@@ -374,12 +344,12 @@ function backendPayload(request, entry) {
 async function assertSurfaceReady(page, entry) {
   const readyChecks = {
     "start-page": async () => {
-      await expect(page.locator("#access-mode")).toContainText("Full-access Ops Manager · Synthetic Manager");
+      await expect(page.locator("#access-mode")).toContainText("Leadership management · self-asserted name · Custodial leadership cohort");
       await expect(page.locator(".hubGrid").first()).toBeVisible();
     },
     "ops-manager-hub": async () => {
-      await expect(page.locator("#enroll-form")).toBeVisible();
-      await expect(page.getByLabel("Personal enrollment code")).toBeVisible();
+      await expect(page.locator("#pin-form")).toBeVisible();
+      await expect(page.getByLabel("Leadership PIN")).toBeVisible();
     },
     "employee-hub": async () => {
       await expect(page.locator(".app")).toHaveCount(4);
@@ -393,31 +363,31 @@ async function assertSurfaceReady(page, entry) {
       await expect(page.getByText("Synthetic Employee", { exact: true }).first()).toBeVisible();
     },
     events: async () => {
-      await expect(page.locator("#status-pill")).toHaveText("1 upcoming event loaded");
-      await expect(page.locator(".eventRow")).toHaveCount(1);
+      await expect(page.locator('#events-content article[data-event-id]')).toHaveCount(1);
+      await expect(page.getByRole('heading',{name:'Synthetic Conservation Briefing',exact:true})).toBeVisible();
     },
     dashboard: async () => {
       await expect(page.locator("#refresh-status")).toContainText("Last refresh:");
       await expect(page.locator("#tiles .tile")).toHaveCount(5);
     },
     scan: async () => {
-      await expect(page.getByRole("heading", { name: "Start Cleaning" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Start Cleaning" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Cleaning in Progress",exact:true })).toBeVisible();
     },
     "operational-insights": async () => {
-      await expect(page.locator("#global-status")).toContainText("Current through");
+      await expect(page.locator("#global-status")).toHaveText("Operational evidence loaded for the displayed filters.");
       await expect(page.locator("#performance-list .dataCard")).toHaveCount(1);
       await expect(page.getByText("Synthetic Employee · Teton Men's Restroom", { exact: true })).toBeVisible();
     },
     "phone-assignments": async () => {
-      await expect(page.locator("#assignment-status")).toHaveText("1 kiosk phones ready.");
+      await expect(page.locator("#assignment-status")).toHaveText("1 kiosk assignments loaded. Phone activation is verified separately.");
       await expect(page.locator("#phone-list .phoneRow")).toHaveCount(1);
       await expect(page.locator(".phoneOperationalWarning")).toContainText("2 pending phone items");
       await expect(page.locator(".phoneOperationalWarning")).toContainText("assignment 4");
     },
     schedule: async () => {
       await expect(page.locator("#service-date")).not.toHaveValue("");
-      await expect(page.locator("#schedule-wrap")).toContainText("No groups match the current filter.");
+      await expect(page.locator('#week-body')).toContainText('Synthetic Employee');
+      await expect(page.locator('#revision-count')).toHaveText('42');
     },
     notifications: async () => {
       await expect(page.getByRole("heading", { name: "Phone notifications" })).toBeVisible();
@@ -433,25 +403,22 @@ async function assertSurfaceReady(page, entry) {
 }
 
 async function installDeterministicRuntime(context, entry) {
+  if(entry.surface==='scan')await installKioskRuntime(context,{verifiedEntryIds:[SYNTHETIC_NFC_ENTRY_ID]});
   await context.addInitScript(({ scanEntryId }) => {
     localStorage.setItem("mz_scan_device_id", "KIOSK_04");
     localStorage.setItem("memphisAssignedDeviceId", "KIOSK_04");
     localStorage.setItem("mz_employee_hub_device_id", "KIOSK_04");
-    if (scanEntryId) {
-      window.MemphisMobile = {
-        verifyScanEntryAttestation: async (entryId) => ({
-          schema_version: "scan-entry-attestation.v1",
-          entry_id: entryId,
-          entry_source: "native-nfc",
-          device_id: "KIOSK_04",
-          location_code: "TETM",
-          created_at: "2026-07-23T14:00:00.000Z",
-          expires_at: "2036-07-23T14:15:00.000Z",
-          client_session_id: null,
-        }),
-      };
-    }
   }, { scanEntryId: entry.surface === "scan" ? SYNTHETIC_NFC_ENTRY_ID : "" });
+  if(entry.surface==='schedule')await context.route('https://scheduler-fixture.onrender.com/**',async route=>{
+    const u=new URL(route.request().url());const day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());const requested=u.searchParams.get('week_start')||day;const monday=new Date(requested+'T12:00:00Z');monday.setUTCDate(monday.getUTCDate()-(monday.getUTCDay()+6)%7);const week=monday.toISOString().slice(0,10);
+    const end=new Date(week+'T12:00:00Z');end.setUTCDate(end.getUTCDate()+6);const id=n=>'70000000-0000-4000-8000-'+String(n).padStart(12,'0');
+    let data={};
+    if(u.pathname==='/static-weekly/manager-snapshot')data={week_start:week,week_end:end.toISOString().slice(0,10),current_service_date:day,authority_revision:42,projection_status:'current',current_publication:{publication_id:id(1),version_id:id(2)},sources:[{source_id:id(2)}],drafts:[],roster:[{slot_id:id(3),slot_label:'Synthetic Employee',contractor_capacity:false,incumbencies:[{person_id:SYNTHETIC_EMPLOYEE_ID,person_name:'Synthetic Employee',effective_start:'2020-01-01',effective_end:null}]}],availability:Array.from({length:7},(_,day_of_week)=>({slot_id:id(3),day_of_week,availability_state:'working'})),assignments:[],latest_projection:{projection_id:id(4),assignments:[{owner_slot_id:id(3),service_date:day,status:'ASSIGNED',work_snapshot:{locationNameSnapshot:'Teton Trek',window:{start:'08:00',end:'09:00'},serviceEffortMinutes:20}}]},exceptions:[]};
+    else if(u.pathname==='/static-weekly/manual-activation/roster')data={serviceDate:day,authorityRevision:42,approvedManualActivation:{schema:'custodial.approved-manual-activation-options.v2',serviceDate:day,authorityRevision:42,choices:[],active:{sourceId:id(2),publicationId:id(1),projectionId:id(4),authorityRevision:42,projectionStatus:'current',normalSourceLocked:true,initialOperationId:id(5),initialProjectionId:id(4)}}};
+    else if(u.pathname==='/static-weekly/approved-choices')data={schema:'custodial.approved-schedule-choices.v1',initial:[]};
+    else throw Error('Unexpected accessibility schedule route '+u.pathname);
+    await route.fulfill({contentType:'application/json',headers:{'access-control-allow-origin':'*','access-control-allow-headers':'content-type,authorization,x-device-id','access-control-allow-methods':'GET,POST,OPTIONS'},body:JSON.stringify({ok:true,data})});
+  });
   await context.route("https://api.open-meteo.com/**", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -464,12 +431,12 @@ async function installDeterministicRuntime(context, entry) {
   await context.route("https://memphis-zoo-mcp.onrender.com/**", (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.pathname === "/auth-api/session") {
+    if (url.pathname === "/custodial-leadership-api/session") {
       if (entry.surface === "ops-manager-hub") {
         return route.fulfill({
-          status: 401,
+          status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ ok: false, error: "No synthetic trusted session for enrollment surface." }),
+          body: JSON.stringify({ok:true,enrolled:false,csrfToken:"synthetic-accessibility-csrf"}),
         });
       }
       return route.fulfill({
@@ -517,7 +484,7 @@ test.describe("current serious and critical accessibility baseline", () => {
       expect(
         new URL(page.url()).pathname,
         `${entry.surface} redirected away from the surface the accessibility baseline claims to cover`,
-      ).toBe(new URL(entry.path, "http://127.0.0.1:4173").pathname);
+      ).toBe(entry.surface==='schedule'?'/schedule-weekly.html':new URL(entry.path, "http://127.0.0.1:4173").pathname);
       await expect(page.locator("body")).toBeVisible();
       await assertSurfaceReady(page, entry);
       expect(pageErrors, `${entry.surface} raised page errors before its accessibility scan`).toEqual([]);
@@ -577,7 +544,7 @@ test("admin repaired four labels through ticket modal [PREP-NEW-006]", async ({ 
         status: 200, contentType: "application/json", body: JSON.stringify(body),
       });
       if (url.origin === "https://memphis-zoo-mcp.onrender.com") {
-        if (url.pathname === "/auth-api/session" && request.method() === "GET") {
+        if (url.pathname === "/custodial-leadership-api/session" && request.method() === "GET") {
           calls.session++;
           return reply(managerSessionPayload());
         }

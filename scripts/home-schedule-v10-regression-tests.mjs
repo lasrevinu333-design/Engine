@@ -1,3 +1,4 @@
+import {createSyntheticNativeHome} from './fixtures/native-home-mutation-context.mjs';
 import assert from 'node:assert/strict';
 import {fixture,payload,day,key,id} from './employee-schedule-convergence-race-tests.mjs';
 import {installHomeFacts} from '../mobile/src/custodial/home-facts-dom.js';
@@ -13,16 +14,18 @@ async function withHome(work){
  try{
   const memory=new Map(),events=new Map(),nodes=new Map(),el=k=>{if(!nodes.has(k))nodes.set(k,{textContent:'',innerHTML:'',dataset:{}});return nodes.get(k);};
   const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(2),employee_name:'Fixture',credential_id:id(3),assignment_epoch:7};
-  const healthy=()=>({ready:true,available:true,quarantined:false}),security={native:true,getStatus:healthy,mutateProtectedWork:async fn=>fn()};
-  const mobile={principalIdentity:()=> 'v10-dom',profileMatchesPrincipal:()=>true},access={profile:()=>profile,device:()=> 'KIOSK_08',request:async()=>legacy()};
+  const nativeFixture=createSyntheticNativeHome('v10-dom'),nativeBinding=nativeFixture.binding;
+  const healthy=nativeFixture.status,security={native:true,getStatus:healthy,mutateProtectedWork:nativeFixture.mutate};
+  const mobile={principalIdentity:()=> nativeBinding,profileMatchesPrincipal:()=>true},access={profile:()=>profile,device:()=> 'KIOSK_08',request:async()=>legacy()};
   globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:mobile};
+  globalThis.window.MemphisCustodialSecurity=security;
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
   globalThis.setInterval=()=>1;globalThis.clearInterval=()=>{};globalThis.fetch=async()=>{throw Error('external facts offline');};
   app=installHomeFacts({getProfile:()=>access.profile(),getDeviceId:()=>access.device(),isVisible:()=>true,security,requestJson:(...args)=>access.request(...args)});
   await app.update(true);assert.equal(el('home-shift').textContent,'7:00 AM–4:00 PM');
-  const who={deviceId:'KIOSK_08',employeeId:id(2),employeeName:'Fixture',credentialId:id(3),assignmentEpoch:7,protectedBinding:'v10-dom'};
-  const owner=createScheduleHomeConvergence({identity:()=>who,storage:globalThis.localStorage,mutate:security.mutateProtectedWork,matches:()=>true});
-  await work({app,el,events,security,mobile,access,healthy,memory,who,owner,key:'mz_employee_schedule_snapshot:v10-dom',availabilityKey:'mz_employee_schedule_snapshot:availability:v10-dom'});
+  const who={deviceId:'KIOSK_08',employeeId:id(2),employeeName:'Fixture',credentialId:id(3),assignmentEpoch:7,protectedBinding:nativeBinding};
+  const owner=createScheduleHomeConvergence({identity:()=>who,storage:globalThis.localStorage,mutate:operation=>security.mutateProtectedWork(operation,{requireEnrollment:true,expectedGeneration:nativeFixture.state.generation}),matches:()=>true});
+  await work({app,el,events,security,mobile,access,healthy,memory,who,owner,key:'mz_employee_schedule_snapshot:'+encodeURIComponent(nativeBinding),availabilityKey:'mz_employee_schedule_snapshot:availability:'+encodeURIComponent(nativeBinding)});
  }finally{app?.stop();for(const[k,v]of saved){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
 }
 for(const modes of [[true,false,true],[true,true,false,true],[true,true,true],[false,true,false]])await test('V9-01 exact-key durable unavailable mode sequence '+modes.join(','),()=>withHome(async f=>{

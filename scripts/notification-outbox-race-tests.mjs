@@ -58,12 +58,12 @@ async function affectedSettlementMembers() {
 // The newly affected settlement fixture must use a real original/actor/route
 // and the existing runtime admission, not the historical bare mutation stub.
 const owning = await originalSettlementCase('fixture-only');
-const {storage, key, row, encoded} = owning;
+const {storage, key, row, encoded, seed} = owning;
 let origin;
 const settle = options => settleNotificationOutboxRow({...owning.args, ...options, origin,
   response:options.delivered === true ? owning.response : null,
   failure:options.delivered === false ? 'NOT_DELIVERED' : undefined});
-storage.setItem(key, encoded);
+seed(encoded);
 origin = owning.capture();
 
 assert.equal(await settle({delivered:true}), true);
@@ -71,21 +71,21 @@ assert.equal(storage.getItem(key), null);
 assert.equal(await settle({delivered:false}), false);
 assert.equal(storage.getItem(key), null, 'late failed sender cannot resurrect a settled receipt');
 
-storage.setItem(key, encoded);
+seed(encoded);
 origin = owning.capture();
 const replacement = JSON.stringify({...row, attempts:1, marker:'newer'});
-storage.setItem(key, replacement);
+seed(replacement);
 assert.equal(await settle({delivered:true}), false);
 assert.equal(storage.getItem(key) === replacement, true, 'late success cannot erase a newer row');
 
-storage.setItem(key, encoded);
+seed(encoded);
 origin = owning.capture(); // Original capture precedes the competing retry.
-storage.setItem(key, JSON.stringify({...row, attempts:1,
+seed(JSON.stringify({...row, attempts:1,
   last_attempt_at:'2026-10-02T04:00:00.000Z'}));
 assert.equal(await settle({delivered:true}), true);
 assert.equal(storage.getItem(key), null, 'success settles the same operation despite a competing retry increment');
 
-storage.setItem(key, encoded);
+seed(encoded);
 origin = owning.capture();
 assert.equal(await settle({delivered:false,
   now:()=> '2026-10-02T04:00:00.000Z'}), true);
@@ -161,7 +161,9 @@ async function originalSettlementCase(name) {
   const args={storage,mutate:runtime.security.mutateProtectedWork,key,encoded,row,origin,request,response,delivered:true,
     now:()=> '2026-01-01T00:00:00.000Z'};
   const originalIntact=()=>storage.rows.get(key)===encoded; // Never log original row/body.
-  if(name==='fixture-only')return {storage,key,row,encoded,args,response,
+  // Fixture seeding models a competing writer. Product settlement still uses
+  // the actual protected runtime; public Storage writes must remain blocked.
+  if(name==='fixture-only')return {storage,key,row,encoded,args,response,seed:value=>raw.setItem(key,value),
     capture:()=>domain.captureNotificationOutboxSettlementOrigin({storage,key,encoded,row,
       expectedPrincipalIdentity:principalIdentity(p),expectedGeneration:generation,...readers})};
   try {

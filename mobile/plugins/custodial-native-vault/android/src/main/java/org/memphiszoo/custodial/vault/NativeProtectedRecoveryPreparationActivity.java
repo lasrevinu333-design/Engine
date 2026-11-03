@@ -22,7 +22,7 @@ import org.json.JSONObject;
  * original work and keys and cannot release a phone or replay work. */
 public final class NativeProtectedRecoveryPreparationActivity extends Activity {
     static final String ACTION="org.memphiszoo.custodial.ORIGINAL_RECOVERY_PREPARATION";
-    private static final AtomicBoolean FLIGHT=new AtomicBoolean();
+    private static final AtomicBoolean FLIGHT=RetainedEnrollmentMaintenanceReceiver.FLIGHT;
     private final Object lifecycle=new Object();
     private NativePrivateCustodyFrameReadControl control;
     private Thread worker;
@@ -278,7 +278,7 @@ public final class NativeProtectedRecoveryPreparationActivity extends Activity {
                 // DATA presentation is closed independently of the Engine's
                 // private effect admission. A contradictory result must not
                 // display local success or disclose original identities.
-                text=NativeManagerPreparationPresentation.enrollmentSeparationObserved(result);
+                text=NativeManagerPreparationPresentation.enrollmentPartitionPrepared(result);
             }else if(preparation==Preparation.READ_LOCAL_FINALIZATION_STATUS){
                 JSONObject result=runtime.inspectExistingOriginalEnrollmentFinalization(control);requireCurrent();
                 if(result.length()!=11||!"custodial.native-original-enrollment-finalization-readback.v1".equals(result.get("schema")))

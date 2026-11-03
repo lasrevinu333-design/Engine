@@ -115,7 +115,7 @@ public final class NativeProviderMaintenanceTest {
     }
     @Test public void failedStaleHttpCannotWriteDiagnosticUnderSuccessorAuthority() throws Exception {
         NativeProviderCompositionTest.Composition x=new NativeProviderCompositionTest.Composition(false);
-        x.duringHttp=()->x.f.engine.removeEnrollment(NativeProviderHttpTest.RID,NativeProviderHttpTest.DEVICE);
+        x.duringHttp=()->NativeProviderHttpTest.preserveSyntheticOriginal(x.f);
         ProviderRecordStoreTest.failure("custodial_native_vault_concurrent_change",x::sync);
         assertFalse(x.f.provider.storage.store().load().keys().stream().anyMatch(k->k.id.equals("last-local-failure")));
         assertEquals(NativeProviderJobLifecycle.Result.SUSPEND,x.owner.pendingWork());assertEquals(0,x.surface.shows);
@@ -196,7 +196,7 @@ public final class NativeProviderMaintenanceTest {
     }
     @Test public void absentNativePrincipalRetainsOriginalSuspendedResultWithoutHttpOrSyntheticDiagnostic() throws Exception {
         NativeProviderCompositionTest.Composition x=new NativeProviderCompositionTest.Composition(false);
-        x.f.engine.removeEnrollment(NativeProviderHttpTest.RID,NativeProviderHttpTest.DEVICE);
+        NativeProviderHttpTest.preserveSyntheticOriginal(x.f);
         assertEquals(NativeProviderJobLifecycle.Result.SUSPEND,x.sync());assertTrue(x.paths.isEmpty());
         assertFalse(x.f.provider.storage.store().load().keys().stream().anyMatch(k->k.id.equals("last-local-failure")));
     }

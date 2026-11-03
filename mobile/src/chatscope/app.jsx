@@ -17,6 +17,7 @@ import {
 import './theme.css';
 import './avatar.css';
 import { createHomeAssistantEntry } from './home-assistant-entry.mjs';
+import { createMessageHistory } from './message-history.mjs';
 
 const API = 'https://memphis-zoo-mcp.onrender.com/messaging-api';
 const MEMPHIS_AVATAR = './memphis_avatar_ui.webp';
@@ -827,11 +828,9 @@ async function retainPermanentDeleteFailure(entry, error, key, expectedBytes, as
 
 async function resolveAuthHeaders() {
   if (EMPLOYEE_CONTEXT && !window.MemphisCustodialSecurity?.native) return { 'X-Device-Id': employeeDeviceId() };
-  const session = await window.MemphisAuth?.requireOpsManagerSession?.({
-    accessLevel: 'full_access', interactive: true, redirect: false, throwOnFailure: true,
-  });
-  if (!session?.token) throw new Error('Named Operations Leadership access is required.');
-  return { Authorization: `Bearer ${session.token}`, 'X-Device-Id': session.device_id || window.MemphisAuth?.getDeviceId?.() || '' };
+  const headers = await window.MemphisAuth?.opsManagerAuthHeaders?.();
+  if (!headers?.Authorization || !headers['X-Device-Id']) throw new Error('Current Operations Leadership access is required.');
+  return headers;
 }
 function deviceId() {
   if (EMPLOYEE_CONTEXT || isNativeCustodialAuthority()) return employeeDeviceId();
@@ -1193,6 +1192,9 @@ function MessengerApp() {
   const [status, setStatus] = useState(EMPLOYEE_CONTEXT ? 'Opening Messages…' : 'Opening Messenger…');
   const [statusKind, setStatusKind] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const historyRef = useRef(null);
   const [newConversation, setNewConversation] = useState(false);
   const [mobileThread, setMobileThread] = useState(false);
   const [composerTooLong, setComposerTooLong] = useState(false);
@@ -1396,6 +1398,8 @@ function MessengerApp() {
       || (!desired && !EMPLOYEE_CONTEXT ? rows[0] : null)
       || null;
     if (next && next.id !== selectedRef.current) {
+      historyRef.current = null;
+      setHasOlderMessages(false); setLoadingOlderMessages(false); setMessages([]);
       selectedRef.current = next.id;
       setSelectedId(next.id);
       setLoadingMessages(true);
@@ -1404,6 +1408,7 @@ function MessengerApp() {
         setMobileThread(true);
       }
     } else if (!next && selectedRef.current) {
+      historyRef.current = null;
       selectedRef.current = '';
       setSelectedId('');
       setMessages([]);
@@ -1567,12 +1572,19 @@ function MessengerApp() {
     };
     assertReadCurrent();
     if (!threadId) return [];
+    if (!historyRef.current || historyRef.current.threadId !== threadId
+        || historyRef.current.mapped !== mapped || historyRef.current.epoch !== originalEpoch) {
+      historyRef.current = { threadId, mapped, epoch: originalEpoch, state: createMessageHistory(), olderFlight: null };
+      setHasOlderMessages(false); setLoadingOlderMessages(false);
+    }
+    const history = historyRef.current;
     if (showLoading) setLoadingMessages(true);
     const epoch = accessEpoch.current;
     const sequence = ++messageLoadSequence.current;
     const isCurrentMessageLoad = () => {
       try { assertReadCurrent(); } catch { return false; }
       return mounted.current && selectedRef.current === threadId
+        && historyRef.current === history
         && epoch === accessEpoch.current && identityRef.current === mapped
         && sequence === messageLoadSequence.current;
     };
@@ -1581,8 +1593,9 @@ function MessengerApp() {
       assertReadCurrent();
       const rows = (envelope.data || []).filter((row) => row.is_deleted !== true);
       if (!isCurrentMessageLoad()) return rows;
-      const merged = mergePendingMessages(rows, threadId, mapped.msg_user_id, currentDeviceId);
+      const merged = mergePendingMessages(history.state.latest(rows), threadId, mapped.msg_user_id, currentDeviceId);
       assertReadCurrent(); setMessages(merged);
+      setHasOlderMessages(history.state.hasOlder());
       const thread = threadsRef.current.find((item) => item.id === threadId);
       const mobileLayout = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 720px)').matches;
       const conversationVisible = document.visibilityState === 'visible' && (!mobileLayout || mobileThreadRef.current);
@@ -1597,6 +1610,36 @@ function MessengerApp() {
     }
   }, [currentDeviceId, loadIdentity, markRead]);
 
+  const loadEarlierMessages = useCallback(async () => {
+    const history = historyRef.current;
+    if (!history || history.olderFlight || !history.state.hasOlder()) return;
+    const { threadId, mapped, epoch } = history;
+    const assertManager = !EMPLOYEE_CONTEXT ? originalManagerOutboxOwner(mapped,currentDeviceId,identityRef,accessEpoch,mounted,true) : () => {};
+    const isCurrent = () => {
+      try { assertManager(); } catch { return false; }
+      return mounted.current && historyRef.current === history && selectedRef.current === threadId
+        && identityRef.current === mapped && accessEpoch.current === epoch;
+    };
+    const assertCurrent = () => { if (!isCurrent()) throw custodialWorkUnavailable(); };
+    if (!isCurrent()) return;
+    const cursor = history.state.cursor();
+    if (!cursor) return;
+    const flight = {};
+    history.olderFlight = flight; setLoadingOlderMessages(true);
+    try {
+      const envelope = await api(`/thread/${encodeURIComponent(threadId)}/messages?user_id=${encodeURIComponent(mapped.msg_user_id)}&device_id=${encodeURIComponent(currentDeviceId)}&limit=200&before=${encodeURIComponent(cursor.before)}&before_id=${encodeURIComponent(cursor.before_id)}`, {assertCurrent});
+      if (!isCurrent()) return;
+      const rows = history.state.older(envelope.data || [], cursor);
+      setMessages(mergePendingMessages(rows, threadId, mapped.msg_user_id, currentDeviceId));
+      setHasOlderMessages(history.state.hasOlder());
+    } catch (error) {
+      if (isCurrent()) throw error;
+    } finally {
+      if (history.olderFlight === flight) history.olderFlight = null;
+      if (isCurrent()) setLoadingOlderMessages(false);
+    }
+  }, [currentDeviceId]);
+
   const selectThread = useCallback((id) => {
     homeAssistantEntry.current.cancel();
     const changed = id !== selectedRef.current;
@@ -1605,6 +1648,8 @@ function MessengerApp() {
     const savedDraft = draftsRef.current[`${identityRef.current?.msg_user_id || ''}:${id}`] || '';
     setComposerTooLong(messageLength(htmlMessageBody(savedDraft)) > MAX_MESSAGE_LENGTH);
     if (changed) {
+      historyRef.current = null;
+      setHasOlderMessages(false); setLoadingOlderMessages(false);
       messageCursor.current = { after: ZERO_TIME, id: ZERO_ID };
       setMessages([]);
       setLoadingMessages(true);
@@ -2286,7 +2331,7 @@ function MessengerApp() {
     setAccessBlocked(false);
     identityRef.current = null; setIdentity(null);
     threadsRef.current = []; setThreads([]);
-    selectedRef.current = ''; setSelectedId(''); setMessages([]);
+    selectedRef.current = ''; historyRef.current = null; setSelectedId(''); setMessages([]);
     (async () => {
       try {
         await loadIdentity();
@@ -2366,9 +2411,12 @@ function MessengerApp() {
           if (stopped || controller.signal.aborted) break;
           assertCurrent?.();
           const next = envelope.meta?.next_cursor;
-          if (next?.after && next?.after_id) threadCursor.current = { after: next.after, id: next.after_id };
           if (envelope.data?.length) await loadThreads({ preferId: selectedRef.current, ...(!EMPLOYEE_CONTEXT ? {assertCurrent} : {}) });
+          if (stopped || controller.signal.aborted || identityRef.current !== identity) break;
           assertCurrent?.();
+          // A change is consumed only after its dependent list is reconciled.
+          // Transient list failures must leave this cursor available for retry.
+          if (next?.after && next?.after_id) threadCursor.current = { after: next.after, id: next.after_id };
         } catch (error) {
           if (stopped || controller.signal.aborted) break;
           try { assertCurrent?.(); } catch { break; }
@@ -2419,7 +2467,14 @@ function MessengerApp() {
           assertCurrent?.();
           const next = envelope.meta?.next_cursor;
           if (next?.after && next?.after_id) messageCursor.current = { after: next.after, id: next.after_id };
-          if (envelope.data?.length) await loadMessages(selectedId);
+          if (envelope.data?.length) {
+            if (historyRef.current?.threadId === selectedId && historyRef.current.mapped === identity
+                && historyRef.current.epoch === accessEpoch.current) {
+              const rows = historyRef.current.state.updates(envelope.data);
+              setMessages(mergePendingMessages(rows, selectedId, identity.msg_user_id, currentDeviceId));
+            }
+            await loadMessages(selectedId);
+          }
           assertCurrent?.();
         } catch (error) {
           if (stopped || controller.signal.aborted) break;
@@ -2438,6 +2493,7 @@ function MessengerApp() {
       homeAssistantEntry.current.cancel();
       accessEpoch.current += 1;
       identityRef.current = null; threadsRef.current = []; selectedRef.current = '';
+      historyRef.current = null; setHasOlderMessages(false); setLoadingOlderMessages(false);
       setIdentity(null); setThreads([]); setMessages([]); setSelectedId('');
       setNewConversation(false); setEmojiOpen(false); setAccessBlocked(true);
       for (const controller of activeMessengerRequests) controller.abort();
@@ -2547,12 +2603,12 @@ function MessengerApp() {
         </Sidebar>
         {selectedThread ? <ChatContainer>
           <ConversationHeader>
-            {!EMPLOYEE_CONTEXT && <ConversationHeader.Back onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }} />}
+            {!EMPLOYEE_CONTEXT && <ConversationHeader.Back><button className="cs-button cs-button--arrow" type="button" aria-label="Back to conversations" onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }}>←</button></ConversationHeader.Back>}
             {messengerAvatar(selectedThread.title, isMemphis(selectedThread) ? MEMPHIS_AVATAR : '')}
             <ConversationHeader.Content userName={selectedThread.title} info={EMPLOYEE_CONTEXT ? '' : (selectedThread.shared ? 'Leadership' : selectedThread.participantNames || '')} />
-            <ConversationHeader.Actions><div className="mz-chat-thread-actions"><button ref={emojiButton} className="mz-button mz-emoji-toggle" type="button" aria-label="Insert emoji" aria-expanded={emojiOpen} aria-controls="messenger-emoji-picker" disabled={!selectedThread.canSend || accessBlocked} onPointerDown={captureEmojiCaret} onClick={() => setEmojiOpen(open => !open)}>Emoji</button>{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" disabled={identity?.read_only || accessBlocked} onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
+            <ConversationHeader.Actions><div className="mz-chat-thread-actions">{hasOlderMessages && <button className="mz-button" type="button" disabled={loadingOlderMessages || loadingMessages || accessBlocked} onClick={() => void loadEarlierMessages().catch(error => setNotice(safe(error), 'error'))}>{loadingOlderMessages ? 'Loading earlier messages…' : 'Earlier messages'}</button>}<button ref={emojiButton} className="mz-button mz-emoji-toggle" type="button" aria-label="Insert emoji" aria-expanded={emojiOpen} aria-controls="messenger-emoji-picker" disabled={!selectedThread.canSend || accessBlocked} onPointerDown={captureEmojiCaret} onClick={() => setEmojiOpen(open => !open)}>Emoji</button>{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" disabled={identity?.read_only || accessBlocked} onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
           </ConversationHeader>
-          <MessageList loading={loadingMessages} loadingMore={false}>
+          <MessageList loading={loadingMessages} loadingMore={loadingOlderMessages}>
             {renderedMessages}
             {!loadingMessages && !messages.length && <Message model={{ message: 'No messages yet.', direction: 'incoming', position: 'single' }} />}
           </MessageList>

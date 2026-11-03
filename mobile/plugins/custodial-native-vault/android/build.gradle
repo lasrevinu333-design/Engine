@@ -14,6 +14,32 @@ ext {
 
 apply plugin: 'com.android.library'
 
+// Normal generated applications attach this exact scope class through their
+// existing source overlay. The standalone library has no application root, so
+// it must generate the same source-owned class before compiling its own Java.
+if (project == rootProject) {
+    def mobileSourceRoot = file('../../../')
+    def generatedScope = layout.buildDirectory.dir('generated/source/custodialNativeScope')
+    def generateScope = tasks.register('generateStandaloneCustodialNativeScope') {
+        inputs.files(fileTree(new File(mobileSourceRoot, 'scripts')) { include '*.mjs' })
+        inputs.files(new File(mobileSourceRoot, 'src/custodial/new-producer-scope.profile.json'),
+            new File(mobileSourceRoot, 'src/custodial/new-producer-scope.js'))
+        outputs.file(generatedScope.map { it.file('CustodialNewProducerScope.java') })
+        doLast {
+            def source = new ByteArrayOutputStream()
+            exec {
+                commandLine 'node', new File(mobileSourceRoot, 'scripts/print-custodial-native-scope.mjs')
+                standardOutput = source
+            }
+            def target = generatedScope.get().file('CustodialNewProducerScope.java').asFile
+            target.parentFile.mkdirs()
+            target.setText(source.toString('UTF-8'), 'UTF-8')
+        }
+    }
+    android.sourceSets.main.java.srcDir(generatedScope)
+    tasks.named('preBuild').configure { dependsOn generateScope }
+}
+
 // Explicit disposable self-instrumenting release environment only. Default
 // debug qualification and shipping library variants keep their normal setup.
 def releaseInstrumentation = providers.gradleProperty('custodialProtectedRecoveryReleaseInstrumentation').getOrElse('false')

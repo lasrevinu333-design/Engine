@@ -21,6 +21,28 @@ const saveStatus = document.getElementById('save-status');
 const testStatus = document.getElementById('test-status');
 const enableDevice = document.getElementById('enable-device');
 const testButton = document.getElementById('test-notification');
+const retryLoad = document.getElementById('retry-load');
+let preferencesLoaded = false, loading = false, saving = false, dirty = false;
+let knownPushDevice = null;
+function updateControls() {
+  for (const control of form.elements) control.disabled = !preferencesLoaded || loading || saving;
+  eventOptions.disabled = !preferencesLoaded || loading || saving || !events.checked;
+  retryLoad.hidden = preferencesLoaded || loading;
+  retryLoad.disabled = loading || saving;
+}
+form.addEventListener('input', () => { if (preferencesLoaded) dirty = true; });
+form.addEventListener('change', () => { if (preferencesLoaded) dirty = true; });
+document.addEventListener('click', (event) => {
+  const link = event.target.closest('a[href]');
+  if (!link || (!dirty && !saving)) return;
+  if (saving || !window.confirm('You have unsaved notification choices. Leave this page and discard them?')) {
+    event.preventDefault(); event.stopImmediatePropagation();
+  } else dirty = false;
+}, true);
+window.addEventListener('beforeunload', (event) => {
+  if (!dirty && !saving) return;
+  event.preventDefault(); event.returnValue = '';
+});
 
 function setStatus(element, text, kind = '') {
   element.textContent = text || '';
@@ -35,7 +57,7 @@ function setWeekdays(days) {
   const selected = new Set(Array.isArray(days) ? days.map(Number) : []);
   document.querySelectorAll('input[name="weekday"]').forEach((input) => { input.checked = selected.has(Number(input.value)); });
 }
-function updateEventOptions() { eventOptions.disabled = !events.checked; }
+function updateEventOptions() { updateControls(); }
 
 async function updatePermissionLabel(pushDevice = null) {
   const state = await notificationPermission();
@@ -78,14 +100,22 @@ function showDeliveryAttention(attention = {}) {
   deliveryAttention.hidden = false;
 }
 async function load() {
+  if (loading || saving) return;
+  loading = true; preferencesLoaded = false; updateControls();
   setStatus(saveStatus, 'Loading choices…', 'info');
-  await refreshManagerSession();
-  await installNotificationRouting();
-  const data = await managerNotificationRequest('/manager-notifications-api/preferences');
-  applyPreferences(data.preferences || {});
-  showDeliveryAttention(data.delivery_attention || {});
-  await updatePermissionLabel(data.push_device || null);
-  setStatus(saveStatus, data.provider_configured ? '' : 'Choices can be saved, but Firebase delivery is not configured.', data.provider_configured ? '' : 'error');
+  try {
+    await refreshManagerSession();
+    await installNotificationRouting();
+    const data = await managerNotificationRequest('/manager-notifications-api/preferences');
+    applyPreferences(data.preferences || {});
+    showDeliveryAttention(data.delivery_attention || {});
+    knownPushDevice = data.push_device || null;
+    await updatePermissionLabel(knownPushDevice);
+    preferencesLoaded = true; dirty = false;
+    setStatus(saveStatus, data.provider_configured ? '' : 'Choices can be saved, but Firebase delivery is not configured.', data.provider_configured ? '' : 'error');
+  } catch (error) {
+    setStatus(saveStatus, `Choices could not load. ${error.message} Retry before changing them.`, 'error');
+  } finally { loading = false; updateControls(); }
 }
 async function enable() {
   enableDevice.disabled = true;
@@ -100,14 +130,17 @@ async function enable() {
 }
 async function save(event) {
   event.preventDefault();
+  if (!preferencesLoaded || loading || saving) return;
   const weekdays = selectedWeekdays();
   if (events.checked && !weekdays.length) return setStatus(saveStatus, 'Choose at least one event reminder day.', 'error');
   const needsPush = messages.checked || events.checked || dueSoon.checked || overdue.checked;
+  saving = true; updateControls();
   setStatus(saveStatus, 'Saving…', 'info');
   try {
     if (needsPush) {
       const registration = await ensurePushRegistration({ requestPermission: true });
       if (registration.receive !== 'granted') throw new Error('Phone notification permission is required for enabled alerts.');
+      if (registration.registered === true) knownPushDevice = { enabled: true };
     }
     const data = await managerNotificationRequest('/manager-notifications-api/preferences', {
       method: 'PUT',
@@ -123,9 +156,11 @@ async function save(event) {
       },
     });
     applyPreferences(data.preferences || {});
-    await updatePermissionLabel();
+    await updatePermissionLabel(data.push_device || knownPushDevice);
+    dirty = false;
     setStatus(saveStatus, 'Saved for this phone.', 'ok');
   } catch (error) { setStatus(saveStatus, error.message, 'error'); }
+  finally { saving = false; updateControls(); }
 }
 async function sendTest() {
   testButton.disabled = true;
@@ -139,7 +174,9 @@ async function sendTest() {
       ? 'Sent through Firebase. Waiting for this phone to receive it…'
       : 'The test was queued. Waiting for delivery…', 'ok');
     window.setTimeout(() => {
-      if (/Waiting/.test(testStatus.textContent)) setStatus(testStatus, 'Firebase accepted the test. Check the notification shade if it did not appear here.', 'ok');
+      if (/Waiting/.test(testStatus.textContent)) setStatus(testStatus, sent > 0
+        ? 'Firebase accepted the test. Receipt on this phone is not confirmed; check the notification shade.'
+        : 'The test is queued. Delivery to this phone is not confirmed.', 'info');
     }, 4500);
   } catch (error) { setStatus(testStatus, error.message, 'error'); }
   finally { testButton.disabled = false; }
@@ -153,4 +190,6 @@ window.addEventListener('memphis:notification-received', (event) => {
   const title = String(event.detail?.notification?.title || '').trim();
   setStatus(testStatus, title ? `Received on this phone: ${title}` : 'Test received on this phone.', 'ok');
 });
-void load().catch((error) => setStatus(saveStatus, error.message, 'error'));
+retryLoad.addEventListener('click', () => { void load(); });
+updateControls();
+void load();

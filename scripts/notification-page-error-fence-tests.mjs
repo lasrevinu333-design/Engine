@@ -1,3 +1,4 @@
+import {syntheticNotificationWriter} from './synthetic-notification-writer.mjs';
 import assert from 'node:assert/strict';
 import {fixture as scheduleFixture} from './employee-schedule-convergence-race-tests.mjs';
 import {installHomeFacts} from '../mobile/src/custodial/home-facts-dom.js';
@@ -17,10 +18,10 @@ await test('F02 Home503 failed unavailable-write must not cancel read fence or r
   const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(1),employee_name:'Synthetic',credential_id:id(2),assignment_epoch:7};
   const data={...profile,service_date:zooServiceDate(),schedule_delivery_mode:'LEGACY_REGISTERED',projection_status:'current',projection_id:id(10),publication_id:id(20),
    projection_authority_revision:10,full_day:true,shift:{start:'07:00',end:'16:00'},raw_items:[]};
-  const healthy=()=>({ready:true,available:true,quarantined:false}),security={native:true,getStatus:healthy,mutateProtectedWork:async fn=>fn()};
+  const healthy=()=>({ready:true,available:true,quarantined:false,generation:11,deviceId:principal.device_id,principal}),security={native:true,getStatus:healthy,mutateProtectedWork:syntheticNotificationWriter(healthy)};
   const storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>{if(writeFails&&k===api.availabilityKey(scope)&&JSON.parse(v).state==='UNAVAILABLE')throw Error('transient U-write failure');memory.set(k,v);}};
-  const makeOwner=()=>createScheduleNotificationAuthority({identity:()=>scope,principal:()=>principal,status:healthy,storage}),owner=makeOwner();
-  globalThis.window={addEventListener(){},MemphisMobile:{principalIdentity:()=>scope,profileMatchesPrincipal:()=>true}};
+  const makeOwner=()=>createScheduleNotificationAuthority({identity:()=>scope,principal:()=>principal,status:healthy,storage,mutate:syntheticNotificationWriter(healthy)}),owner=makeOwner();
+  globalThis.window={addEventListener(){},MemphisCustodialSecurity:security,MemphisMobile:{principalIdentity:()=>scope,profileMatchesPrincipal:()=>true}};
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage=storage;
   globalThis.setInterval=()=>1;globalThis.clearInterval=()=>{};globalThis.fetch=async()=>{throw Error('external facts offline');};
   app=installHomeFacts({getProfile:()=>profile,getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,security,requestJson:async()=>{

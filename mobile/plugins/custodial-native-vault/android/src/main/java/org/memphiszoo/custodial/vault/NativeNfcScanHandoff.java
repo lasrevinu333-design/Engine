@@ -35,8 +35,10 @@ public final class NativeNfcScanHandoff {
     public static final class ReadResult {
         public final String handoffId;
         public final boolean durable;
-        private ReadResult(String handoffId, boolean durable) {
-            this.handoffId=handoffId; this.durable=durable;
+        public final boolean ignored;
+        private ReadResult(String handoffId, boolean durable) { this(handoffId, durable, false); }
+        private ReadResult(String handoffId, boolean durable, boolean ignored) {
+            this.handoffId=handoffId; this.durable=durable; this.ignored=ignored;
         }
     }
 
@@ -49,7 +51,7 @@ public final class NativeNfcScanHandoff {
                 currentBootCount(context),
                 identity
             );
-            Log.i(TAG, result.durable ? "physical_read_persisted" : "physical_read_persistence_not_confirmed");
+            Log.i(TAG, result.ignored ? "physical_read_ignored_initial_minute" : result.durable ? "physical_read_persisted" : "physical_read_persistence_not_confirmed");
             return result;
         } catch (VaultFailure | RuntimeException error) {
             String reason = error instanceof VaultFailure ? ((VaultFailure) error).code : "runtime_failure";
@@ -114,6 +116,9 @@ public final class NativeNfcScanHandoff {
         if (parsed.getScheme() == null || !parsed.getQueryParameters(QUERY_PARAMETER).isEmpty()) {
             throw new VaultFailure("custodial_native_nfc_handoff_refused");
         }
+        // An ignored observation owns no UUID, journal row, navigation or later
+        // timer replay. A fresh physical read is required after the first minute.
+        if (store.ignoresPhysicalScanDuringInitialWork(elapsed, bootCount)) return new ReadResult("", false, true);
         String handoffId = UUID.randomUUID().toString();
         String entryId = UUID.randomUUID().toString();
         Map<String, Object> record = new LinkedHashMap<>();

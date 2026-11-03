@@ -34,6 +34,23 @@ final class AndroidPrivateCustodyOwnerRecovery {
             }
         }
     }
+    /** Explicit finish of one actual v3 durable command. No record is created
+     * from DATA; unknown/v2/foreign roots and ambiguous in-process commits deny. */
+    static JSONObject completeOriginalEnrollmentPartition(Context context,CustodialNativeRuntime runtime,
+        NativePrivateCustodyFrameReadControl control,String originalOperation)throws VaultFailure {
+        if(context==null||runtime==null||control==null||Thread.holdsLock(runtime.engine))throw new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE);
+        control.check();Context application=context.getApplicationContext();
+        if(application==null||runtime.retainedEnrollmentApplication(runtime.engine)!=application)throw new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE);
+        try(var held=AndroidProtectedWorkPreferences.openInstalledOriginalHeldRead()){
+            held.requireCurrent();control.check();Map<String,android.content.SharedPreferences> existing=new TreeMap<>();
+            for(String name:NativeProtectedNamespaceObservation.KEY_FAMILIES.keySet())existing.put(name,application.getSharedPreferences(name,Context.MODE_PRIVATE));
+            var readers=AndroidProtectedNamespaceReaders.bind(existing);
+            var root=NativePrivateMutationEpochStore.originalContextNoBackupRoot(application);
+            var journal=VaultEngine.NativePrivateCustodyExchangeJournal.fromNativeNoBackupRoot(root);
+            var capsules=NativePrivateCapsuleFileStore.fromNativeNoBackupRoot(root);
+            return runtime.engine.completeExistingOriginalEnrollmentPartition(readers,journal,capsules,held,control,runtime,originalOperation);
+        }
+    }
     /** Explicit native FIRST baseline only. No plugin/startup trigger or caller
      * paths/IDs. The Engine verifies frozen WORK/current principal and unique
      * original provider context, and refuses any saved/pending operation. */

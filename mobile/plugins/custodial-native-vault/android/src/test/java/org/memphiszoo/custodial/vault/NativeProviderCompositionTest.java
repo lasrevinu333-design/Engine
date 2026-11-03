@@ -181,7 +181,7 @@ public final class NativeProviderCompositionTest {
         assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());assertEquals(2,overlaps[0]);
     }
     @Test public void removalDuringUnlockedHttpFencesOriginalResponseAndReleasesSingleflight()throws Exception{
-        Composition x=new Composition(false);x.duringHttp=()->x.f.engine.removeEnrollment(NativeProviderHttpTest.RID,NativeProviderHttpTest.DEVICE);
+        Composition x=new Composition(false);x.duringHttp=()->NativeProviderHttpTest.preserveSyntheticOriginal(x.f);
         ProviderRecordStoreTest.failure("custodial_native_vault_concurrent_change",x::sync);
         assertEquals(NativeProviderJobLifecycle.Result.SUSPEND,x.owner.pendingWork());assertEquals(0,x.surface.shows);
         x.owner.reconcile();assertEquals("REMOVED",x.f.provider.read(ProviderEnvelopeCrypto.Domain.METADATA,"journal").getString("availability"));

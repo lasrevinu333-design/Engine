@@ -1,0 +1,17 @@
+{
+  "schema": "custodial.current-supply-controls-supplied-candidate.v1",
+  "scope": "Actual immutable supplied candidate controls, not repinned historical supply-placeholder source; no runtime admission",
+  "input_archive_sha256": "6dfbef995d35b73751591828d14c49e305abada448d20902eeac0f159dc63bde",
+  "historical_controls": {
+    "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java": "02104be6417bd08218031ebbb0e9694f5d536ebe5c200d3f55a7711c77e64ca2",
+    "mobile/src/custodial/bridge.js": "d629e4f9405e2d16a8693c059903c35918a4087838f755a846d90f33cfa76c2e",
+    "memphis-ui.js": "cf29ef7e8be9bc4c42b98cff5bbc0556b96264f07cbf204397ae9105c12af5ca",
+    "mobile/scripts/custodial-navigation-assets.mjs": "6b3775b72585ce726d855750e32f3d0e3d08e99ce9f8ba25b6fbd17c95741af2"
+  },
+  "files": {
+    "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java": "02104be6417bd08218031ebbb0e9694f5d536ebe5c200d3f55a7711c77e64ca2",
+    "mobile/src/custodial/bridge.js": "d0cd2fc672a8814f7c6c47929bc7a5b5ead8297dfa8794ef5d983512b7bc2f18",
+    "memphis-ui.js": "941c7eb3aee3285692834b57d3deaf05b92d6c1859adc3846ab207c3a741efa3",
+    "mobile/scripts/custodial-navigation-assets.mjs": "6b3775b72585ce726d855750e32f3d0e3d08e99ce9f8ba25b6fbd17c95741af2"
+  }
+}

@@ -25,7 +25,7 @@ function localPath(root, relative) {
 export function frontendContractPlan(root = defaultRoot) {
   root = resolve(root);
   const inventory = JSON.parse(readFileSync(resolve(root, 'scripts/frontend-contract-inventory.json')));
-  assert.equal(inventory.schema_version, 2);
+  assert.equal(inventory.schema_version, 3);
   const rows = inventory.scripts;
   assert.ok(Array.isArray(rows) && rows.length > 0);
   const paths = rows.map(row => row.path);
@@ -47,7 +47,8 @@ export function frontendContractPlan(root = defaultRoot) {
     assert.ok(row.path.endsWith('-tests.mjs'));
     assert.ok(Array.isArray(row.invocations) && row.invocations.length > 0, `Missing invocation: ${row.path}`);
     for (const invocation of row.invocations) {
-      assert.deepEqual(Object.keys(invocation).sort(), ['args', 'cwd', 'entry', 'requires']);
+      assert.deepEqual(Object.keys(invocation).sort(), ['args', 'cwd', 'entry', ...(Object.hasOwn(invocation,'node_args')?['node_args']:[]), 'requires']);
+      if(Object.hasOwn(invocation,'node_args'))assert.deepEqual(invocation.node_args,['--experimental-vm-modules'],'Only the explicit Node VM module prerequisite is supported');
       assert.ok(lstatSync(localPath(root, invocation.entry)).isFile(), invocation.entry);
       assert.ok(lstatSync(localPath(root, invocation.cwd)).isDirectory(), invocation.cwd);
       assert.ok(Array.isArray(invocation.args) && invocation.args.every(arg => typeof arg === 'string'
@@ -58,6 +59,10 @@ export function frontendContractPlan(root = defaultRoot) {
       }
       commands.push({ contract: row.path, ...invocation });
     }
+  }
+  for(const row of rows)if(row.superseded_by!==undefined){
+    assert.equal(row.role,'superseded-contract');assert.ok(Array.isArray(row.superseded_by)&&row.superseded_by.length>0);
+    for(const replacement of row.superseded_by)assert.ok(rows.some(r=>r.path===replacement&&r.role==='standalone-contract'),'Superseded source requires an active replacement: '+replacement);
   }
   assert.ok(paths.includes('scripts/moxie-decommission-tests.mjs'));
   assert.ok(commands.some(command => command.contract === 'scripts/moxie-decommission-tests.mjs'));
@@ -109,7 +114,7 @@ function signalGroup(pid, signal) {
 }
 async function runCommand(root, command) {
   assert.equal(process.platform, 'linux', 'The declared CI runner requires Linux process-group custody');
-  const child = spawn(process.execPath, [localPath(root, command.entry), ...command.args], {
+  const child = spawn(process.execPath, [...(command.node_args||[]), localPath(root, command.entry), ...command.args], {
     cwd: localPath(root, command.cwd), stdio: 'inherit', detached: true, shell: false,
   });
   let timedOut = false, escalation;
@@ -145,7 +150,7 @@ async function runCommand(root, command) {
     assert.ok(!groupExists(child.pid), `Owned process group did not settle: ${command.contract}`);
   }
   console.log(JSON.stringify({ contract: command.contract, entry: command.entry,
-    args: command.args, cwd: command.cwd, ...observed, timedOut,
+    args: command.args, node_args: command.node_args||[], cwd: command.cwd, ...observed, timedOut,
     descendantRemainingAtParentExit: descendantRemaining, processGroupAbsent: true }));
   return observed.code === 0 && !observed.signal && !timedOut && !descendantRemaining;
 }

@@ -58,6 +58,7 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
         String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
         if (canonicalUrl.isEmpty()) return "";
         NativeNfcScanHandoff.ReadResult result = NativeNfcScanHandoff.recordPhysicalRead(this, canonicalUrl, identity);
+        if (result.ignored) return ""; // Keep the current Active screen; do not replay this observation.
         if (!result.durable) {
             if (!result.handoffId.isEmpty()) {
                 // Uncertain persistence is not authority to navigate or start.

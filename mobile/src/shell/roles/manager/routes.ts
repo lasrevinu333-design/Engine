@@ -12,6 +12,8 @@ export const managerDefinition: EditionDefinition = {
     { id: 'manager.messages', path: '/messages', label: 'Messages', shortLabel: 'Messages', description: 'Open manager and employee conversations.', legacyTarget: './messages.html?hub=manager', navigation: true },
     { id: 'manager.schedule', path: '/schedule', label: 'Schedule', shortLabel: 'Schedule', description: 'Open staffing, assignments, absences, and coverage.', legacyTarget: './schedule-weekly.html', navigation: true },
     { id: 'manager.locations', path: '/locations', label: 'Locations', shortLabel: 'Locations', description: 'Open current location status and cleaning detail.', legacyTarget: './dashboard.html', navigation: true },
+    { id: 'manager.map', path: '/map', label: 'Dashboard Map', shortLabel: 'Map', description: 'Open cleaning locations and operations context.', legacyTarget: './operations-dashboard.html', navigation: false },
+    { id: 'manager.events', path: '/events', label: 'Events', shortLabel: 'Events', description: 'Open the shared Events feed and source review.', legacyTarget: './events.html', navigation: false },
     { id: 'manager.more', path: '/more', label: 'More', shortLabel: 'More', description: 'Open the current manager tools catalog.', legacyTarget: './index.html#more', navigation: true },
     { id: 'manager.insights', path: '/insights', label: 'Insights & Inspections', shortLabel: 'Insights', description: 'Open cleaning analytics and inspections.', legacyTarget: './operational-insights.html', navigation: false },
     { id: 'manager.guestIssues', path: '/guest-issues', label: 'Guest Issues', shortLabel: 'Issues', description: 'Open location-specific guest cleanliness reports.', legacyTarget: './guest-issues.html', navigation: false },

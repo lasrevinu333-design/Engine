@@ -22,7 +22,7 @@ function fixture({enrolled=false,reject=false,delay=false,cached=null}={}){
       profileMatchesPrincipal:value=>status.state==='enrolled'&&value?.authenticated===true&&value?.canonical_device_id==='KIOSK_08'&&value?.fixture_principal===principal,
       requestJson:async path=>{calls.push(path);const value={authenticated:true,canonical_device_id:'KIOSK_08',employee_name:name,employee_role:'CUSTODIAL_EMPLOYEE',fixture_principal:principal};await responseReady;if(reject)throw Object.assign(new Error('Not authorized'),{status:403});if(failNetwork)throw Error('offline');return value;}},
     setInterval:()=>1,clearInterval(){},setTimeout:()=>2,clearTimeout(){}};
-  const context={window,document:{getElementById:element},navigator:{onLine:false},console,classifyReadiness,createReadinessObservation,readinessPresentation,installHourlyForecastKeyboard,
+  const context={window,document:{getElementById:element},navigator:{onLine:false},console,queueMicrotask,classifyReadiness,createReadinessObservation,readinessPresentation,installHourlyForecastKeyboard,
     sessionStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)},
     installHomeFacts:()=>({stop(){},update(){},authenticatedProfileRestored(){return true;}}),App:{addListener:async()=>{}},Network:{addListener:async()=>{}},StatusBar:{hide:async()=>{}},Promise,Date,Error};
   vm.createContext(context);

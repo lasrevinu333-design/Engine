@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
 const DEVICE_ID = 'KIOSK_AVATAR_TEST';
 const USER_ID = '00000000-0000-4000-8000-000000000801';

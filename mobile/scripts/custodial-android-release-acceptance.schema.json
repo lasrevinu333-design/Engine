@@ -540,7 +540,7 @@
           ],
           "properties": {
             "verifier_version": {
-              "const": "1.9.0"
+              "const": "1.10.0"
             },
             "policy": {
               "const": "exact-custodial-android-manifest-v12-qualified-provider-private-audio"
@@ -685,8 +685,8 @@
                 },
                 "receivers": {
                   "type": "array",
-                  "minItems": 8,
-                  "maxItems": 8,
+                  "minItems": 9,
+                  "maxItems": 9,
                   "uniqueItems": true,
                   "prefixItems": [
                     {
@@ -712,6 +712,9 @@
                     },
                     {
                       "const": "org.memphiszoo.custodial.vault.ProviderNotificationActionReceiver"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.RetainedEnrollmentMaintenanceReceiver"
                     }
                   ],
                   "items": false
@@ -864,7 +867,7 @@
           ],
           "properties": {
             "verifier_version": {
-              "const": "1.9.0"
+              "const": "1.10.0"
             },
             "policy": {
               "const": "exact-custodial-android-manifest-v13-cleaning-first-retained-continuity"
@@ -1012,8 +1015,8 @@
                 },
                 "receivers": {
                   "type": "array",
-                  "minItems": 8,
-                  "maxItems": 8,
+                  "minItems": 9,
+                  "maxItems": 9,
                   "uniqueItems": true,
                   "prefixItems": [
                     {
@@ -1039,6 +1042,9 @@
                     },
                     {
                       "const": "org.memphiszoo.custodial.vault.ProviderNotificationActionReceiver"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.RetainedEnrollmentMaintenanceReceiver"
                     }
                   ],
                   "items": false
@@ -1563,7 +1569,7 @@
           "$ref": "#/$defs/sha256"
         },
         "android_manifest_security_verifier_version": {
-          "const": "1.9.0"
+          "const": "1.10.0"
         },
         "android_manifest_security_verifier_source_sha256": {
           "$ref": "#/$defs/sha256"

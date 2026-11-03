@@ -5,7 +5,7 @@ import {observeProtectedBrowserWork,captureProtectedBrowserWork,inspectCapturedO
  inspectCapturedOriginalCompletionCensus,readCapturedOriginalCompletionCensusArguments,
  inspectCapturedOriginalBrowserValueFrame,readCapturedOriginalBrowserValueChunk,
  closeCapturedProtectedBrowserWork} from '../mobile/src/custodial/protected-browser-inventory.js';
-import {createProtectedBrowserAdmission,PROTECTED_BROWSER_HOLD_KEY,PROTECTED_BROWSER_LOCK}
+import {createProtectedBrowserAdmission,PROTECTED_BROWSER_HOLD_KEY,PROTECTED_BROWSER_MUTATION_KEY,PROTECTED_BROWSER_LOCK}
  from '../mobile/src/custodial/protected-browser-admission.js';
 import {createSyntheticScheduleLocks} from './synthetic-schedule-locks.mjs';
 import {fileURLToPath} from 'node:url';
@@ -316,7 +316,12 @@ const feedbackOriginal=()=>JSON.stringify({schema_version:'employee-feedback-out
 const backupOriginal=raw=>JSON.stringify({schema_version:'employee-feedback-retirement-backup.v1',original_key:activeKey,original_encoded:raw});
 function retirementFixture(entries){
  const local=storage(entries),db=idb(),locks=createSyntheticScheduleLocks();let writes=0;
- local.setItem=(key,value)=>{assert.equal(key,PROTECTED_BROWSER_HOLD_KEY);writes++;local.data.set(key,value);};
+ local.setItem=(key,value)=>{
+  assert.ok([PROTECTED_BROWSER_HOLD_KEY,PROTECTED_BROWSER_MUTATION_KEY].includes(key));
+  if(key===PROTECTED_BROWSER_HOLD_KEY)writes++;
+  else{assert.match(value,/^[1-9][0-9]*$/);assert.equal(BigInt(value),BigInt(local.data.get(key)||0)+1n);}
+  local.data.set(key,value);
+ };
  const gate=createProtectedBrowserAdmission({storage:local,indexedDb:db,locks,cryptoApi:webcrypto});
  return {local,db,locks,gate,get writes(){return writes;}};
 }
@@ -532,7 +537,8 @@ await test('Main admission declares actual session area and rejects its later ch
   capture=await gate.holdAndCapture({operationId:'98000000-0000-4000-8000-000000000001',lifetimeMs:1000});
   assert.equal(capture.state,'OBSERVED_NOT_FROZEN');assert.equal(capture.session_record_count,1);
   assert.equal(capture.session_storage_state,'CAPTURED_READ_ONLY_NOT_AUTHENTICATED');
-  assert.equal(capture.local_record_count,2);assert.equal(capture.record_count,3);
+  assert.equal(capture.local_record_count,3);assert.equal(capture.record_count,4);
+  assert.deepEqual([...local.data.keys()].sort(),[PROTECTED_BROWSER_HOLD_KEY,PROTECTED_BROWSER_MUTATION_KEY,'original'].sort());
   assert.equal(capture.records.filter(row=>row.store==='sessionStorage').length,1);
   assert.equal(capture.native_authority,false);assert.equal(gate.held(),true);
   session.data.set('mz_chatscope_group_pending:USER','changed group');

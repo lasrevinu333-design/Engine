@@ -962,8 +962,8 @@ assert.equal([...callbackReferenceWorkflow.matchAll(/xcode: '26\.2'/g)].length, 
 assert.doesNotMatch(codemagic, /CM_BUILD_NUMBER/, 'Codemagic exports PROJECT_BUILD_NUMBER and BUILD_NUMBER, not CM_BUILD_NUMBER');
 assert.equal(
   [...releaseWorkflowSource.matchAll(/MZ_RELEASE_VERSION: 1\.0\.0/g)].length,
-  5,
-  'every native release workflow must declare the same user-facing version',
+  6,
+  'five store release workflows and the separate first-test workflow must declare the same user-facing version',
 );
 for (const verification of ['apksigner','jarsigner','codesign --verify']) {
   assert.ok(codemagic.includes(verification), `signed artifact verification missing ${verification}`);
@@ -983,8 +983,8 @@ assert.match(codemagic, /custodial-android-toolchain\.json/);
 assert.match(codemagic, /codemagic_xcode_image: '26\.2'/);
 assert.equal(
   [...releaseWorkflowSource.matchAll(/xcode: '26\.2'/g)].length,
-  3,
-  'every Android workflow must pin the reviewed Codemagic image',
+  4,
+  'three store Android workflows and the separate first-test workflow pin the reviewed Codemagic image',
 );
 assert.match(codemagic, /source_status="\$\(git status --porcelain=v1 --untracked-files=all\)"/);
 assert.match(codemagic, /untracked_nonignored_files_absent: true/);
@@ -2246,3 +2246,11 @@ assert.throws(
   /Custodial is Android-only/,
 );
 console.log('NATIVE_MOBILE_BUILD_CONTRACT_PASS');
+
+// Bind the additional count to its actual qualification workflow, not an unexplained relaxation.
+const firstTestWorkflow = codemagic.match(/^  custodial-first-test:\n(?:(?: {4,}.*|[ \t]*)\n)*/m)?.[0] || '';
+assert.equal([...firstTestWorkflow.matchAll(/MZ_RELEASE_VERSION: 1\.0\.0/g)].length, 1);
+for (const workflowName of ['manager-ios','viewer-ios','manager-android','custodial-android','viewer-android']) {
+ const workflow = codemagic.split('  '+workflowName+':\n')[1]?.split(/\n  [a-z][a-z-]*:\n/)[0] || '';
+ assert.equal([...workflow.matchAll(/MZ_RELEASE_VERSION: 1\.0\.0/g)].length,1,workflowName+' exact version declaration');
+}

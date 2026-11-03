@@ -1,8 +1,13 @@
+import {syntheticNotificationWriter} from './synthetic-notification-writer.mjs';
 import assert from 'node:assert/strict';
 import {createScheduleNotificationAuthority} from '../mobile/src/custodial/notification-schedule-authority.js';
 import {principalIdentity} from '../mobile/src/custodial/protected-principal.js';
-import {fixture,principal} from './native-notification-arrival-boundary-tests.mjs';
+import {fixture as actualFixture,principal} from './native-notification-arrival-boundary-tests.mjs';
 import {payload,day,id} from './notification-schedule-cache-authority-tests.mjs';
+const fixtureTime=Date.parse('2026-10-25T17:15:00.000Z');
+class FixtureDate extends Date{constructor(...args){super(...(args.length?args:[fixtureTime]));}static now(){return fixtureTime;}}
+const currentAuthority=options=>createScheduleNotificationAuthority({...options,now:()=>fixtureTime});
+const fixture=options=>actualFixture({...options,clock:FixtureDate,...(options?.scheduleAuthorityFactory?{scheduleAuthorityFactory:currentAuthority}:{})});
 const results=[];
 const healthy={ready:true,available:true,quarantined:false};
 const second={...principal,employee_id:id(201),credential_id:id(202),assignment_epoch:8};
@@ -48,6 +53,7 @@ await test('F06-R1 delayed debug identity cannot mutate or display after protect
  const f=await fixture({display:'denied',scheduleAuthorityFactory:createScheduleNotificationAuthority});
  let release,reached;const hold=new Promise(r=>release=r),waiting=new Promise(r=>reached=r);
  const ui=f.fullBrowser({debugReminder:true,fetchIdentity:async call=>{if(call===1){reached();await hold;return identity('Old');}return identity('New');}});
+ await ui.ready;
  const debug=ui.runTimer(900);await waiting;f.setPrincipal(second);f.emitSecurity(healthy);await ui.poll();
  assert.equal(ui.state.currentDisplayName,'New Employee');release();await debug;
  assert.equal(ui.state.currentDisplayName,'New Employee');assert.equal(ui.active,false,'stale debug card not presented');

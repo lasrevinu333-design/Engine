@@ -29,7 +29,12 @@ const negatives = [
   ['operational purpose stays unqualified', () => ({ purpose: 'operational_release' }), null],
 ];
 test('fails closed: unknown external pin field', () => { const r = inspectForwardTransitionSourceAdmission(fixture(), { ...pins, extra: true }); assert.equal(r.accepted, false); assert.equal(r.reason, 'external_trusted_pins_unknown_field_extra'); });
-test('fails closed: trusted public signer pin differs', () => { const r = inspectForwardTransitionSourceAdmission(fixture(), { ...pins, signer_public_key_sha256: 'd'.repeat(64) }); assert.equal(r.accepted, false); assert.equal(r.reason, 'candidate_or_recovery_signer_mismatch'); });
+test('fails closed: trusted public signer pin differs', () => { const r = inspectForwardTransitionSourceAdmission(fixture(), { ...pins, signer_public_key_sha256: 'd'.repeat(64) }); assert.equal(r.accepted, false); assert.equal(r.reason, 'installed_target_signer_mismatch'); });
+test('fails closed: candidate signer differs after installed signer validates',()=>{
+ const publicKey='d'.repeat(64),installed={...pins.installed_target,signer_public_key_sha256:publicKey};
+ const r=inspectForwardTransitionSourceAdmission(fixture({installed_target:installed}),{...pins,signer_public_key_sha256:publicKey,installed_target:installed});
+ assert.equal(r.accepted,false);assert.equal(r.reason,'candidate_or_recovery_signer_mismatch');
+});
 for (const [name, change, expected] of negatives) test(`fails closed: ${name}`, () => { const inputChange = change(); let pinArg = pins; if (name === 'candidate at installed baseline') pinArg = { ...pins, candidate: inputChange.candidate }; if (name === 'recovery not higher') pinArg = { ...pins, recovery: inputChange.recovery }; const r = inspectForwardTransitionSourceAdmission(fixture(inputChange), pinArg); if (name === 'operational purpose stays unqualified') { assert.equal(r.accepted, true); assert.equal(r.operationally_qualified, false); } else { assert.equal(r.accepted, false); assert.equal(r.reason, expected); } });
 
-console.log(JSON.stringify({ result: 'PASS', scope: 'G30 forward-transition adapter affected pure boundaries only', cases: 17, source_runtime_sql_physical: 'not tested' }));
+console.log(JSON.stringify({ result: 'PASS', scope: 'G30 forward-transition adapter affected pure boundaries only', cases: 18, source_runtime_sql_physical: 'not tested' }));

@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {execFileSync} from 'node:child_process';
-import {webcrypto} from 'node:crypto';
+import {webcrypto,createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
 const require=createRequire(import.meta.url);
 const map=require('../dashboard-map-staging.js');
+const approvedFit=require('../custodial-gps-approved-overall-fit.js');
 const renderer=require('../dashboard-map-renderer.js');
 const page=require('../dashboard-map-page.js');
 const root=new URL('..',import.meta.url);
 const bytes=readFileSync(new URL('dashboard-map-assets/approved-map-47-placement-anchors.json',root));
 const raw=JSON.parse(bytes);
+const acceptedAnchors=approvedFit.transformAnchors(await map.parseApprovedAnchors(Uint8Array.from(bytes),{subtle:webcrypto.subtle}));
 let checks=0;
 const test=async(name,fn)=>{await fn();checks++;console.log('PASS',name);};
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -19,17 +20,17 @@ const read=path=>readFileSync(new URL(path,root),'utf8');
 await test('whole-image fit has no scale floor at desktop, landscape and portrait sizes',()=>{
   // Available map boxes, not measured browser/CSS viewport dimensions.
   for(const [width,height] of [[1760,780],[1360,590],[980,480],[820,230],[620,155],[344,490],[260,90]]){
-    const fit=map.fitViewport({width,height});
+    const fit=map.fitViewport({width,height,canvasWidth:acceptedAnchors.width,canvasHeight:acceptedAnchors.height});
     assert.ok(fit.width<=width+1e-9&&fit.height<=height+1e-9);
-    assert.ok(Math.abs(fit.width/fit.height-1282/550)<1e-12);
-    for(const location of raw.locations){
-      const point=map.screenPoint(location.approvedOverlayCanvasPoint,{fitScale:fit.fitScale,zoom:1});
-      assert.equal(point.x,location.approvedOverlayCanvasPoint.x*fit.fitScale);
-      assert.equal(point.y,location.approvedOverlayCanvasPoint.y*fit.fitScale);
+    assert.ok(Math.abs(fit.width/fit.height-acceptedAnchors.width/acceptedAnchors.height)<1e-12);
+    for(const location of acceptedAnchors.locations){
+      const point=map.screenPoint(location.canvasPoint,{fitScale:fit.fitScale,zoom:1});
+      assert.equal(point.x,location.canvasPoint.x*fit.fitScale);
+      assert.equal(point.y,location.canvasPoint.y*fit.fitScale);
       assert.ok(point.x>=0&&point.y>=0&&point.x<=fit.width&&point.y<=fit.height);
     }
   }
-  assert.ok(map.fitViewport({width:620,height:155}).fitScale<.45);
+  assert.ok(map.fitViewport({width:620,height:155,canvasWidth:acceptedAnchors.width,canvasHeight:acceptedAnchors.height}).fitScale<.45);
   for(const invalid of [0,-1,NaN,Infinity,'600',undefined]){
     assert.throws(()=>map.fitViewport({width:invalid,height:300}));
     assert.throws(()=>map.fitViewport({width:600,height:invalid}));
@@ -47,7 +48,7 @@ class Element{
   setAttribute(name,value){this.attributes[name]=value;}
   querySelector(selector){return selector==='[data-map-callout]'?this.children.find(child=>child.dataset?.mapCallout!==undefined):null;}
 }
-const principal={role:'ops_manager',manager_id:'map-manager',credential_id:'map-credential',device_id:'map-device',token:'fixture-only'};
+const principal={role:'ops_manager',manager_id:'map-manager',credential_id:'map-credential',device_id:'map-device',token:'fixture-only',permissions:{schema:'custodial.manager-permissions.v1',read:true}};
 const fixture=({session=principal}={})=>{
   const keys=['viewport','surface','artwork','layer','status','selection','alerts','locations','alert-count'];
   const elements=Object.fromEntries(keys.map(key=>[key,new Element()]));
@@ -63,7 +64,7 @@ const fixture=({session=principal}={})=>{
   }
   const window=Object.assign(new Element(),{document,crypto:webcrypto,ResizeObserver,matchMedia:()=>({matches:false})});
   window.addEventListener('unrelated',()=>{});
-  const auth={readSession:()=>current,async requireOpsManagerSession(options){validations++;assert.deepEqual(options,{interactive:false,redirect:true});return current;},
+  const auth={hasPermission:(name,session)=>name==='read'&&session?.permissions?.schema==='custodial.manager-permissions.v1'&&session.permissions.read===true,readSession:()=>current,async requireOpsManagerSession(options){validations++;assert.deepEqual(options,{interactive:false,redirect:true});return current;},
     async opsManagerAuthHeaders(options){assert.deepEqual(options,{expectedManagerId:principal.manager_id});return {Authorization:'Bearer fixture-only','X-Device-Id':principal.device_id};}};
   const fetchImpl=async(url,options)=>{
     assert.equal(options.cache,'no-store');
@@ -96,12 +97,12 @@ await test('real page and renderer initialize from hidden layout with exactly47 
 });
 await test('resize observer fits unchanged pin centers to short landscape; no pan or zoom is needed in geometry',()=>{
   f.resize(620,155);
-  const fit=map.fitViewport({width:620,height:155});
+  const fit=map.fitViewport({width:620,height:155,canvasWidth:acceptedAnchors.width,canvasHeight:acceptedAnchors.height});
   assert.equal(f.elements.surface.style.width,`${fit.width}px`);assert.equal(f.elements.surface.style.height,'155px');
   for(const [index,pin] of f.elements.layer.children.entries()){
     assert.equal(pin.dataset.locationId,raw.locations[index].locationId);
-    assert.equal(pin.style.left,`${raw.locations[index].approvedOverlayCanvasPoint.x*fit.fitScale}px`);
-    assert.equal(pin.style.top,`${raw.locations[index].approvedOverlayCanvasPoint.y*fit.fitScale}px`);
+    assert.equal(pin.style.left,`${acceptedAnchors.locations[index].canvasPoint.x*fit.fitScale}px`);
+    assert.equal(pin.style.top,`${acceptedAnchors.locations[index].canvasPoint.y*fit.fitScale}px`);
     assert.equal(pin.style.width,index===0?'42px':'24px');
     assert.ok(parseFloat(pin.style['--map-label-width'])>0);
   }
@@ -157,23 +158,35 @@ await test('map tile inherits sibling components with existing Memphis art and m
   const html=read('start_page1.html'),tile=html.match(/<a id="dashboard-map-link"[\s\S]*?<\/a>/)?.[0];
   assert.ok(tile);assert.match(tile,/class="hubTile primary"/);assert.match(tile,/class="tileIcon dashboardMapIcon"/);
   assert.match(tile,/src="\.\/memphis_avatar_ui\.webp"/);assert.match(tile,/<svg viewBox="0 0 32 28"/);
-  const baseline=execFileSync('git',['show','6fae503111ef21c40a309913965c3b963043aa01:start_page1.html'],{cwd:root,encoding:'utf8'});
-  assert.equal(html.replace('  <link rel="stylesheet" href="./dashboard-map-hub.css">\n','').replace(`        ${tile}\n`,''),baseline);
-  for(const path of ['ops-hub.css','manager-ux.css','memphis-auth.js','dashboard.html','employee-hub.html','mobile/capacitor.config.ts','mobile/scripts/build.mjs']){
-    assert.deepEqual(readFileSync(new URL(path,root)),execFileSync('git',['show',`6fae503111ef21c40a309913965c3b963043aa01:${path}`],{cwd:root}));
-  }
+  // Current contextual pages include the integrated leadership/weather fixes.
+  // Pin their exact existing bytes rather than applying an obsolete map-only
+  // ancestor to this complete candidate or requiring hidden local Git history.
+  const pinBytes=readFileSync(new URL('scripts/fixtures/dashboard-map-current-context-pins-v2.json',root));
+  assert.equal(createHash('sha256').update(pinBytes).digest('hex'),'2d53a50a1df087ebdafa8685313883c36e8a246b94e19e10cb4e411303b070c4');
+  const pins=JSON.parse(pinBytes);
+  assert.equal(pins.schema,'custodial.dashboard-map-current-context-pins.v2');
+  assert.equal(Object.keys(pins.files).length,8);
+  for(const [name,digest]of Object.entries(pins.files))
+    assert.equal(createHash('sha256').update(readFileSync(new URL(name,root))).digest('hex'),digest,'exact frozen current map context: '+name);
 });
 await test('actual Hub link builder gives map the same manager/device/origin context without unrelated changes',()=>{
   const source=read('ops-hub.js');
   const body=source.slice(source.indexOf('  function updateLinks(){'),source.indexOf('  function applyRoleVisibility('));
   const els=new Proxy({}, {get:(target,key)=>target[key]??=( {href:''})});
-  const context={URL,window:{location:{href:'https://example.org/Engine/start_page1.html'}},state:{currentDeviceId:'manager-device'},els,
-    ANNIE_RETURN_URL:'https://memphis-zoo-mcp.onrender.com/moxie/',preserveAnnieOrigin:url=>{url.searchParams.set('origin','annie');return url;}};
-  vm.runInNewContext(`${body}\nupdateLinks();`,context);
+  const session={...principal,device_id:'manager-device'};
+  const auth={readSession:()=>session,isOpsManager:value=>value===session&&value.role==='ops_manager'};
+  const state={currentDeviceId:'manager-device',generation:7,retired:false,session,auth,sessionBinding:JSON.stringify(session)};
+  const currentSource=source.slice(source.indexOf('  function current(generation){'),source.indexOf('  function every(',source.indexOf('  function current(generation){')));
+  const context={URL,window:{location:{href:'https://example.org/Engine/start_page1.html'},MemphisAuth:auth},state,els,
+    managerLinks:[],coverageLink:null,coverageHref:'',resolveDeviceId:()=> 'manager-device',
+    sessionBinding:value=>JSON.stringify(value),retire:()=>{state.retired=true;}};
+  vm.runInNewContext(`${currentSource}\n${body}\nupdateLinks();`,context);
   const mapUrl=new URL(els.dashboardMapLink.href),dashboardUrl=new URL(els.dashboardLink.href);
   assert.equal(mapUrl.pathname,'/Engine/operations-dashboard.html');assert.equal(mapUrl.search,dashboardUrl.search);
   assert.equal(mapUrl.searchParams.get('hub'),'manager');assert.equal(mapUrl.searchParams.get('device'),'manager-device');
-  assert.equal(mapUrl.searchParams.get('origin'),'annie');
+  assert.equal(mapUrl.searchParams.get('origin'),null,'retired assistant origin is not restored into current hub links');
+  state.retired=true;els.dashboardMapLink.href='';vm.runInNewContext(`${currentSource}\n${body}\nupdateLinks();`,context);
+  assert.equal(els.dashboardMapLink.href,'','retired actual hub guard cannot rewrite navigation');
 });
 await test('layout uses matching Hub background, fit-only map, upright constant-size pins and browser zoom fallback',()=>{
   const html=read('dashboard-map.html'),css=read('dashboard-map.css');

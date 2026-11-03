@@ -17,12 +17,19 @@ const F=fileURLToPath(new URL('..',import.meta.url)).replace(/\/$/,'');
 const read=file=>fs.readFileSync(path.join(F,file),'utf8');
 const sha=body=>createHash('sha256').update(body).digest('hex');
 const policyPath='mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java';
-const unchangedControls={
+const historicalControls={
   "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java": "02104be6417bd08218031ebbb0e9694f5d536ebe5c200d3f55a7711c77e64ca2",
   "mobile/src/custodial/bridge.js": "d629e4f9405e2d16a8693c059903c35918a4087838f755a846d90f33cfa76c2e",
   "memphis-ui.js": "cf29ef7e8be9bc4c42b98cff5bbc0556b96264f07cbf204397ae9105c12af5ca",
   "mobile/scripts/custodial-navigation-assets.mjs": "6b3775b72585ce726d855750e32f3d0e3d08e99ce9f8ba25b6fbd17c95741af2"
 };
+const contextBytes=fs.readFileSync(new URL('./fixtures/current-supply-supplied-candidate-controls.json',import.meta.url));
+assert.equal(sha(contextBytes),'1dd14eb89a17f9ce81f386db75f2fe8a8849cc1a0affa31d93bc0a5b727f16a0');
+const currentControls=JSON.parse(contextBytes);assert.equal(currentControls.schema,'custodial.current-supply-controls-supplied-candidate.v1');
+assert.deepEqual(currentControls.historical_controls,historicalControls);
+assert.equal(currentControls.input_archive_sha256,'6dfbef995d35b73751591828d14c49e305abada448d20902eeac0f159dc63bde');
+const unchangedControls=currentControls.files;assert.deepEqual(Object.keys(unchangedControls).sort(),Object.keys(historicalControls).sort());
+
 const compatibilityFiles=[
   "assets/supply_request_icon.svg",
   "Background1_optimized.webp",
@@ -106,10 +113,10 @@ check('CURRENT_NATIVE_LOCAL_PAGE_AND_ALIAS_POLICY_RETAINS_ALL_ORIGINAL_FENCES',(
  assertCustodialNavigationAssets(hashes,policy);hashes.delete('supply-coming-soon.html');assert.throws(()=>assertCustodialNavigationAssets(hashes,policy),/absent/);
  for(const file of ['manager-access.html','schedule-weekly.html','events-admin.html','employee-events.html','ops-manager-hub.html'])assert.equal(pages.includes('/'+file),false);
 });
-check('CURRENT119_ASSET_MANIFEST_RETAINS_REAL_GIT_TREE_AND_LOCAL_SUPPLY_DIGESTS',()=>{
+check('CURRENT_ASSET_MANIFEST_RETAINS_REAL_GIT_TREE_AND_LOCAL_SUPPLY_DIGESTS',()=>{
  // Unchanged maintained verifier requires the real exact Git runtime tree.
  // No executeGit stub, requireExactRuntimeTree:false, or historical100 rebind.
- const result=verifyFrontendReleaseManifest(F);assert.equal(result.ok,true);assert.equal(Object.keys(result.asset_hashes_sha256).length,119);
+ const result=verifyFrontendReleaseManifest(F);assert.equal(result.ok,true);assert.deepEqual(Object.keys(result.asset_hashes_sha256).sort(),discoverRuntimeFiles(F).filter(p=>!['frontend-release-manifest.json','frontend-deployment-manifest.json'].includes(p)).sort());
  assert.equal(result.asset_hashes_sha256['assets/supply_request_icon.svg'],sha(Buffer.from(icon)));
  assert.equal(result.asset_hashes_sha256['supply-coming-soon.html'],sha(Buffer.from(html)));
 });
@@ -135,4 +142,4 @@ check('CURRENT_NAVIGATION_AND_ORIGINAL_DATA_OWNERS_ARE_UNCHANGED_SOURCE_ONLY',()
 assert.equal(groups,8);
 console.log(JSON.stringify({status:'CURRENT_SUPPLIES_SOURCE_CONTRACT_PASS',groups,
  historical_original8groups:'retained byte-literal explicit-fixture-only; not replayed by this current entry',
- scope:'Current local page/Home/35selector/119manifest/native navigation Source only; no browser/native APK/install/privatehealth/device/SQL/external destination proof'}));
+ scope:'Current local page/Home/35selector/120manifest/native navigation Source only; no browser/native APK/install/privatehealth/device/SQL/external destination proof'}));

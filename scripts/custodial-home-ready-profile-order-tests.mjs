@@ -20,7 +20,7 @@ const P={schema_version:'custodial-protected-principal.v1',device_id:'KIOSK_08',
 const Q={...P,employee_id:uuid(4),credential_id:uuid(5),assignment_epoch:2};
 const profile=p=>({authenticated:true,canonical_device_id:p.device_id,device_id:p.device_id,employee_id:p.employee_id,
  employee_name:'Synthetic Custodian',credential_id:p.credential_id,assignment_epoch:p.assignment_epoch});
-const ready=(p=P,generation=6)=>({state:'enrolled',ready:true,available:true,quarantined:false,generation,principal:p});
+const ready=(p=P,generation=6)=>({deviceId:'KIOSK_08',state:'enrolled',ready:true,available:true,quarantined:false,generation,principal:p});
 const original=Object.fromEntries(['window','document','localStorage','fetch','setInterval','clearInterval'].map(k=>[k,globalThis[k]]));
 let checks=0;const check=(a,b,label)=>{assert.deepEqual(a,b,label);checks++;};
 const cases=[];
@@ -35,8 +35,16 @@ function fixture(){
  globalThis.fetch=async url=>{calls.push({kind:'informational',url});return new Response(JSON.stringify(url.includes('current-attendance')?{ok:true,data:{attendance:0,source_timestamp:new Date().toISOString()}}:{}),{status:200});};
  const data=(p=active)=>({...profile(p),schedule_delivery_mode:'LEGACY_REGISTERED',service_date:zooServiceDate(),publication_id:uuid(10),projection_id:uuid(p===P?11:12),
   home_facts:{service_date:zooServiceDate(),employee_id:p.employee_id,employee_name:'Synthetic Custodian',publication_id:uuid(10),projection_id:uuid(p===P?11:12),projection_status:'current',shift:{start:'08:00',end:'17:00'},lunch:{start:'13:00',end:'14:00'}}});
+ // Model the current open protected callback and singleton; no native storage proof.
+ const security={native:true,getStatus:()=>{if(statusHook)statusHook();return structuredClone(status);},
+  async mutateProtectedWork(operation,options){
+   const captured=security.getStatus();assert.equal(options.requireEnrollment,true);assert.equal(options.expectedGeneration,captured.generation);
+   let open=true;const context={deviceId:captured.deviceId,generation:captured.generation,assertCurrent(){assert.ok(open);assert.deepEqual(security.getStatus(),captured);}};
+   try{return await operation(context);}finally{open=false;}
+  }};
+ globalThis.window.MemphisCustodialSecurity=security;
  const controller=installHomeFacts({getProfile:()=>{if(getProfileHook)getProfileHook();return currentProfile;},getDeviceId:()=>active?.device_id||'KIOSK_08',isVisible:()=>true,
-  security:{native:true,getStatus:()=>{if(statusHook)statusHook();return structuredClone(status);},mutateProtectedWork:async fn=>fn()},
+  security,
   requestJson:async()=>{calls.push({kind:'schedule'});return requestHook?requestHook():data();}});
  return {controller,calls,element,stored,data,
   profile(value){currentProfile=value;},status(value){status=value;},active(value){active=value;},

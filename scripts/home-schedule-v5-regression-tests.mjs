@@ -1,3 +1,4 @@
+import {createSyntheticNativeHome} from './fixtures/native-home-mutation-context.mjs';
 import assert from 'node:assert/strict';
 import {fixture,payload,day,key,id} from './employee-schedule-convergence-race-tests.mjs';
 import {createScheduleHomeConvergence} from '../mobile/src/custodial/schedule-home-convergence.js';
@@ -103,11 +104,12 @@ await test('F6 actual Home DOM requires positive event AND current healthy statu
  let app;try{
   const nodes=new Map(),events=new Map(),storage=new Map();const el=k=>{if(!nodes.has(k))nodes.set(k,{textContent:'',innerHTML:'',dataset:{}});return nodes.get(k);};
   const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(2),employee_name:'Fixture',credential_id:id(3),assignment_epoch:7};
-  let status={ready:true,available:true,quarantined:false};const d=legacy();d.service_date=d.home_facts.service_date=zooServiceDate();
-  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=> 'v5-dom',profileMatchesPrincipal:()=>true}};
+  const admitted=createSyntheticNativeHome('v5-dom',{employeeId:id(2),credentialId:id(3)});let status={ready:true,available:true,quarantined:false};const security={native:true,getStatus:()=>({...admitted.status(),...status}),mutateProtectedWork:admitted.mutate};const d=legacy();d.service_date=d.home_facts.service_date=zooServiceDate();
+  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=> admitted.binding,profileMatchesPrincipal:()=>true}};
+  globalThis.window.MemphisCustodialSecurity=security;
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};
   globalThis.setInterval=()=>1;globalThis.clearInterval=()=>{};globalThis.fetch=async()=>{throw Error('unrelated provider offline');};
-  app=installHomeFacts({getProfile:()=>profile,getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,security:{native:true,getStatus:()=>status,mutateProtectedWork:async fn=>fn()},requestJson:async()=>structuredClone(d)});
+  app=installHomeFacts({getProfile:()=>profile,getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,security,requestJson:async()=>structuredClone(d)});
   await app.update(true);assert.equal(el('home-shift').textContent,'7:00 AM–4:00 PM');
   status={ready:false,available:false,quarantined:true};events.get('memphis:custodial-security-state')({detail:status});
   events.get('memphis:custodial-security-state')({detail:{ready:true,available:true,quarantined:false}});

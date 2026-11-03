@@ -2956,6 +2956,11 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
       if(!p||!scope||scope!==currentPrincipalIdentity()||data?.kind!=='employee_lunch_coverage')return false;
       return scheduleNotificationAuthority.isCurrent(data,scope);
     },
+    beginLunchNotificationAudio(data,scope) {
+      const p=currentPrincipal();
+      if(!p||!scope||scope!==currentPrincipalIdentity()||data?.kind!=='employee_lunch_coverage')return null;
+      return scheduleNotificationAuthority.beginLunchAudio(data,scope);
+    },
     isScheduleReminderCurrent(row,scope) {
       const p=currentPrincipal();
       if(!p||!scope||scope!==currentPrincipalIdentity()||row?.employee_id!==p.employee_id)return false;

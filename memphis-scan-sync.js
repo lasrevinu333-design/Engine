@@ -30,7 +30,7 @@
     FRONTEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     MINIMUM_BACKEND_VERSION: 'release-2026.07.19.custodial-v3.12',
     REQUIRED_SCAN_CONTRACT_VERSION: 'scan.v4.snapshot-bound-authority',
-    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: '432052a95830b4a8550cd6478d766bacc2bbbb4b2dd21d44544b238c70c5f001',
+    REQUIRED_BACKEND_SCHEMA_FINGERPRINT: 'ff233923ac21cd46b70985a9eaeb20dbb2a4c0bdc6f69f527159d437ed893440',
   };
 
   const state = {
@@ -46,6 +46,7 @@
     channel: typeof BroadcastChannel === 'function' ? new BroadcastChannel(CONFIG.CHANNEL_NAME) : null,
     lastServerAckAt: null,
     lastError: null,
+    sessionQuarantine: [],
     // The native Custodial shell may have protected interrupted-start evidence
     // to classify before any queued Start Cleaning action is replayed. The
     // bridge is loaded before this worker, so its recovery capability is the
@@ -1008,14 +1009,26 @@
   }
   function allSessions() {
     const rows = [];
+    const quarantined = [];
     try {
       for (let index = 0; index < localStorage.length; index += 1) {
         const key = localStorage.key(index);
         if (!key?.startsWith('session:')) continue;
-        const value = JSON.parse(localStorage.getItem(key));
-        if (value && typeof value === 'object') rows.push(value);
+        const raw = localStorage.getItem(key);
+        let value;
+        try { value = JSON.parse(raw); }
+        catch { quarantined.push({key,reason:'malformed_session'}); continue; }
+        if (!value || typeof value !== 'object' || Array.isArray(value)
+          || safeText(value.session_uuid || value.client_session_id).toLowerCase() !== key.slice('session:'.length).toLowerCase()) {
+          quarantined.push({key,reason:'invalid_session_binding'}); continue;
+        }
+        rows.push(value);
       }
     } catch (error) { throw storageFailure('local workflow', error); }
+    // Quarantine is read isolation, never deletion or a rewrite of unknown
+    // protected bytes. Keep diagnostics and block new work while originals wait
+    // for manager recovery; valid existing work can still finish and retry.
+    state.sessionQuarantine = quarantined;
     return rows;
   }
   function exactSessionForPayload(payload = {}) {
@@ -1104,6 +1117,7 @@
     const supplied = action.replay_binding && typeof action.replay_binding === 'object' ? action.replay_binding : {};
     const payload = action.payload && typeof action.payload === 'object' ? action.payload : {};
     const local = exactSessionForPayload(payload);
+    const epoch = supplied.assignment_epoch ?? local?.offline_authority_assignment_epoch ?? payload.p_snapshot_assignment_epoch;
     return {
       client_session_id: safeText(supplied.client_session_id || local?.client_session_id || local?.session_uuid || payload.p_client_session_id || payload.p_session_uuid),
       client_completion_id: safeText(supplied.client_completion_id || local?.client_completion_id || payload.p_client_completion_id || action.completion_client_id || action.client_id || action.operation_id),
@@ -1111,7 +1125,7 @@
       context_id: safeText(supplied.context_id || local?.context_id || local?.offline_actor_context_id || local?.offline_actor_context?.context_id),
       snapshot_id: safeText(supplied.snapshot_id || local?.offline_authority_snapshot_id || payload.p_snapshot_id),
       employee_id: safeText(supplied.employee_id || local?.offline_authority_employee_id || payload.p_snapshot_employee_id),
-      assignment_epoch: Number(supplied.assignment_epoch ?? local?.offline_authority_assignment_epoch ?? payload.p_snapshot_assignment_epoch),
+      assignment_epoch: epoch == null ? null : Number(epoch),
     };
   }
 
@@ -3541,6 +3555,7 @@
       const blocking = allSessions().filter(session => safeText(session.device_id) === state.deviceId
         && ['active','server-active','offline-provisional','pending_submit','pending_sync'].includes(safeText(session.status)));
       if (blocking.length) throw Object.assign(new Error('Finish the current cleaning and its form before starting another location.'), {code:'custodial_unfinished_work'});
+      if (state.sessionQuarantine.length) throw storageFailure('saved cleaning recovery', new Error('Unknown saved work needs manager recovery; original records were retained.'));
       const value = await authorize();
       return Object.freeze({admitted:true,queued:(await listActions()).length,value});
     });
@@ -3566,6 +3581,8 @@
     return withQueueLock(async (lockContext) => {
       const admission = await drainForNewWorkUnlocked(lockContext);
       if (admission.admitted !== true || typeof authorize !== 'function') return admission;
+      allSessions();
+      if (state.sessionQuarantine.length) throw storageFailure('saved cleaning recovery', new Error('Unknown saved work needs manager recovery; original records were retained.'));
       const value = await authorize();
       const afterAuthorization = await listActions();
       if (afterAuthorization.length) {
@@ -4179,6 +4196,7 @@
     completionDraftExists,
     deleteCompletionDraft,
     resolveDeviceId: () => state.deviceId || resolveDeviceId(),
+    sessionRecoveryDiagnostics: () => state.sessionQuarantine.map(row => ({...row})),
     queueSchemaVersion: CONFIG.SCHEMA_VERSION,
   };
 })();

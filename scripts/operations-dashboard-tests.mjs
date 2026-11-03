@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {installManagerWeather} from '../mobile/src/manager/home-weather.js';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 // Main imports only the new owning callable; old node:test groups must not run.
@@ -194,10 +195,10 @@ test('DASHBOARD_REFRESH_work-order closure retains exact existing outcome refere
 
 // Execute the reserved manager Home script through its normal init/callbacks.
 // Synthetic responses only; no timers, auth storage, or external requests.
-async function managerHomeFixture({attendance,weather,now=Date.parse('2026-10-11T01:00:00Z'),configure}={}) {
+export async function managerHomeFixture({attendance,weather,alerts={type:'FeatureCollection',features:[]},now=Date.parse('2026-10-11T01:00:00Z'),configure}={}) {
  const nodes=new Map(),intervals=new Map(),requests=[];
  const node=id=>{if(!nodes.has(id)){const events=new Map();nodes.set(id,{textContent:'',hidden:false,href:'',disabled:false,
-  setAttribute(key,value){this[key]=value;},removeAttribute(key){delete this[key];},
+  dataset:{},innerHTML:'',setAttribute(key,value){this[key]=value;},removeAttribute(key){delete this[key];},
   addEventListener(type,callback){events.set(type,callback);},emit(type,event){events.get(type)?.(event);},
   classList:{values:new Set(),toggle(k,on){on?this.values.add(k):this.values.delete(k);},add(k){this.values.add(k);}}});}return nodes.get(id);};
  class Clock extends Date {constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}
@@ -212,13 +213,19 @@ async function managerHomeFixture({attendance,weather,now=Date.parse('2026-10-11
   isOpsManager:s=>Boolean(s?.role==='ops_manager'&&s.token),canMutateOpsManagerSurface:s=>Boolean(s&&!s.read_only&&s.access_level!=='read_only'),
   hasRole:(r,s)=>Boolean(s?.roles?.includes(r))};
  const window={location,MemphisAuth:auth,addEventListener:(type,callback)=>events.set(type,callback)};
- const f={nodes,node,intervals,requests,attendance,weather,navigations,auth,window,session:()=>session,setSession:value=>{session=value;},
+ const f={nodes,node,intervals,requests,attendance,weather,alerts,navigations,auth,window,session:()=>session,setSession:value=>{session=value;},
   setDevice:value=>{device=value;},emit:type=>events.get(type)?.(),emitDocument:type=>documentEvents.get(type)?.(),
   fetchOverride:null,turn:()=>new Promise(resolve=>setImmediate(resolve))};
  const fetch=async url=>{requests.push(url);if(f.fetchOverride)return f.fetchOverride(url);
-  let data=url.includes('open-meteo')?f.weather:url.includes('current-attendance')?{ok:true,data:f.attendance}:{ok:true,data:{enabled:false}};return {ok:true,json:async()=>data};};
+  let data=url.includes('open-meteo')?f.weather:url.includes('api.weather.gov')?f.alerts:url.includes('current-attendance')?{ok:true,data:f.attendance}:{ok:true,data:{enabled:false}};return {ok:true,json:async()=>data};};
  configure?.(f);
- vm.runInNewContext(readFileSync(new URL('../ops-hub.js',import.meta.url),'utf8'),{window,document:{getElementById:node,addEventListener:(type,callback)=>documentEvents.set(type,callback)},localStorage:{getItem:()=>null},URL,URLSearchParams,Date:Clock,Intl,console,setInterval:(fn,delay)=>{intervals.set(delay,fn);return delay;},clearInterval:id=>intervals.delete(id),fetch});
+ const original=readFileSync(new URL('../ops-hub.js',import.meta.url),'utf8');
+ const importLine="import { installManagerWeather } from './mobile/src/manager/home-weather.js';\n";
+ assert.equal(original.split(importLine).length,2,'Execute the actual static dependency through its real controller');
+ const interval=(fn,delay)=>{intervals.set(delay,fn);return delay;},clear=id=>intervals.delete(id);
+ const install=options=>(f.weatherController=installManagerWeather({...options,now:()=>now,setIntervalFn:interval,clearIntervalFn:clear,
+  requestJson:async(url,opts)=>{const r=await fetch(url,opts);if(!r.ok)throw Error('Weather unavailable');return r.json();}}));
+ vm.runInNewContext(original.replace(importLine,''),{window,document:{getElementById:node,addEventListener:(type,callback)=>documentEvents.set(type,callback)},localStorage:{getItem:()=>null},URL,URLSearchParams,Date:Clock,Intl,console,setInterval:interval,clearInterval:clear,installManagerWeather:install,fetch});
  await new Promise(resolve=>setImmediate(resolve));return f;
 }
 test('OPS_HUB_BINDING_NEW device changed during original session await cannot publish',async()=>{
@@ -322,9 +329,9 @@ test('PRODUCT Home preserves genuine zero and Central service day without fabric
  const at='2026-10-11T01:00:00Z',epoch=Date.parse(at)/1000;
  const f=await managerHomeFixture({attendance:{attendance:0,planned:null,stale:false,source_timestamp:at,service_date:'2026-10-10'},weather:{current:{time:epoch,temperature_2m:0,weather_code:null},current_units:{time:'unixtime',temperature_2m:'°F'}}});
  assert.equal(f.nodes.get('attendance-value').textContent,'0');assert.match(f.nodes.get('attendance-meta').textContent,/Current.*Planned unavailable.*Central/);
- assert.equal(f.nodes.get('weather-value').textContent,'0°F · Conditions unavailable');assert.match(f.nodes.get('weather-meta').textContent,/Daily high\/low unavailable/);
- assert.match(f.nodes.get('date').textContent,/Oct 10/);assert.match(f.nodes.get('clock').textContent,/8:00/);
- assert.ok(f.requests.some(url=>url.includes('temperature_unit=fahrenheit&timeformat=unixtime')));
+ assert.equal(f.nodes.get('weather-value').textContent,'0°F');assert.equal(f.nodes.get('weather-meta').textContent,'');assert.doesNotMatch(f.nodes.get('weather-value').textContent,/clear|sunny|high|low/i);
+ assert.match(f.nodes.get('date').textContent,/October 10/);assert.match(f.nodes.get('clock').textContent,/8:00/);
+ assert.ok(f.requests.some(url=>{const u=new URL(url);return u.hostname==='api.open-meteo.com'&&u.searchParams.get('temperature_unit')==='fahrenheit'&&u.searchParams.get('timeformat')==='unixtime';}));
  for(const attendance of [{attendance:null},{attendance:false},{attendance:0,available:false},{attendance:4,source_timestamp:'2026-10-10T01:00:00Z'},{attendance:4,source_timestamp:'2026-10-11T02:00:00Z'}]){
   f.attendance=attendance;await f.intervals.get(30000)();assert.equal(f.nodes.get('attendance-value').textContent,'Unavailable');
  }
@@ -334,9 +341,9 @@ test('PRODUCT Home rejects absent weather observations and labels stale source t
  const now=Date.parse('2026-10-11T01:00:00Z'),f=await managerHomeFixture({attendance:null,weather:{current:{time:now/1000,temperature_2m:null,weather_code:null},current_units:{time:'unixtime',temperature_2m:'°F'}}});
  assert.equal(f.nodes.get('weather-value').textContent,'Unavailable');
  f.weather={current:{time:now/1000-3600,temperature_2m:71,weather_code:0},current_units:{time:'unixtime',temperature_2m:'°F'},daily:{time:[Date.parse('2026-10-10T05:00:00Z')/1000],temperature_2m_max:[80],temperature_2m_min:[60]},daily_units:{time:'unixtime',temperature_2m_max:'°F',temperature_2m_min:'°F'}};
- await f.intervals.get(600000)();assert.equal(f.nodes.get('weather-value').textContent,'71°F · Clear');assert.match(f.nodes.get('weather-meta').textContent,/High 80° \/ Low 60°.*Stale forecast.*7:00.*Central/);
+ await f.weatherController.refresh({force:true});assert.equal(f.nodes.get('weather-value').textContent,'71°F · clear');assert.match(f.nodes.get('weather-meta').textContent,/High 80° \/ Low 60°/);assert.match(f.nodes.get('manager-weather-freshness').textContent,/Updated Oct 10, 7:00 PM/);
  for(const patch of [{time:null},{time:false},{temperature_2m:false},{time:now/1000+3600}]){
-  f.weather.current={time:now/1000,temperature_2m:71,...patch};await f.intervals.get(600000)();assert.equal(f.nodes.get('weather-value').textContent,'Unavailable');
+  f.weather.current={time:now/1000,temperature_2m:71,...patch};await f.weatherController.refresh({force:true});assert.equal(f.nodes.get('weather-value').textContent,'Unavailable');
  }
 });
 const visit={id:'school-1',name:'Synthetic school',date:'2026-10-05',arrival_at:'2026-10-05T14:30:00Z',departure_at:null,departure_source:null,status:'SCHEDULED',students:50,chaperones:5,teachers:2,adults:7,total:58,unclassified:1,buses:2};
@@ -599,7 +606,7 @@ test('PRODUCT completion source requires explicit no-open-work fields, never mis
 // proof of a real manager session or server authentication.
 function recordPageAuthFixture(f){
  const source=readFileSync(new URL('../memphis-auth.js',import.meta.url),'utf8');
- const start=source.indexOf('  function hasPermission('),end=source.indexOf('  async function signInWithMap(',start);
+ const start=source.indexOf('  function hasPermission('),end=source.indexOf('  async function ownerCoverage(',start);
  assert(start>=0&&end>start,'current owning pure permission callable required');
  const hasPermission=vm.runInNewContext(source.slice(start,end)+'\nhasPermission;',{window:f.window});
  assert.equal(typeof hasPermission,'function');

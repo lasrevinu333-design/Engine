@@ -105,10 +105,10 @@ await test('F02 missing shared lock prevents transport admission',async()=>{
 });
 function deferred(){let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve};}
 function writerFixture(){
- const f=fixture();let generation=11,p={...principal},ready=true,open=false;
+ const f=fixture();let generation=11,p={...principal},ready=true,open=false,healthPatch={};
  const calls={writes:0,callbacks:0,checkpoints:0,options:[]};
  const hooks={admit:null,settle:null,afterWrite:null,missingCheckpoint:false,contextGeneration:null};
- const health=()=>({ready,available:true,quarantined:false,generation,deviceId:p.device_id,principal:{...p}});
+ const health=()=>({ready,available:true,quarantined:false,generation,deviceId:p.device_id,principal:{...p},...healthPatch});
  const storage={getItem:f.storage.getItem,setItem:(k,v)=>{calls.writes++;f.storage.setItem(k,v);hooks.afterWrite?.();}};
  const mutate=async(operation,options={})=>{
   calls.options.push({...options});if(hooks.admit)await hooks.admit();
@@ -123,7 +123,7 @@ function writerFixture(){
   if(hooks.settle)await hooks.settle();return value;
  };
  const notification=createScheduleNotificationAuthority({identity:()=>scope,principal:()=>p,status:health,storage,mutate,now});
- return{...f,notification,storage,calls,hooks,health,
+ return{...f,notification,storage,calls,hooks,health,setHealthPatch:value=>{healthPatch={...value};},
   changeGeneration:()=>{generation++;},changePrincipal:()=>{p={...p,installation_seal:'synthetic-successor-installation'};},
   withdraw:()=>{ready=false;}};
 }
@@ -204,6 +204,36 @@ await test('NOTIFICATION_WRITER_NEW: superseded queued unavailable cannot report
  const stale=f.notification.unavailable(scope,ticket),current=f.notification.beginResponse(scope);
  release.resolve();await holding;assert.equal(await stale,false);await current;
  assert.equal(f.fence().state,'READING');assert.equal(f.calls.writes,1,'only original read-ahead was written');
+});
+// Documented private credential-store checking is a temporary hold, never
+// admission and never permission to clear a real denied/quarantined latch.
+const checkingPhase={state:'checking',reason:'custodial_security_state_checking',ready:false,available:true,quarantined:false,initialized:true};
+await test('NOTIFICATION_WRITER_NEW: documented checking holds IO then fresh original owner can read without a second material event',async()=>{
+ const f=writerFixture();f.setHealthPatch(checkingPhase);f.notification.securityChanged(f.health());
+ await assert.rejects(f.notification.beginResponse(scope));assert.equal(f.calls.writes,0);assert.equal(f.calls.callbacks,0);
+ f.setHealthPatch({});f.changeGeneration();
+ const ticket=await f.notification.beginResponse(scope);assert.ok(ticket);assert.equal(f.calls.writes,1);assert.equal(f.calls.callbacks,1);
+ assert.deepEqual(f.calls.options,[{requireEnrollment:true,expectedGeneration:12}]);
+});
+await test('NOTIFICATION_WRITER_NEW: checking cannot revive old response tickets or clear real unknown and quarantine states',async()=>{
+ const original=writerFixture(),ticket=await original.notification.beginResponse(scope),wire=[...original.memory];
+ original.setHealthPatch(checkingPhase);assert.equal(original.notification.isCurrent(event(10),scope),false);
+ original.setHealthPatch({});original.changeGeneration();
+ assert.equal(await original.notification.observe(payload(10),scope,ticket),false);assert.deepEqual([...original.memory],wire);
+ for(const denied of [
+  {...checkingPhase,state:'quarantined',quarantined:true,reason:'custodial_restore_quarantine'},
+  {...checkingPhase,reason:'unknown_check'},
+  {...checkingPhase,quarantined:true},
+  {...checkingPhase,initialized:undefined},
+  {ready:false,available:true,quarantined:false},
+ ]){
+  const f=writerFixture();f.setHealthPatch(denied);f.notification.securityChanged(f.health());
+  await assert.rejects(f.notification.beginResponse(scope));
+  f.setHealthPatch(checkingPhase);f.notification.securityChanged(f.health());
+  f.setHealthPatch({});f.changeGeneration();
+  await assert.rejects(f.notification.beginResponse(scope));assert.equal(f.calls.writes,0);assert.equal(f.calls.callbacks,0);
+  f.notification.securityChanged(f.health());await f.notification.beginResponse(scope);assert.equal(f.calls.writes,1);
+ }
 });
 console.log(JSON.stringify({scope:'F02 actual notification/Home/bridge owners; synthetic storage/FIFO locks/transport, no native or physical acceptance',passed:results.filter(r=>r.pass).length,failed:results.filter(r=>!r.pass).length,results},null,2));
 if(results.some(r=>!r.pass))process.exitCode=1;

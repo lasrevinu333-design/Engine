@@ -1,9 +1,11 @@
+const {installSyntheticNavigationVaultFixture}=require('./helpers/synthetic-navigation-vault.cjs');
 const { existsSync, readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
-const { expect, test } = require('@playwright/test');
+const { expect, test } = require('./helpers/isolated-browser-test.cjs');
 
 const output = '/build/batch-0b-shell-browser/custodial';
 const outputDirectory = resolve(__dirname, '..', output.slice(1));
+test.beforeEach(async({page})=>{await page.addInitScript(installSyntheticNavigationVaultFixture);});
 const modules = [
   ['employee-schedule.html', ''],
   ['events.html', '?hub=employee'],
@@ -20,15 +22,17 @@ test.beforeAll(() => {
     .toContain('nativeCustodialHome ? "./index.html"');
 });
 
-test('protected Custodial lock and Home show the current enrolled employee without changing the four-choice Home', async ({ page }) => {
+test('protected Custodial lock and Home show the current enrolled employee with the five approved Home choices', async ({ page }) => {
   await page.addInitScript(({ deviceId, credential, seal }) => {
+    const principal={schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',credential_operation_id:'00000000-0000-4000-8000-000000000811',assignment_epoch:1,installation_seal:seal,enrolled_at:'2026-08-01T00:00:00.000Z'};
+    window.__testInstallNavigationVault({deviceId,credential,seal,principal});
     const installationRecord = JSON.stringify({
       schema_version: 1,
       credential,
       device_id: deviceId,
       installation_seal: seal,
       enrolled_at: '2026-08-01T00:00:00.000Z',
-      migrated_from_credential_only_state: false,
+      migrated_from_credential_only_state: false,principal,
     });
     localStorage.setItem(
       'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
@@ -47,7 +51,7 @@ test('protected Custodial lock and Home show the current enrolled employee witho
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const data = pathname === '/device-auth/status'
-      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson', employee_role: 'staff' }
+      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson',employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1, employee_role: 'staff' }
       : {};
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
   });
@@ -59,8 +63,8 @@ test('protected Custodial lock and Home show the current enrolled employee witho
   await expect(page.locator('#phone-lock')).toBeHidden();
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
   await expect(page.locator('#employee-role')).toHaveText('Custodian');
-  await expect(page.locator('.homeMenu .homeButton')).toHaveCount(4);
-  await expect(page.locator('.homeMenu .homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeMenu .homeButton')).toHaveCount(5);
+  await expect(page.locator('.homeMenu .homeButton')).toHaveText(['Memphis Messenger','My Schedule','Upcoming Events','💬Program Feedback','Supplies']);
   await expect(page.locator('#time-attendance')).toHaveCount(0);
 });
 
@@ -70,15 +74,17 @@ test('protected Custodial wake identifies the assigned employee before a slow ne
       authenticated: true,
       canonical_device_id: deviceId,
       device_id: deviceId,
-      employee_name: 'Karen Robinson',
+      employee_name: 'Karen Robinson',employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1,
     };
+    const principal={schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',credential_operation_id:'00000000-0000-4000-8000-000000000811',assignment_epoch:1,installation_seal:seal,enrolled_at:'2026-08-01T00:00:00.000Z'};
+    window.__testInstallNavigationVault({deviceId,credential,seal,principal});
     const installationRecord = JSON.stringify({
       schema_version: 1,
       credential,
       device_id: deviceId,
       installation_seal: seal,
       enrolled_at: '2026-08-01T00:00:00.000Z',
-      migrated_from_credential_only_state: false,
+      migrated_from_credential_only_state: false,principal,
     });
     localStorage.setItem(
       'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
@@ -88,8 +94,8 @@ test('protected Custodial wake identifies the assigned employee before a slow ne
       localStorage.setItem(key, deviceId);
     }
     localStorage.setItem('memphisZooCustodialInstallationSeal', seal);
-    localStorage.setItem(`mz_custodial_home_cache:${deviceId}`, JSON.stringify({
-      schema_version: 'custodial-home-cache.v3',
+    localStorage.setItem(`mz_custodial_home_cache:${encodeURIComponent(JSON.stringify(principal))}`, JSON.stringify({
+      schema_version: 'custodial-home-cache.v4',principal,
       device_id: deviceId,
       cached_at: new Date().toISOString(),
       profile,
@@ -112,7 +118,7 @@ test('protected Custodial wake identifies the assigned employee before a slow ne
           authenticated: true,
           canonical_device_id: 'KIOSK_08',
           device_id: 'KIOSK_08',
-          employee_name: 'Karen Robinson',
+          employee_name: 'Karen Robinson',employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1,
         },
       }),
     });
@@ -128,13 +134,15 @@ test('protected Custodial wake identifies the assigned employee before a slow ne
 for (const [file, query] of modules) {
   test(`compiled native Custodial ${file} returns to protected home`, async ({ page }) => {
     await page.addInitScript(({ deviceId, credential, seal }) => {
-      const installationRecord = JSON.stringify({
+      const principal={schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',credential_operation_id:'00000000-0000-4000-8000-000000000811',assignment_epoch:1,installation_seal:seal,enrolled_at:'2026-08-01T00:00:00.000Z'};
+    window.__testInstallNavigationVault({deviceId,credential,seal,principal});
+    const installationRecord = JSON.stringify({
         schema_version: 1,
         credential,
         device_id: deviceId,
         installation_seal: seal,
         enrolled_at: '2026-08-01T00:00:00.000Z',
-        migrated_from_credential_only_state: false,
+        migrated_from_credential_only_state: false,principal,
       });
       localStorage.setItem(
         'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
@@ -152,7 +160,7 @@ for (const [file, query] of modules) {
     await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
       const pathname = new URL(route.request().url()).pathname;
       const data = pathname === '/device-auth/status'
-        ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson' }
+        ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson',employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1 }
         : (pathname.includes('/events')
           ? []
           : (pathname.includes('/my-day-summary') ? { service_date: '2026-08-02', groups: [] } : {}));
@@ -162,6 +170,7 @@ for (const [file, query] of modules) {
       });
     });
     await page.goto(`${output}/${file}${query}`);
+    if(file==='events.html'){await expect(page.locator('#events-back')).toHaveText('Back to Home');await page.locator('#events-back').click();await expect(page).toHaveURL(new RegExp('/index\\.html$'));return;}
     await expect.poll(() => page.evaluate(() => Boolean(window.MemphisUI))).toBe(true);
 
     const expectedPath = `${output}/index.html`;
@@ -176,13 +185,15 @@ for (const [file, query] of modules) {
 
 test('compiled Employee Events uses enrolled-phone transport and never the public Viewer feed', async ({ page }) => {
   await page.addInitScript(({ deviceId, credential, seal }) => {
+    const principal={schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',credential_operation_id:'00000000-0000-4000-8000-000000000811',assignment_epoch:1,installation_seal:seal,enrolled_at:'2026-08-01T00:00:00.000Z'};
+    window.__testInstallNavigationVault({deviceId,credential,seal,principal});
     const installationRecord = JSON.stringify({
       schema_version: 1,
       credential,
       device_id: deviceId,
       installation_seal: seal,
       enrolled_at: '2026-08-01T00:00:00.000Z',
-      migrated_from_credential_only_state: false,
+      migrated_from_credential_only_state: false,principal,
     });
     localStorage.setItem(
       'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
@@ -204,7 +215,7 @@ test('compiled Employee Events uses enrolled-phone transport and never the publi
     const pathname = new URL(request.url()).pathname;
     if (pathname.includes('events')) eventRequests.push({ pathname, headers: request.headers() });
     const data = pathname === '/device-auth/status'
-      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson' }
+      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson',employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1 }
       : (pathname === '/employee-events-api' ? [{
           id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
           event_name: 'Zoo Lights',
@@ -215,14 +226,14 @@ test('compiled Employee Events uses enrolled-phone transport and never the publi
           display_location: 'Nocturnal',
           status: 'SCHEDULED',
         }] : []);
+    if(pathname==='/employee-events-api')return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,feed:{schema:'custodial.events-feed.v1',timezone:'America/Chicago',source:'events_app_events',state:'snapshot',coverage:'published_records_only',mailbox_completeness_verified:false,generated_at:new Date().toISOString(),rows:[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',revision:1,timezone:'America/Chicago',name:'Zoo Lights',location:'Nocturnal',date:'2099-08-26',end_date:'2099-08-26',start_time:'13:30:00',end_time:'15:00:00',status:'SCHEDULED',attendees:100,requirements:[],custodial_notes:''}]},meta:{canonical_device_id:'KIOSK_08',employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1}})});
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
   });
 
   await page.goto(`${output}/events.html?hub=employee`);
-  await expect(page.locator('.event .name')).toHaveText('Zoo Lights');
-  await expect(page.locator('.event .when')).toContainText('Aug 26');
-  await expect(page.locator('.event .when')).toContainText('1:30 PM–3:00 PM');
-  await expect(page.locator('.event .where')).toHaveText('Nocturnal');
+  await expect(page.locator('#events-content article[data-event-id] h3')).toHaveText('Zoo Lights');
+  await expect(page.locator('#events-content article[data-event-id]')).toContainText('Nocturnal');
+  await expect(page.locator('#events-content article[data-event-id]')).toContainText('1:30');
   await expect(page.getByRole('button', { name: 'Try Again', exact: true })).toHaveCount(0);
   expect(eventRequests).toHaveLength(1);
   expect(eventRequests[0].pathname).toBe('/employee-events-api');
@@ -232,13 +243,15 @@ test('compiled Employee Events uses enrolled-phone transport and never the publi
 
 test('native NFC remains ambient on compatibility modules and accepts the same tag twice', async ({ page }) => {
   await page.addInitScript(({ deviceId, credential, seal }) => {
+    const principal={schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',credential_operation_id:'00000000-0000-4000-8000-000000000811',assignment_epoch:1,installation_seal:seal,enrolled_at:'2026-08-01T00:00:00.000Z'};
+    window.__testInstallNavigationVault({deviceId,credential,seal,principal});
     const installationRecord = JSON.stringify({
       schema_version: 1,
       credential,
       device_id: deviceId,
       installation_seal: seal,
       enrolled_at: '2026-08-01T00:00:00.000Z',
-      migrated_from_credential_only_state: false,
+      migrated_from_credential_only_state: false,principal,
     });
     localStorage.setItem(
       'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
@@ -256,7 +269,7 @@ test('native NFC remains ambient on compatibility modules and accepts the same t
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const data = pathname === '/device-auth/status'
-      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson' }
+      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson',employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1 }
       : (pathname.includes('/my-day-summary') ? { service_date: '2026-08-02', groups: [] } : {});
     await route.fulfill({
       contentType: 'application/json',
@@ -290,13 +303,15 @@ test('native NFC remains ambient on compatibility modules and accepts the same t
 test('a stale launch handoff is not reclaimed after reaching its protected scan route', async ({ page }) => {
   const handoff = '22222222-2222-4222-8222-222222222222';
   await page.addInitScript(({ deviceId, credential, seal, launchUrl }) => {
+    const principal={schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',credential_operation_id:'00000000-0000-4000-8000-000000000811',assignment_epoch:1,installation_seal:seal,enrolled_at:'2026-08-01T00:00:00.000Z'};
+    window.__testInstallNavigationVault({deviceId,credential,seal,principal});
     const installationRecord = JSON.stringify({
       schema_version: 1,
       credential,
       device_id: deviceId,
       installation_seal: seal,
       enrolled_at: '2026-08-01T00:00:00.000Z',
-      migrated_from_credential_only_state: false,
+      migrated_from_credential_only_state: false,principal,
     });
     localStorage.setItem(
       'capacitor-storage_memphis_zoo_custodial_installation_record_v1',
@@ -316,7 +331,7 @@ test('a stale launch handoff is not reclaimed after reaching its protected scan 
   await page.route('https://memphis-zoo-mcp.onrender.com/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const data = pathname === '/device-auth/status'
-      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson' }
+      ? { authenticated: true, canonical_device_id: 'KIOSK_08', device_id: 'KIOSK_08', employee_name: 'Karen Robinson',employee_id:'00000000-0000-4000-8000-000000000809',credential_id:'00000000-0000-4000-8000-000000000810',assignment_epoch:1 }
       : (pathname.includes('/my-day-summary') ? { service_date: '2026-08-02', groups: [] } : {});
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
   });

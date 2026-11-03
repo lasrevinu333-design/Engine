@@ -94,45 +94,24 @@ if(process.argv.includes('--security-code-lifetime-only')||process.argv.includes
   process.exit(0);
 }
 
-for(const symbol of ['requestTrustedOpsSession','renameOpsManagerTrustedDevice','revokeOpsManagerTrustedDevice','revokeAllOpsManagerTrustedDevices'])assert.match(auth,new RegExp(symbol));
-assert.match(auth,/DEVICE_SECURITY_URL/);
-assert.match(auth,/X-Device-Security-CSRF/);
-assert.match(auth,/ops\/trusted-devices/);
-assert.match(auth,/credentials:'include'/);
+for(const symbol of ['requestTrustedOpsSession','refreshLeadershipSession','isCustodialManagementAdmin','renameOpsManagerTrustedDevice','revokeOpsManagerTrustedDevice','revokeAllOpsManagerTrustedDevices'])assert.match(auth,new RegExp(symbol));
+assert.match(auth,/DEVICE_SECURITY_URL/);assert.match(auth,/X-Device-Security-CSRF/);assert.match(auth,/ops\/trusted-devices/);assert.match(auth,/credentials:'include'/);
 assert.doesNotMatch(auth,/consumeSharedEnrollmentPasscode|createSharedEnrollmentWindow|disableSharedEnrollmentWindow|ops\/shared-enrollment/);
-assert.doesNotMatch(auth,/localStorage\.[gs]etItem\([^)]*(passcode|manager.*token|deviceSecurity)/i);
-assert.doesNotMatch(auth,/Fully Kiosk PIN/i);
-
-assert.match(entry,/personal enrollment code/i);
-assert.match(entry,/auth-api\/ops\/manager-codes\/consume/);
-assert.match(entry,/read-only Viewer/i);
-assert.doesNotMatch(entry,/shared enrollment|48-hour passcode/i);
-
-for(const text of ['OPERATIONS LEADERSHIP ACCESS','Leadership Accounts','Generate Personal Code','Trusted Devices','Rename','Revoke'])assert.match(access,new RegExp(text));
-assert.match(access,/single-use, 15-minute code/i);
-assert.match(access,/leadership-api\/roster/);
-assert.match(access,/leadership-api\/managers\/.*enrollment-code/);
-assert.match(access,/auth-api\/ops\/trusted-devices/);
-assert.match(access,/CUSTODIAL_MANAGER/);
-assert.match(access,/displayed only now/i);
-assert.doesNotMatch(access,/48-Hour|shared enrollment|Generate PC Invite|Generate Phone Invite|Copy Invite Link|Display Invite QR|QRCode|ops_pairing_token|enrollment_url/i);
+assert.doesNotMatch(auth,/localStorage\.[gs]etItem\([^)]*(passcode|manager.*token|deviceSecurity)/i);assert.doesNotMatch(auth,/Fully Kiosk PIN/i);
+const enrollment=read('custodial-leadership-enrollment.mjs');
+assert.match(entry,/Leadership PIN/);assert.match(entry,/approved-name/);assert.match(entry,/read-only viewer/i);assert.match(entry,/custodial-leadership-enrollment\.mjs/);
+assert.doesNotMatch(entry+enrollment,/map-password|map-login-form|manager-codes\/consume|personal enrollment code|48-hour/i);
+assert.match(enrollment,/request\('\/challenge',\{pin:value\}\)/);assert.match(enrollment,/request\('\/enroll',\{accountId\}\)/);assert.match(enrollment,/X-CSRF-Token/);assert.match(enrollment,/SELF_ASSERTED_NAME/);assert.match(enrollment,/mutationHeld/);
+for(const text of ['OPERATIONS LEADERSHIP ACCESS','This browser’s enrollment','Claimed name','Browser registration','Remove enrollment from this browser','Verified contact'])assert.ok(access.includes(text));
+assert.match(access,/custodial-leadership-api\/session/);assert.match(access,/clearSession\(\)/);assert.match(access,/verifiedAt/);
+assert.doesNotMatch(access,/Generate Personal Code|data-code-manager|managers\/.*enrollment-code|one_time_code|QRCode|ops_pairing_token/);
 assert.doesNotMatch(access,/type="password"|localStorage\.[gs]etItem\([^)]*(passcode|manager)/i);
-
-assert.match(hub,/ops-hub\.js/);
-assert.match(hubController,/Named manager enrollment required/);
-assert.match(hubController,/ops-manager-hub\.html/);
-assert.match(hubController,/hasRole\('CUSTODIAL_MANAGER'/);
-assert.match(hubController,/hasRole\('SECURITY_ADMIN'/);
-assert.match(hubController,/Annie Feist/);
+assert.match(hub,/ops-hub\.js/);assert.match(hubController,/Named manager enrollment required/);assert.match(hubController,/ops-manager-hub\.html/);
+assert.match(hubController,/hasRole\('CUSTODIAL_MANAGER'/);assert.match(hubController,/hasRole\('SECURITY_ADMIN'/);assert.match(hubController,/isCustodialManagementAdmin/);assert.match(hubController,/manager_display_name/);assert.match(hubController,/Leadership management.*self-asserted name/);
 assert.doesNotMatch(hub+hubController,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
-
-assert.match(security,/Security Admin unlock required/);
-assert.match(security,/separate Device Security password/);
-assert.match(security,/Unlock for 15 minutes/);
-assert.match(security,/window\.MemphisAuth\.unlockDeviceSecurity/);
-assert.doesNotMatch(security,/shared.*passcode|ops_pairing_token/i);
-
-assert.match(viewer,/read-only/i);
-assert.doesNotMatch(viewer,/Messenger|Moxie|Scheduler|Device Security|Manager Access/i);
-
-console.log('NAMED_MANAGER_PASSWORDLESS_FRONTEND_TESTS_PASS');
+// Legacy employee/security-password behavior remains present. Verified cohort
+// managers must instead consume the real security-session scope; no UI bypass.
+assert.match(security,/window\.MemphisAuth\.unlockDeviceSecurity/);assert.match(security,/isCustodialManagementAdmin/);assert.match(security,/els\.password\.hidden=true;els\.unlock\.hidden=true/);
+assert.match(auth,/security_scope!=='custodial_device_management'/);assert.match(auth,/value\.manager_id!==session\.manager_id/);assert.match(auth,/value\.csrf_token/);
+assert.match(viewer,/read-only/i);assert.match(viewer,/Custodial Operations Center/);assert.doesNotMatch(viewer,/<script[^>]*memphis-auth/);
+console.log('CUSTODIAL_COHORT_PASSWORDLESS_FRONTEND_CONTRACT_PASS');

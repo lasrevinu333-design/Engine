@@ -204,13 +204,14 @@ try {
   for(const mutate of [f=>f.files.get(f.lease).uid=8,f=>f.files.get(f.lease).mode=0o644,f=>f.texts.set(f.lease,f.texts.get(f.lease).replace(f.target,'/outside')),f=>f.files.set(f.source,f.dir(99)),f=>f.files.get(f.target).isSymbolicLink=()=>true])
     check('cleanup rejects changed lease or redirected ownership',()=>{const f=retention();retainBackendCheckout(f.options,f.io);mutate(f);assert.throws(()=>cleanupBackendCheckout(f.options,f.io));assert.ok(!f.actions.some(x=>x.startsWith('remove:')));});
   const helper=readFileSync('scripts/native-actual-sql-fixtures.mjs','utf8');
-  check('standalone total binds actual declared default Java classes plus six wire methods',()=>{
+  check('current declared JVM inventory is distinct from the preserved historical396 wire-helper profile',()=>{
     const runner=readFileSync('mobile/scripts/custodial-provider-storage-tests.mjs','utf8');
     const selection=runner.slice(runner.indexOf('const tests = ['),runner.indexOf('const fixtureSources ='));
     const classes=[...selection.matchAll(/'([A-Za-z0-9]+Test)'/g)].map(match=>match[1]);
-    assert.equal(classes.length,35);assert.equal(new Set(classes).size,35);
-    const defaultCount=classes.reduce((total,name)=>total+(readFileSync('mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/'+name+'.java','utf8').match(/@Test\b/g)||[]).length,0);
-    assert.equal(defaultCount,390);assert.equal(defaultCount+methods.NativeProviderEventDecisionSqlWireTest.length,396);
+    assert.equal(classes.length,40);assert.equal(new Set(classes).size,40);
+    const defaultCount=classes.reduce((total,name)=>total+(readFileSync('mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/'+name+'.java','utf8').match(/@Test\s*(?:\([^)]*\)\s*)?public\s+void\s+\w+\s*\(/g)||[]).length,0);
+    assert.equal(defaultCount,484);assert.equal(defaultCount+methods.NativeProviderEventDecisionSqlWireTest.length,490);
+    // Historical396 helper metadata below is a preserved prior profile, not a current490 execution claim.
   });
 
   check('hosted phases require strict resolver, matching standalone consumption and sealed cleanup',()=>{

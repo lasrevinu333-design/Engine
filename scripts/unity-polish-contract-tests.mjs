@@ -37,6 +37,10 @@ for (const [file, context] of secondaryPages) {
     assert.equal((source.match(/id="prepare"/g)||[]).length,1);assert.match(source,/English and Spanish/);
     continue;
   }
+  if(file==='schedule-simple.html'||file==='schedule.html'){
+    assert.match(source,/schedule-weekly\.html/,'Retired ad hoc scheduler leads to the approved weekly owner');
+    assert.match(source,/window\.location\.replace/);assert.doesNotMatch(source,/generate-day|absence-override/,'Alias has no schedule mutation');continue;
+  }
   if(file==='events.html'){
     assert.match(source,/href="\.\/operations-dashboard\.css"/,'one Events view uses its map board design tokens');
     assert.match(source,/src="\.\/events-view\.js"/,'one Events controller owns role-aware Back and scrolling');

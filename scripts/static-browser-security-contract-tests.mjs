@@ -10,9 +10,13 @@ assert.ok(htmlFiles.length > 0, 'expected root HTML entrypoints');
 for (const file of htmlFiles) {
   const source = await readFile(path.join(repoRoot, file), 'utf8');
   assert.match(source, /http-equiv="Content-Security-Policy"/i, `${file} is missing a CSP meta policy`);
-  assert.match(source, /object-src 'none'/i, `${file} must block plugin objects`);
-  assert.match(source, /base-uri 'self'/i, `${file} must restrict base URL changes`);
-  assert.match(source, /form-action 'self'/i, `${file} must restrict form submissions`);
+  const policy=source.match(/http-equiv="Content-Security-Policy"[^>]*content="([^"]+)"/i)?.[1];
+  assert.ok(policy, file+' must supply a parseable CSP');
+  const directives=new Map();for(const part of policy.split(';')){const [name,...values]=part.trim().split(/\s+/);if(name&&!directives.has(name))directives.set(name,values);}
+  assert.deepEqual(directives.get('object-src')||directives.get('default-src'),["'none'"],file+' must deny plugin objects, including default-src fallback');
+  for(const name of ['base-uri','form-action'])assert.ok(
+    [JSON.stringify(["'self'"]),JSON.stringify(["'none'"])].includes(JSON.stringify(directives.get(name))),
+    file+' must restrict '+name+' to self or none');
   assert.match(source, /<meta name="referrer" content="no-referrer">/i, `${file} is missing its referrer policy`);
 }
 

@@ -207,19 +207,24 @@ const inline=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
 const recurringHelper=readFileSync(new URL('../memphis-recurring-schedule-target.js',import.meta.url),'utf8');
 const snapshots=storage=>[...storage.values()].filter(value=>JSON.parse(value)?.schema_version==='employee-schedule-snapshot.v2');
 function scheduleFixture(initial=original,storage=new Map()){
- let active=initial,offline=false,pending=null,networkData;
+ let active=initial,offline=false,pending=null,networkData,generation=1;
  const events=new Map(),elements=new Map();
  const element=id=>{if(!elements.has(id))elements.set(id,{hidden:false,textContent:'',innerHTML:'',addEventListener(){}});return elements.get(id);};
  const makeData=(p,name)=>({...profile(p,name),service_date:'2026-09-21',full_day:true,
   raw_items:[{name:`${name} area`,coverage_start:'11:00',coverage_end:'14:00'}]});
  networkData=active?makeData(active,'Original'):null;
  const DateFixed=class extends Date{constructor(...a){super(...(a.length?a:['2026-09-21T18:00:00Z']));}static now(){return Date.parse('2026-09-21T18:00:00Z');}};
- const status=()=>({ready:!!active,available:true,quarantined:!active,deviceId:'KIOSK_08',principal:active});
+ const status=()=>({ready:!!active,available:true,quarantined:!active,deviceId:'KIOSK_08',generation,principal:active});
  const window={navigator:{locks:createSyntheticScheduleLocks()},crypto:webcrypto,
   MemphisMobile:{ready:Promise.resolve(),deviceId:()=>active?.device_id||'KIOSK_08',
   principalIdentity:()=>principalIdentity(active),profileMatchesPrincipal:v=>profileMatchesPrincipal(v,active),
   requestJson:async()=>{if(offline)throw new Error('offline');return profile(active);}},
-  MemphisCustodialSecurity:{native:true,getStatus:status,mutateProtectedWork:async fn=>fn()},
+  MemphisCustodialSecurity:{native:true,getStatus:status,mutateProtectedWork:async(fn,options)=>{
+   const captured=generation,capturedPrincipal=JSON.stringify(active);
+   assert.equal(options.requireEnrollment,true);assert.equal(options.expectedGeneration,captured);
+   const context={generation:captured,deviceId:'KIOSK_08',assertCurrent(){assert.equal(generation,captured);assert.equal(JSON.stringify(active),capturedPrincipal);assert.ok(active);}};
+   context.assertCurrent();try{return await fn(context);}finally{context.assertCurrent();}
+  }},
   addEventListener:(event,fn)=>events.set(event,fn)};
  const ctx={window,document:{getElementById:element,addEventListener(){}},Date:DateFixed,Intl,JSON,console,AbortController,TextEncoder,
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},
@@ -229,14 +234,14 @@ function scheduleFixture(initial=original,storage=new Map()){
  return {element,storage,setOffline:v=>{offline=v;},refresh:()=>events.get('online')(),
   defer:()=>{let done;pending=new Promise(r=>{done=r;});return data=>done({ok:true,json:async()=>({ok:true,data})});},
   data:makeData,
-  assign:p=>{active=p;networkData=p?makeData(p,'New'):null;events.get('memphis:custodial-security-state')({detail:status()});}};
+  assign:p=>{generation++;active=p;networkData=p?makeData(p,'New'):null;events.get('memphis:custodial-security-state')({detail:status()});}};
 }
 const f=scheduleFixture();await turn();await turn();
 check(f.element('employee').textContent==='Original','initial authenticated schedule renders');
 check(snapshots(f.storage).length===1,'exact principal cache is saved');
 check(f.storage.size===2,'one snapshot and its real durable availability fence are saved');
 f.setOffline(true);f.refresh();await turn();
-check(/No connection/.test(f.element('state-text').textContent),'same-principal offline schedule is retained');
+check(!f.element('content').hidden&&f.element('employee').textContent==='Original'&&snapshots(f.storage).length===1,'same-principal offline schedule is retained');
 f.setOffline(false);const release=f.defer();f.refresh();await turn();
 f.assign(changed);
 check(f.element('employee').textContent==='Employee'&&f.element('content').hidden,'assignment change immediately clears displayed old employee');
@@ -271,7 +276,7 @@ for(const [field,value] of Object.entries({schema_version:'wrong',device_id:'KIO
 const v2schedule=scheduleFixture(legacyPrincipal);await turn();await turn();
 check(v2schedule.element('employee').textContent==='Original','actual Schedule controller renders legacy principal');
 v2schedule.setOffline(true);v2schedule.refresh();await turn();
-check(/No connection/.test(v2schedule.element('state-text').textContent),'legacy Schedule survives offline exact-principal restart');
+check(!v2schedule.element('content').hidden&&v2schedule.element('employee').textContent==='Original'&&snapshots(v2schedule.storage).length===1,'legacy Schedule survives offline exact-principal restart');
 v2schedule.assign({...legacyPrincipal,legacy_binding_id:uuid(90)});await turn();
 check(v2schedule.element('content').hidden,'new legacy observation invalidates prior Schedule cache');
 check(snapshots(v2schedule.storage).length===1,'old schedule bytes retained not reassigned');

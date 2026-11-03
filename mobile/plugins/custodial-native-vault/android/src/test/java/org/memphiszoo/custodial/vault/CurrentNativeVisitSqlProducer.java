@@ -160,7 +160,12 @@ public final class CurrentNativeVisitSqlProducer {
             .put("exact_received_response_sha256",sha(received)).put("native_authorized_response_sha256",sha(start.body))
             .put("capture_source","NORMAL_HTTPS_TRANSPORT_AND_CURRENT_ACTIVE_ENGINE_RESPONSE")
             .put("journal_state","NATIVE_OCCURRENCE_START_RETAINED_NO_SERVER_START_JOURNAL"));Arrays.fill(received,(byte)0);received=null;
-        String finishEntry=scan(f.work,location,monotonic,uid);require(!startEntry.equals(finishEntry),"distinct finish scan entry");
+        // The shipping first-minute guard requires a genuinely fresh read.
+        // Keep the real monotonic clock and wait; never rewrite original time,
+        // bypass the guard, or queue the ignored observation for later replay.
+        long freshReadAt=monotonic.now()+60_001L;
+        while(monotonic.now()<freshReadAt)Thread.sleep(Math.min(250L,freshReadAt-monotonic.now()));
+        String finishEntry=scan(f.work,location,monotonic,uid);require(!startEntry.equals(finishEntry),"distinct fresh finish scan entry after real first-minute wait");
         String ended=time.completeOccurrenceFromScan("KIOSK_08",location,session,started,finishEntry,true,identity);
         JSONObject answers=new JSONObject().put("work_result",result).put("services_performed",new JSONArray(result.equals("full")?List.of("Full cleaning services"):
             result.equals("details")?List.of("Restock toilet paper"):List.of())).put("form_type","restroom")

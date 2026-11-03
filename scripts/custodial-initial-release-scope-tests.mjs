@@ -32,7 +32,7 @@ check(Object.isFrozen(CUSTODIAL_RELEASE_CAPABILITIES),true);
 const bridge=read('mobile/src/custodial/bridge.js'),begin=bridge.indexOf('  function safeNativeRoute('),end=bridge.indexOf('  function routeProtectedRecovery(',begin);
 const context={URL,location:{href:'https://localhost/index.html',origin:'https://localhost'},deviceId:()=> 'KIOSK_08',deferredCustodialFeature};
 vm.createContext(context);vm.runInContext(bridge.slice(begin,end),context);
-for(const [route,path] of [['messages.html','messages.html'],['thread.html','thread.html'],['events.html?hub=employee','employee-events.html'],['system-feedback.html','employee-feedback.html'],['employee-feedback.html','employee-feedback.html']])
+for(const [route,path] of [['messages.html','messages.html'],['thread.html','thread.html'],['events.html?hub=employee','events.html'],['employee-events.html?hub=employee','events.html'],['system-feedback.html','employee-feedback.html'],['employee-feedback.html','employee-feedback.html']])
  check(new URL(context.safeNativeRoute(route)).pathname,'/'+path,'included route stays in canonical employee page '+route);
 for(const route of ['https://elsewhere.invalid/employee-schedule.html','javascript:alert(1)','intent://settings','admin.html'])check(context.safeNativeRoute(route),'','unapproved route stays blocked '+route);
 check(new URL(context.safeNativeRoute('employee-schedule.html')).pathname,'/employee-schedule.html');

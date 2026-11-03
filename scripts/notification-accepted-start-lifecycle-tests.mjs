@@ -1,3 +1,4 @@
+import {syntheticNotificationWriter} from './synthetic-notification-writer.mjs';
 import assert from 'node:assert/strict';
 import {createHash,webcrypto} from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -14,6 +15,15 @@ import {zooServiceDate} from '../mobile/src/custodial/home-facts.js';
 globalThis.crypto ||= webcrypto;
 const id=n=>`ad000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const sha=v=>createHash('sha256').update(v).digest('hex');
+
+function historicalNotificationSource(name){
+ const bytes=readFileSync(new URL('./fixtures/notification-historical-predecessors-v2/MANIFEST.json',import.meta.url));
+ assert.equal(sha(bytes),'797113477f34800538a05b86be8c94c6a14b2e4676957a37ea972650b234ce51');const metadata=JSON.parse(bytes);
+ assert.equal(metadata.production,false);assert.equal(metadata.release_admission,false);
+ const row=metadata.files.find(row=>row.file===name);assert.ok(row);
+ const source=readFileSync(new URL('./fixtures/notification-historical-predecessors-v2/'+row.file,import.meta.url),'utf8');
+ assert.equal(Buffer.byteLength(source),row.bytes);assert.equal(sha(source),row.sha256);return source;
+}
 const flat=v=>'{'+Object.keys(v).sort((a,b)=>a.length-b.length||(a<b?-1:a>b?1:0)).map(k=>JSON.stringify(k)+': '+JSON.stringify(v[k])).join(', ')+'}';
 const deviceId='KIOSK_08',time=Date.parse('2026-10-11T17:00:00.000Z'),day=zooServiceDate(time);
 const principal={schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:id(1),credential_id:id(2),assignment_epoch:7,credential_operation_id:id(3),installation_seal:'fixture-installation-seal-0001',enrolled_at:'2026-07-01T12:00:00.000Z'};
@@ -24,7 +34,7 @@ const session={service_date:day,device_id:deviceId,employee_id:id(1),assignment_
 const key=(stamp='20261011145959000000',status='overdue',repeat='0')=>`location-visit:${day}:${locationId}:${status}:${stamp}:${repeat}:projection:${projectionId}`;
 const data=(notification_key=key())=>({kind:'employee_location_status',service_date:day,projection_id:projectionId,location_id:locationId,notification_key,receipt_device_id:deviceId,receipt_employee_id:id(1),receipt_credential_id:id(2),receipt_assignment_epoch:'7',route:'employee-schedule.html?hub=employee'});
 const event=d=>({notification:{title:'Synthetic reminder',body:'Synthetic location needs cleaning.',data:d}});
-function make(now=()=>time){const disk=storage();const authority=createScheduleNotificationAuthority({identity:()=>scope,principal:()=>principal,status:()=>({ready:true,available:true,generation:10}),storage:disk,now});return {authority,disk};}
+function make(now=()=>time){const disk=storage(),health=()=>({ready:true,available:true,quarantined:false,generation:10,deviceId,principal});const authority=createScheduleNotificationAuthority({identity:()=>scope,principal:()=>principal,status:health,storage:disk,now,mutate:syntheticNotificationWriter(health)});return {authority,disk};}
 const results=[],remainingSourceLimits=[];
 async function check(name,fn){if(process.env.ACCEPTED_START_ORIGIN_CASE&&name!==`ORIGIN ${process.env.ACCEPTED_START_ORIGIN_CASE}`)return;if(process.env.ACCEPTED_START_READ_CASE&&name!==`READ ${process.env.ACCEPTED_START_READ_CASE}`)return;if(process.argv.includes('--ordinary-lunch-cutoff-race-only')&&!name.startsWith('CUTOFF lunch deadline-race'))return;if(process.argv.includes('--ordinary-lunch-cutoff-only')&&!name.startsWith('CUTOFF lunch '))return;if(process.argv.includes('--schedule-window-boundaries-only')&&!['PAGE lunch actual boundary','PAGE lunch accepted-window'].some(prefix=>name.startsWith(prefix)))return;if(process.argv.includes('--schedule-boundary-delay-only')&&!name.startsWith('PAGE lunch boundary-delay'))return;if(process.argv.includes('--schedule-admission-only')&&!name.startsWith('PAGE lunch accepted-window'))return;if(process.argv.includes('--schedule-navigation-only')&&!name.startsWith('PAGE lunch navigation'))return;if(process.argv.includes('--schedule-page-only')&&!name.startsWith('PAGE lunch '))return;if(process.argv.includes('--lunch-renderer-only')&&!name.startsWith('RENDERER lunch '))return;if(process.argv.includes('--main-mount-only')&&!name.startsWith('MAIN '))return;if(process.argv.includes('--lunch-only')&&!name.startsWith('LUNCH '))return;if(process.argv.includes('--lunch-scheduler-only')&&!name.startsWith('LUNCH scheduler '))return;await fn();results.push(name);}
 
@@ -75,9 +85,13 @@ await check('accepted evidence cannot cross schedule revision even under same pr
  assert.equal(a.observeAcceptedLocationSession({...session,schedule_authority_revision:10},scope,a.beginAcceptedLocationSessionRead(scope)),false);
 });
 await check('foreign location cannot retire original location and lunch identity remains guarded',async()=>{
- const {authority:a}=make();await a.observe(schedule());assert.equal(a.observeAcceptedLocationSession({...session,location_id:id(90)},scope,a.beginAcceptedLocationSessionRead(scope)),true);
+ const {authority:a}=make();const loan='b'.repeat(64);
+ await a.observe(schedule(10,[{loan_id:loan,coverage_purpose:'lunch_coverage',coverer_person_id:principal.employee_id,
+  service_date:day,projection_id:projectionId,coverage_start:'12:00',coverage_end:'13:00'}]));
+ assert.equal(a.observeAcceptedLocationSession({...session,location_id:id(90)},scope,a.beginAcceptedLocationSessionRead(scope)),true);
  assert.equal(a.isCurrent(data(),scope),true);
- const lunch={...data(),kind:'employee_lunch_coverage',document_identity:'a'.repeat(64)};
+ const lunch={...data(),kind:'employee_lunch_coverage',document_identity:'a'.repeat(64),loan_id:loan,event:'start',
+  scheduled_at:'2026-10-11T17:00:00.000000Z',scheduled_time:'12:00',valid_until:'2026-10-11T18:00:00.000000Z'};
  assert.equal(a.isCurrent(lunch,scope),true);assert.equal(a.isCurrent({...lunch,document_identity:'b'.repeat(64)},scope),false);
  assert.equal(a.isLocationReminderRetired(lunch,scope),false);
 });
@@ -87,17 +101,37 @@ const constructorText=fixtureSource.slice(fixtureSource.indexOf('function fullBr
 assert.ok(constructorText.startsWith('function fullBrowserFixture(')&&constructorText.endsWith('}'));
 const reminderSource=readFileSync(new URL('../memphis-device-reminders.js',import.meta.url),'utf8'),turn=()=>new Promise(resolve=>setImmediate(resolve));
 const fullBrowserFixture=vm.runInNewContext('('+constructorText+')',{vm,reminderSource,assert,turn,deviceId,Buffer,queueMicrotask,URL,Uint8Array,DataView,Float32Array});
-function renderer(a,{native=false,observer=true,lunchObserver=true,dateClass=Date}={}){
+class RendererFixtureDate extends Date{constructor(...args){super(...(args.length?args:[time]));}static now(){return time;}}
+async function renderer(a,{native=false,observer=true,lunchObserver=true,dateClass=RendererFixtureDate}={}){
  const warnings=[],saves=[],actions=[],events=new Map();let show;
  const presenter=createNotificationPresenter({identity:()=>scope,nativeMode:()=>false,nativePresent:async()=>false,save:async row=>saves.push(structuredClone(row)),load:async()=>[],displayed:async()=>true,action:async(e,kind)=>{actions.push(kind);return true;},isCurrent:(e,s)=>a.isCurrent(e.notification.data,s)});
  const context=vm.createContext({console:{warn:(...args)=>warnings.push(args),log(){},error(){}},document:{addEventListener(){},hidden:false},window:{addEventListener:(name,fn)=>events.set(name,fn),MemphisMobile:{releaseCapabilities:{messenger:false},nativeNotifications:native,principalIdentity:()=>scope,registerNotificationFallback:fn=>{show=fn;presenter.registerBrowser(fn);},...(observer?{isLocationReminderRetired:(d,s)=>a.isLocationReminderRetired(d,s)}:{}),retryNotificationPresentation:()=>presenter.retry(),presentBrowserNotification:(k,fn)=>presenter.presentBrowser(k,fn)}},localStorage:storage(),Date:dateClass,JSON,Number,Math,Promise});
- if(lunchObserver)context.window.MemphisMobile.isLunchNotificationCurrent=(d,s)=>s===scope&&a.isCurrent(d,s);
+ if(lunchObserver){context.window.MemphisMobile.isLunchNotificationCurrent=(d,s)=>s===scope&&a.isCurrent(d,s);
+ context.window.MemphisMobile.beginLunchNotificationAudio=(d,s)=>s===scope?a.beginLunchAudio(d,s):null;}
+ const health=()=>({ready:true,available:true,quarantined:false,generation:10,deviceId,principal});
+ context.security={native:true,ready:Promise.resolve(),getStatus:health,mutateProtectedWork:syntheticNotificationWriter(health)};
  const browser=fullBrowserFixture(context,{manualAudio:true,browserSpeech:true,observedAudio:true});
+ await browser.ready;
  return {browser,context,presenter,saves,actions,warnings,events,show:(...args)=>show(...args)};
+}
+// NEUTRAL_AUTHORITY: 2026-09-22_to_24 explicitly permits the original
+// uninterrupted valid two-cycle speech to finish beyond payload expiry.
+// This exercises actual renderer callbacks; it never renews an expired cue.
+async function finishOriginalAudio(r,offset=0){
+ const tones=r.browser.tones.length-offset,spoken=r.browser.utterances.length;
+ assert.equal(tones,1,'exactly one original first tone is still owned');assert.equal(spoken,0);
+ assert.equal(r.browser.tones[offset].paused,false);
+ r.browser.tones[offset].onended();await turn();r.browser.runTimer(900);await turn();
+ assert.equal(r.browser.utterances.length,1);const text=r.browser.utterances[0].text;
+ r.browser.utterances[0].onend();await turn();r.browser.runTimer(1200);await turn();
+ assert.equal(r.browser.tones.length,offset+2);r.browser.tones[offset+1].onended();await turn();r.browser.runTimer(900);await turn();
+ assert.equal(r.browser.utterances.length,2);assert.equal(r.browser.utterances[1].text,text);
+ r.browser.utterances[1].onend();await turn();assert.equal(r.browser.state.activeAudioAlert,null);
+ assert.equal(r.browser.tones.length,offset+2,'no third cycle or renewed audio claim');
 }
 function mirrorAction(){const actions=[];const fn=async kind=>{actions.push(kind);return true;};Object.assign(fn,{providerMirror:true,isCurrent:()=>true,playAudio:true,beginAudio:async()=>true,finishAudio:async()=>true,presentationState:()=>({freshness:'CURRENT'}),onRetire(){},onOpen(){},onState(){},retire(){},recheck:async()=>true});return {fn,actions};}
 await check('actual presenter/renderer old popup/audio retires without receipt action; next cycle renders',async()=>{
- const {authority:a}=make();await a.observe(schedule());const r=renderer(a);assert.equal(await r.presenter.accept(event(data())),true);await turn();
+ const {authority:a}=make();await a.observe(schedule());const r=await renderer(a);assert.equal(await r.presenter.accept(event(data())),true);await turn();
  assert.equal(r.browser.active,true);assert.equal(r.browser.tones.length,1);assert.equal(r.browser.tones[0].paused,false);
  const oldCard=r.browser.card;assert.equal(a.observeAcceptedLocationSession(session,scope,a.beginAcceptedLocationSessionRead(scope)),true);
  r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();await r.presenter.retry();await turn();
@@ -109,15 +143,15 @@ await check('actual presenter/renderer old popup/audio retires without receipt a
  r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();assert.equal(r.browser.active,true);
 });
 await check('native-mode provider mirror observes affirmative old-cycle retirement, not poll absence',async()=>{
- const {authority:a}=make();await a.observe(schedule());const r=renderer(a,{native:true}),m=mirrorAction();
+ const {authority:a}=make();await a.observe(schedule());const r=await renderer(a,{native:true}),m=mirrorAction();
  assert.equal(r.show(event(data()),m.fn),true);await turn();assert.equal(r.browser.active,true);assert.equal(r.browser.tones[0].paused,false);
  assert.equal(a.observeAcceptedLocationSession(session,scope,a.beginAcceptedLocationSessionRead(scope)),true);await r.browser.poll();await turn();
  assert.equal(r.browser.fetches,0,'native mode does not poll legacy candidates');assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,true);assert.deepEqual(m.actions,[]);
  assert.equal(r.show(event(data(key('20261011150000000002'))),mirrorAction().fn),true);assert.equal(r.browser.active,true);
 });
 await check('native legacy/no-observer and unavailable observation retain provider-owned notice',async()=>{
- const {authority:a}=make();await a.observe(schedule());const r=renderer(a,{native:true,observer:false});assert.equal(r.show(event(data('legacy:key')),mirrorAction().fn),true);await turn();await r.browser.poll();assert.equal(r.browser.active,true);assert.deepEqual(r.warnings,[]);
- const r2=renderer(a,{native:true});assert.equal(r2.show(event(data()),mirrorAction().fn),true);await turn();await a.unavailable(scope);assert.equal(a.observeAcceptedLocationSession(session,scope,a.beginAcceptedLocationSessionRead(scope)),false);await r2.browser.poll();assert.equal(r2.browser.active,true);assert.deepEqual(r2.warnings,[]);
+ const {authority:a}=make();await a.observe(schedule());const r=await renderer(a,{native:true,observer:false});assert.equal(r.show(event(data('legacy:key')),mirrorAction().fn),true);await turn();await r.browser.poll();assert.equal(r.browser.active,true);assert.deepEqual(r.warnings,[]);
+ const r2=await renderer(a,{native:true});assert.equal(r2.show(event(data()),mirrorAction().fn),true);await turn();await a.unavailable(scope);assert.equal(a.observeAcceptedLocationSession(session,scope,a.beginAcceptedLocationSessionRead(scope)),false);await r2.browser.poll();assert.equal(r2.browser.active,true);assert.deepEqual(r2.warnings,[]);
 });
 await check('actual native scheduler cancels exact owned old ID, keeps cancelled history, and schedules next cycle',async()=>{
  const {authority:a}=make();await a.observe(schedule());const disk=storage(),pending=new Map(),delivered=new Map(),effects=[];
@@ -156,8 +190,8 @@ await check('MAIN actual bridge accepted-session intake is private, single-fligh
 });
 async function acceptedReadFixture(){
  let current=principal,currentScope=scope,generation=10,release,calls=[];
- const disk=storage(),health=()=>({ready:true,available:true,generation});
- const a=createScheduleNotificationAuthority({identity:()=>currentScope,principal:()=>current,status:health,storage:disk,now:()=>time});
+ const disk=storage(),health=()=>({ready:true,available:true,quarantined:false,generation,deviceId:current.device_id,principal:current});
+ const a=createScheduleNotificationAuthority({identity:()=>currentScope,principal:()=>current,status:health,storage:disk,mutate:syntheticNotificationWriter(health),now:()=>time});
  assert.equal(await a.observe(schedule()),true);
  const bridge=readFileSync(new URL('../mobile/src/custodial/bridge.js',import.meta.url),'utf8');
  const begin=bridge.indexOf('  let acceptedLocationSessionRead=null;'),end=bridge.indexOf('  async function reconcileScheduleNotifications(){',begin);
@@ -225,7 +259,7 @@ await check('READ revision-changed-inflight',async()=>{
 });
 const acceptedReadSession={...session,credential_id:principal.credential_id,schedule_authority_revision:'10'};
 await check('READ original-start-cancels-only-original-cycle',async()=>{
- const f=await acceptedReadFixture(),r=renderer(f.a),d=data();
+ const f=await acceptedReadFixture(),r=await renderer(f.a),d=data();
  await turn();
  assert.equal(await r.presenter.accept(event(d)),true,JSON.stringify({authorityCurrent:f.a.isCurrent(d,scope),warnings:r.warnings}));await turn();const old=r.browser.card;
  const work=f.context.read(),join=f.context.read();assert.equal(f.calls.length,1);
@@ -265,11 +299,13 @@ await check('READ opaque-superseded-or-finished-ticket',async()=>{
 await check('READ retained-observation-generation-expiry',async()=>{
  const f=await acceptedReadFixture(),work=f.context.read();f.release({meta:{accepted_location_sessions:[acceptedReadSession]}});assert.equal(await work,true);
  assert.equal(f.a.isLocationReminderRetired(data(),scope),true);f.switchAway();f.restore();assert.equal(f.a.isLocationReminderRetired(data(),scope),false);
- assert.equal(f.a.isCurrent(data(),scope),true,'old accepted observation cannot retire a current new-generation card');
+ assert.equal(f.a.isCurrent(data(),scope),false,'a changed protected generation first requires a fresh authenticated schedule response');
+ assert.equal(await f.a.observe(schedule()),true);
+ assert.equal(f.a.isCurrent(data(),scope),true,'fresh new-generation schedule has no inherited accepted START retirement');
  const next=f.context.read();f.release({meta:{accepted_location_sessions:[acceptedReadSession]}});assert.equal(await next,true);assert.equal(f.a.isLocationReminderRetired(data(),scope),true);
 });
 await check('READ original-retained-map-counterexample',async()=>{
- const source=readFileSync(new URL('../before/notification-schedule-authority.js',import.meta.url),'utf8');
+ const source=historicalNotificationSource('read-before.js');
  const resolved=source.replace("'../../../memphis-recurring-schedule-target.js'",JSON.stringify(new URL('../memphis-recurring-schedule-target.js',import.meta.url).href))
   .replace("'./protected-principal.js'",JSON.stringify(new URL('../mobile/src/custodial/protected-principal.js',import.meta.url).href))
   .replace("'./home-facts.js'",JSON.stringify(new URL('../mobile/src/custodial/home-facts.js',import.meta.url).href));
@@ -350,7 +386,7 @@ await check('READ native-current-accepted-start-retirement',async()=>{
  const f=await nativeAcceptedReadFixture({assertDispatchUnlocked:false});
  assert.equal(await f.a.observe(schedule(11)),true);
  class FixtureDate extends Date{constructor(...args){super(...(args.length?args:[time]));}static now(){return time;}}
- const r=renderer(f.a,{dateClass:FixtureDate});
+ const r=await renderer(f.a,{dateClass:FixtureDate});
  // Complete the actual asynchronous device-read initialization; never
  // replace its renderer registration or inject a private presentation hook.
  for(let i=0;i<20&&!r.context.window.MemphisDeviceReminders;i++)await turn();
@@ -361,7 +397,7 @@ await check('READ native-current-accepted-start-retirement',async()=>{
  assert.equal(displayed,true);await turn();
  assert.equal(r.browser.active,true);assert.equal(r.browser.tones[0].paused,false);
  const originalCard=r.browser.card;
- Object.assign(f.context,{window:{MemphisDeviceReminders:r.context.window.MemphisDeviceReminders},
+ Object.assign(f.context,{nativeApplicationSource:null,window:{MemphisDeviceReminders:r.context.window.MemphisDeviceReminders},
    notificationPresentation:{snapshot:()=>({capable:false})},notificationPresenter:r.presenter,
    nativeNotificationScheduler:{reconcile:()=>assert.fail('Incapable native port must remain unused')}});
  const source=readFileSync(new URL('../mobile/src/custodial/bridge.js',import.meta.url),'utf8');
@@ -424,7 +460,7 @@ const originSample=(changes={})=>({schema:'custodial.accepted-start-origin.v1',s
  context_status:'activated',proof_state:'issued',...changes});
 const originRow=(origin,changes={})=>({...acceptedReadSession,original_start:origin,...changes});
 await check('ORIGIN old-credential-epoch-source-counterexample',async()=>{
- const originalCode=readFileSync(new URL('../before/notification-schedule-authority.js',import.meta.url),'utf8');
+ const originalCode=historicalNotificationSource('origin-before.js');
  const resolved=originalCode.replace("'../../../memphis-recurring-schedule-target.js'",JSON.stringify(new URL('../memphis-recurring-schedule-target.js',import.meta.url).href))
   .replace("'./protected-principal.js'",JSON.stringify(new URL('../mobile/src/custodial/protected-principal.js',import.meta.url).href))
   .replace("'./home-facts.js'",JSON.stringify(new URL('../mobile/src/custodial/home-facts.js',import.meta.url).href));
@@ -528,7 +564,7 @@ await check('LUNCH accepted 11:30/12:00/12:30 starts use actual 45-minute window
 });
 await check('LUNCH actual presenter/renderer retires expired episode without action; overlap remains independently eligible',async()=>{
  let clock=time;const {authority:a}=make(()=>clock);const otherLoan='e'.repeat(64);await a.observe(schedule(10,[responsibility(),responsibility({loan_id:otherLoan,coverage_start:'12:00:00',coverage_end:'13:00:00'})]));
- const r=renderer(a);assert.equal(await r.presenter.accept(event(lunchData())),true);await turn();const old=r.browser.card;
+ const r=await renderer(a);assert.equal(await r.presenter.accept(event(lunchData())),true);await turn();const old=r.browser.card;
  assert.equal(old.querySelector('.mz-reminder-dismiss').textContent,'Dismiss');clock=Date.parse('2026-10-11T17:15:00Z');await r.presenter.retry();await turn();assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,true);
  await old.querySelector('.mz-reminder-open').click();assert.deepEqual(r.actions,[]);
  const next=lunchData({loan_id:otherLoan,notification_key:'f'.repeat(64),scheduled_time:'12:00',scheduled_at:'2026-10-11T17:00:00Z',valid_until:'2026-10-11T18:00:00Z'});
@@ -548,7 +584,7 @@ await check('LUNCH scheduler expiry cancels only original episode and retains ov
 function ordinaryAction(){const value=mirrorAction();value.fn.providerMirror=false;return value;}
 await check('RENDERER lunch ordinary card uses immutable original payload/scope; expiry retires only its own episode',async()=>{
  let clock=time;const {authority:a}=make(()=>clock),otherLoan='e'.repeat(64);await a.observe(schedule(10,[responsibility(),responsibility({loan_id:otherLoan,coverage_start:'12:00:00',coverage_end:'13:00:00'})]));
- const r=renderer(a),m=ordinaryAction(),source=lunchData(),saved=structuredClone(source),seen=[];
+ const r=await renderer(a),m=ordinaryAction(),source=lunchData(),saved=structuredClone(source),seen=[];
  r.context.window.MemphisMobile.isLunchNotificationCurrent=(d,s)=>{seen.push({d,s});return s===scope&&a.isCurrent(d,s);};
  assert.equal(r.show(event(source),m.fn),true);await turn();assert.ok(seen.length>0,'renderer must consult the ordinary lunch capability');
  assert.deepEqual(JSON.parse(JSON.stringify(seen[0].d)),saved);assert.equal(seen[0].s,scope);assert.equal(Object.isFrozen(seen[0].d),true);
@@ -558,11 +594,11 @@ await check('RENDERER lunch ordinary card uses immutable original payload/scope;
  assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,true);await old.querySelector('.mz-reminder-open').click();await old.querySelector('.mz-reminder-dismiss').click();assert.deepEqual(m.actions,[]);assert.equal(r.browser.httpActions.length,0);
  const overlap=lunchData({loan_id:otherLoan,notification_key:'f'.repeat(64),scheduled_time:'12:00',scheduled_at:'2026-10-11T17:00:00Z',valid_until:'2026-10-11T18:00:00Z'}),next=ordinaryAction();
  assert.equal(r.show(event(overlap),next.fn),true);r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();assert.equal(r.browser.active,true);assert.equal(r.browser.card.querySelector('.mz-reminder-dismiss').textContent,'Dismiss');
- const overdue=renderer(a),n=ordinaryAction();assert.equal(overdue.show(event(data(key('20261011145959000000','overdue','1'))),n.fn),true);overdue.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();assert.equal(overdue.browser.active,true);
+ const overdue=await renderer(a),n=ordinaryAction();assert.equal(overdue.show(event(data(key('20261011145959000000','overdue','1'))),n.fn),true);overdue.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();assert.equal(overdue.browser.active,true);
 });
 await check('RENDERER lunch ordinary currentness changes fence actions without accepting a new principal or revision',async()=>{
  for(const change of ['revision','unavailable','principal']){
-  const {authority:a}=make();await a.observe(schedule(10,[responsibility()]));const r=renderer(a),m=ordinaryAction();
+  const {authority:a}=make();await a.observe(schedule(10,[responsibility()]));const r=await renderer(a),m=ordinaryAction();
   let currentScope=scope;r.context.window.MemphisMobile.principalIdentity=()=>currentScope;
   r.context.window.MemphisMobile.isLunchNotificationCurrent=(d,s)=>s===currentScope&&a.isCurrent(d,s);
   assert.equal(r.show(event(lunchData({schedule_authority_revision:10})),m.fn),true);await turn();const old=r.browser.card;
@@ -572,14 +608,14 @@ await check('RENDERER lunch ordinary currentness changes fence actions without a
 });
 await check('RENDERER lunch ordinary missing/unavailable/nonboolean callback is unconfirmed at admission and reconciliation',async()=>{
  for(const callback of [null,()=>undefined,()=>false,()=>({current:true}),()=>{throw Error('unavailable');}]){
-  const {authority:a}=make();await a.observe(schedule(10,[responsibility()]));const r=renderer(a,{lunchObserver:false}),m=ordinaryAction();
+  const {authority:a}=make();await a.observe(schedule(10,[responsibility()]));const r=await renderer(a,{lunchObserver:false}),m=ordinaryAction();
   if(callback)r.context.window.MemphisMobile.isLunchNotificationCurrent=callback;
   assert.equal(r.show(event(lunchData()),m.fn),false);assert.equal(r.browser.active,false);assert.deepEqual(m.actions,[]);assert.equal(r.browser.tones.length,0);
  }
- const {authority:a}=make();await a.observe(schedule(10,[responsibility()]));const r=renderer(a),m=ordinaryAction();assert.equal(r.show(event(lunchData()),m.fn),true);await turn();delete r.context.window.MemphisMobile.isLunchNotificationCurrent;r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,true);assert.deepEqual(m.actions,[]);
+ const {authority:a}=make();await a.observe(schedule(10,[responsibility()]));const r=await renderer(a),m=ordinaryAction();assert.equal(r.show(event(lunchData()),m.fn),true);await turn();delete r.context.window.MemphisMobile.isLunchNotificationCurrent;r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,false,'lost public getter cannot revoke the original private audio continuation');await finishOriginalAudio(r);assert.deepEqual(m.actions,[]);
 });
 await check('RENDERER lunch native provider mirror ignores ordinary JS denial and retains original action lifetime',async()=>{
- const {authority:a}=make();await a.observe(schedule(10,[responsibility()]));const r=renderer(a,{native:true}),m=mirrorAction();let calls=0,live=true;
+ const {authority:a}=make();await a.observe(schedule(10,[responsibility()]));const r=await renderer(a,{native:true}),m=mirrorAction();let calls=0,live=true;
  r.context.window.MemphisMobile.isLunchNotificationCurrent=()=>{calls++;throw Error('ordinary JS source unavailable');};m.fn.isCurrent=()=>live;
  assert.equal(r.show(event(lunchData()),m.fn),true);await turn();await a.unavailable(scope);r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();await r.browser.poll();
  assert.equal(calls,0);assert.equal(r.browser.active,true);assert.equal(r.browser.tones[0].paused,false);assert.deepEqual(m.actions,[]);assert.equal(r.browser.fetches,0);
@@ -597,10 +633,11 @@ function mountActualPage(r,a,disk,clock){
  c.window.navigator={locks:scheduleLocks};
  c.window.MemphisRecurringScheduleTarget=globalThis.MemphisRecurringScheduleTarget;
  c.window.addEventListener=(name,fn)=>{const prior=r.events.get(name);r.events.set(name,event=>{prior?.(event);fn(event);});};
- c.window.MemphisCustodialSecurity={native:true,getStatus:()=>({ready:true,available:true,quarantined:false,deviceId,principal:activePrincipal}),mutateProtectedWork:async fn=>fn()};
+ const health=()=>({ready:true,available:true,quarantined:false,generation:10,deviceId,principal:activePrincipal});
+ c.window.MemphisCustodialSecurity={native:true,getStatus:health,mutateProtectedWork:syntheticNotificationWriter(health)};
  Object.assign(c.window.MemphisMobile,{ready:Promise.resolve(),deviceId:()=>deviceId,principalIdentity:()=>activeScope,
   profileMatchesPrincipal:d=>profileMatchesPrincipal(d,activePrincipal),requestJson:async path=>{reads.push(path);return{};}});
- Object.assign(c,{currentPrincipal:()=>activePrincipal,currentPrincipalIdentity:()=>activeScope,scheduleNotificationAuthority:a,
+ Object.assign(c,{nativeApplicationSource:null,currentPrincipal:()=>activePrincipal,currentPrincipalIdentity:()=>activeScope,scheduleNotificationAuthority:a,
   refreshAcceptedLocationSessions:async()=>false,notificationPresentation:{snapshot:()=>({capable:false})},notificationPresenter:r.presenter});
  const getterStart=committedBridge.indexOf('    isLunchNotificationCurrent(data,scope) {'),getterEnd=committedBridge.indexOf('    isScheduleReminderCurrent(',getterStart);
  const retryStart=committedBridge.indexOf('  async function reconcileScheduleNotifications(){'),retryEnd=committedBridge.indexOf('  const nativeNotificationScheduler',retryStart);
@@ -622,7 +659,7 @@ function mountActualPage(r,a,disk,clock){
   set next(value){next=value;},set offline(value){offline=value;},set rejected(value){rejected=value;},set principal(value){activePrincipal=value;activeScope=principalIdentity(value);}};
 }
 await check('PAGE lunch actual boundary removes expired original card/audio and preserves overlapping accepted duty',async()=>{
- let clock=time;const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),otherLoan='e'.repeat(64);
+ let clock=time;const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),otherLoan='e'.repeat(64);
  p.next=schedule(10,[responsibility(),responsibility({loan_id:otherLoan,coverage_start:'12:00:00',coverage_end:'13:00:00'})]);
  disk.setItem('protected-cleaning-draft','unchanged synthetic original');
  try{await p.load();await a.refresh();assert.equal(p.node('lunch-content').hidden,false);const m=ordinaryAction();assert.equal(r.show(event(lunchData()),m.fn),true);await turn();const old=r.browser.card;
@@ -636,7 +673,7 @@ await check('PAGE lunch actual boundary removes expired original card/audio and 
 });
 await check('PAGE lunch accepted replacement and unavailable source immediately reconcile ordinary presentation',async()=>{
  for(const outcome of ['accepted replacement','unavailable']){
-  const {authority:a,disk}=make(),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>time);
+  const {authority:a,disk}=make(),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>time);
   try{await p.load();await a.refresh();const m=ordinaryAction();assert.equal(r.show(event(lunchData({schedule_authority_revision:10})),m.fn),true);await turn();
    if(outcome==='accepted replacement')p.next=schedule(11,[]);else p.rejected=true;
    await p.load();assert.equal(r.browser.active,false,outcome);assert.equal(r.browser.tones[0].paused,true);assert.deepEqual(m.actions,[]);assert.deepEqual(r.warnings,[]);assert.equal(r.browser.httpActions.length,0);
@@ -645,14 +682,14 @@ await check('PAGE lunch accepted replacement and unavailable source immediately 
  }
 });
 await check('PAGE lunch original accepted scan/cycle currentness is reconciled by render without withdrawing next cycle',async()=>{
- const {authority:a,disk}=make(),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>time);
+ const {authority:a,disk}=make(),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>time);
  try{await p.load();await a.refresh();const m=ordinaryAction();assert.equal(r.show(event(data()),m.fn),true);await turn();assert.equal(a.observeAcceptedLocationSession(session,scope,a.beginAcceptedLocationSessionRead(scope)),true);
   await p.load();assert.equal(r.browser.active,false,'same original old cycle retired after page application');assert.equal(r.browser.tones[0].paused,true);assert.deepEqual(m.actions,[]);
   assert.equal(r.show(event(data(key('20261011150000000002'))),ordinaryAction().fn),true);await p.load();assert.equal(r.browser.active,true,'later cycle remains eligible');
  }finally{p.dispatch('pagehide');await p.settle();}
 });
 await check('PAGE lunch navigation/principal change does not revive old popup and source PENDING adds no speech authority',async()=>{
- let clock=time;const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock);
+ let clock=time;const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock);
  try{await p.load();await a.refresh();const m=ordinaryAction();assert.equal(r.show(event(lunchData()),m.fn),true);await turn();p.dispatch('pagehide');await p.settle();assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,true);
   p.principal={...principal,assignment_epoch:8};p.dispatch('pageshow');await p.settle();assert.equal(r.show(event(lunchData()),ordinaryAction().fn),false);assert.equal(p.node('lunch-content').hidden,true);assert.deepEqual(m.actions,[]);
   p.dispatch('pagehide');p.principal=principal;clock=Date.parse('2026-10-11T17:15:00Z');p.dispatch('pageshow');await p.settle();assert.equal(r.show(event(lunchData()),ordinaryAction().fn),false);assert.equal(r.browser.active,false);
@@ -660,7 +697,7 @@ await check('PAGE lunch navigation/principal change does not revive old popup an
  }finally{p.dispatch('pagehide');await p.settle();}
 });
 await check('PAGE lunch accepted-window activation and original finite end cutoff remain distinct on offline page lifecycle',async()=>{
- let clock=time;const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock);
+ let clock=time;const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock);
  const start=lunchData({scheduled_time:'12:30',scheduled_at:'2026-10-11T17:30:00Z',valid_until:'2026-10-11T18:15:00Z'});
  const end=lunchData({event:'end',notification_key:'f'.repeat(64),scheduled_time:'13:15',scheduled_at:'2026-10-11T18:15:00Z',valid_until:'2026-10-11T18:25:00Z'});
  p.next=schedule(10,[responsibility({coverage_start:'12:30:00',coverage_end:'13:15:00'}),{name:'Regular duty',coverage_start:'07:00:00',coverage_end:'16:00:00'}]);
@@ -670,11 +707,15 @@ await check('PAGE lunch accepted-window activation and original finite end cutof
   clock=Date.parse('2026-10-11T18:15:00Z');r.browser.runTimer(45*60000);await p.settle();assert.equal(p.node('lunch-content').hidden,true);assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,true);assert.deepEqual(m.actions,[]);
   assert.equal(r.show(event(end),ordinaryAction().fn),true,'finite end cue is not borrowed responsibility');await turn();clock=Date.parse('2026-10-11T18:25:00Z');
   assert.equal(a.isCurrent(end,scope),false,'original cutoff has expired');r.browser.runTimer(10*60000);assert.equal(r.browser.active,false,'original finite cutoff timer retires its ordinary card');
-  await p.load();assert.equal(r.browser.active,false);assert.equal(r.browser.tones.at(-1).paused,true);assert.equal(r.browser.httpActions.length,0);assert.deepEqual(r.warnings,[]);
+  await p.load();assert.equal(r.browser.active,false);assert.equal(r.browser.tones.at(-1).paused,false,'expired END visual cannot interrupt its valid original speech');
+  // The START episode already ended on real coverage end. Complete the END
+  // episode against its original indices, with no renewed payload.
+  assert.equal(r.browser.tones[0].paused,true);await finishOriginalAudio(r,1);
+  assert.equal(r.browser.httpActions.length,0);assert.deepEqual(r.warnings,[]);
  }finally{p.dispatch('pagehide');await p.settle();}
 });
 await check('PAGE lunch boundary-delay expires ordinary card before pending accepted-session read; native lease remains separate',async()=>{
- let clock=time,release;const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock);
+ let clock=time,release;const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock);
  const pending=new Promise(resolve=>{release=resolve;});
  try{await p.load();await a.refresh();assert.equal(r.show(event(lunchData()),ordinaryAction().fn),true);await turn();
   r.context.refreshAcceptedLocationSessions=()=>pending;clock=Date.parse('2026-10-11T17:15:00Z');p.offline=true;r.browser.runTimer(15*60000);
@@ -684,60 +725,60 @@ await check('PAGE lunch boundary-delay expires ordinary card before pending acce
  }finally{release(false);p.dispatch('pagehide');await p.settle();}
 });
 const cutoffEnd=(extra={})=>lunchData({event:'end',notification_key:'f'.repeat(64),scheduled_time:'12:15',scheduled_at:'2026-10-11T17:15:00Z',valid_until:'2026-10-11T17:25:00Z',...extra});
-await check('CUTOFF lunch original END deadline stops its own card/audio without polling, action or renewed payload',async()=>{
- let clock=Date.parse('2026-10-11T17:15:00Z');const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),m=ordinaryAction(),source=cutoffEnd();
+await check('CUTOFF lunch original END deadline closes its card and lets only original speech finish without renewal',async()=>{
+ let clock=Date.parse('2026-10-11T17:15:00Z');const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),m=ordinaryAction(),source=cutoffEnd();
  try{await p.load();await a.refresh();disk.setItem('protected-original','retained');const seen=[],getter=r.context.window.MemphisMobile.isLunchNotificationCurrent;
   r.context.window.MemphisMobile.isLunchNotificationCurrent=(d,s)=>{seen.push({d,s});return getter(d,s);};
   assert.equal(r.show(event(source),m.fn),true);await turn();const old=r.browser.card,original=seen[0].d;assert.equal(Object.isFrozen(original),true);
   source.valid_until='2026-10-11T19:00:00Z';source.loan_id='e'.repeat(64);clock=Date.parse('2026-10-11T17:25:00Z');r.browser.runTimer(10*60000);await turn();
-  assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,true);assert.equal(r.browser.state.activeAudioAlert,null);assert.ok(seen.every(v=>v.d===original&&v.s===scope));assert.equal(original.valid_until,'2026-10-11T17:25:00Z');
+  assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,false);assert.notEqual(r.browser.state.activeAudioAlert,null);await finishOriginalAudio(r);assert.ok(seen.every(v=>v.d===original&&v.s===scope));assert.equal(original.valid_until,'2026-10-11T17:25:00Z');
   await old.querySelector('.mz-reminder-open').click();await old.querySelector('.mz-reminder-dismiss').click();assert.deepEqual(m.actions,[]);assert.equal(r.browser.httpActions.length,0);assert.equal(disk.getItem('protected-original'),'retained');assert.deepEqual(r.warnings,[]);
  }finally{p.dispatch('pagehide');await p.settle();}
 });
-await check('CUTOFF lunch Dismiss preserves current audio but original cutoff stops that hidden episode',async()=>{
- let clock=Date.parse('2026-10-11T17:15:00Z');const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),m=ordinaryAction();
+await check('CUTOFF lunch Dismiss and original cutoff preserve only the uninterrupted original speech',async()=>{
+ let clock=Date.parse('2026-10-11T17:15:00Z');const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),m=ordinaryAction();
  try{await p.load();await a.refresh();assert.equal(r.show(event(cutoffEnd()),m.fn),true);await turn();const old=r.browser.card;assert.equal(old.querySelector('.mz-reminder-dismiss').textContent,'Dismiss');await old.querySelector('.mz-reminder-dismiss').click();
   assert.equal(r.browser.active,false);assert.equal(r.browser.tones[0].paused,false,'normal Dismiss must not stop current sentence');assert.notEqual(r.browser.state.activeAudioAlert,null);
-  clock=Date.parse('2026-10-11T17:25:00Z');r.browser.runTimer(10*60000);await turn();assert.equal(r.browser.tones[0].paused,true);assert.equal(r.browser.state.activeAudioAlert,null);assert.deepEqual(m.actions,['dismissed']);assert.equal(r.browser.httpActions.length,0);
+  clock=Date.parse('2026-10-11T17:25:00Z');r.browser.runTimer(10*60000);await turn();assert.equal(r.browser.tones[0].paused,false);await finishOriginalAudio(r);assert.deepEqual(m.actions,['dismissed']);assert.equal(r.browser.httpActions.length,0);
  }finally{p.dispatch('pagehide');await p.settle();}
 });
 await check('CUTOFF lunch old timer cannot remove successor/overdue or govern native provider mirror',async()=>{
- let clock=Date.parse('2026-10-11T17:15:00Z'),oldTick;const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),otherLoan='e'.repeat(64);
+ let clock=Date.parse('2026-10-11T17:15:00Z'),oldTick;const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),otherLoan='e'.repeat(64);
  p.next=schedule(10,[responsibility(),responsibility({loan_id:otherLoan,coverage_start:'12:00:00',coverage_end:'13:00:00'})]);
  try{await p.load();await a.refresh();const set=r.context.window.setTimeout;r.context.window.setTimeout=(fn,delay)=>{if(delay===10*60000)oldTick=fn;return set(fn,delay);};
-  assert.equal(r.show(event(cutoffEnd()),ordinaryAction().fn),true);await turn();assert.equal(typeof oldTick,'function');clock=Date.parse('2026-10-11T17:25:00Z');r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();await turn();assert.equal(r.browser.active,false);
+  assert.equal(r.show(event(cutoffEnd()),ordinaryAction().fn),true);await turn();assert.equal(typeof oldTick,'function');clock=Date.parse('2026-10-11T17:25:00Z');r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();await turn();assert.equal(r.browser.active,false);await finishOriginalAudio(r);
   const next=lunchData({loan_id:otherLoan,notification_key:'e'.repeat(64),scheduled_time:'12:00',scheduled_at:'2026-10-11T17:00:00Z',valid_until:'2026-10-11T18:00:00Z'});assert.equal(r.show(event(next),ordinaryAction().fn),true);await turn();const current=r.browser.card,tone=r.browser.tones.at(-1);oldTick();assert.equal(r.browser.card,current);assert.equal(tone.paused,false,'obsolete timer cannot stop successor audio');
  }finally{p.dispatch('pagehide');await p.settle();}
- const {authority:b,disk:other}=make(()=>clock),native=renderer(b,{native:true}),page=mountActualPage(native,b,other,()=>clock),lease=mirrorAction();let jsCalls=0,cutoffTimers=0;
+ const {authority:b,disk:other}=make(()=>clock),native=await renderer(b,{native:true}),page=mountActualPage(native,b,other,()=>clock),lease=mirrorAction();let jsCalls=0,cutoffTimers=0;
  try{await page.load();await b.refresh();const set=native.context.window.setTimeout;native.context.window.setTimeout=(fn,delay)=>{if(delay===10*60000)cutoffTimers++;return set(fn,delay);};native.context.window.MemphisMobile.isLunchNotificationCurrent=()=>{jsCalls++;throw Error('unavailable JS currentness');};
   assert.equal(native.show(event(cutoffEnd()),lease.fn),true);await turn();native.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();assert.equal(native.browser.active,true);assert.equal(native.browser.tones[0].paused,false);assert.equal(jsCalls,0);assert.equal(cutoffTimers,0);assert.deepEqual(lease.actions,[]);
  }finally{page.dispatch('pagehide');await page.settle();}
- const {authority:b2,disk:d2}=make(()=>clock),overdue=renderer(b2,{native:true}),page2=mountActualPage(overdue,b2,d2,()=>clock);
+ const {authority:b2,disk:d2}=make(()=>clock),overdue=await renderer(b2,{native:true}),page2=mountActualPage(overdue,b2,d2,()=>clock);
  try{await page2.load();await b2.refresh();assert.equal(overdue.show(event(data(key('20261011145959000000','overdue','1'))),ordinaryAction().fn),true);await turn();clock+=60000;overdue.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();assert.equal(overdue.browser.active,true);assert.equal(overdue.browser.httpActions.length,0);
  }finally{page2.dispatch('pagehide');await page2.settle();}
 });
 await check('CUTOFF lunch timer rechecks original clock after backward shift and preserves microsecond cutoff',async()=>{
- let clock=Date.parse('2026-10-11T17:15:00Z');const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock);
+ let clock=Date.parse('2026-10-11T17:15:00Z');const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock);
  try{await p.load();await a.refresh();assert.equal(r.show(event(cutoffEnd()),ordinaryAction().fn),true);await turn();clock=Date.parse('2026-10-11T17:16:00Z');r.browser.runTimer(10*60000);await turn();assert.equal(r.browser.active,true);assert.equal(r.browser.tones.length,1,'recheck cannot replay audio');clock=Date.parse('2026-10-11T17:25:00Z');r.browser.runTimer(9*60000);await turn();assert.equal(r.browser.active,false);
  }finally{p.dispatch('pagehide');await p.settle();}
- clock=Date.parse('2026-10-11T17:15:00Z');const {authority:b,disk:other}=make(()=>clock),micro=renderer(b,{native:true}),page=mountActualPage(micro,b,other,()=>clock);
+ clock=Date.parse('2026-10-11T17:15:00Z');const {authority:b,disk:other}=make(()=>clock),micro=await renderer(b,{native:true}),page=mountActualPage(micro,b,other,()=>clock);
  try{await page.load();await b.refresh();assert.equal(micro.show(event(cutoffEnd({valid_until:'2026-10-11T17:25:00.000001Z'})),ordinaryAction().fn),true);await turn();clock=Date.parse('2026-10-11T17:25:00.000Z');micro.browser.runTimer(600001);assert.equal(micro.browser.active,true,'submillisecond original cutoff is not truncated into early revocation');clock+=1;micro.browser.runTimer(1);assert.equal(micro.browser.active,false);
  }finally{page.dispatch('pagehide');await page.settle();}
 });
-await check('CUTOFF lunch wake/currentness recheck stops original expired/unknown episode before pending source reads',async()=>{
+await check('CUTOFF lunch wake/currentness recheck closes expired/unknown visual while the original private speech finishes',async()=>{
  for(const outcome of ['forward clock','missing currentness']){
-  let clock=Date.parse('2026-10-11T17:15:00Z'),release;const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),pending=new Promise(resolve=>{release=resolve;});
+  let clock=Date.parse('2026-10-11T17:15:00Z'),release;const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),pending=new Promise(resolve=>{release=resolve;});
   try{await p.load();await a.refresh();assert.equal(r.show(event(cutoffEnd()),ordinaryAction().fn),true);await turn();r.context.refreshAcceptedLocationSessions=()=>pending;
    if(outcome==='forward clock')clock=Date.parse('2026-10-11T17:30:00Z');else delete r.context.window.MemphisMobile.isLunchNotificationCurrent;
-   p.dispatch('pageshow');assert.equal(r.browser.active,false,outcome);assert.equal(r.browser.tones[0].paused,true);assert.deepEqual(r.warnings,[]);assert.equal(r.browser.httpActions.length,0);
+   p.dispatch('pageshow');assert.equal(r.browser.active,false,outcome);assert.equal(r.browser.tones[0].paused,false);await finishOriginalAudio(r);assert.deepEqual(r.warnings,[]);assert.equal(r.browser.httpActions.length,0);
   }finally{release(false);p.dispatch('pagehide');await p.settle();}
  }
 });
 await check('CUTOFF lunch deadline-race rechecks original predicate when expiry crosses during timer rearm',async()=>{
- let clock=Date.parse('2026-10-11T17:15:00Z');const {authority:a,disk}=make(()=>clock),r=renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),now=r.context.Date.now,m=ordinaryAction();
+ let clock=Date.parse('2026-10-11T17:15:00Z');const {authority:a,disk}=make(()=>clock),r=await renderer(a,{native:true}),p=mountActualPage(r,a,disk,()=>clock),now=r.context.Date.now,m=ordinaryAction();
  try{await p.load();await a.refresh();assert.equal(r.show(event(cutoffEnd()),m.fn),true);await turn();clock=Date.parse('2026-10-11T17:24:59.999Z');
   r.context.Date.now=()=>{clock=Date.parse('2026-10-11T17:25:00Z');return clock;};r.context.window.MemphisDeviceReminders.reconcileScheduleAuthority();
-  assert.equal(r.browser.active,false,'crossed cutoff must not merely clear timer and leave stale card');assert.equal(r.browser.tones[0].paused,true);assert.deepEqual(m.actions,[]);assert.equal(r.browser.httpActions.length,0);
+  assert.equal(r.browser.active,false,'crossed cutoff must not merely clear timer and leave stale card');assert.equal(r.browser.tones[0].paused,false);await finishOriginalAudio(r);assert.deepEqual(m.actions,[]);assert.equal(r.browser.httpActions.length,0);
  }finally{r.context.Date.now=now;p.dispatch('pagehide');await p.settle();}
 });
 console.log(JSON.stringify({ok:true,cases:results.length,results,remainingSourceLimits,sourceOnly:true,authSQLTransportPhonePhysical:'NOT_RUN',fixtureConstructorSHA256:sha(constructorText),providerLease:'recording intended public action seam, not native auth proof'}));

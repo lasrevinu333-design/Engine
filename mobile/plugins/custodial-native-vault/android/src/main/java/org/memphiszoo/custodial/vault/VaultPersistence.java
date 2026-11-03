@@ -40,4 +40,16 @@ interface VaultPersistence {
         VaultEngine.NativeOriginalInventoryFinalizationRestoredRead original)throws VaultFailure {
         throw new VaultFailure("custodial_native_original_inventory_finalization_readback_unavailable");
     }
+    /** Explicit same-command reopen is unavailable to unbound adapters. */
+    default void requireUnambiguousOriginalFinalizationRead(
+        VaultEngine.NativeOriginalInventoryFinalizationRestoredRead original)throws VaultFailure {
+        throw new VaultFailure("custodial_native_original_inventory_finalization_readback_unavailable");
+    }
+    /** Only the real adapter's in-stack owned commit/readback may inspect its
+     * own pending successor; no later caller may clear or adopt uncertainty. */
+    default void requireOriginalFinalizationOwnedReadback(
+        VaultEngine.NativeOriginalInventoryFinalizationRestoredRead original,
+        VaultEngine.NativeOriginalInventoryFinalizationControl control)throws VaultFailure {
+        throw new VaultFailure("custodial_native_original_inventory_finalization_readback_unavailable");
+    }
 }

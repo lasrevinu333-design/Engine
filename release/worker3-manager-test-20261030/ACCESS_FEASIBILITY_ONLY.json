@@ -1,0 +1,35 @@
+{
+  "scope": "SOURCE_FEASIBILITY_ONLY_NOT_ACTIVATION",
+  "actual_pin": null,
+  "credentials_issued": false,
+  "auth_product_changes": false,
+  "current_candidate": {
+    "manager_entry": "ops-manager-hub.html currently offers Map sign-in plus personal eight-digit enrollment fallback; existing opaque persistent browser binding is separate from the visible code.",
+    "viewer": "ops-viewer.html -> ops-viewer.js has no enrollment dependency and uses only GET /viewer-api/dashboard and GET /viewer-api/events."
+  },
+  "proposed_shared_four_digit_pin": {
+    "possible": true,
+    "actor_limit": "A shared PIN proves group knowledge, not which individual entered it. It cannot by itself justify a named manager actor.",
+    "smallest_safe_contract": [
+      "Main owns a backend-only enrollment endpoint; no PIN literal/digest belongs in web assets, URLs, logs or this evidence.",
+      "Retain server attempt limits, revocation, credential/device binding, token validation and independent role/employee permission checks.",
+      "If individual attribution remains required, associate a named browser/device only through an independently approved enrollment/identity step. Do not infer Jennifer or Annie from shared PIN knowledge.",
+      "Opaque persistent enrollment remains revocable and role-bound; shared PIN is not sent on every API call.",
+      "No credential issuance, security activation, Map-system change or production rollout is included."
+    ]
+  },
+  "viewer_source": {
+    "frontend": [
+      "ops-viewer.html:37",
+      "ops-viewer.js:14-16"
+    ],
+    "backend": "src/leadership-bootstrap.js:142-175 configured middleware only, no requireManager on these two routes"
+  },
+  "viewer_safe_contract": [
+    "Keep aggregate operational count fields and explicitly public scheduled-event fields only.",
+    "Backend enforces response allowlists and public event audiences; frontend hiding does not establish privacy.",
+    "Exclude staff identities, roster/absence/PTO details, punch/payroll, device IDs, notes, submitted reports and internal ticket details.",
+    "No mutation routes, role elevation or authenticated manager API tokens are granted by the read-only link."
+  ],
+  "limits": "Source inspection only. No production endpoint, genuine enrollment, auth activation or live privacy/runtime proof."
+}

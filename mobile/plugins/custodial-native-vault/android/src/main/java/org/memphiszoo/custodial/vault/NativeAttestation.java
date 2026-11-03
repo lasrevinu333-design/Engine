@@ -106,6 +106,19 @@ final class NativeAttestation {
         original.messageForFixedManifestSigner();return result;
     }
 
+    static String localEnrollmentRetentionSignature(VaultEngine.NativeLocalEnrollmentRetentionSigning original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE);
+        requireStoredCredentialId(credential,original.credentialForFixedRetentionSigner());
+        String result=hmac(credential,original.messageForFixedRetentionSigner());original.messageForFixedRetentionSigner();return result;
+    }
+    /** Recompute only this already born fixed report for native verification;
+     * no caller message/body or new authorization is accepted. */
+    static String localEnrollmentRetentionReadSignature(NativeLocalEnrollmentRetentionReport original,char[] credential)throws VaultFailure {
+        if(original==null)throw new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE);
+        requireStoredCredentialId(credential,original.credentialForFixedRetentionReadSigner());
+        String result=hmac(credential,original.messageForFixedRetentionReadSigner());original.messageForFixedRetentionReadSigner();return result;
+    }
+
     static Map<String, Object> offlineStart(
         String deviceId,
         String locationCode,

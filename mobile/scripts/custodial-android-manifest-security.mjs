@@ -12,7 +12,7 @@ import {
 import {isQualifiedProviderRelease,inspectCompiledProviderOwner,PROVIDER_SERVICE,LEGACY_PROVIDER_SERVICES} from './custodial-provider-release-policy.mjs';
 import {isCleaningScope,assertCleaningScopeManifest,SCOPE_MARKER,CLEANING_SCOPE} from './custodial-new-producer-scope-policy.mjs';
 
-export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.9.0';
+export const CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION = '1.10.0';
 export const CUSTODIAL_ANDROID_PACKAGE = 'org.memphiszoo.custodial';
 export const CUSTODIAL_NETWORK_SECURITY_RESOURCE = 'memphis_zoo_network_security_config';
 export const CUSTODIAL_FILE_PROVIDER_PATHS_RESOURCE = 'file_paths';
@@ -67,6 +67,7 @@ export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
     'com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver',
     'com.google.firebase.iid.FirebaseInstanceIdReceiver',
     `${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`,
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.RetainedEnrollmentMaintenanceReceiver`,
     `${CUSTODIAL_ANDROID_PACKAGE}.vault.ProviderNotificationActionReceiver`,
   ]),
 });
@@ -99,6 +100,7 @@ export const custodialFileProviderPaths = `<?xml version="1.0" encoding="utf-8"?
 
 const RESOURCE_REFERENCE = /^@0x[0-9a-f]+$/i;
 export const CUSTODIAL_ANDROID_COMPILED_APPLICATION_ATTRIBUTE_POLICY = Object.freeze({
+  'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialEnrollmentApplication`,
   'android:theme': RESOURCE_REFERENCE,
   'android:label': RESOURCE_REFERENCE,
   'android:icon': RESOURCE_REFERENCE,
@@ -379,6 +381,14 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
     // The native-vault manifest already ships this manager maintenance entry.
     // Match its exact permission and two actions; do not accept an arbitrary
     // exported receiver merely because its class name is recognized.
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.RetainedEnrollmentMaintenanceReceiver`]: policyNode('receiver', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.RetainedEnrollmentMaintenanceReceiver`,
+      'android:permission': 'android.permission.DUMP', 'android:exported': 'true',
+    }, [intentFilter([
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.VERIFY_RETAINED_ENROLLMENT`),
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.REPORT_RETAINED_ENROLLMENT`),
+      action(`${CUSTODIAL_ANDROID_PACKAGE}.FINISH_RETAINED_ENROLLMENT`),
+    ])]),
     [`${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`]: policyNode('receiver', {
       'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.AssignedDeviceActivationReceiver`,
       'android:permission': 'android.permission.DUMP',
@@ -500,6 +510,7 @@ export function configureCustodialAndroidManifestSecuritySource(source) {
   }
   let configured = match[0];
   for (const [name, value] of Object.entries({
+    name: `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialEnrollmentApplication`,
     usesCleartextTraffic: 'false',
     networkSecurityConfig: `@xml/${CUSTODIAL_NETWORK_SECURITY_RESOURCE}`,
   })) configured = setApplicationAttribute(configured, name, value);
@@ -516,6 +527,7 @@ export function assertCustodialAndroidManifestSecuritySource(source) {
   }
   const tag = applicationTag(text)[0];
   for (const [name, expected] of Object.entries({
+    name: `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialEnrollmentApplication`,
     usesCleartextTraffic: 'false',
     networkSecurityConfig: `@xml/${CUSTODIAL_NETWORK_SECURITY_RESOURCE}`,
   })) {

@@ -1,0 +1,96 @@
+{
+  "schema": "custodial.frontend-retained-source304-binding.v1",
+  "scope": "ACTUAL_ISOLATED_FRESH304_SCHEMA_EVIDENCE_AND_COMPATIBILITY_DECLARATIONS_ONLY",
+  "backend_source_commit": "535603d8eecc9851907817f9e8f6211100332331",
+  "canonical_source_count": 304,
+  "schema_fingerprint": "ff233923ac21cd46b70985a9eaeb20dbb2a4c0bdc6f69f527159d437ed893440",
+  "schema_transition": {
+    "transition_id": "custodial-full-hour-test-20261029",
+    "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "to_fingerprint": "ff233923ac21cd46b70985a9eaeb20dbb2a4c0bdc6f69f527159d437ed893440",
+    "expires_at": "2026-11-01T15:12:05Z"
+  },
+  "backend_source_files": [
+    {
+      "path": "supabase/canonical/schema-fingerprint.txt",
+      "sha256": "bc15a8e5d5e550194f957ce6d1e632e14e03d02e39ee653dfd99bedfbe1122e6",
+      "bytes": 65
+    },
+    {
+      "path": "supabase/canonical/schema-fingerprint-input.json",
+      "sha256": "937a45649c0338376a6f6689f7220deff307be8e250a13d8c422fa857128275d",
+      "bytes": 7957988
+    },
+    {
+      "path": "supabase/canonical/migration-replay-order.json",
+      "sha256": "abba683ec10c75fb3ab585e8a12351a410438bd24822569d3f3671c9ae6fa751",
+      "bytes": 57672
+    },
+    {
+      "path": "supabase/migrations/20261031225210_custodial_sealed_repairs_current_eight.sql",
+      "sha256": "f4e3dc5be9a465e2099bd9b23488f99b3f9e4c1d9d969844b2fa06b1fbdc7a73",
+      "bytes": 211245
+    },
+    {
+      "path": "release/fresh-only-replay/SOURCE304_SUCCESSOR.json",
+      "sha256": "17071df15c837a52c1b9962abc1cb26453d5b7be935ec3904a728e7caffcc4a5",
+      "bytes": 1903
+    }
+  ],
+  "retained_source304_successor": {
+    "schema": "custodial.ci-fresh-only-exact-source-successor.v1",
+    "scope": "DISPOSABLE_CONSTRUCTION_ONLY_NOT_VENDOR_NORMAL_OR_PRODUCTION_ADMISSION",
+    "predecessor_manifest": {
+      "path": "release/fresh-only-replay/MANIFEST.json",
+      "sha256": "5094a272dcc9f01ccbf043f3de7012e12bdb542606089a0a818629c1ecf86b26",
+      "migrations": 297,
+      "overrides": 22
+    },
+    "predecessor_successor": {
+      "path": "release/fresh-only-replay/SOURCE303_SUCCESSOR.json",
+      "sha256": "d51728e9973dcfba729164bce441d45efff8cf10b59f3382ade56efbae515e27",
+      "bytes": 1874,
+      "source_migrations": 303
+    },
+    "preserved_predecessor_replay": {
+      "path": "release/fresh-only-replay/SOURCE303_REPLAY_ORDER.json",
+      "sha256": "3e5a9219707a0724b375d94225940b6271d30dcda1b34a4289a9bf77d290f0dd",
+      "bytes": 57485
+    },
+    "source_migrations": 304,
+    "replay_manifest": {
+      "path": "supabase/canonical/migration-replay-order.json",
+      "sha256": "abba683ec10c75fb3ab585e8a12351a410438bd24822569d3f3671c9ae6fa751",
+      "bytes": 57672
+    },
+    "append": {
+      "name": "20261031225210_custodial_sealed_repairs_current_eight.sql",
+      "original": {
+        "path": "supabase/migrations/20261031225210_custodial_sealed_repairs_current_eight.sql",
+        "sha256": "f4e3dc5be9a465e2099bd9b23488f99b3f9e4c1d9d969844b2fa06b1fbdc7a73",
+        "bytes": 211245
+      },
+      "selected": {
+        "path": "supabase/migrations/20261031225210_custodial_sealed_repairs_current_eight.sql",
+        "sha256": "f4e3dc5be9a465e2099bd9b23488f99b3f9e4c1d9d969844b2fa06b1fbdc7a73",
+        "bytes": 211245
+      },
+      "atomic_mode": "exact-Source-BEGIN-COMMIT"
+    },
+    "observed_empty_source_fingerprint": "ff233923ac21cd46b70985a9eaeb20dbb2a4c0bdc6f69f527159d437ed893440",
+    "source_capture_scope": "ACTUAL_FRESH304_CONSTRUCTION_AND_READ_ONLY_CATALOG_BEFORE_INITIAL_ACTIVATION",
+    "full_vendor_NORMAL": false,
+    "expected_fingerprint_authority": null
+  },
+  "actual_isolated_fresh_schema_observed": true,
+  "production": false,
+  "production_applicability": false,
+  "independent_review": false,
+  "release_admission": false,
+  "frontend_pair_admission": false,
+  "full_program_or_physical_acceptance": false,
+  "preserved_source303_binding": {
+    "path": "scripts/fixtures/current303-schema-source-binding.json",
+    "sha256": "0f00aeb56dcd180bfb0e37c19910076a5f95f0fba54b8482cea4e4b250ff6a8f"
+  }
+}

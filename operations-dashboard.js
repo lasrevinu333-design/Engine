@@ -57,7 +57,7 @@
       txt('ops-date',new Intl.DateTimeFormat('en-US',{timeZone:DATA.ZONE,weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(at));
       const minute=Math.floor(now()/60000);
       if(minute!==lastMinute){lastMinute=minute;renderFeeds();}
-      else{const events=view('events'),text=events.cards.filter(c=>c.active).map(c=>c.title).join('   •   ')||'No active upcoming events.';
+      else{const events=view('events'),text=ops?(events.cards.filter(c=>c.active).map(c=>c.title).join('   •   ')||'No active upcoming events.'):events.note;
         if(el('ops-events-ticker').textContent!==text)txt('ops-events-ticker',text);}
 
     }

@@ -285,3 +285,6 @@
     display: none !important;
   }
 }
+
+/* Employee secondary navigation meets the field touch target. */
+body[data-memphis-context="employee"] .mz-back-link{min-height:52px}

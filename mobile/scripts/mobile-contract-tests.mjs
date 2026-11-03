@@ -230,6 +230,9 @@ if(process.argv.includes('--custodial-realm-containment-only')){
   process.exit(0);
 }
 
+// Default compatibility-model cases use the existing explicit FIFO Web Locks model.
+// This supplies a browser primitive, never native/private inventory authority.
+await import('../../scripts/synthetic-schedule-locks.mjs');
 const root = new URL('../', import.meta.url);
 const files = async (path) => readFile(new URL(path, root), 'utf8');
 const [
@@ -302,18 +305,21 @@ assert.match(buildScript, /memphis-build-identity\.js/);
 assert.match(buildScript, /native_build_number: nativeBuildNumber \? Number\(nativeBuildNumber\) : null/);
 
 for (const module of [
-  'Today', 'Overdue', 'Due soon', 'Being cleaned now', 'Open problems', 'Events affecting today',
+  'Today', 'Overdue', 'Due soon', 'Being cleaned now', 'Open problems', 'Events today',
   'Decisions', 'Coverage', 'Absence / PTO', 'Schedule change', 'Correct record', 'Maintenance problem',
   'Saved work needs review', 'Phone problem', 'Admin Tools', 'Phone enrollment', 'Phone assignment',
   'Manager Access', 'Device Security', 'Diagnostics', 'Offline evidence details', 'Release / canary',
   'Rollback / recovery', 'Audit logs', 'Gemini administration',
 ]) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
+assert.match(managerHtml, /id="today-events-heading">Events today<\/h2>/);
+assert.match(managerHtml, /href="\.\/events\.html"/,'Current named event widget retains the shared Events route');
 assert.doesNotMatch(managerHtml, /<h2 class="sectionTitle">Operations tools<\/h2>/, 'manager home must not mix occasional tools into daily work');
 assert.doesNotMatch(managerHtml, /ChatScope Messenger/);
 assert.doesNotMatch(managerHtml, /href="\.\/dashboard\.html#locations"/);
 for (const label of ['Home','Messages','Schedule','Status','More']) assert.match(managerHtml, new RegExp(`navLabel">${label}<`));
 assert.match(managerHtml, /mz-native-android/);
-assert.match(managerJs, /auth-api\/ops\/manager-codes\/consume/);
+assert.match(managerJs, /window\.MemphisAuth\?\.requireOpsManagerSession\?\.\(\{forceRefresh:true,redirect:false,interactive:false,throwOnFailure:true\}\)/,'Manager home restores through the current central named-session owner');
+assert.match(managerHtml, /ops-manager-hub\.html\?return=index\.html/,'Interactive enrollment stays at the shared-PIN named entry');
 assert.match(managerJs, /credentials: 'include'/);
 assert.doesNotMatch(managerJs, /SecureStorage|device_credential|sessionStorage|X-Memphis-Device-Credential|mobile-auth-api/);
 assert.match(managerJs, /Existing phone access was kept/);
@@ -324,7 +330,9 @@ assert.match(managerJs, /els\.insights\.hidden = !custodialAdmin/);
 assert.doesNotMatch(managerJs, /catch \(error\) \{\s*await secureRemove\(\)/, 'transient refresh errors must not erase native enrollment');
 assert.match(managerBridge, /AUTHENTICATED_API_PREFIXES/);
 assert.match(managerBridge, /window\.fetch = \(input, init\) => bridgeFetch/);
-assert.match(managerBridge, /auth-api\/session\?access_level=full_access/);
+assert.match(managerBridge, /centralRefresh=centralAuth\?\.refreshLeadershipSession\?\.bind\(centralAuth\)/);
+assert.match(managerBridge, /centralHeaders=centralAuth\?\.opsManagerAuthHeaders\?\.bind\(centralAuth\)/);
+assert.match(managerBridge, /centralRevoke=centralAuth\?\.clearSession\?\.bind\(centralAuth\)/,'Bridge retains the central revocable session owner');
 assert.match(managerBridge, /credentials: 'include'/);
 assert.doesNotMatch(managerBridge, /SecureStorage|device_credential|sessionStorage|X-Memphis-Device-Credential|mobile-auth-api/);
 assert.match(nativeLayout, /mz-native-android/);
@@ -339,8 +347,10 @@ assert.match(messengerApp, /filter\(\(row\) => !isRetiredThread\(row\)\)/);
 assert.doesNotMatch(messengerApp, /window\.fetch\s*=|MutationObserver/);
 assert.match(retiredChatScope, /messages\.html/);
 
-assert.match(accessHtml, /single-use personal code/i);
-assert.match(accessJs, /leadership-api\/managers\/.*enrollment-code/);
+assert.match(accessHtml, /shared four-digit PIN/i);
+assert.match(accessJs, /ops-manager-hub\.html/);
+assert.match(accessJs, /searchParams\.set\('return','index\.html'\)/);
+assert.doesNotMatch(accessJs, /enrollment-code|one_time_code|Generate Personal Code/);
 
 assert.doesNotMatch(viewerHtml, /Messenger|Moxie|Scheduler|Device Security|Manager Access|Notifications/);
 for (const module of ['Dashboard','Events']) assert.ok(viewerHtml.includes(module), `viewer app missing ${module}`);
@@ -392,10 +402,15 @@ assert.match(phoneAssignmentsJs, /Activate \/ recover phone/);
 assert.match(phoneAssignmentsJs, /assigned-activation-operations/);
 assert.match(phoneAssignmentsJs, /trusted maintenance computer/);
 assert.doesNotMatch(phoneAssignmentsJs, /Generate App Code|enrollment-code/);
-assert.match(insightsHtml, /Custodial Work Statistics/);
-assert.doesNotMatch(insightsHtml + insightsJs, /Inspection entry|Inspection score|Insights & Inspections/i);
+assert.match(insightsHtml, /<h1>Operational Insights<\/h1>/);
+assert.match(insightsHtml, /no new inspection entry is recorded/i,'Existing historical results remain read-only');
+assert.doesNotMatch(insightsHtml, /<form\b|<textarea\b|type=["']submit["']/i,'No new inspection entry control');
+assert.match(insightsJs, /Inspection score unavailable/,'Missing historical evidence is not invented');
 for (const endpoint of ['cleaning-performance','session-facts','ticket-trends']) assert.match(insightsJs, new RegExp(endpoint));
-assert.doesNotMatch(insightsJs, /analytics-api\/inspections|inspection_id|inspection score/i);
+assert.deepEqual([...insightsJs.matchAll(/method\s*:\s*['"](POST|PUT|PATCH|DELETE)['"]/gi)].map(m=>m[1]),['POST'],'Only the existing manager cleaning correction is a declared write');
+assert.match(insightsJs,/save:\(id,operationId,body\)=>correctionEnvelope\(`[\s\S]*?\/corrections`,\{method:'POST',operationId,body\}\)/,'The one write remains the separately guarded correction route');
+assert.match(insightsJs,/request\(query\(paths\[kind\],parameters\)\)/,'Analytics/history loads use the default GET reader');
+assert.match(insightsJs, /owner!==principal\(\)/,'Original named principal remains bound across reads');
 assert.match(insightsNativeAuth, /analytics-api/);
 assert.match(insightsNativeAuth, /mobile\.authHeaders/);
 
@@ -465,9 +480,10 @@ assert.match(custodialJs, /showHome\(profile\)/);
 assert.doesNotMatch(custodialJs, /loadAreas|all_items|included_locations|Phone enrolled and notifications ready/);
 assert.deepEqual(
   [...custodialHtml.matchAll(/class="homeLabel">([^<]+)</g)].map((match) => match[1].trim()),
-  ['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback'],
-  'Home must expose exactly four large operational buttons',
+  ['Memphis Messenger', 'My Schedule', 'Upcoming Events', 'Program Feedback', 'Supplies'],
+  'Home retains the four operational destinations and the approved Supplies placeholder',
 );
+assert.match(custodialHtml,/class="homeButton" href="\.\/supply-coming-soon\.html" aria-label="Supplies — coming soon"/,'Supplies stays a local placeholder');
 assert.match(custodialHtml, /id="home-memphis"[^>]*class="memphisHome"[\s\S]*<strong>Ask Memphis<\/strong>/);
 assert.doesNotMatch(custodialHtml, /bottomNav|navLabel|employee-phone|areas-list|home-status/);
 assert.doesNotMatch(custodialHtml, /remove-enrollment|Remove Enrollment From This Phone/);
@@ -496,6 +512,33 @@ assert.match(custodialBridge, /loadOfflineAuthoritySnapshot/);
 assert.match(custodialBridge, /authorizeOfflineNewWork/);
 assert.match(custodialBridge, /beginRollbackFence/);
 assert.match(custodialBridge, /clearRollbackFence/);
+// Execute the ACTUAL Home subscription: a ready publication must finish
+// before its consumer launches another credential check/restore generation.
+{
+ const {runInNewContext}=await import('node:vm');
+ const start=custodialJs.indexOf('security.subscribe((status) => {'),end=custodialJs.indexOf("void Network.addListener('networkStatusChange'",start);
+ assert.ok(start>0&&end>start);
+ const source=custodialJs.slice(start,end);
+ const mounted=()=>{
+  let callback,principal='original';const queued=[],calls=[];
+  const context={previousAssignmentState:'',profile:{saved:true},window:{MemphisMobile:{principalIdentity:()=>principal}},
+   security:{subscribe:fn=>{callback=fn;}},queueMicrotask:fn=>queued.push(fn),
+   els:{name:{textContent:'original'},role:{textContent:'staff'},phoneLockName:{textContent:'original'},activeCleaning:{hidden:false},home:{hidden:true}},
+   invalidateReadiness:options=>{calls.push('withdraw');if(options?.refresh!==false)calls.push('probe');},
+   showBoot:()=>calls.push('boot'),showAssignmentNeeded:()=>calls.push('assignment'),showManagerNeeded:()=>calls.push('manager'),
+   restore:()=>{calls.push('restore');return Promise.resolve();}};
+  runInNewContext(source,context);return{calls,queued,emit:(status,p)=>{if(p!==undefined)principal=p;callback(status);},flush:()=>{while(queued.length)queued.shift()();}};
+ };
+ const ready=(generation=1)=>({state:'enrolled',deviceId:'KIOSK_08',quarantined:false,generation,initialized:true,ready:true,available:true});
+ const first=mounted();first.emit(ready());assert.equal(first.calls.includes('withdraw'),true);
+ assert.equal(first.calls.includes('probe'),false,'Publication callback must synchronously withdraw readiness without starting another status generation');
+ assert.equal(first.calls.includes('restore'),false,'Original material event finishes before asynchronous restore begins');
+ first.flush();assert.equal(first.calls.filter(x=>x==='restore').length,1);
+ const denied=mounted();denied.emit(ready());denied.emit({...ready(2),state:'quarantined',quarantined:true});denied.flush();
+ assert.equal(denied.calls.includes('restore'),false,'A queued ready callback cannot run after actual quarantine');
+ const successor=mounted();successor.emit(ready(1),'A');successor.emit(ready(2),'B');successor.emit(ready(3),'A');successor.flush();
+ assert.equal(successor.calls.filter(x=>x==='restore').length,1,'Only the latest original publication may launch its fresh verification');
+}
 assert.match(custodialJs, /async function prepareOfflineAuthority\(\) \{\s*if \(!navigator\.onLine \|\| !deviceId\(\)\) return false;\s*try \{\s*const snapshot=await request\('\/scan-api\/rpc',\{method:'POST',body:\{device_id:deviceId\(\),fn:'tool_get_offline_scan_authority_snapshot',args:\{p_device_id:deviceId\(\)\}\}\}\);\s*if \(snapshot\) return await window\.MemphisMobile\?\.saveOfflineScanAuthoritySnapshot\?\.\(snapshot\) === true;\s*\} catch \{/,
   'Home may prepare offline work only from an online identity-bound server snapshot admitted through the native bridge; failure must preserve existing authority');
 assert.equal((custodialJs.match(/void prepareOfflineAuthority\(\)\.then\(snapshotAnchored => \{/g) || []).length, 1,
@@ -505,7 +548,8 @@ assert.match(custodialJs, /readinessObservation\.accept\(readinessToken, readine
 assert.doesNotMatch(custodialJs, /await prepareOfflineAuthority\(\)/,
   'An offline-authority refresh must never delay the employee Home screen');
 assert.match(custodialBridge, /native-notification-outbox\.v1/);
-assert.match(custodialBridge, /persistOpenedNotification\(data\)/);
+assert.match(custodialBridge, /persistOpenedNotification\(original,owner\)/,'Opened event receipt keeps its original captured owner');
+assert.match(custodialBridge, /saved!==true\|\|!eventOwnerCurrent\(owner\)/,'Changed owner refuses event receipt navigation');
 assert.match(custodialBridge, /persistEventOpened:persistOpenedNotification/);
 assert.match(custodialBridge, /flushNativeNotificationOutbox/);
 assert.match(custodialBridge, /Idempotency-Key/);
@@ -656,7 +700,7 @@ function memorySecure(initial = {}, { failures = {}, hooks = {} } = {}) {
   }
   return {
     operations,
-    async get(key) { await before('get', key); return values.get(key); },
+    async get(key) { await before('get', key); return values.has(key)?values.get(key):null; },
     async set(key, value) { await before('set', key, value); values.set(key, String(value)); },
     async remove(key) { await before('remove', key); values.delete(key); },
     value(key) { return values.get(key); },
@@ -1024,10 +1068,11 @@ for (const key of [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY])
   await entered.promise;
   let transportRan = false;
   const queuedTransport = store.dispatchAuthorizedTransport(() => { transportRan = true; });
+  const mutationRefused=assert.rejects(blockingMutation, CustodialSecurityTransitionError);
+  const transportRefused=assert.rejects(queuedTransport, CustodialSecurityTransitionError);
   storage.values.set('mz_employee_hub_device_id', 'KIOSK_02');
   release.resolve();
-  await blockingMutation;
-  await assert.rejects(queuedTransport, CustodialSecurityTransitionError);
+  await Promise.all([mutationRefused,transportRefused]);
   assert.equal(transportRan, false);
 }
 
@@ -1065,10 +1110,14 @@ for (const key of [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY])
   await secureReadEntered.promise;
   storage.values.set(CUSTODIAL_INSTALLATION_MARKER_KEY, 'raced-seal');
   releaseSecureRead.resolve();
-  await assert.rejects(removal, /does not match this phone/i);
+  await assert.rejects(removal, error=>error?.code==='custodial_security_state_unavailable'
+    &&error?.operation==='removal original local state'&&error?.cause?.message==='Original removal rows changed');
   assert.equal(remoteRemovalRan, false);
-  assert.equal(store.getStatus().quarantined, true);
-  assert.equal(store.getStatus().reason, 'installation_binding_changed_during_removal');
+  assert.equal(store.getStatus().state,'unavailable');
+  assert.equal(store.getStatus().ready,false);assert.equal(store.getStatus().available,false);
+  assert.equal(store.getStatus().reason,'custodial_security_state_unavailable');
+  assert.equal(secureStorage.value(CUSTODIAL_INSTALLATION_RECORD_KEY),fixture.secure[CUSTODIAL_INSTALLATION_RECORD_KEY], 'Earlier original-row refusal retains the original protected credential bytes');
+  assert.equal(storage.value(CUSTODIAL_INSTALLATION_MARKER_KEY),'raced-seal','Refusal never overwrites the changed original row');
 }
 
 // Plaintext fallback credentials are removed without ever being read.
@@ -1780,11 +1829,12 @@ assert.equal(removalStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
   const read = store.readCredential();
   await gate.entered;
   assert.equal(store.getStatus().ready, false, 'security must stay fail-closed throughout a read reconciliation');
-  const removal = store.removeEnrollment({ beforeRemove: successfulRemoteRemoval });
-  assert.equal(secure.operations.some(([operation]) => operation === 'remove'), false, 'remove must wait for the in-flight read');
+  await assert.rejects(store.removeEnrollment({ beforeRemove: successfulRemoteRemoval }),error=>error?.code==='custodial_security_state_checking','An uninitialized submission cannot inherit the eventual read identity');
+  assert.equal(secure.operations.some(([operation]) => operation === 'remove'), false, 'Refused early removal changes no secure key');
   gate.release();
   assert.equal(await read, 'read-remove-old');
-  await removal;
+  assert.equal(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY),fixture.secure[CUSTODIAL_INSTALLATION_RECORD_KEY]);
+  await store.removeEnrollment({ beforeRemove: successfulRemoteRemoval });
   assert.equal(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY), undefined);
 }
 
@@ -1811,11 +1861,15 @@ assert.equal(removalStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
   const set = store.setEnrollment({ credential: 'set-before-remove', deviceId: 'KIOSK_09' });
   await gate.entered;
   assert.equal(store.getStatus().ready, false, 'security must stay fail-closed throughout an enrollment commit');
-  const removal = store.removeEnrollment({ beforeRemove: successfulRemoteRemoval });
-  assert.equal(secure.operations.some(([operation]) => operation === 'remove'), false, 'remove must wait for the in-flight set');
+  const oldRemovalRefused=assert.rejects(store.removeEnrollment({ beforeRemove: successfulRemoteRemoval }),error=>error instanceof CustodialSecurityTransitionError&&error.code==='custodial_security_generation_changed','A queued empty-original removal cannot target the future enrollment');
+  assert.equal(secure.operations.some(([operation]) => operation === 'remove'), false, 'Refused early removal changes no secure key');
   gate.release();
   await set;
-  await removal;
+  await oldRemovalRefused;
+  assert.equal(parsed(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY)).credential,'set-before-remove');
+  await store.ensureSecurityState();
+  assert.equal(store.getStatus().state,'enrolled');assert.equal(store.getStatus().ready,true);
+  await store.removeEnrollment({ beforeRemove: successfulRemoteRemoval });
   assert.equal(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY), undefined);
   for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), undefined);
 }
@@ -2064,9 +2118,9 @@ assert.equal(removalStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
   assert.equal(lateDispatchCalls, 0, 'transport queued after recovery must never dispatch');
 }
 
-// Local enrollment is erased only after the backend's single atomic removal
-// operation has durably completed. A failed call reuses the same operation UUID;
-// legacy split-operation journals remain restart-compatible across upgrades.
+// Compatibility removal originals survive an ambiguous remote failure. A V1
+// journal alone never reconstructs lost private identity or authorizes replay.
+// Current native positive replay has its separate original-preservation cases.
 {
   const fixture = enrolledFixture({ deviceId: 'KIOSK_07', credential: 'remove-after-dispatch-secret' });
   const secure = memorySecure(fixture.secure);
@@ -2114,21 +2168,17 @@ assert.equal(removalStorage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
   assert.equal(pendingRemoval.phase, 'pending_server_removal');
   assert.equal(parsed(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY)).credential, 'remove-workflow-secret');
 
-  await store.removeEnrollment({
-    beforeRemove: async ({ phase, operationId, checkpoint }) => {
-      assert.equal(phase, 'pending_server_removal');
-      assert.equal(operationId, pendingRemoval.operation_id, 'retry must reuse the durable removal UUID');
-      remoteCalls.push(`remove:success:${operationId}`);
-      await checkpoint('server_logged_out');
-    },
-  });
-  assert.deepEqual(remoteCalls, [
-    `remove:pending_server_removal:${pendingRemoval.operation_id}`,
-    `remove:success:${pendingRemoval.operation_id}`,
-  ]);
-  assert.equal(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY), undefined);
-  assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
-  for (const key of CUSTODIAL_DEVICE_KEYS) assert.equal(storage.value(key), undefined);
+  let secondRemote=false;
+  await assert.rejects(store.removeEnrollment({beforeRemove:async()=>{secondRemote=true;}}),error=>error instanceof CustodialSecurityTransitionError&&error.code==='custodial_security_generation_changed',
+    'A secret-free compatibility journal cannot restore the lost private original identity or authorize a new remote call');
+  assert.equal(secondRemote,false);assert.deepEqual(remoteCalls,[`remove:pending_server_removal:${pendingRemoval.operation_id}`]);
+  assert.equal(parsed(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY)).operation_id,pendingRemoval.operation_id);
+  assert.equal(parsed(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY)).phase,'pending_server_removal');
+  assert.equal(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY),fixture.secure[CUSTODIAL_INSTALLATION_RECORD_KEY]);
+  for(const [key,value]of Object.entries(fixture.local))assert.equal(storage.value(key),value);
+  // Positive current native durable-command replay is covered by the retained
+  // VaultEngine original-preservation cases; V1 DATA cannot mint its authority.
+
 }
 
 for (const legacyPhase of ['pending_push_unregister', 'push_unregistered']) {
@@ -2152,15 +2202,12 @@ for (const legacyPhase of ['pending_push_unregister', 'push_unregistered']) {
     indexedDb: memoryIndexedDb([], { exists: false }),
     cryptoApi: deterministicCrypto(`legacy-${legacyPhase}`),
   });
-  await store.removeEnrollment({
-    beforeRemove: async ({ phase, operationId, checkpoint }) => {
-      assert.equal(phase, legacyPhase);
-      assert.equal(operationId, legacyOperation.operation_id);
-      await checkpoint('server_logged_out');
-    },
-  });
-  assert.equal(secure.value(CUSTODIAL_INSTALLATION_RECORD_KEY), undefined);
-  assert.equal(storage.value(CUSTODIAL_REMOVAL_OPERATION_KEY), undefined);
+  const beforeLocal=storage.snapshot(),beforeSecure=secure.snapshot();let called=false;
+  await assert.rejects(store.ensureSecurityState(),error=>error?.code==='custodial_enrollment_removal_pending'&&error.operation?.operation_id===legacyOperation.operation_id);
+  await assert.rejects(store.removeEnrollment({beforeRemove:async()=>{called=true;}}),error=>error instanceof CustodialSecurityTransitionError&&error.code==='custodial_security_generation_changed',
+    'Legacy split-operation DATA is retained but cannot create current private original-removal authority');
+  assert.equal(called,false);assert.deepEqual(storage.snapshot(),beforeLocal);assert.deepEqual(secure.snapshot(),beforeSecure);
+
 }
 
 // The backend's exact pre-confirmation 409 is bounded: a valid local journal

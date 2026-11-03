@@ -70,13 +70,13 @@ export function installManagerWeather({document=globalThis.document,requestJson=
     }
     return refresh();
   }
-  function stop() {
+  function stop({clear=true}={}) {
     active=false;generation+=1;
     if(clockTimer!==null)clearIntervalFn(clockTimer);
     if(refreshTimer!==null)clearIntervalFn(refreshTimer);
     clockTimer=null;refreshTimer=null;
     for(const controller of controllers)controller.abort();
-    controllers.clear();flight=null;records={};
+    controllers.clear();flight=null;if(clear)records={};
   }
   return {start,refresh,stop};
 }

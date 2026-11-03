@@ -311,6 +311,9 @@ const fixtureSource = String.raw`
         publicCredentialExposed: JSON.stringify(globalThis.MemphisCustodialSecurity).includes(secret),
       };
     },
+    async seedOwnedWork() {
+      return runtime.security.mutateProtectedWork(()=>{globalThis.localStorage['session:ready-work']='preserved-session';});
+    },
     async attemptAuthorizedTransport() {
       let callbackCalled = false;
       let error = null;
@@ -373,10 +376,11 @@ try {
     assert.equal(initial.status.deviceId, 'KIOSK_08');
     assert.equal(initial.publicCredentialExposed, false);
 
-    const mainRealm = await page.evaluate(() => {
+    const mainRealm = await page.evaluate(async () => {
       const attempts = {};
       for (const [name, operation] of Object.entries({
         namedWrite: () => { localStorage.memphisAssignedDeviceId = 'KIOSK_02'; },
+        unownedWorkWrite: () => {localStorage['session:ready-work']='unowned';},
         namedDelete: () => { delete localStorage.memphisAssignedDeviceId; },
         defineProperty: () => Object.defineProperty(localStorage, 'memphisAssignedDeviceId', { value: 'KIOSK_02' }),
         replaceSetItem: () => Object.defineProperty(Storage.prototype, 'setItem', { value() {} }),
@@ -385,7 +389,7 @@ try {
         catch (error) { attempts[name] = error.name; }
       }
       localStorage.ordinary_cache_key = 'ordinary-value';
-      localStorage['session:ready-work'] = 'preserved-session';
+      await globalThis.firewallFixture.seedOwnedWork();
       return {
         attempts,
         deviceId: localStorage.getItem('memphisAssignedDeviceId'),
@@ -397,6 +401,7 @@ try {
     });
     assert.deepEqual(mainRealm.attempts, {
       namedWrite: 'CustodialProtectedStateMutationError',
+      unownedWorkWrite: 'CustodialProtectedStateMutationError',
       namedDelete: 'CustodialProtectedStateMutationError',
       defineProperty: 'CustodialProtectedStateMutationError',
       replaceSetItem: 'TypeError',

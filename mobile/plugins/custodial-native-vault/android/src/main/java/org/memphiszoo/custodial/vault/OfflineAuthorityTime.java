@@ -11,6 +11,7 @@ import java.util.UUID;
  */
 final class OfflineAuthorityTime {
     private static final long MAX_OCCURRENCE_DURATION_MS = 24L * 60L * 60L * 1000L;
+    private static final long INITIAL_SCAN_IGNORE_MS = 60_000L;
     private final OfflineAuthorityTimeStore store;
     private final MonotonicClock clock;
 
@@ -362,6 +363,29 @@ final class OfflineAuthorityTime {
         requireMatchingObservedTag(sessionId, identity);
     }
 
+    /** Owner's first-minute rule uses the original durable START and native
+     * observation, never wall time, a page timer or a retried delivery time. */
+    static boolean ignoresPhysicalScan(OfflineOccurrence original, long observedElapsed, int observedBoot) throws VaultFailure {
+        if (original == null || !original.completedAt.isEmpty() || original.bootCount != observedBoot) return false;
+        long captured = derivedTimestampMillis(original.clockBaseAt, original.anchorElapsedRealtimeMillis, observedElapsed);
+        long started = VaultTimestamps.epochMillis(original.startedAt, "custodial_native_completion_recovery_required");
+        try { return Math.subtractExact(captured, started) < INITIAL_SCAN_IGNORE_MS; }
+        catch (ArithmeticException error) { throw new VaultFailure("custodial_native_completion_recovery_required", error); }
+    }
+
+    synchronized boolean ignoresFinishScan(String deviceId, String locationCode, String sessionId,
+        String startedAt, long observedElapsed, int observedBoot) throws VaultFailure {
+        store.requireWorkAdmission();
+        OfflineOccurrence original = store.loadOccurrence(exactSessionId(sessionId));
+        if (original == null || !original.deviceId.equals(VaultValidation.deviceId(deviceId))
+            || !original.locationCode.equals(canonicalLocationCode(locationCode))
+            || !original.startedAt.equals(exactTimestamp(startedAt)))
+            throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+        if (!original.completedAt.isEmpty()) return false; // Exact frozen finish replay keeps its existing proof.
+        if (original.bootCount != observedBoot) throw new VaultFailure("custodial_native_completion_recovery_required");
+        return ignoresPhysicalScan(original, observedElapsed, observedBoot);
+    }
+
     synchronized void requireMatchingObservedTag(String sessionId, String identity) throws VaultFailure {
         store.requireWorkAdmission();
         OfflineOccurrence occurrence = store.loadOccurrence(exactSessionId(sessionId));
@@ -511,7 +535,7 @@ final class OfflineAuthorityTime {
         if (currentElapsed < anchorElapsed) throw new VaultFailure("custodial_native_offline_anchor_refused");
         try {
             long timestamp = derivedTimestampMillis(generatedAt, anchorElapsed, currentElapsed);
-            if (VaultTimestamps.compareEpochMillisToInstant(timestamp, expiresAt, "custodial_native_offline_anchor_refused") > 0) {
+            if (VaultTimestamps.compareEpochMillisToInstant(timestamp, expiresAt, "custodial_native_offline_anchor_refused") >= 0) {
                 throw new VaultFailure("custodial_native_offline_anchor_expired");
             }
             return VaultTimestamps.fromEpochMillisExact(timestamp);

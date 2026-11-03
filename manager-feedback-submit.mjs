@@ -51,9 +51,23 @@ export function createManagerFeedbackSubmitter({storage,current,send,uuid=()=>cr
   if(storage.getItem(KEY)!==prior.raw)throw fail('Saved feedback changed. Keep the original receipt for review.');
   storage.removeItem(KEY);
   if(storage.getItem(KEY)!==null)throw fail('Saved feedback retirement is unconfirmed.');
-  pending=null;return item;
+  // The page must compare its current draft with the original actually accepted
+  // inside this lock, not with whichever draft was visible before the await.
+  const submittedDraft=Object.freeze({category:b.category,priority:b.priority,message:b.message});
+  pending=null;return Object.freeze({...item,submittedDraft});
  }
- return Object.freeze({hasPending:()=>Boolean(original()),submit(draft){
+ async function readPending(){
+  if(typeof locks?.request!=='function')throw fail('Exclusive feedback storage is unavailable. Keep your draft and retry.');
+  return locks.request(KEY,{mode:'exclusive'},async()=>{
+   const prior=original();if(!prior)return null;
+   const owner=actor(await current()),b=prior.body;
+   if(owner.manager_id!==b.expected_manager_id||owner.credential_id!==b.expected_credential_id||owner.device_id!==b.device_id)
+    throw fail('Saved feedback belongs to an earlier sign-in. Keep it for recovery.');
+   original(); // Recheck exact storage after the awaited current-authority read.
+   return JSON.parse(JSON.stringify(b)); // Retained DATA, never a server receipt.
+  });
+ }
+ return Object.freeze({hasPending:()=>Boolean(original()),readPending,submit(draft){
   if(flight)return flight;
   const selected=JSON.parse(JSON.stringify(draft));
   if(typeof locks?.request!=='function')return Promise.reject(fail('Exclusive feedback storage is unavailable. Keep your draft and retry.'));

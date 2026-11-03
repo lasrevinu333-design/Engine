@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com https://api.weather.gov; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
   <meta name="referrer" content="no-referrer">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#081422">
   <title>Memphis Zoo Operations Hub</title>
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12">
   <link rel="stylesheet" href="./ops-hub.css">
+  <link rel="stylesheet" href="./manager-home-weather.css">
 </head>
 <body data-memphis-context="manager">
   <main class="hubPage">
@@ -38,6 +39,8 @@
       </article>
     </section>
 
+    <section class="uxCard" id="manager-weather" aria-label="Zoo date, time and weather" style="margin-top:14px"><h2>Weather for the next hours</h2><p id="manager-weather-freshness">Weather source not loaded.</p><ul id="manager-weather-hours" aria-label="Next hours at the Zoo"></ul><ul id="manager-weather-alerts" class="managerWeatherAlerts" aria-label="Source weather warnings" aria-live="polite"></ul><p id="manager-alerts-freshness">Weather warnings not loaded.</p></section>
+
     <section class="hubSection uxCard">
       <div class="sectionHeading"><div><div class="uxEyebrow">Start here</div><h2>Today</h2><p>One tap to the work managers use most.</p></div></div>
       <div class="apps hubGrid coreGrid">
@@ -56,6 +59,7 @@
         <a id="guest-issues-link" class="hubTile" href="./guest-issues.html" hidden><span class="tileIcon" aria-hidden="true">!</span><span><strong>Guest Issues</strong><small>Marketing review, dispatch, and closure after zoo approval</small></span></a>
         <a id="feedback-link" class="hubTile" href="./system-feedback.html"><span class="tileIcon" aria-hidden="true">?</span><span><strong>Feedback</strong><small>Report a problem or improvement idea</small></span></a>
         <a id="notifications-link" class="hubTile" href="./notifications.html"><span class="tileIcon" aria-hidden="true">◉</span><span><strong>Notifications</strong><small>Messages, event reminders, and location alerts</small></span></a>
+        <a id="unfinished-work-link" class="hubTile" href="./unfinished-work.html"><span class="tileIcon" aria-hidden="true">!</span><span><strong>Unfinished work</strong><small>Eric: review timed-out work and explicitly clear it</small></span></a>
         <a id="phone-assignments-link" class="hubTile" href="./phone-assignments.html"><span class="tileIcon" aria-hidden="true">▣</span><span><strong>Phone Assignments</strong><small>Move kiosk phones to new or existing employees</small></span></a>
       </div>
     </section>
@@ -64,7 +68,7 @@
       <details>
         <summary>Access, security, and diagnostics</summary>
         <div class="hubGrid">
-          <a id="manager-access-link" class="hubTile" href="./manager-access.html"><span class="tileIcon" aria-hidden="true">◎</span><span><strong>Manager Access</strong><small>Personal enrollment codes and leadership accounts</small></span></a>
+          <a id="manager-access-link" class="hubTile" href="./manager-access.html"><span class="tileIcon" aria-hidden="true">◎</span><span><strong>Manager Access</strong><small>Leadership PIN and registered browsers</small></span></a>
           <a id="device-security-link" class="hubTile" href="./device-security.html"><span class="tileIcon" aria-hidden="true">⬡</span><span><strong>Device Security</strong><small>Review and revoke enrolled phones</small></span></a>
           <a id="release-canary-link" class="hubTile" href="./admin.html#release-canary-controls" hidden><span class="tileIcon" aria-hidden="true">◈</span><span><strong>Release Canary</strong><small>Pause or resume the one-phone physical acceptance window</small></span></a>
           <a id="gemini-console-link" class="hubTile" href="./gemini-admin.html"><span class="tileIcon" aria-hidden="true">✧</span><span><strong>Gemini Console</strong><small>Read-only diagnostics and system audit</small></span></a>
@@ -85,6 +89,6 @@
 
   <script src="./memphis-auth.js?v=owner-access-20261006"></script>
   <script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
-  <script src="./ops-hub.js?v=owner-access-20261006"></script>
+  <script type="module" src="./ops-hub.js?v=owner-access-20261006"></script>
 </body>
 </html>

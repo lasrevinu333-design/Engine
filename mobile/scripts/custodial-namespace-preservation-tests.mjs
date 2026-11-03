@@ -11,8 +11,8 @@ if(process.env.EVENT_OPEN_IDENTITY_CASE){
 // absence; never a live phone, key, credential, browser, grant or API operation.
 const caches=['mz_scan_authority_snapshot:','mz_scan_contract_cache:','mz_custodial_home_cache:','mz_employee_schedule_snapshot:','mz_employee_events_snapshot:'];
 const pending=CUSTODIAL_PROTECTED_STORAGE_PREFIXES.filter(p=>!caches.includes(p));
-const added=['mz_employee_feedback_outbox:','mz_chatscope_group_pending:','mz_native_notification_outbox:','mz_custodial_prestart_recovery:'];
-assert.equal(pending.length,13);assert.equal(caches.length,5);
+const added=['mz_employee_feedback_outbox:','mz_chatscope_group_pending:','mz_native_notification_outbox:','mz_custodial_prestart_recovery:','mz_employee_feedback_retirement_backup:','mz_same_original_recovery_original.v1:','mz_original_inventory_separation.v1:'];
+assert.equal(pending.length,16);assert.equal(caches.length,5);
 function fixture(){
  const local=new Map(),secure=new Map();let remote=0,opens=0;
  const storage={get length(){return local.size;},key:i=>[...local.keys()][i]??null,getItem:k=>local.get(k)??null,setItem:(k,v)=>local.set(k,v),removeItem:k=>local.delete(k)};
@@ -55,7 +55,7 @@ await test('nested feedback original identity discovered without accepting it',a
 await test('missing additional identity remains unowned recovery not clean enrollment',async()=>{
  const f=fixture();f.local.set(added[0]+'old',JSON.stringify({body:{note:'SYNTHETIC no device identity'}}));await assert.rejects(f.store.ensureSecurityState(),e=>e.code==='custodial_restore_quarantine');assert.equal(f.store.getStatus().preservedCounts.total_pending,1);assert.ok(f.store.getRecoveryRecord().original_identities.some(x=>x.device_id==='unowned_preserved_work'));
 });
-console.log(JSON.stringify({passed,failed,scope:'actual SOURCE credential-store; synthetic Storage/secure callback/IDB absence only',all13declared_pending_prefixes:pending,all5explicit_cache_prefixes:caches,phone_or_production_or_key_removal:false}));
+console.log(JSON.stringify({passed,failed,scope:'actual SOURCE credential-store; synthetic Storage/secure callback/IDB absence only',all16declared_pending_prefixes:pending,all5explicit_cache_prefixes:caches,phone_or_production_or_key_removal:false}));
 process.exitCode=failed?1:0;
 }
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
   <meta name="referrer" content="no-referrer">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0.0,viewport-fit=cover" />
   <title>Guest Cleanliness Issues</title>
   <style>
     :root{--text:#f7fbff;--muted:rgba(235,243,248,.72);--line:rgba(255,255,255,.11);--panel:rgba(7,13,18,.58);--shadow:0 18px 42px rgba(0,0,0,.34);--lime:#8ac53f;--green1:#a8e146;--green2:#6cb81f}
@@ -29,7 +29,7 @@
             <div class="sub">Approved guest reports dispatched by Marketing to Operations.</div>
           </div>
           <div class="tools">
-            <select id="status-filter" class="select">
+            <select aria-label="Filter guest issues by status" id="status-filter" class="select">
               <option value="">All statuses</option>
               <option value="open">Open</option>
               <option value="resolved">Resolved</option>

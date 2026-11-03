@@ -1,11 +1,12 @@
-const { test, expect } = require('@playwright/test');
+const {currentLeadershipSession}=require('./helpers/current-leadership-session.cjs');
+const { test, expect } = require('./helpers/isolated-browser-test.cjs');
 
 const managerId='00000000-0000-4000-8000-000000000101';
 const credentialId='00000000-0000-4000-8000-000000000102';
 const conversationId='00000000-0000-4000-8000-000000000103';
 const attachmentId='00000000-0000-4000-8000-000000000104';
 
-function session(){return{ok:true,data:{session:{token:'test-trusted-token',role:'ops_manager',roles:['CUSTODIAL_MANAGER'],manager_id:managerId,manager_display_name:'Disposable Eric',credential_id:credentialId,device_id:'gemini-browser',access_level:'full_access',read_only:false,trusted_device:true,expires_at:'2036-07-18T00:00:00.000Z'},trusted_device:{credential_id:credentialId}}};}
+function session(){return currentLeadershipSession({deviceId:'gemini-browser',managerId,credentialId,displayName:'Synthetic Gemini Manager'});}
 function conversation(){return{conversation_id:conversationId,title:'New chat',status:'active',created_at:'2026-07-18T12:00:00Z',updated_at:'2026-07-18T12:00:00Z',last_activity_at:'2026-07-18T12:00:00Z',draft_text:''};}
 function sse(events){return events.map(([type,data])=>`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`).join('');}
 
@@ -13,7 +14,7 @@ async function installBackend(context,{trusted=true,interruptFirst=false}={}){
   const state={messages:[],uploads:[],sendCount:0,streamBodies:[],interrupted:false,repair:{proposals:[],jobs:[]}};
   await context.route('https://memphis-zoo-mcp.onrender.com/**',async route=>{
     const request=route.request();const url=new URL(request.url());
-    if(url.pathname==='/auth-api/session'){
+    if(url.pathname==='/custodial-leadership-api/session'){
       await route.fulfill({status:trusted?200:401,contentType:'application/json',body:JSON.stringify(trusted?session():{ok:false,error:'Trusted device required.'})});return;
     }
     if(url.pathname==='/gemini-api/conversations'&&request.method()==='GET'){
@@ -78,13 +79,15 @@ test('trusted desktop has simple persistent chat, attachment, streaming, and dup
   await context.close();
 });
 
-test('durable IndexedDB outbox survives interruption and retries the same logical message after reload',async({browser})=>{
-  const context=await browser.newContext();const backend=await installBackend(context,{interruptFirst:true});const page=await context.newPage();
-  await page.goto('/gemini-admin.html');await page.getByLabel('Message Gemini Console').fill('Recover this exact message.');await page.getByRole('button',{name:'Send'}).click();
-  await expect(page.locator('#status')).toHaveClass(/error/);const firstId=backend.streamBodies[0].client_message_id;
-  await page.reload();await expect(page.getByText('Verified grounded response.')).toBeVisible();
-  expect(backend.sendCount).toBe(2);expect(backend.streamBodies[1].client_message_id).toBe(firstId);
-  await context.close();
+test('durable IndexedDB original survives interruption and reload without an unverified replacement send',async({browser})=>{
+ const context=await browser.newContext();try{const backend=await installBackend(context,{interruptFirst:true});const page=await context.newPage();await page.goto('/gemini-admin.html');await page.getByLabel('Message Gemini Console').fill('Recover this exact message.');await page.getByRole('button',{name:'Send'}).click();
+  await expect(page.locator('#status')).toHaveClass(/error/);expect(backend.sendCount).toBe(1);const firstId=backend.streamBodies[0].client_message_id;
+  const readOriginal=()=>page.evaluate(async()=>{const names=await indexedDB.databases();if(!names.some(x=>x.name==='memphis-gemini-console'&&x.version===1))throw Error('Original outbox absent');
+   return new Promise((resolve,reject)=>{const request=indexedDB.open('memphis-gemini-console',1);request.onupgradeneeded=()=>{request.transaction.abort();reject(Error('Unexpected outbox creation'));};request.onerror=()=>reject(request.error);request.onsuccess=()=>{const db=request.result,tx=db.transaction('outbox','readonly'),get=tx.objectStore('outbox').getAll();get.onsuccess=()=>resolve(get.result);get.onerror=()=>reject(get.error);tx.oncomplete=()=>db.close();tx.onabort=()=>{db.close();reject(tx.error);};};});});
+  const original=await readOriginal();expect(original).toHaveLength(1);expect(original[0].client_message_id).toBe(firstId);expect(original[0].state).toBe('dispatch_attempted');
+  await page.reload();await expect(page.locator('#status')).toHaveText('Saved original requests retained; their exact outcomes remain unconfirmed. No replacement request was sent.');
+  expect(await readOriginal()).toEqual(original);expect(backend.sendCount).toBe(1);expect(backend.streamBodies[0].client_message_id).toBe(firstId);
+ }finally{await context.close();}
 });
 
 test('mobile viewport supports the chat composer and an untrusted browser never sees the console',async({browser})=>{

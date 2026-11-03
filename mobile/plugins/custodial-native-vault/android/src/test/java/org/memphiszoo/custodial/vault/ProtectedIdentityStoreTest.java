@@ -26,11 +26,19 @@ public final class ProtectedIdentityStoreTest {
                         case "getAll": return new HashMap<>(values);
                         case "edit":
                             Map<String,String> pending=new HashMap<>();
+                            java.util.Set<String> removed=new java.util.HashSet<>();
                             return Proxy.newProxyInstance(SharedPreferences.Editor.class.getClassLoader(),
                                 new Class<?>[]{SharedPreferences.Editor.class},(e,em,ea)->{
-                                    if(em.getName().equals("putString")){pending.put((String)ea[0],(String)ea[1]);return e;}
+                                    if(em.getName().equals("putString")){
+                                        if(ea[1]==null){removed.add((String)ea[0]);pending.remove(ea[0]);}
+                                        else{pending.put((String)ea[0],(String)ea[1]);removed.remove(ea[0]);}return e;
+                                    }
+                                    if(em.getName().equals("remove")){removed.add((String)ea[0]);pending.remove(ea[0]);return e;}
                                     if(em.getName().equals("commit")){
                                         if(failCommit)return false;
+                                        // A complete synchronous Editor models the original journal's
+                                        // marker removal and exact readback, without clear/apply support.
+                                        removed.forEach(values::remove);
                                         pending.forEach((k,v)->values.put(k,corruptReadback?"damaged":v));return true;
                                     }
                                     throw new AssertionError("Unexpected preference mutation: "+em.getName());
@@ -51,8 +59,11 @@ public final class ProtectedIdentityStoreTest {
         var store=new AndroidOfflineAuthorityTimeStore(p.instance(),cipher);
         fixture.capture(new NativePrincipalJournal(store),state(),fixture.data());
         new NativeAssignedActivationJournal(store).captureConfirmed(state());
-        assertEquals(2,cipher.existingKeyEncryptCalls);assertEquals(0,cipher.destroyCalls);
-        assertEquals(4,p.values.size());
+        assertEquals(4,cipher.existingKeyEncryptCalls);assertEquals(0,cipher.destroyCalls);
+        assertEquals(6,p.values.size());
+        assertTrue(p.values.get(AndroidProtectedWorkPreferences.WORK_GENERATION_KEY).matches("[0-9a-f-]{36}"));
+        assertEquals("4",p.values.get(AndroidProtectedWorkPreferences.MUTATION_KEY));
+        assertFalse(p.values.containsKey(AndroidProtectedWorkPreferences.WORK_WRITE_KEY));
         for(String key:new String[]{"authenticated_principal","assigned_activation_proof"}){
             JSONObject envelope=new JSONObject(p.values.get(key));
             assertEquals(2,envelope.length());assertTrue(envelope.has("ciphertext"));assertTrue(envelope.has("iv"));
@@ -76,17 +87,20 @@ public final class ProtectedIdentityStoreTest {
         fixture.capture(new NativePrincipalJournal(store),state(),fixture.data());String old=p.values.get("authenticated_principal");
         p.failCommit=true;
         try{fixture.capture(new NativePrincipalJournal(store),state(),fixture.data().put("assignment_epoch",5));fail();}
-        catch(VaultFailure expected){assertEquals("custodial_native_offline_time_persistence_failed",expected.code);}
+        catch(VaultFailure expected){assertEquals(NativeWorkOriginalWriteAttempt.FAILURE,expected.code);}
         try{new NativeAssignedActivationJournal(store).captureConfirmed(state());fail();}
-        catch(VaultFailure expected){assertEquals("custodial_native_offline_time_persistence_failed",expected.code);}
+        catch(VaultFailure expected){assertEquals(NativeWorkOriginalWriteAttempt.FAILURE,expected.code);}
         assertEquals(old,p.values.get("authenticated_principal"));assertFalse(p.values.containsKey("assigned_activation_proof"));p.retained();
     }
     @Test public void readbackMismatchNeverReportsAProtectedIdentity()throws Exception{
         var p=new Preferences();p.corruptReadback=true;var store=new AndroidOfflineAuthorityTimeStore(p.instance(),new TestCipher());
         try{fixture.capture(new NativePrincipalJournal(store),state(),fixture.data());fail();}
-        catch(VaultFailure expected){assertEquals("custodial_native_offline_time_persistence_failed",expected.code);}
+        catch(VaultFailure expected){assertEquals(NativeWorkOriginalWriteAttempt.FAILURE,expected.code);}
         try{new NativePrincipalJournal(store).readFor(state());fail();}catch(VaultFailure expected){}
-        assertEquals("damaged",p.values.get("authenticated_principal"));p.retained();
+        assertFalse(p.values.containsKey("authenticated_principal"));
+        assertEquals("damaged",p.values.get(AndroidProtectedWorkPreferences.WORK_WRITE_KEY));
+        try{store.loadNfcHandoffsForPhysicalRead();fail();}catch(VaultFailure expected){}
+        p.retained();
     }
     @Test public void unreadableCiphertextIsPreservedAndNeverInventsIdentity()throws Exception{
         var p=new Preferences();var cipher=new TestCipher();var store=new AndroidOfflineAuthorityTimeStore(p.instance(),cipher);
@@ -102,7 +116,8 @@ public final class ProtectedIdentityStoreTest {
         var p=new Preferences();var store=new AndroidOfflineAuthorityTimeStore(p.instance(),f.cipher);
         assertEquals("not_required",f.engine().completeLegacyAssignedActivation(NativeLegacyLineageJournalTest.OP,
             NativeLegacyLineageJournalTest.DEVICE,new NativeLegacyLineageJournal(store)));
-        assertEquals(6,p.values.size());
+        assertEquals(8,p.values.size());
+        assertFalse(p.values.containsKey(AndroidProtectedWorkPreferences.WORK_WRITE_KEY));
         for(String key:p.values.keySet())if(key.startsWith("legacy_lineage:")){
             JSONObject envelope=new JSONObject(p.values.get(key));assertEquals(2,envelope.length());
             assertTrue(envelope.has("iv"));assertTrue(envelope.has("ciphertext"));

@@ -1,3 +1,4 @@
+import { installManagerWeather } from './mobile/src/manager/home-weather.js';
 (() => {
   'use strict';
 
@@ -18,6 +19,10 @@
     notificationsLink:document.getElementById('notifications-link'),phoneAssignmentsLink:document.getElementById('phone-assignments-link'),managerAccessLink:document.getElementById('manager-access-link'),
     deviceSecurityLink:document.getElementById('device-security-link'),releaseCanaryLink:document.getElementById('release-canary-link'),geminiConsoleLink:document.getElementById('gemini-console-link'),
   };
+
+  const weatherIds={'manager-home-date':'date','manager-home-clock':'clock','manager-weather-current':'weather-value','manager-weather-summary':'weather-meta'};
+  const weather=installManagerWeather({document:{getElementById:id=>document.getElementById(weatherIds[id]||id)},isVisible:()=>!document.hidden&&current(state.generation)});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)weather.stop({clear:false});else if(state.session&&!state.retired)void weather.start();});
 
   function resolveDeviceId(){return String(window.MemphisAuth?.getDeviceId?.()||'').trim();}
   function safe(error){return error instanceof Error?error.message:String(error||'Unknown error');}
@@ -41,7 +46,7 @@
   }
   function retire(){
     if(state.retired)return;
-    state.retired=true;state.generation++;
+    state.retired=true;state.generation++;weather.stop();
     for(const interval of intervals)clearInterval(interval);intervals.clear();
     clearManagerView();state.session=null;state.sessionBinding='';
     setStatus('Manager access changed or page retired. Reload to verify access.','error');
@@ -107,7 +112,7 @@
     if(!current(state.generation))return;
     const owner=window.MemphisAuth.canMutateOpsManagerSurface(session);
     const coverageLink=document.getElementById('owner-coverage-link');if(coverageLink)coverageLink.hidden=!owner;
-    const custodial=window.MemphisAuth.hasRole('CUSTODIAL_MANAGER',session);
+    const custodial=window.MemphisAuth.hasRole('CUSTODIAL_MANAGER',session)||window.MemphisAuth.isCustodialManagementAdmin?.(session)===true;
     const director=window.MemphisAuth.hasRole('DIRECTOR',session);
     const security=window.MemphisAuth.hasRole('SECURITY_ADMIN',session);
     for(const element of [els.insightsLink,els.phoneAssignmentsLink,els.managerAccessLink,els.geminiConsoleLink])if(element)element.hidden=!custodial;
@@ -126,24 +131,6 @@
     const update=()=>{if(!current(generation))return;const now=new Date();els.clock.textContent=now.toLocaleTimeString([],{timeZone:ZONE,hour:'numeric',minute:'2-digit'});els.date.textContent=now.toLocaleDateString([],{timeZone:ZONE,weekday:'long',month:'short',day:'numeric'});};
     update();every(update,1000);
   }
-
-  async function refreshWeather(){
-    const generation=state.generation;if(!current(generation))return;
-    try{
-      const response=await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.1506&longitude=-89.9944&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&timeformat=unixtime&timezone=America%2FChicago&forecast_days=1',{cache:'no-store'});
-      if(!current(generation))return;
-      const data=await response.json();if(!current(generation))return;if(!response.ok||!data?.current)throw new Error(`HTTP ${response.status}`);
-      const now=Date.now(),temp=numeric(data.current.temperature_2m),observed=numeric(data.current.time);
-      if(temp===null||observed===null||data.current_units?.time!=='unixtime'||data.current_units?.temperature_2m!=='°F'||observed*1000>now+60000||observed*1000<now-86400000)throw new Error('Weather observation unavailable');
-      const daily=data.daily,idx=Array.isArray(daily?.time)&&data.daily_units?.time==='unixtime'?daily.time.findIndex(t=>numeric(t)!==null&&localDay(Number(t)*1000)===localDay(now)):-1;
-      const high=numeric(daily?.temperature_2m_max?.[idx]),low=numeric(daily?.temperature_2m_min?.[idx]);
-      const extremes=idx>=0&&data.daily_units?.temperature_2m_max==='°F'&&data.daily_units?.temperature_2m_min==='°F'&&high!==null&&low!==null&&high>=low?`High ${Math.round(high)}° / Low ${Math.round(low)}°`:'Daily high/low unavailable';
-      const stale=now-observed*1000>45*60000,at=new Date(observed*1000).toLocaleTimeString([],{timeZone:ZONE,hour:'numeric',minute:'2-digit'});
-      els.weatherValue.textContent=`${Math.round(temp)}°F · ${weatherText(data.current.weather_code)}`;els.weatherMeta.textContent=`${extremes} · ${stale?'Stale forecast':'Forecast updated'} ${at} Central`;
-      els.weatherMeta.classList.toggle('stale',stale);
-    }catch{if(!current(generation))return;els.weatherValue.textContent='Unavailable';els.weatherMeta.textContent='Weather feed could not refresh.';els.weatherMeta.classList.add('stale');}
-  }
-  function weatherText(code){const value=numeric(code);if(value===0)return'Clear';if([1,2,3].includes(value))return'Clouds';if([45,48].includes(value))return'Fog';if([51,53,55,56,57].includes(value))return'Drizzle';if([61,63,65,66,67,80,81,82].includes(value))return'Rain';if([71,73,75,77,85,86].includes(value))return'Snow';if([95,96,99].includes(value))return'Storms';return'Conditions unavailable';}
 
   async function refreshAttendance(){
     const generation=state.generation;if(!current(generation))return;
@@ -195,17 +182,18 @@
     if(state.retired||generation!==state.generation)return;
     if(priorSession&&(session!==priorSession||sessionBinding(session)!==priorBinding)){retire();return;}
     if(!session||!window.MemphisAuth.isOpsManager(session)){showAccessRequired();return;}
+    if(!priorSession&&window.MemphisAuth.isCustodialManagementAdmin?.(session))state.currentDeviceId=resolveDeviceId();
     state.session=session;
     state.sessionBinding=sessionBinding(session);
     if(!current(generation))return;
     const returnPath=new URLSearchParams(window.location.search).get('return');
     if(returnPath){try{const resolved=new URL(returnPath,window.location.href);if(resolved.origin===window.location.origin&&!resolved.pathname.includes('..')){window.location.replace(resolved.toString());return;}}catch{}}
     const name=session.manager_display_name||'Operations Leadership';const title=session.manager_job_title||'';
-    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${window.MemphisAuth.canMutateOpsManagerSurface(session)?"Owner · full control":"Read-only · absence routes, CoverAll and scan tickets"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
-    updateLinks();applyRoleVisibility(session);startClock(generation);setStatus('Access current.','ok');
-    await Promise.allSettled([refreshWeather(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
+    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${window.MemphisAuth.isCustodialManagementAdmin?.(session)?"Leadership management · self-asserted name":session.permissions?.owner===true?"Owner · full control":"Read-only · absence routes, CoverAll and scan tickets"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
+    updateLinks();applyRoleVisibility(session);setStatus('Access current.','ok');
+    await Promise.allSettled([weather.start(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
     if(!current(generation))return;
-    every(refreshAttendance,30000);every(refreshWeather,600000);
+    every(refreshAttendance,30000);
   }
 
   void init().catch((error)=>{if(!state.retired)setStatus(safe(error),'error');});

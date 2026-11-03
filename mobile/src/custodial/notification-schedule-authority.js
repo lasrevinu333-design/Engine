@@ -23,9 +23,16 @@ export function createScheduleNotificationAuthority({identity,principal,status,s
   const readIdentity=()=>guarded(identity);
   const readPrincipal=()=>guarded(()=>copy(principal()));
   const healthy=value=>value?.ready===true&&value?.available===true&&value?.quarantined!==true;
+  // The private store explicitly announces this bounded inspection phase. It
+  // withholds IO and retires old epochs, but is not a permanent denial or a
+  // capability to clear an earlier quarantine. Unknown phases still latch.
+  const checking=value=>value?.ready===false&&value?.quarantined===false
+    &&value?.state==='checking'&&value?.reason==='custodial_security_state_checking'
+    &&typeof value?.available==='boolean'&&typeof value?.initialized==='boolean'
+    &&Number.isSafeInteger(value?.generation)&&value.generation>0;
   function usable(scope){
-    try{const good=guarded(()=>healthy(status()));
-      if(!good){trip();return false;}
+    try{const snapshot=guarded(status),good=guarded(()=>healthy(snapshot));
+      if(!good){if(guarded(()=>checking(snapshot))){securityGeneration++;return false;}trip();return false;}
       return Boolean(scope&&scope===readIdentity()&&!quarantined);
     }catch{return false;}}
   function assertRow(row,scope){
@@ -254,7 +261,7 @@ export function createScheduleNotificationAuthority({identity,principal,status,s
     const m=/^([01][0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$/.exec(value);
     return m?Number(m[1])*3600+Number(m[2])*60+Number(m[3]||0):null;
   }
-  function lunchCurrent(data,row,p,day){
+  function lunchCurrent(data,row,p,day,continuingAudio=false){
     if(!digest(data.loan_id)||!['start','end'].includes(data.event))return false;
     const at=now(),clock=civilClock(at),scheduled=instant(data.scheduled_at),scheduledTime=civilSeconds(data.scheduled_time);
     if(scheduled===null||scheduledTime===null||scheduled>BigInt(at)*1000n)return false;
@@ -273,7 +280,7 @@ export function createScheduleNotificationAuthority({identity,principal,status,s
     // Native supplies an original finite cutoff; never replace it with an
     // inferred hour. Legacy START is bounded by accepted responsibility time.
     if(data.valid_until!==undefined){const until=instant(data.valid_until);
-      if(until===null||until<=scheduled||BigInt(at)*1000n>=until)return false;}
+      if(until===null||until<=scheduled||!continuingAudio&&BigInt(at)*1000n>=until)return false;}
     if(data.event==='end')return data.valid_until!==undefined
       &&windows.every(w=>scheduledTime>=w.end)&&clock.seconds>=scheduledTime;
     return windows.every(w=>scheduledTime<=w.start)
@@ -459,7 +466,9 @@ export function createScheduleNotificationAuthority({identity,principal,status,s
       const row=winner(scope,day);if(!row)return false;
       return commit(row,scope,generation,day,null,original);
     },
-    securityChanged(value){const generation=++securityGeneration;quarantined=true;
+    securityChanged(value){const generation=++securityGeneration;
+      try{if(guarded(()=>checking(value)&&checking(status())))return;}catch{quarantined=true;return;}
+      quarantined=true;
       try{const corroborated=guarded(()=>healthy(value)&&healthy(status())&&Boolean(readIdentity())&&Boolean(readPrincipal()));
         if(corroborated&&generation===securityGeneration)quarantined=false;
       }catch{quarantined=true;}
@@ -478,7 +487,21 @@ export function createScheduleNotificationAuthority({identity,principal,status,s
       }catch{return false;}
     },
     isStorageKey:key=>typeof key==='string'&&key.startsWith(prefix),
-    isCurrent(data,scope){
+    isCurrent:(data,scope)=>current(data,scope),
+    beginLunchAudio(data,scope){
+      // One in-process admission for the original uninterrupted sequence.
+      // This capability cannot authorize a display, action, receipt or replay.
+      try{
+        if(data?.kind!=='employee_lunch_coverage'||!current(data,scope))return null;
+        const original=copy(data),owner=captureOwner(scope),row=state(scope,zooServiceDate(now())).row;
+        original.schedule_authority_revision=row.recurring_target?.target?.authorityRevision
+          ??row.data.schedule_application?.authority_revision??row.data.projection_authority_revision;
+        let live=true;
+        return Object.freeze({isCurrent:()=>live&&ownerCurrent(owner)&&current(original,scope,true),retire:()=>{live=false;}});
+      }catch{return null;}
+    },
+  });
+  function current(data,scope,continuingAudio=false){
       try{
         if(!usable(scope))return false;
         if(!['employee_lunch_coverage','employee_location_status'].includes(data?.kind))return true;
@@ -500,7 +523,7 @@ export function createScheduleNotificationAuthority({identity,principal,status,s
         if(data.schedule_authority_revision!==undefined&&String(data.schedule_authority_revision)!==String(revision))return false;
         if(data.kind==='employee_lunch_coverage'){
           const lunch=target?.lunchDocumentIdentity??row.data.schedule_application?.lunch_document_identity??row.data.lunch_document_identity;
-          if(!digest(lunch)||data.document_identity!==lunch||!lunchCurrent(data,row,p,day))return false;
+          if(!digest(lunch)||data.document_identity!==lunch||!lunchCurrent(data,row,p,day,continuingAudio))return false;
         }
         if(data.kind==='employee_location_status'){
           // A server-accepted active session retires only its old canonical
@@ -510,7 +533,6 @@ export function createScheduleNotificationAuthority({identity,principal,status,s
         }
         return day===zooServiceDate(now())&&!quarantined&&ownerCurrent(known.rowOwner);
       }catch{return false;}
-    },
-  });
+    }
   return authority;
 }

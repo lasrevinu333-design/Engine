@@ -136,7 +136,7 @@ function printLifetime({pause=null,storage=new Map()}={}){
     credential_id:'synthetic-credential',device_id:'synthetic-device',token:'synthetic-not-a-credential',
     expires_at:'2099-01-01T00:00:00.000Z',read_only:false,
     permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:true}};
-  const snapshot={week_start:'2026-10-12',projection_status:'current',authority_revision:7,
+  const snapshot={week_start:'2026-10-12',week_end:'2026-10-18',projection_status:'current',authority_revision:7,
     current_publication:{publication_id:'98000000-0000-4000-8000-000000000002'},
     latest_projection:{projection_id:'98000000-0000-4000-8000-000000000003',replay_digest:'b'.repeat(64)}};
   const hash=bytes=>createHash('sha256').update(bytes).digest('hex');

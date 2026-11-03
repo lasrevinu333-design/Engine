@@ -13,6 +13,12 @@ public final class NfcHandoffPersistenceTest {
         var first=new HashMap<String,Object>(before);var second=new HashMap<String,Object>(after);
         first.remove(GENERATION);Object generation=second.remove(GENERATION);
         assertTrue(generation instanceof String);assertEquals(generation,UUID.fromString((String)generation).toString());
+        // The same source-owned NFC attempt closes its durable mutation epoch
+        // at predecessor+2. No unrelated WORK row may change with that receipt.
+        assertEquals(AndroidProtectedWorkPreferences.attemptEpoch(AndroidProtectedWorkPreferences.durableEpoch(before),2),
+            AndroidProtectedWorkPreferences.durableEpoch(after));
+        first.remove(AndroidProtectedWorkPreferences.MUTATION_KEY);
+        second.remove(AndroidProtectedWorkPreferences.MUTATION_KEY);
         assertTrue(NativeProtectedWorkSnapshot.exactRawEquals(first,second));
     }
     static AndroidOfflineAuthorityTimeStore store(PhysicalTagOccurrenceTest.Preferences p) {
@@ -65,11 +71,11 @@ public final class NfcHandoffPersistenceTest {
     @Test public void verifiedRollbackRestoresExistingCiphertextAndProtectedWorkExactly() throws Exception {
         var f=new PhysicalTagOccurrenceTest.Fixture();f.start();
         f.prefs.disk.put("unrelated_pending_draft","draft-bytes");
-        String legacy=NativeNfcScanHandoff.record(f.store,URL,1000,7);
+        String legacy=NativeNfcScanHandoff.record(f.store,URL,61000,7);
         Map<String,Object> before=new HashMap<>(f.prefs.disk);
         int next=f.prefs.commits+1;
         f.prefs.beforeCommit=()->f.prefs.persistThenFail=f.prefs.commits>=next+1&&f.prefs.commits<next+3;
-        var failed=NativeNfcScanHandoff.recordResult(f.store,URL,1001,7,ID);
+        var failed=NativeNfcScanHandoff.recordResult(f.store,URL,61001,7,ID);
         assertFalse(failed.durable);assertEquals("",failed.handoffId);
         originalRowsUnchangedExceptNativeAttemptGeneration(before,f.prefs.disk);assertEquals(f.prefs.disk,f.prefs.durableDisk);
         assertEquals(Set.of(legacy),f.store.loadNfcHandoffs().keySet());

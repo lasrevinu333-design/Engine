@@ -1,7 +1,7 @@
 import fs from 'node:fs';import vm from 'node:vm';import crypto from 'node:crypto';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);const {installNativeAcceptanceFixture}=require('../helpers/native-acceptance-fixture.cjs');
 const text=fs.readFileSync(process.argv[2]+'/memphis-scan-sync.js','utf8');
-const source=text.slice(text.indexOf('  async function verifiedServerCompletionReceipt('),text.indexOf('  function isTerminalReconciliation('));
+const source=text.slice(text.indexOf('  function originalCompletionSession('),text.indexOf('  function recoveryPhaseFor('))+'\n'+text.slice(text.indexOf('  async function verifiedServerCompletionReceipt('),text.indexOf('  function isTerminalReconciliation('));
 const S='10000000-0000-4000-8000-000000000001',C='20000000-0000-4000-8000-000000000001',E='30000000-0000-4000-8000-000000000001';
 const sha256=s=>crypto.createHash('sha256').update(s).digest('hex');
 const canonical=v=>JSON.stringify(sort(v));function sort(v){if(Array.isArray(v))return v.map(sort);if(v&&typeof v==='object')return Object.fromEntries(Object.keys(v).sort().map(k=>[k,sort(v[k])]));return v;}
@@ -19,6 +19,8 @@ async function run(authenticated){
  const ctx={safeText,isUuid,sha256,canonicalJson:canonical,exactSessionForPayload:()=>null,
    replayBindingFor:()=>({client_session_id:S,client_completion_id:C,snapshot_id:''}),
    rpc:async()=>{counts.rpc++;throw Error('No authentic server response');},
+   // Queue leasing is an explicit synthetic boundary of this receipt-authority unit; no browser/native authority is created.
+   requireClaimOwnership:async original=>assert.equal(original,item),
    persistClaimPayload:async()=>true,persistServerCompletionReceipt:async()=>{},
    deleteCompletionDraft:async()=>{counts.draftDeletion++;},mutateProtectedQueue:async fn=>fn(),
    localStorage:{removeItem(){},getItem:()=>null},storageFailure:(_,e)=>e,
@@ -51,5 +53,5 @@ for(const [name,fn] of [
  ['original completion attestation mutation cannot reuse authenticated receipt',()=>{const changed={...semanticPayload,p_native_completion_attestation:'e'.repeat(64)};assert.throws(()=>exposed.__testReadAuthenticatedCompletion({deviceId:'KIOSK_08',completionPayload:changed}));}],
  ['correlation identity mutation cannot reuse authenticated receipt',()=>{const changed={...semanticPayload,p_correlation_id:`scan-commit:${S}:${E}`};assert.throws(()=>exposed.__testReadAuthenticatedCompletion({deviceId:'KIOSK_08',completionPayload:changed}));}]
 ]){try{await fn();tests.push({name,passed:true});}catch(e){tests.push({name,passed:false,error:e.message});}}
-console.log(JSON.stringify({scope:'Actual source receipt/worker functions with hostile browser row and stubbed native/HTTP boundaries; native journal separately unit-tested',passed:tests.filter(x=>x.passed).length,failed:tests.filter(x=>!x.passed).length,forged,authentic,tests},null,2));
+console.log(JSON.stringify({scope:'Actual source receipt/worker functions with hostile browser row and stubbed queue-lease/native/HTTP boundaries; native journal separately unit-tested',passed:tests.filter(x=>x.passed).length,failed:tests.filter(x=>!x.passed).length,forged,authentic,tests},null,2));
 process.exitCode=tests.some(x=>!x.passed)?1:0;

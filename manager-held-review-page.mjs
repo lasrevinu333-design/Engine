@@ -1,5 +1,6 @@
 import { createManagerHeldReviewController, validateHeldReviewPage } from './manager-held-review-display.mjs';
 import { createHeldEventCorrectionController } from './manager-held-event-correction.mjs';
+import { zooLocalInstant } from './zoo-local-time.mjs';
 
 // The shared Events feed remains separate. This manager-only view reads one
 // fixed review route and uses fixed correction routes; it never imports mail.
@@ -29,7 +30,7 @@ function currentBinding(w, now) {
   // storage, UI, telemetry or a caller-selected identity/URL.
   return { manager: s.manager_id, credential: s.credential_id, device: s.device_id,
     token: s.token, expires: s.expires_at, mode: s.auth_mode,
-    canCorrect: s.read_only === false && plain(s.permissions) && s.permissions.owner === true };
+    canCorrect: s.read_only === false && plain(s.permissions) && (s.permissions.owner === true || w.MemphisAuth.isCustodialManagementAdmin?.(s) === true) };
 }
 const same = (a, b) => !!a && !!b && Object.keys(a).every(key => a[key] === b[key]);
 function bounded(promise, signal) {
@@ -69,8 +70,10 @@ export function createManagerHeldReviewPage({ window: w = globalThis, document: 
     const timer = w.setTimeout(() => abort.abort(), 10000);
     const request = { abort, timer }; requests.add(request);
     try {
+      const headers = await bounded(w.MemphisAuth.opsManagerAuthHeaders(), abort.signal);
+      if (!same(captured, currentBinding(w, now())) || headers.Authorization !== `Bearer ${captured.token}` || headers['X-Device-Id'] !== captured.device) throw denied();
       const response = await bounded(fetchImpl(url, { ...init, cache: 'no-store', credentials: 'omit', redirect: 'error',
-        headers: { ...(init.headers || {}), Authorization: `Bearer ${captured.token}`, 'X-Device-Id': captured.device }, signal: abort.signal }), abort.signal);
+        headers: { ...(init.headers || {}), ...headers }, signal: abort.signal }), abort.signal);
       if ([401, 403].includes(response.status)) { withdraw(); throw denied(); }
       const text = await bounded(response.text(), abort.signal);
       if (typeof text !== 'string' || text.length > MAX_RESPONSE_CHARS) throw unavailable();
@@ -121,7 +124,7 @@ export function createManagerHeldReviewPage({ window: w = globalThis, document: 
     if (!owner?.canCorrect) return '<p class="mz-held-correction-readonly" data-correction-status>Read-only manager access: held review status only. Corrections require full write capability.</p>';
     if (!activeCorrectionApi) return '<p class="mz-held-correction-missing" data-correction-status>Correction interface is not available; this row remains held.</p>';
     const v2 = activeCorrectionApi.v2 === true;
-    return `<div class="mz-held-correction" data-ledger-id="${escape(row.ledger_id)}"><p data-correction-status>Choose explicit details, then preview. Original title/start are not available in this safe row.</p><form data-correction-form novalidate>${v2 ? '<label>Manager-confirmed event title <input data-correction-event-name maxlength="180" required></label><label>Manager-confirmed start <input data-correction-start type="datetime-local" required></label>' : ''}<label>End time <input data-correction-end type="datetime-local" required></label><label>Eligible place <select data-correction-venue required><option value="">Choose an eligible place</option></select></label><button type="button" data-correction-preview>Preview correction</button><button type="button" data-correction-confirm disabled>Confirm exactly this preview</button>${v2 ? '<button type="button" data-correction-status-check disabled>Check saved outcome</button>' : ''}</form></div>`;
+    return `<div class="mz-held-correction" data-ledger-id="${escape(row.ledger_id)}"><p data-correction-status>Choose explicit details, then preview. Original title/start are not available in this safe row.</p><form data-correction-form novalidate>${v2 ? '<label>Manager-confirmed event title <input data-correction-event-name maxlength="180" required></label><label>Manager-confirmed start (Zoo local time) <input data-correction-start type="datetime-local" required></label><label>Start when clocks move back <select data-correction-start-occurrence><option value="">Choose only if this time occurs twice</option><option value="earlier">First occurrence (daylight time)</option><option value="later">Second occurrence (standard time)</option></select></label>' : ''}<label>End time (Zoo local time) <input data-correction-end type="datetime-local" required></label><label>End when clocks move back <select data-correction-end-occurrence><option value="">Choose only if this time occurs twice</option><option value="earlier">First occurrence (daylight time)</option><option value="later">Second occurrence (standard time)</option></select></label><label>Eligible place <select data-correction-venue required><option value="">Choose an eligible place</option></select></label><button type="button" data-correction-preview>Preview correction</button><button type="button" data-correction-confirm disabled>Confirm exactly this preview</button>${v2 ? '<button type="button" data-correction-status-check disabled>Check saved outcome</button>' : ''}</form></div>`;
   }
   function correctionState(card, state, detail = null) {
     const status = card.querySelector('[data-correction-status]');
@@ -173,10 +176,13 @@ export function createManagerHeldReviewPage({ window: w = globalThis, document: 
           if (!endInput.value || !venue.value) throw new Error('invalid_correction_choices');
           if (activeCorrectionApi.v2 === true) {
             if (!eventName?.value || !startInput?.value) throw new Error('invalid_manager_confirmed_facts');
-            local.chooseManagerConfirmed({ event_name: eventName.value, start_at: new Date(startInput.value).toISOString(), end_at: new Date(endInput.value).toISOString(), venue_ref: venue.value });
-          } else local.choose({ end_at: new Date(endInput.value).toISOString(), venue_ref: venue.value });
+            local.chooseManagerConfirmed({ event_name: eventName.value, start_at: zooLocalInstant(startInput.value, form.querySelector('[data-correction-start-occurrence]')?.value), end_at: zooLocalInstant(endInput.value, form.querySelector('[data-correction-end-occurrence]')?.value), venue_ref: venue.value });
+          } else local.choose({ end_at: zooLocalInstant(endInput.value, form.querySelector('[data-correction-end-occurrence]')?.value), venue_ref: venue.value });
           await local.preview();
-        } catch (error) { correctionState(correctionCard, error?.code === 'AUTH_WITHDRAWN' ? 'DENIED' : local.getState(), error?.code); }
+        } catch (error) {
+          correctionState(correctionCard, error?.code === 'AUTH_WITHDRAWN' ? 'DENIED' : local.getState(), error?.code);
+          if (/Zoo local/.test(error?.message || '')) correctionCard.querySelector('[data-correction-status]').textContent = error.message;
+        }
       });
       confirmButton.addEventListener('click', async () => { try { await local.confirm(); } catch (error) { correctionState(correctionCard, error?.code === 'AUTH_WITHDRAWN' ? 'DENIED' : local.getState(), error?.code); } });
       statusButton?.addEventListener('click', async () => { try { await local.checkSavedOutcome(); } catch (error) { correctionState(correctionCard, error?.code === 'AUTH_WITHDRAWN' ? 'DENIED' : local.getState(), error?.code); } });
@@ -215,12 +221,13 @@ export function createManagerHeldReviewPage({ window: w = globalThis, document: 
     try {
       // Existing normal auth helper, no cookie/token extraction or identity
       // fallback. The server route rechecks current registry before/after SQL.
-      await bounded(w.MemphisAuth.requireOpsManagerSession({ interactive: false, redirect: false, throwOnFailure: true }), abort.signal);
+      const headers = await bounded(w.MemphisAuth.opsManagerAuthHeaders(), abort.signal);
+      if (headers.Authorization !== `Bearer ${captured.token}` || headers['X-Device-Id'] !== captured.device) throw denied();
       check();
       const url = new URL(MANAGER_HELD_REVIEW_URL); url.searchParams.set('limit', '100');
       if (cursor !== null) url.searchParams.set('cursor', cursor);
       const response = await bounded(fetchImpl(url.toString(), { method: 'GET', cache: 'no-store', credentials: 'omit', redirect: 'error',
-        headers: { Authorization: `Bearer ${captured.token}`, 'X-Device-Id': captured.device }, signal: abort.signal }), abort.signal);
+        headers, signal: abort.signal }), abort.signal);
       // Even a late denial is intentionally fail-closed, never ignored as stale
       // availability noise. A new controller needs a separate normal check.
       if ([401, 403].includes(response.status)) throw Object.assign(denied(), { status: response.status });

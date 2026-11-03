@@ -1,3 +1,4 @@
+import {createSyntheticNativeHome} from './fixtures/native-home-mutation-context.mjs';
 import assert from 'node:assert/strict';
 import {fixture,payload,key,id} from './employee-schedule-convergence-race-tests.mjs';
 import {installHomeFacts} from '../mobile/src/custodial/home-facts-dom.js';
@@ -14,13 +15,15 @@ async function withHome(work){
   const memory=new Map(),events=new Map(),nodes=new Map(),timers=new Set();let timerId=0;
   const el=k=>{if(!nodes.has(k))nodes.set(k,{textContent:'',innerHTML:'',dataset:{}});return nodes.get(k);};
   const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(2),employee_name:'Fixture',credential_id:id(3),assignment_epoch:7};
-  const healthy=()=>({ready:true,available:true,quarantined:false}),security={native:true,getStatus:healthy,mutateProtectedWork:async fn=>fn()};
-  const access={request:async()=>legacy()};globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=> 'v13-dom',profileMatchesPrincipal:()=>true}};
+  const nativeFixture=createSyntheticNativeHome('v13-dom'),nativeBinding=nativeFixture.binding;
+  const healthy=nativeFixture.status,security={native:true,getStatus:healthy,mutateProtectedWork:nativeFixture.mutate};
+  const access={request:async()=>legacy()};globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=> nativeBinding,profileMatchesPrincipal:()=>true}};
+  globalThis.window.MemphisCustodialSecurity=security;
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
   globalThis.setInterval=()=>{const n=++timerId;timers.add(n);return n;};globalThis.clearInterval=n=>timers.delete(n);globalThis.fetch=async()=>{throw Error('external facts offline');};
   app=installHomeFacts({getProfile:()=>profile,getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,security,requestJson:(...args)=>access.request(...args)});
   await app.update(true);assert.equal(el('home-shift').textContent,'7:00 AM–4:00 PM');
-  await work({app,el,events,access,healthy,memory,timers,availabilityKey:'mz_employee_schedule_snapshot:availability:v13-dom'});
+  await work({app,el,events,access,healthy,memory,timers,availabilityKey:'mz_employee_schedule_snapshot:availability:'+encodeURIComponent(nativeBinding)});
  }finally{app?.stop();for(const[k,v]of saved){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
 }
 for(const event of ['online','memphis:schedule-refresh','memphis:native-notification-received'])await test('V12-01A same-owner abort reentry '+event,()=>withHome(async f=>{

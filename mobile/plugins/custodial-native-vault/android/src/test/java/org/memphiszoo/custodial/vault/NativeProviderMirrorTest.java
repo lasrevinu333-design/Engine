@@ -159,7 +159,7 @@ public final class NativeProviderMirrorTest {
     }
     @Test public void authoritativeRemovalCanReportRetiredButCannotExposeOrReviveOriginalClaim()throws Exception{
         Mirror m=new Mirror();m.attach();m.ready();String claim=m.claim().getString("claim_id");
-        m.x.f.engine.removeEnrollment(NativeProviderHttpTest.RID,NativeProviderHttpTest.DEVICE);
+        NativeProviderHttpTest.preserveSyntheticOriginal(m.x.f);
         JSONObject state=m.x.owner.mirrorClaimState(m.plugin,m.attachment,claim);
         assertEquals("RETIRED",state.getString("freshness"));assertFalse(state.getBoolean("current"));
         assertTrue(state.getBoolean("retire_visual"));assertTrue(state.getBoolean("stop_audio"));assertFalse(state.getBoolean("navigation_pending"));
@@ -234,7 +234,7 @@ public final class NativeProviderMirrorTest {
     }
     @Test public void removalInvalidatesAttachmentAndSignalsWithoutAnyPayloadInHint()throws Exception{
         Mirror m=new Mirror();m.attach();m.ready();String claim=m.claim().getString("claim_id");int prior=m.hints.size();
-        m.x.f.engine.removeEnrollment(NativeProviderHttpTest.RID,NativeProviderHttpTest.DEVICE);m.x.owner.reconcile();
+        NativeProviderHttpTest.preserveSyntheticOriginal(m.x.f);m.x.owner.reconcile();
         assertTrue(m.hints.size()>prior);ProviderRecordStoreTest.failure("custodial_provider_attachment_invalid",()->m.apply(claim,"opened"));
         for(String hint:m.hints)assertTrue(hint.matches("[0-9a-f-]{36}/[0-9]+"));assertTrue(m.x.inbox(m.p.recordId).isNull("opened_event_id"));
     }

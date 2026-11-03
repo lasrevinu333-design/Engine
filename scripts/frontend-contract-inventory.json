@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "scripts": [
     {
       "path": "scripts/accepted-map-large-asset-source-tests.mjs",
@@ -244,6 +244,26 @@
           "args": [],
           "cwd": ".",
           "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-approved-preservation-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "Exact new approved-preservation comparison layer for historical source reducers. No runtime, native or release admission; all old pin tables remain unchanged."
+    },
+    {
+      "path": "scripts/current-approved-preservation-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Bind every current Java source, verify all genuine predecessor reverse deltas and reject unknown context/profile mutations; current dynamic native qualification is separate.",
+      "invocations": [
+        {
+          "entry": "scripts/current-approved-preservation-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "scripts/fixtures/current-approved-preservation-source-deltas.json"
+          ]
         }
       ]
     },
@@ -805,42 +825,18 @@
     },
     {
       "path": "scripts/events-admin-import-ui-tests.mjs",
-      "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
-      "invocations": [
-        {
-          "entry": "scripts/events-admin-import-ui-tests.mjs",
-          "args": [],
-          "cwd": ".",
-          "requires": []
-        }
-      ]
+      "role": "superseded-contract",
+      "reason": "October 5\u20136 owner Events consolidation retired manual Event Input Console and its parser/writer. Historical test bytes retained. Current replacement coverage: retired-events-entry-tests (fixed safe legacy route), shared-events-view-tests (common authorized reader, cancellation, stale/offline), backend shared-events-feed-tests (retired API410 and audience separation), outlook-event-sync-adapter-tests (typed supported source importer). No collector activation or live source acceptance implied."
     },
     {
       "path": "scripts/events-admin-parser-regression-tests.mjs",
-      "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
-      "invocations": [
-        {
-          "entry": "scripts/events-admin-parser-regression-tests.mjs",
-          "args": [],
-          "cwd": ".",
-          "requires": []
-        }
-      ]
+      "role": "superseded-contract",
+      "reason": "October 5\u20136 owner Events consolidation retired manual Event Input Console and its parser/writer. Historical test bytes retained. Current replacement coverage: retired-events-entry-tests (fixed safe legacy route), shared-events-view-tests (common authorized reader, cancellation, stale/offline), backend shared-events-feed-tests (retired API410 and audience separation), outlook-event-sync-adapter-tests (typed supported source importer). No collector activation or live source acceptance implied."
     },
     {
       "path": "scripts/events-admin-source-evidence-tests.mjs",
-      "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
-      "invocations": [
-        {
-          "entry": "scripts/events-admin-source-evidence-tests.mjs",
-          "args": [],
-          "cwd": ".",
-          "requires": []
-        }
-      ]
+      "role": "superseded-contract",
+      "reason": "October 5\u20136 owner Events consolidation retired manual Event Input Console and its parser/writer. Historical test bytes retained. Current replacement coverage: retired-events-entry-tests (fixed safe legacy route), shared-events-view-tests (common authorized reader, cancellation, stale/offline), backend shared-events-feed-tests (retired API410 and audience separation), outlook-event-sync-adapter-tests (typed supported source importer). No collector activation or live source acceptance implied."
     },
     {
       "path": "scripts/feedback-authority-frontend-contract-tests.mjs",
@@ -984,6 +980,19 @@
       "invocations": [
         {
           "entry": "scripts/gps-native-history-renderer-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/guest-approval-entry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Actual guest entry startup honors approval and unavailable state even with legacy demo query; synthetic VM only",
+      "invocations": [
+        {
+          "entry": "scripts/guest-approval-entry-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -1544,6 +1553,52 @@
       ]
     },
     {
+      "path": "scripts/manual-activation-ui-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current canonical manual-activation or third-absence controller contract; source-only synthetic ports, no database/device authority.",
+      "invocations": [
+        {
+          "entry": "scripts/manual-activation-ui-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manual-period-boundary-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F02/F03/F09 period boundary contracts using actual source functions and synthetic current-date snapshots.",
+      "invocations": [
+        {
+          "entry": "scripts/manual-period-boundary-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "memphis-approved-schedule.js",
+            "memphis-scheduler-actions.js",
+            "schedule-weekly.js",
+            "coverall-print.js"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/manual-period-controller-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F02/F03 period controller synthetic request, authority, and explicit confirmation contracts.",
+      "invocations": [
+        {
+          "entry": "scripts/manual-period-controller-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "memphis-scheduler-actions.js"
+          ]
+        }
+      ]
+    },
+    {
       "path": "scripts/memphis-home-entry-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
@@ -1589,6 +1644,61 @@
       "invocations": [
         {
           "entry": "scripts/message-send-receipt-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/messenger-bundle-browser-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F04/F22 unchanged generated Messenger bundle in owned local Playwright Chromium with intercepted assets and synthetic fetch; requires installed Chromium, no server or provider.",
+      "invocations": [
+        {
+          "entry": "scripts/messenger-bundle-browser-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "chatscope-messenger.js",
+            "chatscope-messenger.css"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/messenger-cohort-csrf-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F04/F22 regression: current Messenger CSRF and retained history, with synthetic actor/thread race coverage.",
+      "invocations": [
+        {
+          "entry": "scripts/messenger-cohort-csrf-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/messenger-history-integration-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F04/F22 regression: current Messenger CSRF and retained history, with synthetic actor/thread race coverage.",
+      "invocations": [
+        {
+          "entry": "scripts/messenger-history-integration-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/messenger-history-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F04/F22 regression: current Messenger CSRF and retained history, with synthetic actor/thread race coverage.",
+      "invocations": [
+        {
+          "entry": "scripts/messenger-history-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -1846,26 +1956,32 @@
     {
       "path": "scripts/native-recurring-callback-hold-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Current actual private ESM fixture uses Node SourceTextModule; explicit Node VM modules flag is an invocation prerequisite",
       "invocations": [
         {
           "entry": "scripts/native-recurring-callback-hold-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
     {
       "path": "scripts/native-recurring-normal-callback-writer-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Current actual private ESM fixture uses Node SourceTextModule; explicit Node VM modules flag is an invocation prerequisite",
       "invocations": [
         {
           "entry": "scripts/native-recurring-normal-callback-writer-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
@@ -1885,78 +2001,96 @@
     {
       "path": "scripts/native-recurring-ordinary-bridge-flight-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Current actual private ESM fixture uses Node SourceTextModule; explicit Node VM modules flag is an invocation prerequisite",
       "invocations": [
         {
           "entry": "scripts/native-recurring-ordinary-bridge-flight-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
     {
       "path": "scripts/native-recurring-ordinary-frame-data-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Current actual private ESM fixture uses Node SourceTextModule; explicit Node VM modules flag is an invocation prerequisite",
       "invocations": [
         {
           "entry": "scripts/native-recurring-ordinary-frame-data-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
     {
       "path": "scripts/native-recurring-ordinary-owner-data-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Current actual private ESM fixture uses Node SourceTextModule; explicit Node VM modules flag is an invocation prerequisite",
       "invocations": [
         {
           "entry": "scripts/native-recurring-ordinary-owner-data-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
     {
       "path": "scripts/native-recurring-ordinary-release-protocol-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Current actual private ESM fixture uses Node SourceTextModule; explicit Node VM modules flag is an invocation prerequisite",
       "invocations": [
         {
           "entry": "scripts/native-recurring-ordinary-release-protocol-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
     {
       "path": "scripts/native-recurring-private-render-copy-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Current actual private ESM fixture uses Node SourceTextModule; explicit Node VM modules flag is an invocation prerequisite",
       "invocations": [
         {
           "entry": "scripts/native-recurring-private-render-copy-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
     {
       "path": "scripts/native-recurring-typed-render-data-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Current actual private ESM fixture uses Node SourceTextModule; explicit Node VM modules flag is an invocation prerequisite",
       "invocations": [
         {
           "entry": "scripts/native-recurring-typed-render-data-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
@@ -2424,7 +2558,10 @@
           "entry": "scripts/owner-access-client-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [],
+          "node_args": [
+            "--experimental-vm-modules"
+          ]
         }
       ]
     },
@@ -2942,6 +3079,46 @@
       ]
     },
     {
+      "path": "scripts/retired-events-entry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current compatibility routes for retired event entrypoints; proves same-origin canonical destination, visible fallback, no query/token carryover or writer/cache controls. Complements shared-events-view-tests and backend retiredEventIntake410 coverage.",
+      "invocations": [
+        {
+          "entry": "scripts/retired-events-entry-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/retired-scheduler-entry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current safe compatibility routes for both retired schedule generators; no normal-schedule mutation",
+      "invocations": [
+        {
+          "entry": "scripts/retired-scheduler-entry-tests.mjs",
+          "args": [
+            "schedule.html"
+          ],
+          "cwd": ".",
+          "requires": [
+            "schedule.html"
+          ]
+        },
+        {
+          "entry": "scripts/retired-scheduler-entry-tests.mjs",
+          "args": [
+            "schedule-simple.html"
+          ],
+          "cwd": ".",
+          "requires": [
+            "schedule-simple.html"
+          ]
+        }
+      ]
+    },
+    {
       "path": "scripts/run-native-original-feedback-journey.mjs",
       "role": "explicit-tool-or-fixture",
       "reason": "explicit feedback journey runner with separate owner lifecycle"
@@ -3067,7 +3244,13 @@
           "entry": "scripts/scan-device-employee-default-tests.mjs",
           "args": [],
           "cwd": ".",
-          "requires": []
+          "requires": [
+            "index.html",
+            "memphis-completion-taxonomy.js",
+            "memphis-device-identity.js",
+            "mobile/src/custodial/protected-browser-admission.js",
+            "scripts/synthetic-schedule-locks.mjs"
+          ]
         }
       ]
     },
@@ -3129,16 +3312,25 @@
       ]
     },
     {
-      "path": "scripts/schedule-advanced-live-schedule-tests.mjs",
+      "path": "scripts/scan-source-pair-compatibility-tests.mjs",
       "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
+      "reason": "Actual page and worker refuse obsolete/missing schema and accept exact retained302 declarations in synthetic VM; no build/backend actions",
       "invocations": [
         {
-          "entry": "scripts/schedule-advanced-live-schedule-tests.mjs",
+          "entry": "scripts/scan-source-pair-compatibility-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
         }
+      ]
+    },
+    {
+      "path": "scripts/schedule-advanced-live-schedule-tests.mjs",
+      "role": "superseded-contract",
+      "reason": "Retired mutable schedule.html generator; the fixed alias must preserve safe date/device hints and cannot regenerate normal schedules.",
+      "superseded_by": [
+        "scripts/retired-scheduler-entry-tests.mjs",
+        "scripts/schedule-weekly-contract-tests.mjs"
       ]
     },
     {
@@ -3200,15 +3392,11 @@
     },
     {
       "path": "scripts/schedule-simple-midday-tests.mjs",
-      "role": "standalone-contract",
-      "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
-      "invocations": [
-        {
-          "entry": "scripts/schedule-simple-midday-tests.mjs",
-          "args": [],
-          "cwd": ".",
-          "requires": []
-        }
+      "role": "superseded-contract",
+      "reason": "Retired schedule-simple.html generator; approved normal schedules remain locked and dated changes use the current weekly manager owner.",
+      "superseded_by": [
+        "scripts/retired-scheduler-entry-tests.mjs",
+        "scripts/schedule-weekly-contract-tests.mjs"
       ]
     },
     {
@@ -3247,6 +3435,138 @@
           "args": [],
           "cwd": ".",
           "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/sealed-cleaning-correction-route-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F25 actual insights click and dynamically imported completed-record panel through synthetic typed route, CSRF, CAS and original-operation readback.",
+      "invocations": [
+        {
+          "entry": "scripts/sealed-cleaning-correction-route-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "operational-insights.js",
+            "manager-cleaning-correction.mjs",
+            "memphis-completion-evidence.js",
+            "zoo-local-time.mjs"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/sealed-cleaning-correction-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F25 completed-record correction DOM and uncertain-operation contracts with synthetic typed choices and original receipts.",
+      "invocations": [
+        {
+          "entry": "scripts/sealed-cleaning-correction-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "manager-cleaning-correction.mjs",
+            "zoo-local-time.mjs"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/sealed-lunch-audio-expiry-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F13 synthetic native notification authority and actual reminder renderer; no device, audio provider or real notifications.",
+      "invocations": [
+        {
+          "entry": "scripts/sealed-lunch-audio-expiry-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "scripts/native-notification-arrival-boundary-tests.mjs",
+            "scripts/synthetic-schedule-security.mjs",
+            "scripts/synthetic-schedule-locks.mjs",
+            "memphis-device-reminders.js",
+            "mobile/src/custodial/notification-schedule-authority.js",
+            "mobile/src/custodial/notification-presentation.js",
+            "mobile/src/custodial/notification-schedule.js",
+            "mobile/src/custodial/protected-principal.js",
+            "mobile/src/custodial/home-facts.js",
+            "mobile/src/custodial/device-reminders-runtime.js"
+          ]
+        },
+        {
+          "entry": "scripts/sealed-lunch-audio-expiry-tests.mjs",
+          "args": [
+            "--legacy"
+          ],
+          "cwd": ".",
+          "requires": [
+            "scripts/native-notification-arrival-boundary-tests.mjs",
+            "scripts/synthetic-schedule-security.mjs",
+            "scripts/synthetic-schedule-locks.mjs",
+            "memphis-device-reminders.js",
+            "mobile/src/custodial/notification-schedule-authority.js",
+            "mobile/src/custodial/notification-presentation.js",
+            "mobile/src/custodial/notification-schedule.js",
+            "mobile/src/custodial/protected-principal.js",
+            "mobile/src/custodial/home-facts.js",
+            "mobile/src/custodial/device-reminders-runtime.js"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/sealed-manager-ui-repair-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed manager UI source/DOM integration: Chicago time, scoped CSRF, response races, weather, map/events, truthful problem queue, attendance and phone-settings confirmation; synthetic only.",
+      "invocations": [
+        {
+          "entry": "scripts/sealed-manager-ui-repair-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "zoo-local-time.mjs",
+            "mobile/src/custodial/home-facts.js",
+            "mobile/src/manager/home-weather.js",
+            "mobile/src/manager/home-context.js",
+            "mobile/src/manager/notifications-client.js",
+            "mobile/src/manager/app.js",
+            "mobile/src/manager/index.html",
+            "operational-insights.js",
+            "ops-hub.js",
+            "start_page1.html"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/sealed-nfc-minute-ui-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Explicit Q02 native NFC minute UI contract against actual scan page functions with synthetic clock and state.",
+      "invocations": [
+        {
+          "entry": "scripts/sealed-nfc-minute-ui-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "index.html"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/sealed-scan-recovery-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Sealed F10/F11 scan recovery contracts against actual UI/queue owners with synthetic protected storage, no native acceptance.",
+      "invocations": [
+        {
+          "entry": "scripts/sealed-scan-recovery-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": [
+            "memphis-ui.js",
+            "memphis-scan-sync.js"
+          ]
         }
       ]
     },
@@ -3340,9 +3660,32 @@
       "reason": "Retained byte-literal historical eight-group98-to100 asset comparison requires genuine AFTER/BEFORE fixture and explicit BASE; current Supplies source has its own zero-argument counterpart"
     },
     {
+      "path": "scripts/synthetic-notification-writer.mjs",
+      "role": "imported-support",
+      "reason": "Synthetic receipt writer imported by current notification tests; not a standalone contract."
+    },
+    {
       "path": "scripts/synthetic-schedule-locks.mjs",
       "role": "imported-support",
       "reason": "module imported by its owning contracts, not a standalone test"
+    },
+    {
+      "path": "scripts/synthetic-schedule-security.mjs",
+      "role": "imported-support",
+      "reason": "Synthetic generation/principal security fixture imported by native schedule receipt contracts; not a standalone test."
+    },
+    {
+      "path": "scripts/third-absence-coverall-ui-contract-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current canonical manual-activation or third-absence controller contract; source-only synthetic ports, no database/device authority.",
+      "invocations": [
+        {
+          "entry": "scripts/third-absence-coverall-ui-contract-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
     },
     {
       "path": "scripts/thread-send-ux-regression-tests.mjs",
@@ -3364,6 +3707,32 @@
       "invocations": [
         {
           "entry": "scripts/ticket-actions-client-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/unfinished-work-browser-retention-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current unfinished-work owner attention and original-browser preservation regression. Explicit synthetic ports; no live/device authority.",
+      "invocations": [
+        {
+          "entry": "scripts/unfinished-work-browser-retention-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/unfinished-work-panel-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current unfinished-work owner attention and original-browser preservation regression. Explicit synthetic ports; no live/device authority.",
+      "invocations": [
+        {
+          "entry": "scripts/unfinished-work-panel-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -3434,6 +3803,54 @@
     }
   ],
   "fixture_inputs": [
+    {
+      "path": "scripts/fixtures/current-approved-preservation-source-deltas.json",
+      "bytes": 120158,
+      "sha256": "a713abcce24bfe181450bf084ac6a88b0bd2def38ced6a6a62e589d30c3564c8",
+      "purpose": "Explicit current approved-preservation source-comparison context, genuine L predecessors and all current Java identities; no historical evidence or runtime admission repinned."
+    },
+    {
+      "path": "scripts/fixtures/helper-current-schedule-refresh-fixture.mjs",
+      "bytes": 7546,
+      "sha256": "ecbb2c31c3f7496c06d54d415b50bfdfa7991760111c1e132abd17288abd8376",
+      "purpose": "Exact synthetic DOM/auth/transport fixture around actual current schedule page/A/P source for existing AC-18 original-owner read convergence regressions; no SQL, authentication or release acceptance."
+    },
+    {
+      "path": "scripts/fixtures/notification-historical-predecessors-v2/MANIFEST.json",
+      "bytes": 1670,
+      "sha256": "797113477f34800538a05b86be8c94c6a14b2e4676957a37ea972650b234ce51",
+      "purpose": "Exact actual local Git predecessor for the named historical notification counterexample; no current authority claim"
+    },
+    {
+      "path": "scripts/fixtures/notification-historical-predecessors-v2/origin-before.js",
+      "bytes": 21871,
+      "sha256": "2d5b4ace347bdb9b88fac83bd31cdbc186f4b113713d85f5cdbd7e4178248d2b",
+      "purpose": "Exact actual local Git predecessor for the named historical notification counterexample; no current authority claim"
+    },
+    {
+      "path": "scripts/fixtures/notification-historical-predecessors-v2/read-before.js",
+      "bytes": 18737,
+      "sha256": "c1fd4eed4bc849f3c8c983225b628be728ee8df2d1c07d31e616514fc08cde57",
+      "purpose": "Exact actual local Git predecessor for the named historical notification counterexample; no current authority claim"
+    },
+    {
+      "path": "scripts/fixtures/quiet-offline-supplied-current-controls-v1.json",
+      "bytes": 976,
+      "sha256": "2f6d9bf5cb17e045d4a117b6a314e8f54061a00e926d3ea8fc4b4208920fbf44",
+      "purpose": "Immutable supplied-input controls distinct from preserved bf805 historical comparison"
+    },
+    {
+      "path": "scripts/fixtures/quiet-offline-supplied-current-controls-v2.json",
+      "bytes": 1247,
+      "sha256": "b7da8fc7490ee133816b2692f460c86d6e18570fe83c0d08a6943a2515447f37",
+      "purpose": "Version2 exact supplied classifier/work controls, distinct from unchanged historical bf805 pins"
+    },
+    {
+      "path": "scripts/fixtures/quiet-offline-supplied-current-controls-v3.json",
+      "bytes": 2064,
+      "sha256": "d548865f9e95399008ed9fc3782a1b96ef3a545f8f2ddfb1eae24459600330cd",
+      "purpose": "Exact immutable input controls plus losslessly reversed approved absent-epoch repair; no historical pin or admission change"
+    },
     {
       "path": "test-fixtures/ci/current-backend/SOURCE_TEST_CONTEXT.json",
       "sha256": "c6e01d587fde67cf863558782b2412f814a4142410c6941d244dbfe06c6333c6",
@@ -4015,6 +4432,18 @@
       "sha256": "f07ac563074274ba2a87d2f67acd15c65c7315f3788f2ae361a4ef5150b1b062",
       "bytes": 23703,
       "purpose": "Exact retained nonproduction synthetic Task8 capture; existing pinned test DATA only, not current SQL/manager/phone authority"
+    },
+    {
+      "path": "scripts/fixtures/helper-current-scheduler-contract-fixtures.mjs",
+      "bytes": 35164,
+      "sha256": "fb592219b1ed8fd8db0e3097f7c757804136233651013c3cc15c422b59a73b67",
+      "purpose": "Exact synthetic existing scheduler test declarations around current page, saved requests, publication and third-absence consumers; zero test registration, no alternate product implementation."
+    },
+    {
+      "path": "scripts/fixtures/helper-current-staffing-fill-page-fixture.mjs",
+      "bytes": 6397,
+      "sha256": "088e26457e9fc9857ebdfbef6b14cc71261dbc2538458265d92afc2153f709c2",
+      "purpose": "Exact existing staffing-page synthetic DOM/auth fixture for original vacancy fill UI preview, explicit confirmation and original-outcome readback; no SQL or device authority."
     }
   ],
   "generated_inputs": [
@@ -4056,6 +4485,10 @@
     },
     {
       "name": "@playwright/test",
+      "from": "package.json"
+    },
+    {
+      "name": "playwright",
       "from": "package.json"
     }
   ]

@@ -587,7 +587,7 @@ final class CustodialNativeRuntime {
                         case ADVANCE_MANIFEST -> engine.advanceOriginalInventoryManifest(requestOwner,saved,new NativePrivateCustodyHttp(),control);
                         case MANAGER_DECISION -> engine.readOriginalInventoryManagerDecisionStatus(requestOwner,saved,new NativePrivateCustodyHttp(),control);
                         case RETAIN_MANAGER_DECISION -> engine.retainOriginalInventoryManagerDecisionObservation(requestOwner,saved,new NativePrivateCustodyHttp(),control);
-                        case SEPARATE_ENROLLMENT_KEEP_WORK -> engine.separateHeldOriginalEnrollmentKeepingWork(requestOwner,saved,new NativePrivateCustodyHttp(),control);
+                        case SEPARATE_ENROLLMENT_KEEP_WORK -> engine.separateHeldOriginalEnrollmentKeepingWork(requestOwner,saved,new NativePrivateCustodyHttp(),control,this);
                         case REGISTRATION -> engine.readOriginalInventoryRegistrationStatus(requestOwner,saved,new NativePrivateCustodyHttp(),control);
                     };
                     held.requireCurrent();control.check();
@@ -773,6 +773,9 @@ final class CustodialNativeRuntime {
 
     static synchronized CustodialNativeRuntime get(Context context) {
         if (context == null || context.getApplicationContext() == null) throw new IllegalArgumentException("custodial_application_context_required");
+        if(context.getApplicationContext() instanceof CustodialEnrollmentApplication application){
+            try{application.requireStartupPartitionCurrent();}catch(VaultFailure refused){throw new IllegalStateException(refused.code,refused);}
+        }
         if (instance == null) instance = new CustodialNativeRuntime(context.getApplicationContext());
         return instance;
     }
@@ -1054,6 +1057,19 @@ final class CustodialNativeRuntime {
         synchronized(engine){synchronized(providerCoordinator){
             if(localProviderOwner!=null)localProviderOwner.detach(attachment,expectedEpoch);
         }}
+    }
+    CustodialEnrollmentApplication retainedEnrollmentApplication(VaultEngine expected)throws VaultFailure {
+        if(expected!=engine)throw new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE);
+        return CustodialEnrollmentApplication.actual(application);
+    }
+    void quiesceRetainedEnrollmentEffects(VaultEngine.NativeOriginalInventoryFinalizationControl original,
+        NativePrivateCustodyFrameReadControl control)throws VaultFailure {
+        AndroidRetainedEnrollmentEffects.quiesce(retainedEnrollmentApplication(engine),this,original,control);
+    }
+    JSONObject completeExistingRetainedEnrollmentPartition(NativePrivateCustodyFrameReadControl control,String originalOperation)throws VaultFailure {
+        if(control==null||Thread.holdsLock(engine)||Thread.holdsLock(providerCoordinator))throw new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE);
+        var app=retainedEnrollmentApplication(engine);app.requireStartupPartitionCurrent();control.check();
+        return AndroidPrivateCustodyOwnerRecovery.completeOriginalEnrollmentPartition(application,this,control,originalOperation);
     }
     /** Lifecycle recovery of an already-pending local original, never creation
      * or activation of the private protocol. Native API26 filesystem support

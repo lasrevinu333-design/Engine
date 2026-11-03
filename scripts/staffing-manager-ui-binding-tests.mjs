@@ -1,43 +1,55 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import vm from 'node:vm';
-
-const page=readFileSync(new URL('../schedule-weekly.html',import.meta.url),'utf8');
-const source=page.match(/<script>\s*([\s\S]*?)<\/script>/)[1].replace(/^init\(\)\.catch\([^\n]+$/m,'');
-const person='10000000-0000-4000-8000-000000000001',slot='20000000-0000-4000-8000-000000000001',absence='30000000-0000-4000-8000-000000000001';
-function fixture(){
- const nodes=new Map(),calls=[];const checked={dataset:{calloutSlot:slot},checked:true,disabled:false};
- const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,hidden:false,open:false,dataset:{},addEventListener(){},replaceChildren(){},classList:{toggle(){}}});return nodes.get(id);};
- const document={hidden:false,getElementById:node,querySelectorAll:selector=>selector==='[data-callout-slot]:checked:not(:disabled)'?[checked]:selector==='[data-contractor-slot]:checked:not(:disabled)'?[]:selector==='[data-callout-slot],[data-contractor-row] input'?[checked]:selector==='[data-turnover-slot],[data-reverse-exception]'?[]:[]};
- const context=vm.createContext({console,URL,URLSearchParams,AbortController,document,navigator:{onLine:true},location:{hash:'',search:''},crypto:{randomUUID:()=>absence},window:{lucide:{createIcons(){}},MemphisAuth:{getCSTDateString:()=> '2026-09-24'}}});
- const run=code=>vm.runInContext(code,context);run(source);
- run(`globalThis.executed=[];globalThis.refreshed=0;globalThis.confirmations=[];
-  state.snapshot={week_start:'2026-09-21',week_end:'2026-09-27',authority_revision:17,drafts:[],
-   current_publication:{publication_id:'publication',version_id:'version'},availability:[],assignments:[],exceptions:[],
-   roster:[{slot_id:${JSON.stringify(slot)},slot_label:'Karen position',incumbencies:[{person_id:${JSON.stringify(person)},person_name:'Karen',effective_start:'2020-01-01',effective_end:null}],week_staffing:[{service_date:'2026-09-24',person_id:${JSON.stringify(person)},person_name:'Karen',availability_state:'working',device_ids:['KIOSK_08']}]}]};
-  els.week_start.value='2026-09-21';els.service_date.value='2026-09-24';els.absence_type.value='daily_absence';
-  confirmAction=async(message)=>{confirmations.push(message);return true;};refreshSnapshot=async()=>{refreshed++;};
-  state.staffingCoordinator={hasPending:()=>false,recover:async()=>null,prepare:async(input)=>{executed.push(input);return{phase:'PREPARED',command:{state:'PREPARED',semantic_body:{commandKind:input.command_kind,startDate:input.start_date,endDate:input.end_date}},preview:{schema:'memphis-zoo.staffing-command-preview.v1',weeks:[{week_start:'2026-09-21',assignments:[{service_date:input.start_date,status:'assigned',owner_name_snapshot:'Kathy',work_id:'Area A',work_snapshot:{locationNameSnapshot:'Area A',window:{start:'07:00',end:'09:00'}}}],lunch_responsibilities:[]}]}};},confirm:async()=>({command:{state:'ACCEPTED'},delivery:{targets:[{status:'PENDING'}]}}),cancel:async()=>({state:'CANCELLED'})};`);
- context.__calls=calls;
- return{run,node,checked,json:value=>JSON.parse(run(`JSON.stringify(${value})`)),context};
-}
-let checks=0;const same=(a,b,m)=>{assert.deepEqual(a,b,m);checks++;};
+import {privatePreviewFixture,cancellationFixture,A} from './fixtures/helper-current-scheduler-contract-fixtures.mjs';
+let checks=0;const same=(a,b,message)=>{assert.deepEqual(a,b,message);checks++;};
+function selectedAbsence(){const f=privatePreviewFixture(),slot=f.record.input.slots.find(row=>row.incumbencies?.some(person=>person.personId===f.body.employee_id));
+ const checked={dataset:{calloutSlot:slot.id},checked:true,disabled:false};
+ f.context.document.querySelectorAll=selector=>selector==='[data-callout-slot]:checked:not(:disabled)'?[checked]:[];
+ f.page.els.absence_type.value=f.body.absence_kind;f.context.crypto={randomUUID:()=>f.body.client_prepare_key};return{...f,checked};}
 {
- const f=fixture();await f.run('applyDayChanges()');const input=f.json('executed[0]');
- same(input,{command_kind:'absence',employee_id:person,start_date:'2026-09-24',end_date:'2026-09-24',absence_kind:'daily_absence',expected_revision:17},'manager UI binds person/date/type/revision to durable command');
- same(f.run('confirmations.length'),1,'one explicit confirmation follows prepared schedule preview');assert.match(f.run('confirmations[0]'),/Kathy — Area A/);checks++;same(f.run('refreshed'),1,'accepted command refreshes authoritative manager view');
- assert.match(f.node('status').textContent,/1 pending/);checks++;
+ const f=selectedAbsence();await f.page.applyDayChanges();const begin=f.requests.find(row=>row.path===A.staffingCommandPath);
+ same(JSON.parse(begin.options.body),f.body,'actual manager UI binds exact person/date/type/revision/preparation key');
+ same(f.actions.pending().body,f.body,'saved original body equals selected input');same(f.actions.pending().command.phase,'PREPARED','private candidate is prepared');
+ same(f.confirmCount(),0,'preparation never automatically publishes');same(f.nodes.get('approved-preview-panel').hidden,false,'actual dated candidate is visible before confirmation');
+ const duties=f.nodes.get('approved-preview-rows').children;same(duties.length,f.enriched.preview.weeks[0].assignments.length,'review contains each actual prepared duty');
+ same(duties.every(row=>row.children[0].textContent===f.body.start_date),true,'review duties bind original requested day');
+ same(duties.every(row=>row.children[1].textContent.startsWith('CoverAll capacity')),true,'review displays actual prepared capacity owner');
+ assert.match(f.nodes.get('approved-preview-summary').textContent,/Relative weekly equity index/);checks++;
+ same(f.requests.some(row=>row.path==='/static-weekly/day-changes/batch'),false,'single employee uses durable staffing protocol');
+ const original=f.actions.pending().encoded;let dialogs=0;f.context.confirmAction=async()=>{dialogs++;return false;};
+ await f.nodes.get('staffing-confirm-btn').listeners.get('click')();same(f.confirmCount(),0,'cancel keeps private preview unconfirmed');same(f.actions.pending().encoded,original,'cancel preserves exact original');
+ f.context.confirmAction=async()=>{dialogs++;return true;};await f.nodes.get('staffing-confirm-btn').listeners.get('click')();
+ same(dialogs,2,'one cancelled review then one explicit accepted review');same(f.confirmCount(),1,'exactly one authoritative confirmation');
+ same(f.map.size,0,'accepted original clears only after current persisted readback');same(f.page.state.snapshot.authority_revision,f.current.authority_revision,'current accepted manager view refreshed');
+ same(f.requests.filter(row=>row.path.endsWith('/confirm')).length,1,'one confirmation endpoint call');
 }
 {
- const f=fixture();f.run(`state.snapshot.exceptions=[{id:${JSON.stringify(absence+':2026-09-24')},staffingAbsenceId:${JSON.stringify(absence)},type:'daily_absence',serviceDate:'2026-09-24'}];
-  api=async(path)=>({state:'ACCEPTED',semantic_body:{commandKind:'absence',employeeId:${JSON.stringify(person)},endDate:'2026-09-26'}});`);
- await f.run(`reverseChange({target:{closest:()=>({dataset:{reverseException:${JSON.stringify(absence+':2026-09-24')}}})}})`);
- same(f.json('executed[0]'),{command_kind:'cancel_absence',employee_id:person,start_date:'2026-09-24',end_date:'2026-09-26',target_absence_id:absence,expected_revision:17},'return action cancels exact remaining accepted absence window');
- same(f.run('refreshed'),1,'accepted cancellation refreshes manager view');
+ const f=cancellationFixture();await f.page.reverseChange(f.event);const input=f.actions.pending().body;
+ same(input,{command_kind:'cancel_absence',employee_id:f.original,start_date:'2026-10-14',end_date:'2026-10-20',target_absence_id:f.target,client_prepare_key:f.context.crypto.randomUUID(),expected_revision:7},'cancel binds original employee and entire remaining accepted window');
+ same(input.employee_id===f.occupant,false,'current occupant never substitutes for original absent employee');same(f.actions.pending().weekBindings.length,2,'both remaining weeks are bound');
+ same(f.confirmationCount(),0,'cancellation first exposes private current-plan preview');
+ assert.match(f.nodes.get('approved-preview-summary').textContent,/ALL 2 remaining weeks/);checks++;
+ f.context.confirmAction=async()=>true;await f.nodes.get('staffing-confirm-btn').listeners.get('click')();
+ same(f.confirmationCount(),1,'one explicit remaining-window cancellation confirmation');same(f.map.size,0,'all-week accepted readback settles original cancellation');
 }
 {
- const f=fixture();f.context.document.querySelectorAll=selector=>selector==='[data-callout-slot]:checked:not(:disabled)'?[f.checked,{dataset:{calloutSlot:'other'},disabled:false}]:[];
- await assert.rejects(()=>f.run('applyDayChanges()'),/one employee absence at a time/);checks++;
- same(f.run('executed.length'),0,'multiple employees cannot become a partial pseudo-atomic command');
+ const f=selectedAbsence();f.page.state.snapshot.approved_manual_period={schema:'custodial.approved-manual-period-window.v1',
+  manifestSha256:'fe02bbdebc736d95360b55cc7dfe5b73c5a9eaa76f364f1c0f4420a0afb9950f',publicationId:f.before.current_publication.publication_id,
+  versionId:f.before.current_publication.version_id,frameStart:f.before.week_start,frameEnd:f.before.week_end,origin:f.before.week_start,normalSourceLocked:true};
+ f.context.document.querySelectorAll=selector=>selector==='[data-callout-slot]:checked:not(:disabled)'?[f.checked,{dataset:{calloutSlot:'other'},disabled:false}]:[];
+ await assert.rejects(f.page.applyDayChanges(),/one employee absence/i);checks++;
+ same(f.requests.length,0,'approved manual plan never dispatches a partial multi-employee command');same(f.map.size,0,'invalid multiple selection saves no original');
 }
-console.log(JSON.stringify({status:'PASS',checks,scope:'actual manager page durable absence/cancellation binding; synthetic coordinator and DOM, no live auth/SQL/phone'}));
+{
+ const f=selectedAbsence();await f.page.applyDayChanges();const bytes=f.actions.pending().encoded;f.failConfirm();f.context.confirmAction=async()=>true;
+ await f.nodes.get('staffing-confirm-btn').listeners.get('click')();same(f.confirmCount(),1,'lost reply still records one attempted confirmation');
+ same(f.actions.pending().encoded,bytes,'unknown reply retains exact original input');const before=f.requests.length;
+ await f.page.resumeStaffingPreview();same(f.requests.slice(before).every(row=>row.options.method!=='POST'),true,'unknown confirmation resumes GET-only');
+ same(f.confirmCount(),1,'recovery never reconfirms');same(f.map.size,0,'exact accepted readback clears original after recovery');
+}
+for(const change of ['employee','range','server-day','future-basis']){
+ const f=cancellationFixture();if(change==='employee')delete f.page.state.snapshot.exceptions[0].staffingEmployeeId;
+ if(change==='range')delete f.page.state.snapshot.exceptions[0].staffingEndDate;if(change==='server-day')f.setToday(undefined);if(change==='future-basis')f.setMissingBasis();
+ try{await f.page.reverseChange(f.event);}catch(error){assert.match(error.message,/original accepted absence/i);}
+ same(f.requests.some(row=>row.options.method==='POST'),false,change+' cannot prepare an inferred/truncated cancellation');same(f.map.size,0,change+' preserves no fabricated original');
+}
+console.log(JSON.stringify({status:'PASS_CURRENT_STAFFING_MANAGER_BINDING',checks,scope:'Actual current page/actions private preparation, one explicit confirmation, full remaining-window cancellation and GET-only original recovery; exact extracted synthetic fixtures. No live auth/SQL/phone proof.'}));

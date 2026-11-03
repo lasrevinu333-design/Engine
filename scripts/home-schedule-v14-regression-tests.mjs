@@ -1,3 +1,4 @@
+import {createSyntheticNativeHome} from './fixtures/native-home-mutation-context.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {fixture,payload,key,id} from './employee-schedule-convergence-race-tests.mjs';
@@ -14,9 +15,11 @@ async function homeReentry(event,site,oldFailure=false){
   const memory=new Map(),events=new Map(),nodes=new Map(),timers=new Set();let timerId=0,armed=false,nested=0,schedules=0,infos=0;
   const hook=name=>{if(armed&&!nested&&name===site){nested++;events.get(event)();if(oldFailure)throw Error('retired capture failure');}};
   const el=k=>{if(!nodes.has(k))nodes.set(k,{textContent:'',innerHTML:'',dataset:{}});return nodes.get(k);};
+  const nativeFixture=createSyntheticNativeHome('v14-dom'),nativeBinding=nativeFixture.binding;
   const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(2),employee_name:'Fixture',credential_id:id(3),assignment_epoch:7};
-  const security={get native(){hook('native');return true;},getStatus(){hook('status');return{ready:true,available:true,quarantined:false};},mutateProtectedWork:async fn=>fn()};
-  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=>{hook('principal');return'v14-dom';},profileMatchesPrincipal:()=>{hook('matches');return true;}}};
+  const security={get native(){hook('native');return true;},getStatus(){hook('status');return nativeFixture.status();},mutateProtectedWork:nativeFixture.mutate};
+  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=>{hook('principal');return nativeBinding;},profileMatchesPrincipal:()=>{hook('matches');return true;}}};
+  globalThis.window.MemphisCustodialSecurity=security;
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
   globalThis.setInterval=()=>{const n=++timerId;timers.add(n);return n;};globalThis.clearInterval=n=>timers.delete(n);
   globalThis.fetch=async()=>{if(armed)infos++;throw Error('external facts offline');};
@@ -25,7 +28,7 @@ async function homeReentry(event,site,oldFailure=false){
   await app.update(true);assert.equal(el('home-shift').textContent,'7:00 AM–4:00 PM');
   armed=true;await app.update(true);await until(()=>schedules>0);await tick();await tick();
   assert.equal(nested,1);assert.equal(schedules,1,'only nested update may start a schedule request');assert.equal(infos,3);
-  assert.equal(JSON.parse(memory.get('mz_employee_schedule_snapshot:availability:v14-dom')).state,'AVAILABLE');
+  assert.equal(JSON.parse(memory.get('mz_employee_schedule_snapshot:availability:'+encodeURIComponent(nativeBinding))).state,'AVAILABLE');
   assert.equal(el('home-shift').textContent,'7:00 AM–4:00 PM');assert.equal(timers.size,1);
  }finally{app?.stop();for(const[k,v]of saved){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
 }

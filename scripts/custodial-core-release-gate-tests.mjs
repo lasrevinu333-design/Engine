@@ -55,16 +55,16 @@ test('workflow filters include core test-only changes', () => {
 });
 test('fixed inventory retains every core regression family', () => {
   const expected = `scan-device-employee-default-tests oc24-completion-form-tests
-completion-taxonomy-client-tests completion-conditional-browser-tests
+completion-taxonomy-client-tests protected-browser-completion-value-tests
 verified-check-completion-tests custodial-scan-recovery-classification-tests
 custodial-completion-draft-recovery-tests
 scan-outage-retry-tests scan-outage-storage-fence-tests scan-retry-after-tests scan-retry-migration-tests
- dashboard-verified-scan-readback-tests dashboard-production-data-tests dashboard-completion-evidence-tests dashboard-completion-evidence-browser-tests
+ dashboard-verified-scan-readback-tests operations-dashboard-tests dashboard-recent-activity-tests dashboard-not-cleaned-compact-tests
  custodial-readiness-tests custodial-readiness-bridge-tests custodial-readiness-browser-tests
  native-removal-contract-tests provider-composition-contract-tests provider-event-decisions-contract-tests provider-maintenance-contract-tests provider-retained-schedule-contract-tests provider-mirror-contract-tests provider-mirror-renderer-tests
  active-gps-lifecycle-tests active-gps-build-contract-tests
  gps-calibration-integrity-tests custodial-initial-release-scope-tests runtime-sanitation-source-tests custodial-generated-runtime-sanitation-tests custodial-navigation-assets-tests
- custodial-original-home-dom-tests custodial-home-facts-tests custodial-hourly-keyboard-contract-tests custodial-home-ready-profile-order-tests custodial-home-authenticated-restore-tests recurring-schedule-target-tests
+ custodial-original-home-dom-tests custodial-home-facts-tests custodial-hourly-keyboard-contract-tests custodial-home-ready-profile-order-tests custodial-home-authenticated-restore-tests home-recurring-convergence-tests
  employee-schedule-recurring-delivery-tests employee-schedule-application-receipt-tests
  employee-schedule-cache-resilience-tests employee-schedule-section-tests
  home-schedule-v8-regression-tests home-schedule-v9-regression-tests home-schedule-v10-regression-tests
@@ -81,7 +81,7 @@ scan-outage-retry-tests scan-outage-storage-fence-tests scan-retry-after-tests s
   assert.deepEqual(CORE_SUITES.filter(x=>x!=='scripts/provider-event-decision-wire-contract-tests.mjs'&&!mapSuites.includes(x)), expected);
   expected.splice(expected.indexOf('scripts/provider-event-decisions-contract-tests.mjs')+1,0,'scripts/provider-event-decision-wire-contract-tests.mjs');
   assert.equal(expected.length,65);
-  expected.splice(expected.indexOf('scripts/dashboard-production-data-tests.mjs')+1,0,...mapSuites);
+  expected.splice(expected.indexOf('scripts/operations-dashboard-tests.mjs')+1,0,...mapSuites);
   assert.equal(expected.length,68);assert.deepEqual(CORE_SUITES,expected);
   assert.equal(new Set(CORE_SUITES).size, CORE_SUITES.length);
   assert.equal(Object.isFrozen(CORE_SUITES), true);
@@ -89,7 +89,7 @@ scan-outage-retry-tests scan-outage-storage-fence-tests scan-retry-after-tests s
 const success = () => ({ status: 0, signal: null, stdout: '', stderr: '' });
 const silent = () => {};
 const regular = () => ({ isFile: () => true, isSymbolicLink: () => false });
-for(const name of ['dashboard-map-staging-tests','dashboard-map-renderer-tests','dashboard-map-page-contract-tests','provider-event-decision-wire-contract-tests','provider-event-decisions-contract-tests','provider-retained-schedule-contract-tests','custodial-hourly-keyboard-contract-tests','custodial-home-authenticated-restore-tests','custodial-home-ready-profile-order-tests','dashboard-production-data-tests','provider-maintenance-contract-tests','provider-mirror-contract-tests','provider-mirror-renderer-tests','runtime-sanitation-source-tests','custodial-generated-runtime-sanitation-tests']){
+for(const name of ['dashboard-map-staging-tests','dashboard-map-renderer-tests','dashboard-map-page-contract-tests','provider-event-decision-wire-contract-tests','provider-event-decisions-contract-tests','provider-retained-schedule-contract-tests','custodial-hourly-keyboard-contract-tests','custodial-home-authenticated-restore-tests','custodial-home-ready-profile-order-tests','operations-dashboard-tests','provider-maintenance-contract-tests','provider-mirror-contract-tests','provider-mirror-renderer-tests','runtime-sanitation-source-tests','custodial-generated-runtime-sanitation-tests']){
   const suite=`scripts/${name}.mjs`;
   test(`${name} cannot be omitted from preflight`,()=>{
     assert.equal(CORE_SUITES.filter(value=>value===suite).length,1);let calls=0;

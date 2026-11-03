@@ -104,7 +104,7 @@ final class NativePrivateMutationEpochStore {
             int applicationUid=android.os.Process.myUid();
             if(applicationUid<0||application.getApplicationInfo()==null
                 ||application.getApplicationInfo().uid!=applicationUid)throw invalid();
-            File original=application.getNoBackupFilesDir();
+            File original=CustodialEnrollmentApplication.nativeNoBackupRoot(application);
             if(original==null||!original.isAbsolute())throw invalid();
             Path originalPath=original.toPath();
             var before=Files.readAttributes(originalPath,PosixFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
@@ -122,7 +122,7 @@ final class NativePrivateMutationEpochStore {
                 ||application.getApplicationInfo()==null
                 ||application.getApplicationInfo().uid!=applicationUid
                 ||android.os.Process.myUid()!=applicationUid)throw invalid();
-            File current=application.getNoBackupFilesDir();
+            File current=CustodialEnrollmentApplication.nativeNoBackupRoot(application);
             if(current==null||!original.equals(current)
                 ||!canonical.equals(current.getCanonicalFile()))throw invalid();
             observed.require(canonical);

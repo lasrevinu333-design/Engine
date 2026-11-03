@@ -16,20 +16,14 @@ for (const path of [
 ]) assert.equal(existsSync(new URL(`../${path}`, import.meta.url)), false, path);
 
 
-// Retain the pre-existing manager console without the retired origin/navigation
-// integration. Its authenticated event operations remain available; the retired
-// application pages and assets below still must be absent.
-assert.equal(existsSync(new URL('../events-admin.html', import.meta.url)), true, 'retained manager events console');
+// October 5–6 consolidation retired manual event intake. Preserve only a
+// compatibility entry to the one shared Events page; no old writer UI returns.
+assert.equal(existsSync(new URL('../events-admin.html', import.meta.url)), true, 'retained Events compatibility entry');
 const retainedEventsAdmin = read('events-admin.html');
 assert.doesNotMatch(retainedEventsAdmin, /\/moxie(?:[\/?#\s"'`]|$)|moxie-link|data-mz-annie-back|ANNIE_RETURN_URL|ANNIE_ORIGIN_SESSION_KEY|isAnnieOrigin|preserveAnnieOrigin/);
-assert.match(retainedEventsAdmin, /<body data-memphis-context="manager">/);
-assert.match(retainedEventsAdmin, /await window\.MemphisAuth\.requireOpsManagerSession\(\{ interactive: false, redirect: true \}\)/);
-assert.match(retainedEventsAdmin, /async function authHeaders\(\) \{ return await window\.MemphisAuth\.opsManagerAuthHeaders\(\); \}/);
-assert.match(retainedEventsAdmin, /EVENTS_ADMIN_URL: 'https:\/\/memphis-zoo-mcp\.onrender\.com\/admin-api\/events'/);
-assert.match(retainedEventsAdmin, /await requireManagerHubSession\(\);[\s\S]*await loadReferenceData\(\);[\s\S]*await loadEvents\(\);/);
-for (const operation of ['saveEvent', 'deleteEvent', 'loadEventForEdit']) {
-  assert.ok(retainedEventsAdmin.includes(`function ${operation}(`), `retained manager operation ${operation}`);
-}
+assert.match(retainedEventsAdmin, /window\.location\.replace\(new URL\('\.\/events\.html', window\.location\.href\)\.href\)/);
+assert.match(retainedEventsAdmin, /href="\.\/events\.html"/);
+assert.doesNotMatch(retainedEventsAdmin, /<form|<input|<button|admin-api|saveEvent|deleteEvent|loadEventForEdit|fetch\(/);
 
 assert.doesNotMatch(read('mobile/src/manager/index.html'), /moxie-mobile|moxie-tile/i);
 assert.doesNotMatch(read('mobile/src/shell/roles/manager/routes.ts'), /manager\.moxie|moxie-mobile/i);

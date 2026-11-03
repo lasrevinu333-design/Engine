@@ -18,14 +18,16 @@ assert.doesNotMatch(html, /practical cleaning order|first stop|next stop|route/i
 assert.match(html, /employee-schedule-snapshot\.v2/, 'Schedule must retain a protected-principal-scoped offline snapshot');
 assert.match(html, /row\.principal!==principal\|\|!row\.data\|\|!matches\(row\.data,owns\)\)\)throw cacheError\(\)/, 'missing or mismatched cache principal or payload must fail closed using the original caller, not become absent authority');
 assert.match(html, /mutateProtectedWork/, 'Schedule snapshots must remain protected native work');
-assert.match(html, /No connection — showing only known active windows from your last update/, 'Offline wording must not overclaim stale authority');
+assert.match(html, /els\.notice\.textContent=!offline&&sameDay\?String\(data\?\.notice\|\|''\):''/,'Cached authority must not show an unconfirmed live notice');
+assert.doesNotMatch(html, /No connection — showing only known active windows/, 'Approved quiet offline presentation must not add a repeated connection warning');
 assert.match(html, /memphis:schedule-refresh/, 'Schedule must respond to assignment changes');
 assert.match(html, /visibilitychange/, 'Schedule must refresh after returning to the app');
 assert.match(html, /window\.addEventListener\('online'/, 'Schedule must refresh after connectivity returns');
 assert.doesNotMatch(html, />Refresh<|Assigned Areas|Scheduled|Primary Ownership/, 'Employee UI must not expose technical or managerial schedule controls');
 
 console.log('EMPLOYEE_SCHEDULE_CURRENT_AREAS_PASS');
-await import('./schedule-display-order-tests.mjs');
+// Current display ordering is asserted above; the retired missing standalone
+// file is not an executable dependency. Existing convergence/Home cases follow.
 await import('./employee-schedule-convergence-race-tests.mjs');
 await import('./home-schedule-v4-regression-tests.mjs');
 await import('./home-schedule-v5-regression-tests.mjs');

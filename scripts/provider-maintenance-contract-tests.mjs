@@ -6,8 +6,11 @@ import {providerMaintenancePins as pins,withoutProviderMaintenance} from './prov
 import {withoutProviderClassification} from './provider-classification-source-boundary.mjs';
 import './provider-classification-contract-tests.mjs';
 import {withoutProviderEventDecisions} from './provider-event-decisions-source-boundary.mjs';
+import {withoutReleaseAdmission} from './provider-release-admission-source-boundary.mjs';
 const dir='mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/';
-const read=name=>withoutProviderEventDecisions(name,readFileSync(dir+name,'utf8')),sha=v=>createHash('sha256').update(v).digest('hex');let checks=0;
+// Historical maintenance assertions compare the exact pre-release seam;
+// nested release assertions still read the actual qualified successor.
+const read=name=>{const source=withoutProviderEventDecisions(name,readFileSync(dir+name,'utf8'));return name==='CustodialNativeRuntime.java'?withoutReleaseAdmission(name,source):source;},sha=v=>createHash('sha256').update(v).digest('hex');let checks=0;
 for(const row of pins.files){
  const source=withoutProviderClassification(row.name,readFileSync(row.path,'utf8'));assert.equal(sha(source),row.current_sha256);checks++;
  if(row.origin){assert.equal(sha(withoutProviderMaintenance(row.name,source)),row.base_sha256);checks++;

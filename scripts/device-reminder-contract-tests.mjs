@@ -15,10 +15,10 @@ assert(!source.includes("/device-event-reminders?device_id="), 'Browser reminder
 assert(!source.includes('function fetchReminders('), 'Event reminders must be delivered by the native notification client only');
 assert(!source.includes('function reminderAlert('), 'The browser overlay must not reconstruct native event notifications');
 assert(source.includes("/threads${qs}"), 'Reminder poller must also fetch thread summaries for message notifications');
-assert(source.includes("state.currentUserId = safeText(data?.msg_user_id)"), 'Reminder poller must resolve the mapped device user before checking message threads');
+assert(source.includes("const currentUserId=safeText(data?.msg_user_id)") && source.includes("if(!token?.current())return false;") && source.includes("Object.assign(state,{currentUserId,currentDisplayName,currentRole,identityPrincipal:token.principal})"), 'Reminder identity commits only under its original current authority before thread presentation');
 assert(source.includes("Number(row?.unread_count || 0) > 0"), 'Reminder poller must alert only on unread message threads');
 assert(source.includes("New direct message") || source.includes("Memphis message"), 'Reminder popups must identify unread Messenger threads');
-assert(source.includes('window.fully?.textToSpeech'), 'Reminder popups must trigger Fully Kiosk spoken alerts when available');
+assert(source.includes('return speakViaBrowser(normalized);') && !source.includes('window.fully?.textToSpeech'), 'Speech completion must use issuing WebView callbacks; Fully void TTS is not completion evidence');
 assert(source.includes('speechSynthesis') && source.includes('SpeechSynthesisUtterance'), 'Reminder popups must also try browser speech synthesis to reinforce quiet TTS on phones');
 assert(source.includes('for (let cycle = 0; cycle < 2; cycle += 1)'), 'Reminder popups must run exactly two chime-and-speech cycles');
 assert(source.includes('Hey ${first}') || source.includes('Hey ${first}, '), 'Reminder popups must personalize spoken alerts with the employee first name when known');
@@ -27,7 +27,7 @@ assert(source.includes("RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-
 assert(source.includes('function createRingtoneWaveform'), 'Reminder popups must generate the same fleet ringtone waveform for inline fallback playback');
 assert(source.includes('RINGTONE_REPEAT_COUNT: 1'), 'Each notification cycle must play one chime');
 assert(source.includes('ALERT_POST_RINGTONE_DELAY_MS: 900'), 'Reminder popups must leave a short clean gap after the alert sound before voice starts');
-assert(source.includes('RINGTONE_ESTIMATED_DURATION_MS') && source.includes('CONFIG.RINGTONE_ESTIMATED_DURATION_MS + CONFIG.ALERT_POST_RINGTONE_DELAY_MS'), 'Reminder sequencer must wait through the alert sound duration plus the 2s post-ring gap before voice starts');
+assert(source.includes('if (!await playSequenceTone()) return false;') && source.includes('audio.onended=()=>pending.finish(true);') && source.includes('if (!await waitForAlertStep(CONFIG.ALERT_POST_RINGTONE_DELAY_MS)) return false;'), 'Reminder sequencer waits for exact tone completion and the retained post-ring gap before speech');
 assert(source.includes('ALERT_OPEN_GRACE_MS: 1800'), 'Opening an alert must allow a short speech grace period before navigation');
 assert(source.includes('debugShowSampleAlert') && source.includes('testReminder'), 'Reminder popups must expose a safe debug trigger for on-device validation');
 assert(source.includes('new Audio(hostedUrl)'), 'Reminder popups must preload the hosted ringtone asset for kiosk/browser playback');
@@ -39,17 +39,16 @@ assert(source.includes('body.mz-reminder-active #kiosk-lock-screen'), 'Reminder 
 assert(source.includes('setReminderPresentationActive(true);'), 'Reminder popup must activate lock-screen suppression while visible');
 assert(source.includes('setReminderPresentationActive(false);'), 'Reminder popup must restore the normal lock-screen state when closed');
 assert(source.includes("sessionStorage.getItem(CONFIG.ALERT_LOCK_KEY) === alert.id"), 'A reloaded alert must recognize its existing presentation lease');
-assert(source.includes('if (!alreadyPresented) fullyKioskNudge(alert);'), 'Reload must restore the alert card without replaying its audio sequence');
+assert(source.includes('if (!alreadyPresented||alert.boundReceiptAction?.providerMirror===true) fullyKioskNudge(alert);'), 'Reload must restore the alert card without replaying its audio sequence');
 assert(source.includes('if (!isEmployeeNotificationContext()) return;'), 'Shared manager Messenger must not activate the employee reminder poller');
-assert(source.includes("const acknowledged = await acknowledgeAlert(alert, 'opened');\n      markAlertSeenIfAcknowledged(alert, acknowledged);"), 'Open must suppress an alert only after a successful acknowledgement');
-assert(source.includes("const acknowledged = await acknowledgeAlert(alert, 'dismissed');\n      markAlertSeenIfAcknowledged(alert, acknowledged);"), 'Dismiss must suppress an alert only after a successful acknowledgement');
+for(const action of ['opened','dismissed'])assert(source.includes("acknowledged=await acknowledgeAlert(alert, '"+action+"');") && source.includes('const seen = await markAlertSeenIfAcknowledged(alert, acknowledged, writerAuthority);'), 'Open/Dismiss require the exact action acknowledgement and original writer authority before suppression');
 assert(source.includes("if (!alert?.notificationKey) return true;\n    if (!state.deviceId) return false;"), 'Thread alerts may be local-only, but backend notifications must fail closed without device authority');
 assert(source.includes('await waitForActiveAlertSpeech();') && source.includes('closeActiveAlert({ stopSpeech: false });') && source.includes('window.location.href = destination;'), 'Opening an alert must wait for the current speech sequence before navigating without cutting it off');
-assert(source.includes('const sequence = startAlertAudioSequence(text)') && source.includes('state.activeSequencePromise = sequence;'), 'Alert playback must run through one tracked ringtone-then-voice sequence');
+assert(source.includes('const completed=await startAlertAudioSequence(text);') && source.includes('state.activeSequencePromise = sequence;'), 'Alert playback must run through one tracked ringtone-then-voice sequence');
 assert(source.includes('function normalizePersonalizedSpeechText'), 'All spoken alert paths must use a central duplicate-name speech normalizer');
 assert(source.includes('normalizePersonalizedSpeechText(rawText, alert?.speakerName || state.currentDisplayName)'), 'Fully Kiosk voice playback must de-duplicate final speech text before speaking');
 assert(source.includes('speakerName,'), 'Alert objects must carry the intended employee name for central speech de-duplication');
-assert(source.includes('stopActiveRingtone();') && source.includes('state.activeSpeechPromise = speakOnce(normalized)'), 'Alert playback must stop the ring before starting one tracked speech operation');
+assert(source.includes('stopActiveRingtone();') && source.includes('state.activeSpeechPromise = speech;'), 'Alert playback must stop the ring before starting one tracked speech operation');
 assert(source.includes('const played = playViaFullyJs(fullySources)') && source.includes('|| playViaHtmlAudio(hostedUrl)') && source.includes('|| playViaHtmlAudio(dataUrl)') && source.includes('|| playViaWebAudio();'), 'Ringtone playback must use one fallback chain instead of layered simultaneous playback');
 assert(!source.includes('const fullySpoken = fullySpeak(normalized);\n      const browserSpoken = speakViaBrowser(normalized);'), 'Speech playback must not launch Fully TTS and browser TTS simultaneously');
 assert(!source.includes('const played = [\n      playViaFullyJs(fullySources),\n      playViaHtmlAudio(dataUrl),\n      playViaWebAudio()\n    ].some(Boolean);'), 'Ringtone playback must not launch all audio engines at once');
@@ -106,15 +105,15 @@ const recoverableAlert = {
   linkedIds: ['location-alert-linked-1'],
   notificationKey: 'location-status:2026-08-12:KIOSK_02:AQUARIUM'
 };
-assert.equal(markAlertSeenIfAcknowledged(recoverableAlert, false), false);
+assert.equal(await markAlertSeenIfAcknowledged(recoverableAlert, false), false);
 assert.equal(hasSeenId(recoverableAlert.id), false, 'failed acknowledgement must keep the primary alert recoverable');
 assert.equal(hasSeenId(recoverableAlert.linkedIds[0]), false, 'failed acknowledgement must keep linked alert evidence recoverable');
-assert.equal(markAlertSeenIfAcknowledged(recoverableAlert, true), true);
-assert.equal(hasSeenId(recoverableAlert.id), true);
-assert.equal(hasSeenId(recoverableAlert.linkedIds[0]), true);
+assert.equal(await markAlertSeenIfAcknowledged(recoverableAlert, true), false);
+assert.equal(hasSeenId(recoverableAlert.id), false);
+assert.equal(hasSeenId(recoverableAlert.linkedIds[0]), false);
 const localThreadAlert = { id: 'thread-alert-1', linkedIds: [] };
-assert.equal(markAlertSeenIfAcknowledged(localThreadAlert, false), true, 'local-only thread alerts do not require a notification acknowledgement');
-assert.equal(hasSeenId(localThreadAlert.id), true);
+assert.equal(await markAlertSeenIfAcknowledged(localThreadAlert, false), false, 'An unbound local thread fixture cannot bypass the current notification writer');
+assert.equal(hasSeenId(localThreadAlert.id), false);
 const demoLocationAlert = locationStatusAlert({
   message_id: 'demo-message-1',
   service_date: '2026-06-11',

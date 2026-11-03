@@ -1,3 +1,4 @@
+import {createSyntheticNativeHome} from './fixtures/native-home-mutation-context.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {fixture,payload,day,key,id} from './employee-schedule-convergence-race-tests.mjs';
@@ -126,11 +127,14 @@ async function homeDom({native=true,historical=false,throws=false,positive=true}
    const data={...d.home_facts,canonical_device_id:'KIOSK_08',publication_id:id(99),projection_id:id(98),shift:{start:'11:00',end:'19:00'}};
    memory.set('mz_custodial_home_cache:'+encodeURIComponent(homeBinding(identity))+':facts',JSON.stringify({schema_version:'custodial-home-facts.v2-original-hub',binding:homeBinding(identity),records:{schedule:{data,received_at:new Date().toISOString()}}}));
   }
-  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=> 'v6-dom',profileMatchesPrincipal:()=>true}};
+  const admitted=createSyntheticNativeHome('v6-dom',{employeeId:id(2),credentialId:id(3)});
+  const security={native,getStatus:()=>{if(broken)throw Error('synthetic status error');return {...admitted.status(),...status};},mutateProtectedWork:admitted.mutate};
+  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=> admitted.binding,profileMatchesPrincipal:()=>true}};
+  globalThis.window.MemphisCustodialSecurity=security;
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
   globalThis.setInterval=()=>1;globalThis.clearInterval=()=>{};globalThis.fetch=async()=>{throw Error('provider offline');};
   app=installHomeFacts({getProfile:()=>profile,getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,
-   security:{native,getStatus:()=>{if(broken)throw Error('synthetic status error');return status;},mutateProtectedWork:async fn=>fn()},
+   security,
    requestJson:async()=>{if(historical)throw Error('offline');return structuredClone(d);}});
   await app.update(true);
   if(historical){assert.equal(el('home-shift').textContent,'Schedule unavailable');return;}

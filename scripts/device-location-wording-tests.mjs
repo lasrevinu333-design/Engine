@@ -8,12 +8,11 @@ import {locationCueWordingPins,normalizeCurrentLocationCueWording} from './locat
 const source=fs.readFileSync(new URL('../memphis-device-reminders.js',import.meta.url),'utf8');
 const oldText='`${lead}${locationName} needs attention now.`';
 const newText='`${lead}${locationName} is overdue and needs attention now.`';
-// Hash-bound c86f002 baseline; no dependency on historical Git objects in a
-// fresh/shallow CI checkout. The reversed one-phrase delta must reproduce the
-// complete exact original script before any comparison is accepted.
+// Exact integrated Root source context. This synthetic wording inverse keeps
+// current authority/audio changes intact; it is not the historical c86f002 file.
 const baseline=source.replace(newText,oldText);
 const digest=text=>createHash('sha256').update(text).digest('hex');
-assert.equal(digest(baseline),'31429725ea97d9e4628c3dc0f28f9c2ff06fbae7c3b1531a548af2cdab367918');
+assert.equal(digest(baseline),'8d03a64050172fe6747d136c6077718cb352d500e9e3cb7cb8778a35e08b0155');
 function harness(text,native=false){
   const noop=()=>{},scope={employee:'synthetic-staff',epoch:7};
   const context={URL,console,window:{location:{href:'https://example.test/employee-hub.html?device=KIOSK_10'},addEventListener:noop,
@@ -34,7 +33,7 @@ const plain=x=>JSON.parse(JSON.stringify(x));
 test('REV4.1-NOT-010: overdue speech names staff/location and explicitly says overdue and attention now',()=>{
   assert.equal(current.locationStatusAlert(row).speechText,'Hey Synthetic, Synthetic Aviary is overdue and needs attention now.');
 });
-test('Formatting is the only production change: all dispatch/authority/audio/replay/lifecycle source remains byte-identical',()=>{
+test('Wording inverse leaves all current dispatch/authority/audio/replay/lifecycle bytes intact',()=>{
   assert.equal(baseline.split(oldText).length,2);
   assert.equal(digest(source),digest(baseline.replace(oldText,newText)));
 });
@@ -68,8 +67,9 @@ test('Name de-duplication retains the complete overdue message',()=>{
     'Hey Synthetic, Aviary is overdue and needs attention now.');
 });
 test('Historical source comparisons accept only the exact one-phrase successor, never unknown edits',()=>{
-  assert.equal(digest(source),locationCueWordingPins.current_sha256);
-  assert.equal(normalizeCurrentLocationCueWording('memphis-device-reminders.js',source),baseline);
+  assert.equal(digest(source),'9046b9ee1857247c5427602dcd779bb5c37ead5290344d10d42353a55aca3313');
+  assert.equal(locationCueWordingPins.current_sha256,'c6afb4ca9e14d8fe223b271319041b4af0e064adf3632098ba9cf69d74972d08','Historical normalizer authority remains unchanged');
+  assert.equal(normalizeCurrentLocationCueWording('memphis-device-reminders.js',source),source);
   assert.equal(normalizeCurrentLocationCueWording('memphis-device-reminders.js',baseline),baseline);
   for(const hostile of [source+'\n// unknown',source.slice(1),source.replace('is overdue and','is late and')])
     assert.equal(normalizeCurrentLocationCueWording('memphis-device-reminders.js',hostile),hostile);

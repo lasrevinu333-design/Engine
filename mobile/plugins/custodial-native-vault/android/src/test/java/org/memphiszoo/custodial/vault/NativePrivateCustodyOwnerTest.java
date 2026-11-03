@@ -463,8 +463,16 @@ public final class NativePrivateCustodyOwnerTest {
     @Test public void ownerChangeAfterFileEffectRetainsRecordButCannotReturnAcceptanceOrRemoveOriginals()throws Exception {
         try(var f=new Fixture();var prepared=f.engine().prepareOriginalRetainedNamespacePrivateCapsule(f.h.l)){
             Runnable mutate=()->f.x.f.x.unknown.get("MemphisZooCustodialNativeVaultV1").put("late-owned-unknown","preserved");
-            testKey("afterSyntheticChecks",new Class<?>[]{int.class,Runnable.class},3,mutate);
-            denied(()->f.engine().retainOriginalPrivateCustody(prepared,f.store));assertTrue(Files.exists(f.committed));assertFalse(Files.exists(f.pending));
+            // The owning flow can add key rechecks. Bind this fault to the
+            // actual normal committed-file effect rather than a fragile count.
+            var effects=new java.util.concurrent.atomic.AtomicInteger();Runnable[] after={null};
+            after[0]=()->{
+                if(Files.exists(f.committed)&&!Files.exists(f.pending)){effects.incrementAndGet();mutate.run();}
+                else try{testKey("afterSyntheticChecks",new Class<?>[]{int.class,Runnable.class},1,after[0]);}
+                    catch(Exception e){throw new AssertionError(e);}
+            };
+            testKey("afterSyntheticChecks",new Class<?>[]{int.class,Runnable.class},1,after[0]);
+            denied(()->f.engine().retainOriginalPrivateCustody(prepared,f.store));assertEquals(1,effects.get());assertTrue(Files.exists(f.committed));assertFalse(Files.exists(f.pending));
             var saved=files(f.dir);denied(f::inspect);sameFiles(saved,f.dir);assertEquals("preserved",f.x.f.x.unknown.get("MemphisZooCustodialNativeVaultV1").get("late-owned-unknown"));}
     }
     @Test public void sameInodeCrashAliasOnlyResumesExactRecoveredOriginalAndChangedAbsenceStaysNonAuthoritative()throws Exception {

@@ -12427,6 +12427,7 @@ final class VaultEngine {
             }catch(VaultFailure failure){refused=true;throw failure;}catch(Exception failure){refused=true;throw retainedFailure();}
             catch(Error failure){refused=true;throw failure;}
         }
+        void requirePersistenceOwner(VaultPersistence expected)throws VaultFailure {requireCurrent();if(expected==null||owner.persistence!=expected)throw retainedFailure();}
         VaultSnapshot originalSnapshotForReadback()throws VaultFailure {requireCurrent();return data.originalSnapshotForOwningRead();}
         VaultSnapshot terminalSnapshotForReadback()throws VaultFailure {requireCurrent();return data.terminalSnapshotForOwningRead();}
         private void bindNamespace(NativeProtectedNamespaceObservation original)throws VaultFailure {
@@ -12509,6 +12510,47 @@ final class VaultEngine {
         finally{VaultValidation.wipe(credential);}
     }
 
+    org.json.JSONObject completeExistingOriginalEnrollmentPartition(
+        java.util.Map<String,NativeProtectedNamespaceObservation.Store> readers,NativePrivateCustodyExchangeJournal journal,
+        NativePrivateCapsuleFileStore capsules,AndroidProtectedWorkPreferences.HeldOriginalRead held,
+        NativePrivateCustodyFrameReadControl control,CustodialNativeRuntime runtime,String requestedOperation)throws VaultFailure {
+        if(Thread.holdsLock(this)||runtime==null||runtime.engine!=this||readers==null||journal==null||capsules==null||held==null||control==null)throw retainedFailure();
+        NativeOriginalInventoryFinalizationRestoredRead original=null;NativeProtectedNamespaceObservation namespaces=null;
+        NativeOriginalInventoryFinalizationControl fixed=null;
+        try{
+            synchronized(this){
+                original=readExistingOriginalFinalization(journal,held,control);
+                if(original==null||!original.data.durableCommand||!original.data.operationId.equals(VaultValidation.operationId(requestedOperation)))throw retainedFailure();
+                namespaces=NativeProtectedNamespaceObservation.observeHeldOriginal(readers,held);original.bindNamespace(namespaces);
+                persistence.requireUnambiguousOriginalFinalizationRead(original);
+                var state=persistence.readOriginalInventoryFinalizationSnapshot(original);
+                namespaces.requireRestoredFinalizationOriginalData(original,state);
+                journal.requireRestoredFinalizationBrowserFiles(original);capsules.requireOriginalFinalizationRecord(original);
+                fixed=new NativeOriginalInventoryFinalizationControl(original,namespaces,capsules,state);original=null;
+            }
+            final var completed=fixed;
+            var next=NativePreservedEnrollmentTransition.complete(this,control,new NativePreservedEnrollmentTransition.OwnedEffects<NativeRetainedEnrollmentRealmStore.State>(){
+                public void settleOriginalEnrollment()throws VaultFailure {
+                    if(!completed.observed)persistence.commitOriginalInventoryFinalization(completed);
+                    completed.requireRetainedEnrollmentSuccessor();
+                }
+                public void verifyRetainedBrowserOutsideMonitor()throws VaultFailure {
+                    synchronized(VaultEngine.this){completed.requireRetainedEnrollmentSuccessor();}
+                }
+                public NativeRetainedEnrollmentRealmStore.State publishRetainedPartitionOutsideMonitor()throws VaultFailure {
+                    return completed.commitRetainedEnrollmentPartition(runtime.retainedEnrollmentApplication(VaultEngine.this),runtime);
+                }
+                public void verifyRetainedSuccessor()throws VaultFailure {completed.requireRetainedEnrollmentSuccessor();}
+            });
+            synchronized(this){fixed.requireRetainedEnrollmentSuccessor();
+                return new org.json.JSONObject().put("schema","custodial.native-retained-enrollment-partition-result.v1")
+                    .put("original_operation_id",fixed.terminal.removalOperationId).put("next_enrollment_partition",next.realm)
+                    .put("restart_required",true).put("all_original_work_retained",true).put("work_accepted",false)
+                    .put("key_removal",false).put("phone_assignment_changed",false);}
+        }catch(VaultFailure e){throw e;}catch(Exception e){throw retainedFailure();}
+        finally{synchronized(this){if(fixed!=null)fixed.close();if(namespaces!=null)namespaces.close();if(original!=null)original.close();}}
+    }
+
     /** One invocation's fixed enrollment successor. Construction is private to
      * the owning CURRENT manager-decision/retained-inventory composition below.
      * No request/JSON/UUID/receipt flag can construct this control. It cannot
@@ -12528,11 +12570,14 @@ final class VaultEngine {
         private final NativeProtectedNamespaceObservation namespaces;
         private final String browserBinding,browserMetadata,browserParts;
         private final String documentSha,diskSha;
+        private final NativeOriginalInventoryFinalizationRestoredRead restored;
+        private final NativePrivateCapsuleFileStore restoredCapsules;
         private boolean attempted,observed,closed,refused;
         private NativeOriginalInventoryFinalizationControl(NativeOriginalInventoryAcknowledgement acknowledgement,
             NativePrivateCustodyExchangeJournal.Stored intent,VaultSnapshot original,VaultSnapshot terminal)throws VaultFailure {
             if(acknowledgement==null||intent==null||original==null||terminal==null
                 ||!Thread.holdsLock(acknowledgement.decision.owner)||!"COMMITTED".equals(intent.phase))throw retainedFailure();
+            this.restored=null;this.restoredCapsules=null;
             this.acknowledgement=acknowledgement;var eligibility=acknowledgement.eligibility;
             this.eligibility=eligibility;var decision=eligibility.decision;
             this.owner=decision.owner;this.decision=decision;this.intent=intent;
@@ -12547,17 +12592,34 @@ final class VaultEngine {
             documentSha=intent.documentSha;diskSha=intent.diskSha;
             requireBeforeCommit();
         }
+        private NativeOriginalInventoryFinalizationControl(NativeOriginalInventoryFinalizationRestoredRead original,
+            NativeProtectedNamespaceObservation namespaces,NativePrivateCapsuleFileStore capsules,
+            OriginalInventoryFinalizationStoredState state)throws VaultFailure {
+            if(original==null||namespaces==null||capsules==null||state==null||!Thread.holdsLock(original.owner)
+                ||!original.data.durableCommand||original.namespace!=namespaces)throw retainedFailure();
+            owner=original.owner;acknowledgement=null;eligibility=null;decision=null;
+            restored=original;restoredCapsules=capsules;held=original.held;intent=original.stored;
+            this.namespaces=namespaces;this.original=original.data.originalSnapshotForOwningRead();
+            terminal=original.data.terminalSnapshotForOwningRead();
+            browserBinding=browserMetadata="";browserParts=original.data.browserPartSetSha256;
+            documentSha=intent.documentSha;diskSha=intent.diskSha;
+            attempted=observed=state==OriginalInventoryFinalizationStoredState.FIXED_SUCCESSOR_SNAPSHOT_PRESENT;
+            if(observed)requireRetainedEnrollmentSuccessor();else requireBeforeCommit();
+        }
+        private NativePrivateCustodyFrameReadControl owningControl(){return restored==null?decision.control:restored.control;}
         private void requireOpen()throws VaultFailure {
-            if(!Thread.holdsLock(owner)||closed||refused||intent==null||decision.owner!=owner)
+            if(!Thread.holdsLock(owner)||closed||refused||intent==null||(restored==null&&decision.owner!=owner))
                 throw retainedFailure();
+            if(restored!=null){restored.requireCurrent();if(!restored.data.durableCommand)throw retainedFailure();}
             intent.open();
             if(!documentSha.equals(intent.documentSha)||!diskSha.equals(intent.diskSha))throw retainedFailure();
-            held.requireCurrent();decision.control.check();
+            held.requireCurrent();owningControl().check();
         }
         void requireBeforeCommit()throws VaultFailure {
             try{
                 requireOpen();if(attempted||observed)throw retainedFailure();
-                acknowledgement.requireCurrent();
+                if(restored==null)acknowledgement.requireCurrent();
+                else requireRestoredSource(OriginalInventoryFinalizationStoredState.ORIGINAL_SNAPSHOT_PRESENT);
                 if(!original.equals(owner.persistence.load())||original.phase!=VaultPhase.ACTIVE||!original.hasCredential()
                     ||terminal.revision!=original.revision+1||terminal.phase!=VaultPhase.EMPTY||terminal.hasCredential())
                     throw retainedFailure();
@@ -12578,7 +12640,10 @@ final class VaultEngine {
         }
         void beginCommitAttempt()throws VaultFailure {
             requireBeforeCommit();
-            acknowledgement.consumeForOriginalCommit(this);
+            if(restored==null)acknowledgement.consumeForOriginalCommit(this);
+            // A v3 durable command reserves this ONE original fixed CAS. Its
+            // authenticated actual GCM/HELD/all8 owner is rechecked above; no
+            // old receipt or parsed DATA value grants a new action.
             attempted=true;
             try{AndroidProtectedWorkPreferences.requireOriginalEnrollmentCommit(owner.persistence,this);}
             catch(VaultFailure|RuntimeException|Error failure){refused=true;throw failure;}
@@ -12605,6 +12670,7 @@ final class VaultEngine {
             byte[] targetBytes=null;
             try{
                 requireOpen();if(!attempted||!observed||!terminal.equals(owner.persistence.load()))throw retainedFailure();
+                if(restored!=null){requireRestoredSource(OriginalInventoryFinalizationStoredState.FIXED_SUCCESSOR_SNAPSHOT_PRESENT);return;}
                 namespaces.requireExactEnrollmentSuccessor(this);
                 var browser=decision.dispatch.original.original.browser;
                 browser.requireCheckedPostFinalizationOriginalHoldFence();
@@ -12638,6 +12704,7 @@ final class VaultEngine {
             byte[] targetBytes=null;
             try{
                 requireOpen();if(!attempted||observed||!terminal.equals(readback))throw retainedFailure();
+                if(restored!=null){requireRestoredSource(OriginalInventoryFinalizationStoredState.FIXED_SUCCESSOR_SNAPSHOT_PRESENT);observed=true;return;}
                 // The old complete source graph intentionally no longer
                 // matches its ACTIVE vault. Do NOT weaken its predicates or
                 // call it a current post-finalization graph. Check only the
@@ -12654,7 +12721,91 @@ final class VaultEngine {
             catch(Error failure){refused=true;throw failure;}
             finally{if(targetBytes!=null)java.util.Arrays.fill(targetBytes,(byte)0);}
         }
-        @Override public void close(){synchronized(owner){closed=true;acknowledgement.close();intent.close();}}
+        /** Same actual retained-current graph, after the one fixed enrollment
+         * successor. A second employee receives a new STORAGE partition, never
+         * a new recovery predecessor or a changed original work identity. */
+        private void requireRestoredSource(OriginalInventoryFinalizationStoredState expected)throws VaultFailure {
+            if(restored==null||!restored.data.durableCommand)throw retainedFailure();
+            restored.requireCurrent();
+            if(attempted&&!observed)owner.persistence.requireOriginalFinalizationOwnedReadback(restored,this);
+            else owner.persistence.requireUnambiguousOriginalFinalizationRead(restored);
+            var state=owner.persistence.readOriginalInventoryFinalizationSnapshot(restored);
+            if(state!=expected)throw retainedFailure();
+            namespaces.requireRestoredFinalizationOriginalData(restored,state);
+            restored.journal.requireRestoredFinalizationBrowserFiles(restored);
+            restoredCapsules.requireOriginalFinalizationRecord(restored);
+            char[] credential=null;
+            try{credential=owner.cipher.decrypt(original.secret);NativeAttestation.requireStoredCredentialId(credential,restored.data.credentialId);}
+            finally{VaultValidation.wipe(credential);}
+            restored.requireCurrent();owningControl().check();
+        }
+        void requireRetainedEffectsOwner(CustodialNativeRuntime runtime)throws VaultFailure {
+            synchronized(owner){if(runtime==null||runtime.engine!=owner)throw retainedFailure();requireRetainedEnrollmentSuccessor();}
+        }
+        private NativeRetainedEnrollmentRealmStore.State commitRetainedEnrollmentPartition(
+            CustodialEnrollmentApplication application,CustodialNativeRuntime runtime)throws VaultFailure {
+            try{
+                synchronized(owner){requireRetainedEnrollmentSuccessor();}
+                runtime.quiesceRetainedEnrollmentEffects(this,owningControl());
+                synchronized(owner){
+                    requireRetainedEnrollmentSuccessor();application.requireStartupPartitionCurrent();
+                    var store=application.writerStore();var previous=application.startupState(store);
+                    var archived=new org.json.JSONObject(intent.document).getJSONObject("finalization");
+                    byte[] intentBytes=intent.document.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    try(var data=NativeOriginalInventoryFinalizationIntentData.decode(intentBytes)){
+                        if(!data.durableCommand||!previous.realm.equals(data.storagePredecessorRealm)
+                            ||!previous.sha256.equals(data.storagePredecessorSha256))throw retainedFailure();
+                        var report=new org.json.JSONObject().put("schema",NativeLocalEnrollmentRetentionReport.SCHEMA)
+                            .put("realm_id",data.storagePartitionId).put("previous_realm",previous.realm)
+                            .put("inventory_native_request_id",data.inventoryNativeRequestId).put("approval_id",data.managerApprovalId)
+                            .put("operation_id",data.operationId).put("credential_id",data.credentialId)
+                            .put("manifest_sha256",archived.getString("inventory_manifest_sha256"))
+                            .put("local_finalization_intent_document_sha256",intent.documentSha)
+                            .put("local_finalization_intent_disk_sha256",intent.diskSha)
+                            .put("original_native_values_sha256",data.valuesSha256)
+                            .put("original_browser_frame_sha256",data.browserFrameSha256)
+                            .put("original_browser_part_set_sha256",data.browserPartSetSha256);
+                        var proof=new NativeLocalEnrollmentRetentionSigning(this,report.toString());char[] credential=null;
+                        try{credential=owner.cipher.decrypt(original.secret);
+                            report.put("purpose_binding_sha256",proof.bindingSha256)
+                                .put("purpose_attestation",NativeAttestation.localEnrollmentRetentionSignature(proof,credential));}
+                        finally{VaultValidation.wipe(credential);proof.close();}
+                        requireRetainedEnrollmentSuccessor();
+                        String files=NativeRetainedEnrollmentFiles.capture(application.nativeNoBackupRoot().toPath(),owningControl()::check);
+                        requireRetainedEnrollmentSuccessor();
+                        var binding=new org.json.JSONObject().put("schema","custodial.local-retained-enrollment-binding.v1")
+                            .put("original_finalization_intent_utf8",intent.document).put("retained_original_files_utf8",files)
+                            .put("local_retention_report_utf8",report.toString());
+                        var committed=store.advance(previous,data.storagePartitionId,data.operationId,binding.toString());
+                        requireRetainedEnrollmentSuccessor();
+                        if(!store.read().sha256.equals(committed.sha256))throw retainedFailure();return committed;
+                    }finally{java.util.Arrays.fill(intentBytes,(byte)0);}
+                }
+            }catch(VaultFailure e){throw e;}catch(Exception e){throw retainedFailure();}
+        }
+        @Override public void close(){synchronized(owner){closed=true;if(restored==null){acknowledgement.close();intent.close();}else restored.close();}}
+    }
+
+    /** Fixed private signer; only the actual consumed finalization owner can
+     * construct it. No page body, caller hash, imported receipt or generic
+     * credential signer is admitted. Signing is not pointer publication. */
+    static final class NativeLocalEnrollmentRetentionSigning implements AutoCloseable {
+        private final NativeOriginalInventoryFinalizationControl original;
+        private final String message,credentialId,bindingSha256;
+        private boolean closed;
+        private NativeLocalEnrollmentRetentionSigning(NativeOriginalInventoryFinalizationControl original,String report)throws VaultFailure {
+            this.original=original;original.requireRetainedEnrollmentSuccessor();
+            try{
+                var data=new org.json.JSONObject(report);
+                credentialId=data.getString("credential_id");
+                bindingSha256=NativeLocalEnrollmentRetentionReport.bindingSha256(data);
+                message="custodial.native-local-enrollment-retention-purpose.v1"+"\n"+credentialId+"\n"+bindingSha256;
+            }catch(Exception e){throw retainedFailure();}
+        }
+        String credentialForFixedRetentionSigner()throws VaultFailure {requireCurrent();return credentialId;}
+        String messageForFixedRetentionSigner()throws VaultFailure {requireCurrent();return message;}
+        private void requireCurrent()throws VaultFailure {if(closed)throw retainedFailure();original.requireRetainedEnrollmentSuccessor();}
+        @Override public void close(){closed=true;}
     }
 
     /** Closed local transition eligibility, NOT the server's ACK flag or the
@@ -12718,6 +12869,7 @@ final class VaultEngine {
      * This type never grants work acceptance, resend, thaw or key removal.
      */
     private static final class NativeOriginalInventoryAcknowledgement implements AutoCloseable {
+        private CustodialEnrollmentApplication application;
         private final NativeOriginalInventoryDecisionReadLease decision;
         private final NativeOriginalInventoryFinalizationEligibility eligibility;
         private NativeOriginalInventoryFinalizationControl finalization;
@@ -12760,10 +12912,21 @@ final class VaultEngine {
      * accepted. Observation/retention and plugin actions are not callers.
      * Source mounting is not positive owning qualification or release admission.
      */
+    /** The former unbound seam cannot choose an Application/runtime owner. */
     org.json.JSONObject separateHeldOriginalEnrollmentKeepingWork(
         NativeOriginalInventoryAckRequestControl original,NativeOriginalInventoryAckRequestJournal.Result retained,
         NativePrivateCustodyHttp http,NativePrivateCustodyFrameReadControl control)throws VaultFailure {
-        return finalizeOriginalInventoryPreservingWork(original,retained,http,control);
+        if(Thread.holdsLock(this))throw concurrent();throw retainedFailure();
+    }
+
+    org.json.JSONObject separateHeldOriginalEnrollmentKeepingWork(
+        NativeOriginalInventoryAckRequestControl original,NativeOriginalInventoryAckRequestJournal.Result retained,
+        NativePrivateCustodyHttp http,NativePrivateCustodyFrameReadControl control,
+        CustodialNativeRuntime runtime)throws VaultFailure {
+        if(runtime==null||runtime.engine!=this)throw retainedFailure();
+        var application=runtime.retainedEnrollmentApplication(this);
+        application.requireStartupPartitionCurrent();
+        return finalizeOriginalInventoryPreservingWork(original,retained,http,control,application,runtime);
     }
 
     /** Private continuation of the explicit protected action only.
@@ -12771,9 +12934,17 @@ final class VaultEngine {
      * a distinct actual Source read outside the Engine monitor. Any ambiguous
      * outcome retains the immutable intent and originals; it never retries.
      */
+    /** Retained negative boundary: an unbound legacy call cannot create the
+     * actual Application/runtime owner required for a new storage partition. */
     private org.json.JSONObject finalizeOriginalInventoryPreservingWork(
         NativeOriginalInventoryAckRequestControl original,NativeOriginalInventoryAckRequestJournal.Result retained,
         NativePrivateCustodyHttp http,NativePrivateCustodyFrameReadControl control)throws VaultFailure {
+        if(Thread.holdsLock(this))throw concurrent();throw retainedFailure();
+    }
+
+    private org.json.JSONObject finalizeOriginalInventoryPreservingWork(
+        NativeOriginalInventoryAckRequestControl original,NativeOriginalInventoryAckRequestJournal.Result retained,
+        NativePrivateCustodyHttp http,NativePrivateCustodyFrameReadControl control,CustodialEnrollmentApplication application,CustodialNativeRuntime runtime)throws VaultFailure {
         if(Thread.holdsLock(this))throw concurrent();
         try(var decision=readOriginalInventoryDecisionLease(original,retained,http,control)){
             NativeOriginalInventoryFinalizationControl fixed;
@@ -12781,25 +12952,37 @@ final class VaultEngine {
                 NativeOriginalInventoryAcknowledgement acknowledgement=null;
                 try{
                     acknowledgement=new NativeOriginalInventoryAcknowledgement(decision);
-                    fixed=prepareOriginalInventoryFinalization(acknowledgement);acknowledgement=null;
+                    acknowledgement.application=application;fixed=prepareOriginalInventoryFinalization(acknowledgement);acknowledgement=null;
                 }finally{if(acknowledgement!=null)acknowledgement.close();}
             }
             try(fixed){
-                synchronized(this){fixed.requireBeforeCommit();persistence.commitOriginalInventoryFinalization(fixed);}
-                // Never reuse the earlier decision read after the await/write,
-                // renew its deadline or hold the Engine across Source I/O.
-                decision.dispatch.original.original.browser.requirePostFinalizationOriginalHoldFence();
+                var nextRealm=NativePreservedEnrollmentTransition.complete(this,control,new NativePreservedEnrollmentTransition.OwnedEffects<NativeRetainedEnrollmentRealmStore.State>(){
+                    public void settleOriginalEnrollment()throws VaultFailure {fixed.requireBeforeCommit();persistence.commitOriginalInventoryFinalization(fixed);}
+                    public void verifyRetainedBrowserOutsideMonitor()throws VaultFailure {
+                        decision.dispatch.original.original.browser.requirePostFinalizationOriginalHoldFence();
+                    }
+                    public NativeRetainedEnrollmentRealmStore.State publishRetainedPartitionOutsideMonitor()throws VaultFailure {
+                        synchronized(VaultEngine.this){
+                            char[] oldCredential=null;
+                            try{
+                                fixed.requireRetainedEnrollmentSuccessor();oldCredential=cipher.decrypt(fixed.original.secret);
+                                NativeAttestation.requireStoredCredentialId(oldCredential,new org.json.JSONObject(decision.target).getString("credential_id"));
+                                fixed.requireRetainedEnrollmentSuccessor();
+                            }catch(VaultFailure failure){throw failure;}catch(Exception failure){throw retainedFailure();}
+                            finally{VaultValidation.wipe(oldCredential);}
+                        }
+                        return fixed.commitRetainedEnrollmentPartition(application,runtime);
+                    }
+                    public void verifyRetainedSuccessor()throws VaultFailure {fixed.requireRetainedEnrollmentSuccessor();}
+                });
                 synchronized(this){
-                    char[] oldCredential=null;
                     try{
-                        fixed.requireRetainedEnrollmentSuccessor();
-                        oldCredential=cipher.decrypt(fixed.original.secret);
-                        NativeAttestation.requireStoredCredentialId(oldCredential,
-                            new org.json.JSONObject(decision.target).getString("credential_id"));
                         fixed.requireRetainedEnrollmentSuccessor();
                         var target=new org.json.JSONObject(decision.target);
                         return new org.json.JSONObject()
-                            .put("schema","custodial.native-original-enrollment-successor-observation.v1")
+                            .put("next_enrollment_partition",nextRealm.realm)
+                            .put("restart_required",true)
+                            .put("schema","custodial.native-original-enrollment-successor-observation.v2")
                             .put("state","ORIGINAL_SUCCESSOR_OBSERVED_ALL_WORK_RETAINED_NOT_RELEASED")
                             .put("original_operation_id",target.get("operation_id"))
                             .put("original_generation_id",target.get("original_generation_id"))
@@ -12809,7 +12992,6 @@ final class VaultEngine {
                             .put("work_accepted",false).put("replay_allowed",false).put("finalizer_allowed",false)
                             .put("key_removal",false).put("phone_released",false);
                     }catch(VaultFailure failure){throw failure;}catch(Exception failure){throw retainedFailure();}
-                    finally{VaultValidation.wipe(oldCredential);}
                 }
             }
         }
@@ -12822,6 +13004,8 @@ final class VaultEngine {
      */
     private NativeOriginalInventoryFinalizationControl prepareOriginalInventoryFinalization(
         NativeOriginalInventoryAcknowledgement acknowledgement)throws VaultFailure {
+        CustodialEnrollmentApplication application=acknowledgement==null?null:acknowledgement.application;
+        if(application==null)throw retainedFailure();
         if(acknowledgement==null||acknowledgement.decision.owner!=this||!Thread.holdsLock(this))throw retainedFailure();
         var decision=acknowledgement.decision;
         NativePrivateCustodyExchangeJournal.Stored intent=null;byte[] originalBytes=null,terminalBytes=null;
@@ -12839,7 +13023,25 @@ final class VaultEngine {
                 EnrollmentMetadata.empty(),operation,"",false,"");
             var codec=new VaultSnapshotCodec();originalBytes=codec.encode(original);terminalBytes=codec.encode(terminal);
             var metadata=decision.dispatch.original.original.held.originalMetadataForOwningRecovery();
-            var fixed=new org.json.JSONObject().put("schema","custodial.original-inventory-enrollment-finalization-intent.v2")
+            if(application==null)throw retainedFailure();application.requireStartupPartitionCurrent();
+            decision.dispatch.original.original.held.requireSameNativeRoot(application.nativeNoBackupRoot());
+            var previousStore=application.writerStore();var previous=application.startupState(previousStore);
+            org.json.JSONObject approval;
+            long authorizationMillis=clock.nowMillis();
+            long authorizationElapsed=System.nanoTime()-decision.readStartedNanos;
+            byte[] targetBytes=decision.target.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            try(var decoded=NativeOriginalInventorySeparationApprovalWire.decodeCurrent(targetBytes,decision.dispatch.original.nativeId,
+                publication.manifestSha,decision.registrationSha,200,decision.response,decision.readStartedMillis,
+                authorizationElapsed,authorizationMillis)){approval=decoded.json();}
+            finally{java.util.Arrays.fill(targetBytes,(byte)0);}
+            var fixed=new org.json.JSONObject().put("schema","custodial.original-inventory-enrollment-finalization-intent.v3")
+                .put("durable_command_purpose","COMPLETE_ONE_ORIGINAL_ENROLLMENT_SEPARATION_KEEP_ALL_ORIGINAL_WORK_AND_KEYS")
+                .put("storage_partition_id",java.util.UUID.randomUUID().toString())
+                .put("storage_predecessor_realm",previous.realm).put("storage_predecessor_sha256",previous.sha256)
+                .put("inventory_native_request_id",decision.dispatch.original.nativeId)
+                .put("manager_approval_id",approval.getString("approval_id"))
+                .put("manager_approval_response_base64",NativeRetainedAttempt.encodeBase64(decision.response))
+                .put("authorized_at",NativeOriginalInventorySeparationApprovalWire.originalCommandObservationInstant(decision.readStartedMillis,authorizationElapsed,authorizationMillis))
                 .put("state","ORIGINAL_LOCAL_ENROLLMENT_TRANSITION_OUTCOME_UNKNOWN")
                 .put("original_target",target).put("inventory_manifest_sha256",publication.manifestSha)
                 .put("registration_receipt_sha256",decision.registrationSha)
@@ -16662,12 +16864,12 @@ final class VaultEngine {
         result.put("removal_pending", removalPending);
         result.put("removal_finalized", removalFinalized);
         result.put("removal_device_id", removalPending || removalFinalized ? state.deviceId : "");
-        result.put("removal_remote_complete", state.phase == VaultPhase.REMOVAL_TOMBSTONE || removalFinalized);
+        result.put("removal_remote_complete", state.phase == VaultPhase.REMOVAL_TOMBSTONE);
         if (removalPending || removalFinalized) {
             Map<String, Object> removal = new LinkedHashMap<>();
             removal.put("operation_id", state.removalOperationId);
             removal.put("device_id", state.deviceId);
-            removal.put("remote_complete", state.phase == VaultPhase.REMOVAL_TOMBSTONE || removalFinalized);
+            removal.put("remote_complete", state.phase == VaultPhase.REMOVAL_TOMBSTONE);
             removal.put("finalized", removalFinalized);
             result.put("removal", VaultCollections.copyMap(removal));
         }

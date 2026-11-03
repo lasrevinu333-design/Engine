@@ -14,7 +14,7 @@ export function currentDeviceId() {
   return String(localStorage.getItem(DEVICE_KEY) || localStorage.getItem('mz_scan_device_id') || '').trim();
 }
 export function currentSession() {
-  return window.MemphisMobile?.readSession?.() || null;
+  return window.MemphisAuth?.readSession?.() || null;
 }
 export async function refreshManagerSession() {
   const session = await window.MemphisMobile?.refresh?.({ force: true });
@@ -22,18 +22,22 @@ export async function refreshManagerSession() {
   return { session };
 }
 export async function managerNotificationRequest(path, options = {}) {
-  let session = currentSession();
-  if (!session || Date.parse(session.expires_at || '') <= Date.now() + 5000) session = (await refreshManagerSession()).session;
+  const original = currentSession();
+  const identity = s => s && [s.role,s.manager_id,s.credential_id,s.device_id,s.auth_mode].join('\u001f');
+  const headers = await window.MemphisAuth.opsManagerAuthHeaders();
+  const session = currentSession();
+  if (!session || (original && identity(original)!==identity(session))
+    || headers.Authorization!==`Bearer ${session.token}` || headers['X-Device-Id']!==session.device_id)
+    throw new Error('Manager access changed. Open this page again.');
+  const binding = identity(session), token = session.token;
+  const current = () => identity(currentSession())===binding && currentSession()?.token===token;
   const response = await fetch(`${API}${path}`, {
-    method: options.method || 'GET', cache: 'no-store', credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${session.token}`,
-      'X-Device-Id': session.device_id || currentDeviceId(),
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-    },
+    method: options.method || 'GET', cache: 'no-store', credentials: 'include', redirect: 'error',
+    headers: { ...headers, ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   const payload = await response.json().catch(() => null);
+  if (!current()) throw new Error('Manager access changed. The original outcome has not been confirmed.');
   if (!response.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
   return payload.data;
 }

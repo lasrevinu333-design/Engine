@@ -10,6 +10,7 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
   const els={guests:byId('home-guest-count'),guestDetails:byId('home-guest-details'),attendance:byId('home-attendance-freshness'),
     weatherCurrent:byId('home-weather-current'),weatherIcon:byId('home-weather-icon'),weatherSummary:byId('home-weather-summary'),weather:byId('home-weather-freshness'),hours:byId('home-weather-hours'),hourlyFreshness:byId('home-hourly-freshness'),alerts:byId('home-weather-alerts'),alertFreshness:byId('home-alerts-freshness'),shift:byId('home-shift'),lunch:byId('home-lunch'),schedule:byId('home-schedule-freshness')};
   let facts=null,binding='',timer=null,securityBlocked=false,securityGeneration=0,protectedBinding='',updateSequence=0,pendingReady=null;
+  let cachedProfileOnly=false,factsCachedProfileOnly=false,authenticatedProfile=null;
   const healthy=value=>{try{return value!==null&&typeof value==='object'&&value.ready===true&&value.available===true&&value.quarantined===false;}catch{return false;}};
   function clearSchedule(){if(els.shift)els.shift.textContent='Schedule unavailable';if(els.lunch)els.lunch.textContent='Lunch unavailable';
     if(els.schedule){els.schedule.textContent='Phone identity must be verified.';els.schedule.dataset.stale='true';}}
@@ -60,8 +61,15 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     if(!scope){if(nativeWriterObserved||security.native===true)throw mutationInvalidated();return sourceStorage.setItem(key,value);}
     if(!scope.expected.has(key)||typeof value!=='string')throw mutationInvalidated();
     scope.checkpoint();
-    try{scope.write.call(sourceStorage,key,value);if(scope.read.call(sourceStorage,key)!==value)throw mutationInvalidated();}
-    catch{throw mutationInvalidated();}
+    try{scope.write.call(sourceStorage,key,value);}
+    catch{
+      // Only an unchanged original owner and unchanged rows can distinguish
+      // storage failure from authority replacement. Preserve that distinction
+      // so a validated terminal can remain blocking in this live Home.
+      scope.checkpoint();
+      throw Object.assign(new Error('Home cache storage unavailable'),{code:'schedule_cache_storage_unavailable'});
+    }
+    if(scope.read.call(sourceStorage,key)!==value)throw mutationInvalidated();
     scope.expected.set(key,value);scope.checkpoint();
   }};
   const captureProtectedMutation=operation=>{
@@ -147,6 +155,7 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     els.shift.textContent=value.schedule.shift;els.lunch.textContent=value.schedule.lunch;els.schedule.textContent=value.schedule.detail;els.schedule.dataset.stale=String(value.schedule.stale);
   }
   async function request(kind,id,signal){
+    if(cachedProfileOnly)throw Error('Only saved facts are available.');
     if(kind==='schedule'){
       const owner=facts,generation=securityGeneration,invocation=updateSequence,originalBinding=homeBinding(id);
       const currentRequest=()=>{
@@ -204,9 +213,37 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
       if(getProfile()!==profile||!owns())return false;
       const after=readyProof(security.getStatus());
       if(!owns()||!sameReady(expected,after))return false;
-      pendingReady=null;securityBlocked=false;protectedBinding=expected.principal;
+      pendingReady=null;securityBlocked=false;protectedBinding=expected.principal;cachedProfileOnly=false;authenticatedProfile=profile;
       return true;
     }catch{if(owns())quarantine();return false;}
+  }
+  async function protectedCachedProfileRestored(profile){
+    // Offline app.restore owns this path. A poll or old ready event is not
+    // proof: validate the real native store again, then bind its exact current
+    // generation to the unchanged protected-principal cache and live profile.
+    const invocation=++updateSequence,generation=securityGeneration;
+    const owns=()=>invocation===updateSequence&&generation===securityGeneration;
+    const mobile=window.MemphisMobile,reader=mobile?.readCustodialHomeCache;
+    try{
+      if(security.native!==true||profile?.authenticated!==true||getProfile()!==profile
+        ||typeof reader!=='function'||!owns())return false;
+      const encoded=JSON.stringify(profile),originalPrincipal=mobile.principalIdentity();
+      const cached=()=>window.MemphisMobile===mobile&&mobile.readCustodialHomeCache===reader
+        &&getProfile()===profile&&JSON.stringify(profile)===encoded
+        &&JSON.stringify(reader.call(mobile)?.profile)===encoded
+        &&mobile.principalIdentity()===originalPrincipal;
+      if(!cached()||!owns())return false;
+      const validated=readyProof(await security.ensureSecurityState());
+      if(!owns()||!validated||validated.principal!==originalPrincipal||!cached()||!owns())return false;
+      const before=readyProof(security.getStatus());
+      if(!owns()||!sameReady(validated,before))return false;
+      const captured=captureSecurity({recover:true,data:profile});
+      if(!owns()||!admitted(captured)||captured.id.protectedBinding!==originalPrincipal||!cached()||!owns())return false;
+      const after=readyProof(security.getStatus());
+      if(!owns()||!sameReady(validated,after))return false;
+      pendingReady=null;securityBlocked=false;protectedBinding=originalPrincipal;cachedProfileOnly=true;
+      return true;
+    }catch{return false;}
   }
   function update(force=false){
     const invocation=++updateSequence,generation=securityGeneration;
@@ -240,10 +277,10 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     if(!isVisible()||!Object.values(els).every(Boolean))return;
     if(!owns())return;const next=homeBinding(id);
     protectedBinding=id.protectedBinding;
-    if(!facts||binding!==next){
-      retireResources();if(!owns())return;binding=next;
+    if(!facts||binding!==next||factsCachedProfileOnly!==cachedProfileOnly){
+      retireResources();if(!owns())return;binding=next;factsCachedProfileOnly=cachedProfileOnly;
       facts=createHomeFacts({identity,identityVersion:()=>securityGeneration,sourceVersion:()=>updateSequence,storage:cacheStorage,mutate:protectedMutation,request,render:draw,
-        resolveSchedule:(id,data)=>schedule.resolve(id,data),onIdentityMismatch:quarantine,kinds:['schedule','attendance','weather','alerts']});
+        resolveSchedule:(id,data)=>schedule.resolve(id,data),onIdentityMismatch:quarantine,kinds:cachedProfileOnly?[]:['schedule','attendance','weather','alerts']});
     }
     if(!owns())return;
     const owner=facts,pending=owner.refresh({force});
@@ -287,5 +324,9 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     if(!id)update();else facts?.redraw();
   });
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
-  return {update,stop,authenticatedProfileRestored};
+  // The restore coordinator calls this after cleaning/identity recovery has
+  // settled. Optional stale facts can never gate access to retained work.
+  const restoreProfileFacts=profile=>profile===authenticatedProfile
+    ? Promise.resolve(true):protectedCachedProfileRestored(profile);
+  return {update,stop,authenticatedProfileRestored,protectedCachedProfileRestored,restoreProfileFacts};
 }

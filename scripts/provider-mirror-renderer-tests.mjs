@@ -17,6 +17,7 @@ async function actual({historical=false,play=true}={}){
  const ui=f.fullBrowser({manualAudio:true,browserSpeech:true,observedAudio:true,
   onTone:()=>{const applied=native.calls.filter(x=>x[0]==='apply').map(x=>x[1]);
    check(applied.findLast(x=>x.action==='audio_started')?.claim_id,applied.findLast(x=>x.action==='displayed')?.claim_id,'actual tone follows confirmed original native durable claim');}});
+ await ui.ready;
  const first=native.add(1,{play_audio:play,historical,navigation_pending:historical});
  if(historical)native.states.set(first.claim_id,{current:true,freshness:'FRESHNESS_UNAVAILABLE',retire_visual:false,stop_audio:false,navigation_pending:true});
  await native.mirror.start();await native.mirror.reconcile();await turn();

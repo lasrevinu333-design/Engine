@@ -8,7 +8,12 @@ const engineConstructors = readdirSync(main).filter(name=>name.endsWith('.java')
 assert.deepEqual(engineConstructors,['CustodialNativeRuntime.java'],'one production engine construction, not parallel enrollment owners');
 assert.match(runtime,/static synchronized CustodialNativeRuntime get\(Context context\)/);
 assert.match(runtime,/new CustodialNativeRuntime\(context\.getApplicationContext\(\)\)/);
-assert.doesNotMatch(runtime,/import .*Activity|PluginCall|PluginMethod|getActivity\(|destroyKey\(|finalizeRemoval\(/);
+// Documentation that says 'No PluginMethod accepts...' is not an exposed
+// Capacitor entrypoint. Keep the ban on actual UI imports, annotations,
+// PluginCall declarations and forbidden effects.
+assert.doesNotMatch(runtime,/^\s*import[^;\n]*(?:Activity|PluginCall|PluginMethod)/m);
+assert.doesNotMatch(runtime,/^\s*@PluginMethod\b/m);
+assert.doesNotMatch(runtime,/\bPluginCall\s+[A-Za-z_$]|getActivity\(|destroyKey\(|finalizeRemoval\(/);
 for(const source of [plugin,receiver]) assert.match(source,/CustodialNativeRuntime\.get\(/);
 assert.match(plugin,/engine = runtime\.engine;[\s\S]*offlineAuthorityStore = runtime\.offlineStore;[\s\S]*offlineAuthorityTime = runtime\.offlineTime;/);
 assert.match(receiver,/VaultEngine engine = runtime\.engine;[\s\S]*AndroidOfflineAuthorityTimeStore protectedStore = runtime\.offlineStore;/);

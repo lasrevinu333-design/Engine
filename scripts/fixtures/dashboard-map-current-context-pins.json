@@ -1,0 +1,15 @@
+{
+  "schema": "custodial.dashboard-map-current-context-pins.v1",
+  "implementationSourceCommit": "2af401de8a3eb977085f1eb2e5525fcb6efd5e41",
+  "files": {
+    "start_page1.html": "6a38cd824790cd873e7c2ffe0e6b5f7f15beef31e94f27f658627af536cad189",
+    "ops-hub.css": "44cd4e1af5313d7add1c393e0b5a69183e737cd132e3302f1457c2ae985f5d4b",
+    "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
+    "memphis-auth.js": "0cf46b7511537a1879ce5bbdb57d296344644bf8caf8f5ed86fda2f49373c56d",
+    "dashboard.html": "bf47a1c340e8111ee8b79a53059cc93ae67d9d66fb3d8c68528370241d7ece3c",
+    "employee-hub.html": "757a4ed70aec1a72b244bf1465328f34fdaacc284bf4dc436b00d5ae3973a0a9",
+    "mobile/capacitor.config.ts": "ef8cd3a43bfc513288bed2f3113e5e55ec5454135e70137c58fdd5ac540564f4",
+    "mobile/scripts/build.mjs": "bd3cbbe44b26bb0f782212aa84950693fc12ee286f2f9b53a7b679f38da47b6f"
+  },
+  "scope": "Exact frozen current implementation context for map integration tests; no independent review, live, browser or physical map-accuracy claim."
+}

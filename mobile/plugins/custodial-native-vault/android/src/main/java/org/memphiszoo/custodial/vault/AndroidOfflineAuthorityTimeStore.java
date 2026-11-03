@@ -1155,6 +1155,23 @@ final class AndroidOfflineAuthorityTimeStore implements OfflineAuthorityTime.Off
         return false;
     }
 
+    /** Read-only rejection at physical ingress; no pending handoff is created. */
+    boolean ignoresPhysicalScanDuringInitialWork(long observedElapsed, int observedBoot) throws VaultFailure {
+        synchronized (WORK_WRITE_LOCK) {
+            for (String key : preferences.getAll().keySet()) {
+                if (!key.startsWith(OCCURRENCE_PREFIX)) continue;
+                JSONObject raw = load(key, "custodial_native_offline_occurrence_mismatch");
+                if (raw == null) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+                String sessionId = raw.optString("client_session_id", "");
+                if (!key.equals(occurrenceKey(sessionId))) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+                OfflineAuthorityTime.OfflineOccurrence original = loadOccurrence(sessionId);
+                if (original == null) throw new VaultFailure("custodial_native_offline_occurrence_mismatch");
+                if (OfflineAuthorityTime.ignoresPhysicalScan(original, observedElapsed, observedBoot)) return true;
+            }
+            return false;
+        }
+    }
+
     @Override
     public void deleteOccurrence(String clientSessionId) throws VaultFailure {
         synchronized(WORK_WRITE_LOCK){

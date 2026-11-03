@@ -1,3 +1,4 @@
+import {createSyntheticNativeHome} from './fixtures/native-home-mutation-context.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import './synthetic-schedule-locks.mjs';
@@ -31,13 +32,15 @@ for(const [name,getter]of statusCases)await test('V6-03 Home exact storage redra
   const nodes=new Map(),events=new Map(),memory=new Map(),el=k=>{if(!nodes.has(k))nodes.set(k,{textContent:'',innerHTML:'',dataset:{}});return nodes.get(k);};
   const profile={authenticated:true,canonical_device_id:'KIOSK_08',employee_id:id(2),employee_name:'Fixture',credential_id:id(3),assignment_epoch:7};
   const d=legacy();d.service_date=d.home_facts.service_date=zooServiceDate();
-  const security={native:true,getStatus:()=>({ready:true,available:true,quarantined:false}),mutateProtectedWork:async fn=>fn()},original=security.getStatus;
-  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=> 'v7-dom',profileMatchesPrincipal:()=>true}};
+  const admitted=createSyntheticNativeHome('v7-dom',{employeeId:id(2),credentialId:id(3)});
+  const security={native:true,getStatus:admitted.status,mutateProtectedWork:admitted.mutate},original=security.getStatus;
+  globalThis.window={addEventListener:(n,f)=>events.set(n,f),MemphisMobile:{principalIdentity:()=> admitted.binding,profileMatchesPrincipal:()=>true}};
+  globalThis.window.MemphisCustodialSecurity=security;
   globalThis.document={getElementById:el,addEventListener(){},hidden:false};globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
   globalThis.setInterval=()=>1;globalThis.clearInterval=()=>{};globalThis.fetch=async()=>{throw Error('provider offline');};
   app=installHomeFacts({getProfile:()=>profile,getDeviceId:()=> 'KIOSK_08',isVisible:()=>true,security,requestJson:async()=>structuredClone(d)});
   await app.update(true);assert.equal(el('home-shift').textContent,'7:00 AM–4:00 PM');security.getStatus=getter;
-  assert.doesNotThrow(()=>events.get('storage')({key:'mz_employee_schedule_snapshot:v7-dom'}));assert.equal(el('home-shift').textContent,'Schedule unavailable');
+  assert.doesNotThrow(()=>events.get('storage')({key:'mz_employee_schedule_snapshot:'+encodeURIComponent(admitted.binding)}));assert.equal(el('home-shift').textContent,'Schedule unavailable');
   security.getStatus=original;await app.update(true);assert.equal(el('home-shift').textContent,'Schedule unavailable');
   events.get('memphis:custodial-security-state')({detail:original()});await app.update(true);assert.equal(el('home-shift').textContent,'7:00 AM–4:00 PM');
  }finally{app?.stop();for(const[k,v]of old){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}

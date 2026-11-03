@@ -21,6 +21,7 @@
     RINGTONE_HOSTED_FILE: 'memphis-alert-tone.wav?v=release-2026.07.19.custodial-v3.12'
   };
 
+  const lunchAudioContinuations=new WeakMap();
   const state = {
     deviceId: '',
     currentUserId: '',
@@ -573,6 +574,9 @@
     const sequence = (async()=>{
       if (alert.boundReceiptAction?.beginAudio && !await alert.boundReceiptAction.beginAudio()) return false;
       if (!alertCurrent(alert)) return false;
+      const continuation=alert.beginLunchAudio?.();
+      if(alert.beginLunchAudio&&(!continuation||!continuation.isCurrent()))return false;
+      if(continuation)lunchAudioContinuations.set(alert,continuation);
       const completed=await startAlertAudioSequence(text);
       await alert.boundReceiptAction?.finishAudio?.(completed===true);
       return completed;
@@ -581,6 +585,7 @@
     });
     state.activeSequencePromise = sequence;
     sequence.finally(() => {
+      retireLunchAudio(alert);
       if (state.activeSequencePromise === sequence) {
         state.activeSequencePromise = null;
         if (state.activeAudioAlert === alert) state.activeAudioAlert = null;
@@ -1036,6 +1041,7 @@
 
   function stopAlertAudio(alert) {
     if (alert && state.activeAudioAlert !== alert) return;
+    retireLunchAudio(state.activeAudioAlert);
     if(state.activeAlert!==state.activeAudioAlert)clearLunchCutoff(state.activeAudioAlert);
     state.alertSequenceToken += 1;
     clearPendingRingtoneRepeats();
@@ -1068,6 +1074,14 @@
     if(alert?.boundReceiptAction&&!alert.boundReceiptAction.isCurrent())return false;
     return typeof alert?.currentAuthority!=='function'||alert.currentAuthority()===true;
   }
+  function retireLunchAudio(alert){
+    const continuation=lunchAudioContinuations.get(alert);
+    continuation?.retire();lunchAudioContinuations.delete(alert);
+  }
+  function audioCurrent(alert){
+    const continuation=lunchAudioContinuations.get(alert);
+    return state.activeAudioAlert===alert&&continuation?continuation.isCurrent()===true:alertCurrent(alert);
+  }
   function hasLunchCutoff(alert){return alert?.notificationType==='lunch_coverage'
     &&alert.boundReceiptAction?.providerMirror!==true&&typeof alert.originalLunchCutoff==='string';}
   function clearLunchCutoff(alert){
@@ -1095,8 +1109,9 @@
     let current=false;try{current=alertCurrent(alert);}catch{}
     if(state.detached||state.activeAlert!==alert&&state.activeAudioAlert!==alert){clearLunchCutoff(alert);return;}
     if(current){if(rearm)armLunchCutoff(alert);return;}
-    if(state.activeAlert===alert)closeActiveAlert({stopSpeech:state.activeAudioAlert===alert});
-    if(state.activeAudioAlert===alert)stopAlertAudio(alert);
+    const keepAudio=state.activeAudioAlert===alert&&audioCurrent(alert);
+    if(state.activeAlert===alert)closeActiveAlert({stopSpeech:!keepAudio});
+    if(state.activeAudioAlert===alert&&!keepAudio)stopAlertAudio(alert);
     clearLunchCutoff(alert);
   }
   function recheckOwnedLunchCutoffs(){
@@ -1106,10 +1121,10 @@
   function reconcileScheduleAuthority(invalidatePolls=true){
     if(invalidatePolls)state.authorityGeneration++;
     const visual=state.activeAlert,audio=state.activeAudioAlert;
-    if(visual&&!alertCurrent(visual))closeActiveAlert({stopSpeech:true});
-    if(audio&&!alertCurrent(audio))stopAlertAudio(audio);
+    if(visual&&!alertCurrent(visual))closeActiveAlert({stopSpeech:!audioCurrent(visual)});
+    if(audio&&!audioCurrent(audio))stopAlertAudio(audio);
     armLunchCutoff(state.activeAlert);if(state.activeAudioAlert!==state.activeAlert)armLunchCutoff(state.activeAudioAlert);
-    return (!state.activeAlert||alertCurrent(state.activeAlert))&&(!state.activeAudioAlert||alertCurrent(state.activeAudioAlert));
+    return (!state.activeAlert||alertCurrent(state.activeAlert))&&(!state.activeAudioAlert||audioCurrent(state.activeAudioAlert));
   }
   function showAlert(alert, owned = false) {
     if(state.detached||document.hidden===true)return false;
@@ -1263,7 +1278,7 @@
 
     document.body.appendChild(backdrop);
     alert.boundReceiptAction?.onRetire?.((options) => {
-      const stopAudio=alert.boundReceiptAction?.providerMirror!==true||options?.stopAudio!==false;
+      const stopAudio=alert.boundReceiptAction?.providerMirror===true?options?.stopAudio!==false:!audioCurrent(alert);
       if (state.activeAlert === alert) closeActiveAlert({stopSpeech:stopAudio});
       if(stopAudio)stopAlertAudio(alert); // Dismiss may have hidden this card while audio continued.
       // Never remove a successor or report a still-visible old card retired.
@@ -1341,6 +1356,7 @@
     return showAlert({id:data.notification_key,notificationKey:data.notification_key,
       notificationType:lunch?'lunch_coverage':'location_status',boundReceiptAction,currentAuthority,
       originalLunchCutoff:lunch&&boundReceiptAction?.providerMirror!==true?original.valid_until:undefined,
+      beginLunchAudio:lunch&&boundReceiptAction?.providerMirror!==true?()=>window.MemphisMobile?.beginLunchNotificationAudio?.(original,scope):null,
       kicker:lunch?'Lunch coverage':'Schedule reminder',title:safeText(notification.title,'Memphis Zoo'),body,
       openLabel:'Open schedule',dismissLabel:'Dismiss',openUrl:boundReceiptAction?.providerMirror===true?new URL(data.route,window.location.href).toString():buildScheduleUrl(data),
       speakerName:state.currentDisplayName,speechText:body},true);

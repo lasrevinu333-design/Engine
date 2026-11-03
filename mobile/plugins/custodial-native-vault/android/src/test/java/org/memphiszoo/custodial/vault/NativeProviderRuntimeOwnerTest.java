@@ -429,8 +429,8 @@ public final class NativeProviderRuntimeOwnerTest {
     @Test public void canceledNativePresenceDoesNotRetireActiveRecordsOrDestroyAnyKey() throws Exception {
         Fixture x = new Fixture(false); x.allowed = false;
         Map<String,Object> before = new HashMap<>(x.f.provider.storage.memory.raw);
-        ProviderRecordStoreTest.failure("custodial_native_removal_cancelled", () -> x.removal().remove(RID, DEVICE));
-        assertEquals(1, x.gateCalls); assertEquals(before, x.f.provider.storage.memory.raw);
+        ProviderRecordStoreTest.failure("custodial_native_removal_inventory_admission_required", () -> x.removal().remove(RID, DEVICE));
+        assertEquals(0, x.gateCalls); assertEquals(before, x.f.provider.storage.memory.raw);
         assertEquals("AVAILABLE", x.meta().getString("availability")); assertEquals(0, x.f.cipher.destroyCalls);
         assertEquals(true, x.f.engine.getState().get("active"));
     }
@@ -438,12 +438,12 @@ public final class NativeProviderRuntimeOwnerTest {
         for (boolean legacy : new boolean[]{false, true}) {
             Fixture x = new Fixture(legacy); Object providerKey = x.f.provider.storage.keys.value;
             String originalPrincipal = NativeProviderPrincipal.fromNativeJournal(x.inbox().getJSONObject("principal")).digest;
-            x.removal().remove(RID, DEVICE);
+            NativeProviderHttpTest.preserveSyntheticOriginal(x.f);x.owner.reconcile();
             assertEquals("REMOVED", x.meta().getString("availability"));
             assertEquals("REVOKED_OR_FOREIGN", x.inbox().getString("authority_state"));
             assertTrue(x.inbox().getBoolean("os_cancel_pending")); assertEquals(0, x.f.cipher.destroyCalls);
-            x.owner = x.reconstruct(); x.removal().finalizeRemoval(RID);
-            assertEquals(1, x.f.cipher.destroyCalls); assertSame(providerKey, x.f.provider.storage.keys.value);
+            x.owner = x.reconstruct(); x.owner.reconcile();
+            assertEquals(0, x.f.cipher.destroyCalls); assertSame(providerKey, x.f.provider.storage.keys.value);
             assertEquals(originalPrincipal, NativeProviderPrincipal.fromNativeJournal(x.inbox().getJSONObject("principal")).digest); assertEquals(1, x.events());
             assertEquals("EMPTY", x.f.engine.getState().get("state"));
             assertTrue(x.owner.reconcileLocalEffects()); assertEquals(0, x.surface.shows);
@@ -452,24 +452,25 @@ public final class NativeProviderRuntimeOwnerTest {
     }
     @Test public void durableFenceReadbackFailureBlocksFinalizationAndPreservesRetry() throws Exception {
         for (String failure : new String[]{"reject", "ambiguous", "read"}) {
-            Fixture x = new Fixture(false); x.f.engine.removeEnrollment(RID, DEVICE);
+            Fixture x = new Fixture(false); NativeProviderHttpTest.preserveSyntheticOriginal(x.f);
             if (failure.equals("read")) x.f.provider.storage.memory.throwRead = true;
             else if (failure.equals("ambiguous")) x.f.provider.storage.memory.persistThenReject = true;
             else x.f.provider.storage.memory.reject = true;
-            try { x.removal().finalizeRemoval(RID); fail(failure); }
+            try { x.owner.reconcile(); fail(failure); }
             catch (VaultFailure expected) { assertTrue(expected.code.startsWith("custodial_provider_")); }
-            assertEquals(0, x.f.cipher.destroyCalls); assertEquals("REMOVAL_TOMBSTONE", x.f.engine.getState().get("state"));
+            assertEquals(0, x.f.cipher.destroyCalls); assertEquals("EMPTY", x.f.engine.getState().get("state"));
             x.f.provider.storage.memory.throwRead = false; x.f.provider.storage.memory.persistThenReject = false; x.f.provider.storage.memory.reject = false;
-            x.owner = x.reconstruct(); x.removal().finalizeRemoval(RID); assertEquals(1, x.f.cipher.destroyCalls);
+            x.owner = x.reconstruct(); x.owner.reconcile(); assertEquals(0, x.f.cipher.destroyCalls);
             assertEquals("REMOVED", x.meta().getString("availability")); assertEquals(1, x.events());
         }
     }
     @Test public void failedRemovalKeepsItsOriginalErrorAndAddsFenceFailureWithoutPretendingSuccess() throws Exception {
-        Fixture x = new Fixture(false); x.allowed = false; x.f.provider.storage.memory.throwRead = true;
+        Fixture x = new Fixture(false);var originals=new HashMap<>(x.f.provider.storage.memory.raw); x.allowed = false; x.f.provider.storage.memory.throwRead = true;
         try { x.removal().remove(RID, DEVICE); fail(); }
         catch (VaultFailure expected) {
-            assertEquals("custodial_native_removal_cancelled", expected.code); assertEquals(1, expected.getSuppressed().length);
+            assertEquals("custodial_native_removal_inventory_admission_required", expected.code); assertEquals(0, expected.getSuppressed().length);
         }
+        assertEquals(0,x.gateCalls);assertEquals(originals,x.f.provider.storage.memory.raw);
         assertEquals(0, x.f.cipher.destroyCalls); assertEquals(true, x.f.engine.getState().get("active"));
     }
     @Test public void nativeUnavailabilityPreservesOriginalRecordsRatherThanDeclaringRemoval() throws Exception {
@@ -489,7 +490,7 @@ public final class NativeProviderRuntimeOwnerTest {
         assertEquals(x.f.principal.digest, NativeProviderPrincipal.fromNativeJournal(x.inbox().getJSONObject("principal")).digest); assertEquals(1, x.events());
     }
     @Test public void failedExactCancellationSurvivesRestartAndNeverShowsOrCancelsUnrelatedTags() throws Exception {
-        Fixture x = new Fixture(false); x.removal().remove(RID, DEVICE); x.removal().finalizeRemoval(RID);
+        Fixture x = new Fixture(false); NativeProviderHttpTest.preserveSyntheticOriginal(x.f);x.owner.reconcile();
         x.surface.active = NativeProviderDisplayDriver.Active.MATCH; x.surface.cancelWorks = false;
         ProviderRecordStoreTest.failure("custodial_provider_os_cancel_unconfirmed", () -> x.owner.reconcileLocalEffects());
         assertTrue(x.inbox().getBoolean("os_cancel_pending")); x.owner = x.reconstruct(); x.surface.cancelWorks = true;
@@ -506,33 +507,15 @@ public final class NativeProviderRuntimeOwnerTest {
         assertEquals(commits, x.f.provider.storage.memory.commits);
     }
     @Test public void lostRemovalResponseFencesDurableIntentAndRetriesOriginalOperationWithoutReprompt() throws Exception {
-        MutableClock clock = new MutableClock(NativeProviderHttpTest.NOW); FakeTransport transport = new FakeTransport(clock);
-        MemoryPersistence persistence = new MemoryPersistence(); TestCipher cipher = new TestCipher();
-        NativeProviderJournalTest.Fixture provider = new NativeProviderJournalTest.Fixture();
-        VaultEngine[] engineRef = new VaultEngine[1];
-        EnrollmentTransport guarded = (EnrollmentTransport) Proxy.newProxyInstance(EnrollmentTransport.class.getClassLoader(), new Class<?>[]{EnrollmentTransport.class}, (proxy, method, args) -> {
-            if (method.getName().equals("remove")) {
-                // Capture/send/settle removes the inherited engine network lock;
-                // the provider wrapper must not introduce a second one.
-                assertFalse(Thread.holdsLock(engineRef[0])); assertFalse(Thread.holdsLock(provider.storage.lock));
-            }
-            try { return method.invoke(transport, args); } catch (InvocationTargetException failure) { throw failure.getCause(); }
-        });
-        VaultEngine engine = new VaultEngine(persistence, cipher, guarded, new FakeLegacySource(), new TestSealGenerator(), clock); engineRef[0] = engine;
-        engine.enroll(OP, DEVICE, "enrollment", "12345678".toCharArray()); engine.completeLocalBinding(OP); engine.confirmEnrollment(OP);
-        NativePrincipalJournal principals = new NativePrincipalJournal(new NativePrincipalJournalTest.Memory());
-        new NativePrincipalJournalTest().capture(principals, engine.getState(), new NativePrincipalJournalTest().data().put("credential_id", engine.getState().get("active_credential_id")));
-        NativeLegacyLineageJournal legacy = new NativeLegacyLineageJournal(new NativeLegacyLineageJournalTest.Store());
-        NativeProviderRuntimeOwner owner = new NativeProviderRuntimeOwner(engine, principals, legacy, provider.journal(), provider.storage.lock, new NativeProviderDisplayDriverTest.Surface());
-        owner.reconcile(); provider.journal().captureToken("synthetic-only");
-        int[] gates = {0}; RemovalCoordinator original = new RemovalCoordinator(engine, (op, device) -> { gates[0]++; return true; });
-        NativeProviderRemovalCoordinator removal = new NativeProviderRemovalCoordinator(engine, original, owner);
-        transport.loseRemoveAfterSuccess = 1;
-        ProviderRecordStoreTest.failure("custodial_native_network_unavailable", () -> removal.remove(RID, DEVICE));
-        assertEquals("REMOVAL_REQUESTED", engine.getState().get("state"));
-        assertEquals("REMOVED", provider.read(ProviderEnvelopeCrypto.Domain.METADATA, "journal").getString("availability"));
-        ProviderRecordStoreTest.failure("custodial_native_removal_conflict", () -> removal.remove(OP, DEVICE));
-        removal.remove(RID, DEVICE); removal.finalizeRemoval(RID);
-        assertEquals(1, gates[0]); assertEquals(2, transport.removeCalls.get()); assertEquals(1, cipher.destroyCalls);
+        Fixture x=new Fixture(false);var original=x.f.persistence.current();byte[] retained=new VaultSnapshotCodec().encode(original);
+        var transition=new NativeProviderHttpTest.SyntheticPreservation(x.f.engine,x.f.persistence,x.f.cipher,original);
+        transition.afterPublish=()->{throw new VaultFailure("synthetic_original_publish_reply_lost");};
+        ProviderRecordStoreTest.failure("synthetic_original_publish_reply_lost",transition::complete);
+        x.owner.reconcile();assertEquals("EMPTY",x.f.engine.getState().get("state"));assertEquals("REMOVED",x.meta().getString("availability"));
+        ProviderRecordStoreTest.failure("synthetic_same_process_unknown",transition::complete);
+        ProviderRecordStoreTest.failure("custodial_native_removal_inventory_admission_required",()->x.removal().remove(OP,DEVICE));
+        var resumed=new NativeProviderHttpTest.SyntheticPreservation(x.f.engine,x.f.persistence,x.f.cipher,original);int commits=x.f.persistence.commitAttempts.get();resumed.complete();
+        assertEquals(commits,x.f.persistence.commitAttempts.get());assertArrayEquals(retained,new VaultSnapshotCodec().encode(original));assertEquals(0,x.gateCalls);assertEquals(0,x.f.enrollmentTransport.removeCalls.get());assertEquals(0,x.f.cipher.destroyCalls);
     }
+
 }

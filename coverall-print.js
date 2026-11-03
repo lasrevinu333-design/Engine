@@ -1,6 +1,12 @@
 (function(root){'use strict';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,HASH=/^[a-f0-9]{64}$/;
 function monday(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Choose a valid service date.');const d=new Date(date+'T12:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==date)throw Error('Choose a valid service date.');d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10);}
+function snapshotPeriod(snapshot,date){
+ monday(date);monday(snapshot?.week_start);
+ const end=new Date(Date.parse(snapshot.week_start+'T12:00Z')+6*86400000).toISOString().slice(0,10);
+ if(snapshot.week_end!==end||date<snapshot.week_start||date>end)throw Error('The accepted publication period does not cover the selected service date.');
+ return snapshot.week_start;
+}
 function validate(value,{date,revision,projectionId,publicationId,replayDigest,managerId}){
  const doc=value?.document;if(value?.schema!=='custodial.coverall-pdf-pair.v1'||doc?.serviceDate!==date||doc.authorityRevision!==revision||doc.projectionId!==projectionId||doc.managerContact?.managerId!==managerId||!HASH.test(doc.documentDigest||'')||!Array.isArray(doc.contractors)||!doc.contractors.length)throw Error('The handout does not match the accepted date, revision or manager.');
  if(!UUID.test(publicationId||'')||typeof replayDigest!=='string'||!HASH.test(replayDigest)||doc.publicationId!==publicationId||doc.replayDigest!==replayDigest)throw Error('The handout does not match the accepted schedule source.');
@@ -27,7 +33,7 @@ function validateCanonicalLink(value,{expected,capacityId,requestId,base,ttlHour
   ||! /^#access_token=[A-Za-z0-9_-]{32,512}$/.test(u.hash))throw Error('The private link could not be verified.');
  return ['en','es','both'].map(language=>{const link=new URL(u);link.searchParams.set('lang',language);return {language,href:link.href};});
 }
-const api=Object.freeze({monday,validate,acceptedCapacities,validateCanonicalLink});root.MemphisCoverAllPrint=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+const api=Object.freeze({monday,snapshotPeriod,validate,acceptedCapacities,validateCanonicalLink});root.MemphisCoverAllPrint=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 if(!root.document?.getElementById('prepare'))return;
 const d=root.document,el=id=>d.getElementById(id),auth=root.MemphisAuth,actions=root.MemphisSchedulerActions;
 let owner=null,base='',busy=false,sequence=0,urls=[],guard=null,closed=false,entry=null,accessDenied=false,listening=false;
@@ -45,10 +51,10 @@ async function readJson(url,options,timeout){current();const read=new AbortContr
 }
 async function request(path){current();const headers=await auth.opsManagerAuthHeaders();current();const {response,data}=await readJson(base+path,{method:'GET',cache:'no-store',redirect:'error',headers},65000);current();if(response.status===401||response.status===403){accessDenied=true;current();}if(!response.ok||data?.ok!==true)throw Error(data?.error||'Current handout information is unavailable.');return data.data;}
 async function prepare(){if(busy||linkBusy||closed||accessDenied)return;busy=true;const attempt=++sequence;clear();el('prepare').disabled=true;el('date').disabled=true;
- try{current();const date=el('date').value,week=monday(date);el('back').href='./schedule-weekly.html?date='+encodeURIComponent(date);
+ try{current();const date=el('date').value;monday(date);el('back').href='./schedule-weekly.html?date='+encodeURIComponent(date);
  el('status').textContent='Checking the accepted schedule and both handout languages…';
- const snapshot=await request('/static-weekly/manager-snapshot?week_start='+encodeURIComponent(week));
- if(snapshot?.week_start!==week||snapshot.projection_status!=='current'||!Number.isSafeInteger(snapshot.authority_revision)||snapshot.authority_revision<0||!UUID.test(snapshot.current_publication?.publication_id||'')||!UUID.test(snapshot.latest_projection?.projection_id||'')||typeof snapshot.latest_projection?.replay_digest!=='string'||!HASH.test(snapshot.latest_projection.replay_digest))throw Error('The schedule is not current. Regenerate or publish the accepted routes first.');
+  const snapshot=await request('/static-weekly/manager-snapshot?week_start='+encodeURIComponent(date)),week=snapshotPeriod(snapshot,date);
+  if(snapshot.projection_status!=='current'||!Number.isSafeInteger(snapshot.authority_revision)||snapshot.authority_revision<0||!UUID.test(snapshot.current_publication?.publication_id||'')||!UUID.test(snapshot.latest_projection?.projection_id||'')||typeof snapshot.latest_projection?.replay_digest!=='string'||!HASH.test(snapshot.latest_projection.replay_digest))throw Error('The schedule is not current. Materialize the approved period first.');
  if(entry&&date===entry.date&&(snapshot.authority_revision!==entry.revision||snapshot.latest_projection.projection_id!==entry.projectionId))throw Error('The schedule changed since the reviewed Schedule page. Return to Schedule and refresh before preparing matching handouts.');
  const expected={date,revision:snapshot.authority_revision,projectionId:snapshot.latest_projection.projection_id,publicationId:snapshot.current_publication.publication_id,replayDigest:snapshot.latest_projection.replay_digest,managerId:owner.managerId};
  const query=new URLSearchParams({week_start:week,service_date:date,expected_revision:String(expected.revision),projection_id:expected.projectionId});
@@ -80,7 +86,7 @@ function loadLinkPending(){
  const keys=['schema','managerId','base','requestId','capacityId','date','week','revision','projectionId','ttlHours'];
  if(!value||Object.keys(value).sort().join(',')!==keys.sort().join(',')||value.schema!=='custodial.coverall-link-pending.v1'
   ||value.managerId!==owner.managerId||value.base!==base||!UUID.test(value.requestId||'')||!UUID.test(value.capacityId||'')
-  ||monday(value.date)!==value.week||!Number.isSafeInteger(value.revision)||value.revision<0||!UUID.test(value.projectionId||'')
+   ||snapshotPeriod({week_start:value.week,week_end:new Date(Date.parse(value.week+'T12:00Z')+6*86400000).toISOString().slice(0,10)},value.date)!==value.week||!Number.isSafeInteger(value.revision)||value.revision<0||!UUID.test(value.projectionId||'')
   ||!Number.isInteger(value.ttlHours)||value.ttlHours<1||value.ttlHours>168)throw Error('This browser’s link recovery details are unavailable. Nothing was sent. Ask for help before creating another link.');
  linkPending=value;el('link-controls').hidden=false;el('revoke-link').disabled=false;
  el('link-status').textContent='A link may still be active. Its address is no longer available on this page. Revoke it before creating a new link.';

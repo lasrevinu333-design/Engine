@@ -1,6 +1,6 @@
 const { existsSync, readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
-const { expect, test } = require('@playwright/test');
+const { expect, test } = require('./helpers/isolated-browser-test.cjs');
 const AxeBuilder = require('@axe-core/playwright').default;
 
 const repositoryRoot = resolve(__dirname, '..');

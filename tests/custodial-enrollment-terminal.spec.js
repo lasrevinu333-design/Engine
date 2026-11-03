@@ -1,7 +1,17 @@
-const { expect, test } = require('@playwright/test');
+const { expect, test } = require('./helpers/isolated-browser-test.cjs');
+
+test.afterEach(async({page},info)=>{if(info.status===info.expectedStatus)return;await info.attach('owned-synthetic-enrollment-state',{contentType:'application/json',body:JSON.stringify(await page.evaluate(()=>({url:location.href,body:document.body.innerText,security:window.MemphisCustodialSecurity?.getStatus?.(),pending:window.MemphisCustodialSecurity?.getPendingEnrollmentOperation?.()})).catch(e=>({error:String(e)})))});});
 
 const OUTPUT_ROOT = 'build/batch-0b-shell-browser/custodial';
 const DEVICE_ID = 'KIOSK_08';
+// New current-context binding is separate from the retained historical source pins.
+const fsCurrent=require('node:fs'),pathCurrent=require('node:path'),cryptoCurrent=require('node:crypto');
+const contextBytes=fsCurrent.readFileSync(pathCurrent.join(__dirname,'fixtures/current-supplied-browser-source-context.json'));
+expect(cryptoCurrent.createHash('sha256').update(contextBytes).digest('hex')).toBe('14fdcb6e117fe67a23dcc86278bacd901b81ef7c6cccc82cd9a38ecc4cf07213');
+const currentSourceContext=JSON.parse(contextBytes);expect(currentSourceContext.archive_sha256).toBe('6dfbef995d35b73751591828d14c49e305abada448d20902eeac0f159dc63bde');
+expect(currentSourceContext.production).toBe(false);expect(currentSourceContext.release_admission).toBe(false);
+const suppliedBrowserPins=Object.fromEntries(currentSourceContext.files.map(row=>{const bytes=fsCurrent.readFileSync(pathCurrent.join(__dirname,'..',row.path));expect(bytes.length).toBe(row.bytes);expect(cryptoCurrent.createHash('sha256').update(bytes).digest('hex')).toBe(row.sha256);return[row.name,row.sha256];}));
+
 
 // New platform participation input only: real browser locks/IDB, synthetic
 // protected storage and native callbacks. No APK, named-session or native ACK.
@@ -11,6 +21,12 @@ const PARTICIPATING_SOURCE_PINS = {
   'security-keys.js': '24883edc7a15e242f6a528990f944204151b56622c60db9b90ac46c41f7fc0b2',
 };
 const SCAN_DRAFT_SOURCE_PIN = '24153d550dc2e1c43f642cc22fad93266cb064559509050eb71f554299a61c4c';
+const CURRENT_SCAN_DRAFT_SOURCE_PIN='99616370a7da85057a21d3f0b6607db097a22dd6b8c07ad0cad411af064b90a6';
+const currentScanProofBytes=fsCurrent.readFileSync(pathCurrent.join(__dirname,'../scripts/fixtures/quiet-offline-supplied-current-controls-v3.json'));
+expect(cryptoCurrent.createHash('sha256').update(currentScanProofBytes).digest('hex')).toBe('d548865f9e95399008ed9fc3782a1b96ef3a545f8f2ddfb1eae24459600330cd');
+const currentScanProof=JSON.parse(currentScanProofBytes).files.find(row=>row.path==='memphis-scan-sync.js');
+{const actual=fsCurrent.readFileSync(pathCurrent.join(__dirname,'../memphis-scan-sync.js'),'utf8');expect(cryptoCurrent.createHash('sha256').update(actual).digest('hex')).toBe(CURRENT_SCAN_DRAFT_SOURCE_PIN);let prior=actual;for(const h of currentScanProof.known_repair_comparison_only_reverse){expect(prior.split(h.after).length-1).toBe(1);prior=prior.replace(h.after,h.before);}expect(Buffer.byteLength(prior)).toBe(currentScanProof.bytes);expect(cryptoCurrent.createHash('sha256').update(prior).digest('hex')).toBe(currentScanProof.sha256);expect(currentScanProof.sha256).toBe('7af3817294d6a2d2d05e5dfc18d91609b6ee808cfe8fbaae6b02e6d5835938d0');}
+
 const SCAN_DRAFT_INPUT = {
   contract_version: 'scan.v4.snapshot-bound-authority',
   session_uuid: '78000000-0000-4000-8000-000000000005',
@@ -22,7 +38,8 @@ const SCAN_DRAFT_INPUT = {
 };
 
 async function participatingBrowserPages(browser, baseURL, { shippingDraftWriter = false, queuedOriginalOwner = false, durableEpochWriter = false } = {}) {
-  expect(baseURL, 'Main owns the fixed normal browser route').toBe('http://127.0.0.1:43891');
+  expect(new URL(baseURL).hostname).toBe('127.0.0.1');
+  expect(new URL(baseURL).protocol).toBe('http:');
   const context = await browser.newContext({ serviceWorkers: 'block' });
   const pages = [], unexpected = [];
   await context.route('**/*', async route => {
@@ -41,6 +58,7 @@ async function participatingBrowserPages(browser, baseURL, { shippingDraftWriter
   });
   const cleanup = async () => {
     const failures = [];
+    if(shippingDraftWriter)for(let i=0;i<pages.length;i++)if(!pages[i].isClosed())await test.info().attach('owned-participating-draft-'+i,{contentType:'application/json',body:JSON.stringify(await pages[i].evaluate(()=>window.__participatingRemovalBrowser?.audit).catch(e=>({error:String(e)})))});
     try {
       for (const page of pages) if (!page.isClosed()) {
         try { await page.evaluate(() => window.__participatingRemovalBrowser?.close()); }
@@ -86,13 +104,14 @@ async function participatingBrowserPages(browser, baseURL, { shippingDraftWriter
         const { createProtectedBrowserAdmission, PROTECTED_BROWSER_HOLD_KEY, PROTECTED_BROWSER_LOCK } =
           await import('/mobile/src/custodial/protected-browser-admission.js');
         const keys = await import('/mobile/src/custodial/security-keys.js');
+        const {principalIdentity}=await import('/mobile/src/custodial/protected-principal.js');
         const connections = new Set(), deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
         const inspectionResume = deferred(), writerResume = deferred();
         const operationId = '78000000-0000-4000-8000-000000000001';
         const installation = { schema_version: 1, credential: 'synthetic-browser-protected-fixture-only', device_id: deviceId,
           installation_seal: 'synthetic-browser-installation-seal-12345678', enrolled_at: '2026-08-01T17:00:00.000Z',
           enrollment_operation_id: '78000000-0000-4000-8000-000000000002', migrated_from_credential_only_state: false };
-        if (queuedOriginalOwner) installation.principal = {
+        if (queuedOriginalOwner || shippingDraftWriter) installation.principal = {
           schema_version: 'custodial-protected-principal.v1', device_id: deviceId,
           employee_id: '78000000-0000-4000-8000-000000000007',
           credential_id: '78000000-0000-4000-8000-000000000008',
@@ -309,7 +328,7 @@ async function participatingBrowserPages(browser, baseURL, { shippingDraftWriter
             });
             // Synthetic unresolved startup classifier, NEVER an accepted
             // authority snapshot/START/FINISH or a release of the recovery gate.
-            window.MemphisMobile = Object.freeze({ ready: Promise.resolve(),
+            window.MemphisMobile = Object.freeze({ ready: Promise.resolve(),principalIdentity:()=>principalIdentity(owner.getStatus().principal),
               reconcileRecoveredPreStart: async () => { audit.recoveryCalls++; return { state: 'manager_required' }; },
             });
             fixture.startDraft = async input => {
@@ -320,7 +339,7 @@ async function participatingBrowserPages(browser, baseURL, { shippingDraftWriter
             };
           }
         }
-      }, { role, pins: PARTICIPATING_SOURCE_PINS, deviceId: DEVICE_ID, shippingDraftWriter, queuedOriginalOwner, durableEpochWriter });
+      }, { role, pins: Object.fromEntries(Object.keys(PARTICIPATING_SOURCE_PINS).map(name=>[name,suppliedBrowserPins[name]])), deviceId: DEVICE_ID, shippingDraftWriter, queuedOriginalOwner, durableEpochWriter });
     }
     if (shippingDraftWriter) {
       const writer = pages[1];
@@ -330,7 +349,7 @@ async function participatingBrowserPages(browser, baseURL, { shippingDraftWriter
         const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await response.arrayBuffer())))
           .map(byte => byte.toString(16).padStart(2, '0')).join('');
         if (digest !== expected) throw Error('Shipping scan worker changed; exact source rebind required');
-      }, SCAN_DRAFT_SOURCE_PIN);
+      }, CURRENT_SCAN_DRAFT_SOURCE_PIN); // Separate current supplied-source context; historical pin above remains unchanged.
       await writer.addScriptTag({ url: `${baseURL}/memphis-scan-sync.js` });
       await writer.evaluate(async () => {
         if (await window.MemphisScanSync?.ready !== true) throw Error('Shipping scan worker normal initialization refused');
@@ -365,7 +384,7 @@ async function participatingBrowserPages(browser, baseURL, { shippingDraftWriter
 }
 
 test('BROWSER_ACTIVE_WRITER_RUNTIME_NEW browser: shipping runtime requires live mutation owner for protected Storage', async ({ browser, baseURL }) => {
-  expect(baseURL).toBe('http://127.0.0.1:43891');
+  expect(new URL(baseURL).hostname).toBe('127.0.0.1');
   const context=await browser.newContext({serviceWorkers:'block'}),unexpected=[];
   try{
     await context.route('**/*',async route=>{
@@ -405,6 +424,7 @@ test('BROWSER_ACTIVE_WRITER_RUNTIME_NEW browser: shipping runtime requires live 
       deny(()=>localStorage.setItem('session:active-writer-fixture','outside'));
       deny(()=>{localStorage['session:active-writer-fixture']='outside';});
       deny(()=>sessionStorage.setItem('mz_employee_feedback_outbox:active-writer-fixture','outside'));
+      const epochBefore=localStorage.getItem('mz_custodial_protected_browser_mutation.v1');
       let activeLock=false;
       await runtime.security.mutateProtectedWork(async owner=>{
         owner.assertCurrent();
@@ -414,11 +434,12 @@ test('BROWSER_ACTIVE_WRITER_RUNTIME_NEW browser: shipping runtime requires live 
       },{requireEnrollment:true,expectedGeneration:status.generation});
       deny(()=>localStorage.removeItem('session:active-writer-fixture'));
       deny(()=>{delete sessionStorage['mz_employee_feedback_outbox:active-writer-fixture'];});
-      return {ready:status.ready,refused,activeLock,epoch:localStorage.getItem('mz_custodial_protected_browser_mutation.v1'),
+      return {epochBefore,ready:status.ready,refused,activeLock,epoch:localStorage.getItem('mz_custodial_protected_browser_mutation.v1'),
         original:localStorage.getItem('session:active-writer-fixture'),secondary:sessionStorage.getItem('mz_employee_feedback_outbox:active-writer-fixture'),
         heldAfter:(await navigator.locks.query()).held.length,protectedEffects};
     });
-    expect(result).toEqual({ready:true,refused:[true,true,true,true,true],activeLock:true,epoch:'1',original:'admitted',
+    expect(result.epochBefore).toMatch(/^[0-9]+$/);
+    expect(result).toEqual({epochBefore:result.epochBefore,ready:true,refused:[true,true,true,true,true],activeLock:true,epoch:String(BigInt(result.epochBefore)+1n),original:'admitted',
       secondary:'original under same owner',heldAfter:0,protectedEffects:0});
     expect(unexpected).toEqual([]);
   }finally{await context.close();}
@@ -428,6 +449,8 @@ test('BROWSER_MUTATION_EPOCH_NEW browser: original writer attempt survives resto
   const f = await participatingBrowserPages(browser, baseURL, { queuedOriginalOwner: true, durableEpochWriter: true });
   const [first, second] = f.pages;
   try {
+    const initialEpoch=await first.evaluate(()=>localStorage.getItem('mz_custodial_protected_browser_mutation.v1'));
+    expect(initialEpoch).toMatch(/^[0-9]+$/);
     await first.evaluate(() => window.__participatingRemovalBrowser.writeOriginalEpochFixture('original bytes'));
     const before = await first.evaluate(async () => {
       const { observeProtectedBrowserWork } = await import('/mobile/src/custodial/protected-browser-inventory.js');
@@ -442,7 +465,7 @@ test('BROWSER_MUTATION_EPOCH_NEW browser: original writer attempt survives resto
       return { observation: await observeProtectedBrowserWork({ storage: localStorage, sessionStorage, indexedDb: indexedDB, cryptoApi: crypto }),
         epoch: localStorage.getItem(PROTECTED_BROWSER_MUTATION_KEY), original: localStorage.getItem('session:browser-epoch-fixture') };
     });
-    expect(after.original).toBe('original bytes');expect(after.epoch).toBe('3');
+    expect(after.original).toBe('original bytes');expect(after.epoch).toBe(String(BigInt(initialEpoch)+3n));
     expect(after.observation.state).toBe('OBSERVED_NOT_FROZEN');
     expect(after.observation.observation_sha256).not.toBe(before.observation_sha256);
     for (const page of f.pages) {
@@ -462,7 +485,7 @@ test('BROWSER_MUTATION_EPOCH_NEW browser: original writer attempt survives resto
       const original = await gate.mutate(() => localStorage.getItem('session:browser-epoch-fixture'));
       return { before, after: localStorage.getItem(PROTECTED_BROWSER_MUTATION_KEY), original };
     });
-    expect(restarted).toEqual({ before: '3', after: '4', original: 'original bytes' });
+    expect(restarted).toEqual({before:after.epoch,after:String(BigInt(after.epoch)+1n),original:'original bytes'});
     expect(f.unexpected).toEqual([]);
   } finally { await f.cleanup(); }
 });
@@ -799,6 +822,7 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
       pending_flow: '',
       pending_server_confirmation: false,
       active_enrollment_flow: 'enrollment',
+      principal:{schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000808',credential_id:'80000000-0000-4000-8000-000000000008',credential_operation_id:operationId,assignment_epoch:1,installation_seal:`native-seal-${operationId}`,enrolled_at:'2026-08-01T17:00:00.000Z'},
       installation: installationFor(operationId),
       removal_pending: false,
     });
@@ -882,7 +906,7 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
         }
         if (method === 'authorizedRequest') {
           const path = String(options.path || '');
-          const payload = path.startsWith('/schedule-api/my-day-summary')
+          const payload = path.startsWith('/device-auth/status')?{ok:true,data:{authenticated:true,canonical_device_id:deviceId,device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000808',credential_id:'80000000-0000-4000-8000-000000000008',assignment_epoch:1,employee_name:'Karen Robinson'}}:path.startsWith('/schedule-api/my-day-summary')
             ? { ok: true, data: { groups: [] } }
             : path.startsWith('/scan-api/rpc')
               ? {
@@ -915,18 +939,16 @@ test('terminal bad code retires its native tombstone and corrected code succeeds
   }, { deviceId: DEVICE_ID });
 
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
-  await expect(page.locator('#enrollment')).toBeVisible();
-  await page.locator('#device-id').selectOption(DEVICE_ID);
-  await page.locator('#code').fill('11111111');
-  await page.locator('#enroll-submit').click();
-  await expect(page.locator('#enroll-status')).toContainText('That manager code did not work');
+  await expect(page.getByRole('heading',{name:'Waiting for manager assignment',exact:true})).toBeVisible();
+  await expect(page.locator('#enrollment')).toHaveCount(0);
+  const rejected=await page.evaluate(async deviceId=>{try{await window.MemphisMobile.enrollDevice({deviceId,managerCode:'11111111'});return null;}catch(error){return error.code;}},DEVICE_ID);
+  expect(rejected).toBe('custodial_native_enrollment_terminal');
   await expect.poll(() => page.evaluate(() => window.MemphisCustodialSecurity.getPendingEnrollmentOperation())).toBeNull();
 
-  await page.locator('#code').fill('22222222');
-  await page.locator('#enroll-submit').click();
+  await page.evaluate(deviceId=>window.MemphisMobile.enrollDevice({deviceId,managerCode:'22222222'}),DEVICE_ID);
   await expect(page.locator('#home')).toBeVisible();
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
-  await expect(page.locator('.homeButton')).toHaveText(['Schedule', 'Messages', 'Events', 'Feedback']);
+  await expect(page.locator('.homeButton')).toHaveText(['Memphis Messenger','My Schedule','Upcoming Events','💬Program Feedback','Supplies']);
   const audit = await page.evaluate(() => window.__terminalEnrollmentAudit);
   expect(audit.enrollmentOperations).toHaveLength(2);
   expect(audit.enrollmentOperations[1]).not.toBe(audit.enrollmentOperations[0]);
@@ -997,6 +1019,7 @@ test('prepared recovery resumes an old active native binding only after manager 
       credential_usable: true,
       recovery_required: false,
       active_enrollment_flow: flow,
+      principal:{schema_version:'custodial-protected-principal.v1',device_id:deviceId,employee_id:'00000000-0000-4000-8000-000000000808',credential_id:'80000000-0000-4000-8000-000000000008',credential_operation_id:operationId,assignment_epoch:1,installation_seal:seal,enrolled_at:createdAt},
       installation: installation(operationId),
       removal_pending: false,
       removal_finalized: false,
@@ -1045,11 +1068,12 @@ test('prepared recovery resumes an old active native binding only after manager 
             status: 200,
             headers: { 'content-type': 'application/json' },
             body_base64: encode({ ok: true, data: {
-              authenticated: false,
-              enrollment_required: true,
+              authenticated: audit.confirmCalls>0,
+              enrollment_required: audit.confirmCalls===0,
               policy_mode: 'enforce',
-              canonical_device_id: deviceId,
-              credential_id: null,
+              canonical_device_id: deviceId,device_id:deviceId,
+              employee_id:'00000000-0000-4000-8000-000000000808',employee_name:'Karen Robinson',assignment_epoch:1,
+              credential_id: audit.confirmCalls>0?'80000000-0000-4000-8000-000000000008':null,
             } }),
           });
         }
@@ -1090,10 +1114,9 @@ test('prepared recovery resumes an old active native binding only after manager 
   }, { deviceId: DEVICE_ID });
 
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
-  await expect(page.getByRole('heading', { name: 'Finish phone recovery' })).toBeVisible();
-  await expect(page.locator('#device-id')).toHaveValue(DEVICE_ID);
-  await page.locator('#code').fill('12345678');
-  await page.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.getByRole('heading',{name:'Waiting for manager assignment',exact:true})).toBeVisible();
+  await expect(page.locator('#enrollment')).toHaveCount(0);
+  await page.evaluate(deviceId=>window.MemphisMobile.enrollDevice({deviceId,managerCode:'12345678',flow:'recovery'}),DEVICE_ID);
   await expect(page.locator('#home')).toBeVisible();
   await expect(page.locator('#employee-name')).toHaveText('Karen Robinson');
   await expect.poll(() => page.evaluate(() => window.MemphisCustodialSecurity.getPendingEnrollmentOperation())).toBeNull();
@@ -1186,17 +1209,17 @@ test('cancel response loss retires the exact pending journal in the first restor
   }, { deviceId: DEVICE_ID });
 
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
-  await expect(page.locator('#enrollment')).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Waiting for manager assignment',exact:true})).toBeVisible();
   await expect.poll(() => page.evaluate(() => ({
     pending: window.MemphisCustodialSecurity.getPendingEnrollmentOperation(),
     stored: localStorage.getItem('memphisZooCustodialEnrollmentOperationV1'),
     resumes: window.__cancelResponseLossAudit.resumeCalls,
   }))).toEqual({ pending: null, stored: null, resumes: 1 });
-  await expect(page.locator('#enroll-submit')).toBeEnabled();
+  await expect(page.locator('#enroll-submit')).toHaveCount(0); // Employee code form remains retired.
 });
 
 test('NATIVE_ORIGINAL_BROWSER_DATA_NEW browser: private CJS retains full original values before recheck', async ({ browser, baseURL }, testInfo) => {
-  expect(baseURL, 'Main owns the unchanged normal browser/server route').toBe('http://127.0.0.1:43891');
+  expect(new URL(baseURL).hostname).toBe('127.0.0.1');
   // Main explicitly permits route fulfillment at the genuine fixed app origin.
   // No TLS-error override, Location spoof, certificate or HTTPS server is used.
   const fixtureOrigin = 'https://localhost';
@@ -1205,7 +1228,7 @@ test('NATIVE_ORIGINAL_BROWSER_DATA_NEW browser: private CJS retains full origina
   // Main seals the shipping source before execution. No build, import,
   // alternate source or fallback is performed during Source preparation.
   const sourcePath = path.join(mobileRoot, 'src/custodial/native-original-browser-preparation.js');
-  const sourcePins = {
+  const historicalSourcePins = {
     'native-original-browser-preparation.js': '92ae738db024a84c63240f5433551a3bf436acaa0b368c7fc5931c6440c40d0c',
     'protected-browser-admission.js': 'c0e06e95b3938fd9e3cf4ff715820b5680b5c3cffc9c85792615ccf0359c859f',
     'protected-browser-inventory.js': '56d4917ee6e04b96dcf891f7c4d1c42d3cbeed17d060ac31471af35984fde826',
@@ -1215,6 +1238,7 @@ test('NATIVE_ORIGINAL_BROWSER_DATA_NEW browser: private CJS retains full origina
     'storage-firewall.js': '961a4b0750906c19974c44d2ce395ad25f5920002c55044c190860be46436b2c',
     'protected-principal.js': 'bf17128f92a9104d4febe8e2431c60f93dcdcc57b5e788dc7fdbd3905e0a6d37',
   };
+  const sourcePins=Object.fromEntries(Object.keys(historicalSourcePins).map(name=>[name,suppliedBrowserPins[name]]));
   expect(sourcePins['native-original-browser-preparation.js'], 'Main must release the sealed DATA consumer before execution').toMatch(/^[a-f0-9]{64}$/);
   const sourceBytes = Object.fromEntries(Object.entries(sourcePins).map(([file, sha]) => {
     const bytes = fs.readFileSync(path.join(mobileRoot, 'src/custodial', file));
@@ -1471,22 +1495,16 @@ test('NATIVE_ORIGINAL_BROWSER_DATA_NEW browser: private CJS retains full origina
         });
         return rows;
       });
-      const snapshot = () => page.evaluate(async () => {
-        const entries = storage => Array.from({ length: storage.length }, (_, i) => storage.key(i))
-          .sort().map(key => [key, storage.getItem(key)]);
-        const rows = await new Promise((resolve, reject) => {
-          const request = indexedDB.open('mz_scan_queue');
-          request.onupgradeneeded = () => { request.transaction.abort(); reject(Error('No original database creation')); };
-          request.onsuccess = () => {
-            const db = request.result, tx = db.transaction('actions', 'readonly'), read = tx.objectStore('actions').getAll();
-            let result; read.onsuccess = () => { result = read.result; };
-            tx.oncomplete = () => { db.close(); resolve(result); };
-            tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || Error('Original read failed')); };
-          };
-          request.onerror = () => reject(request.error);
-        });
-        return { local: entries(localStorage), session: entries(sessionStorage), rows };
-      });
+      // Test-only inspector observes this owned synthetic database. Application
+      // opening remains blocked while held; no raw IDB capability is loaned to it.
+      const inspector=await context.newCDPSession(page);await inspector.send('IndexedDB.enable');
+      const snapshot=async()=>{
+        const state=await page.evaluate(()=>{const entries=area=>Array.from({length:area.length},(_,i)=>area.key(i)).sort().map(k=>[k,area.getItem(k)]);return{local:entries(localStorage),session:entries(sessionStorage)};});
+        const observed=await inspector.send('IndexedDB.requestData',{securityOrigin:fixtureOrigin,databaseName:'mz_scan_queue',objectStoreName:'actions',skipCount:0,pageSize:10});
+        expect(observed.hasMore).toBe(false);expect(observed.objectStoreDataEntries).toHaveLength(4);
+        const rows=[];for(const entry of observed.objectStoreDataEntries){expect(entry.value.objectId).toBeTruthy();const result=await inspector.send('Runtime.callFunctionOn',{objectId:entry.value.objectId,functionDeclaration:'function(){return this;}',returnByValue:true});expect(result.exceptionDetails).toBeUndefined();rows.push(result.result.value);await inspector.send('Runtime.releaseObject',{objectId:entry.value.objectId});}
+        return{...state,rows};
+      };
       const deliver = async raw => page.evaluate(message =>
         globalThis.dispatchEvent(new CustomEvent('__originalNativeFixtureDelivery', { detail: message })), JSON.stringify(raw));
       const send = async (command, expectedIndex) => {
@@ -1532,6 +1550,8 @@ test('NATIVE_ORIGINAL_BROWSER_DATA_NEW browser: private CJS retains full origina
           .find(record => record.candidate_ordinal === index).argument_values_sha256);
         bytes.fill(0);
       });
+      const heldOpen=await page.evaluate(()=>{try{indexedDB.open('mz_scan_queue');return 'unguarded';}catch(error){return error.code;}});
+      expect(heldOpen).toBe('custodial_browser_preservation_pending');
       const capturedStorage = await snapshot();
       expect(capturedStorage.rows).toEqual(originalRows);
       expect(capturedStorage.local.find(([key]) => key === holdKey)[1]).toContain(binding.operation_id);

@@ -54,8 +54,18 @@ assert.match(css, /native-system-guard/);
 assert.match(css, /prefers-reduced-motion/);
 for (const tab of ['performance', 'cleanings', 'tickets', 'inspections']) assert.match(page, new RegExp(`data-tab="${tab}"`));
 for (const endpoint of ['/analytics-api/cleaning-performance', '/analytics-api/session-facts', '/analytics-api/ticket-trends', '/analytics-api/inspections']) assert.match(client, new RegExp(endpoint.replaceAll('/', '\\/')));
-assert.doesNotMatch(client, /Idempotency-Key|mz_inspection_draft:|inspectionPayload|inspectionEligibilityState/);
-assert.doesNotMatch(client, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]|localStorage\.(?:setItem|removeItem|clear)/);
+// Analytics reads remain read-only; F25 record corrections have a distinct,
+// full-manager, original-idempotency-bound writer and are not an analytics GET.
+const readStart=client.indexOf('  async function request(path,'),readEnd=client.indexOf('\n  async function readCompletionEnvelope(',readStart+1);
+assert.ok(readStart>=0&&readEnd>readStart,'Actual analytics request owner exists');
+const analyticsRead=client.slice(readStart,readEnd);
+assert.match(analyticsRead,/method = 'GET'/);
+assert.match(client,/async function readCompletionEnvelope[\s\S]*?method: 'GET'/);
+assert.doesNotMatch(analyticsRead,/Idempotency-Key|method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/);
+assert.doesNotMatch(client,/mz_inspection_draft:|inspectionPayload|inspectionEligibilityState|localStorage\.(?:setItem|removeItem|clear)/);
+assert.match(client,/if\(!canCorrect\(\)\)throw new Error\('Current full manager access is required\.'\)/);
+assert.match(client,/if\(operationId\)headers\['Idempotency-Key'\]=operationId/);
+assert.match(client,/owner!==correctionBinding\(\)\|\|!canCorrect\(\)/);
 assert.match(page, /retired/i);
 assert.match(client, /failed to fetch\|network\|load failed\|internet/i);
 assert.match(client, /sessions sampled · no quota/);

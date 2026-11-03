@@ -8,7 +8,18 @@ import {createRequire} from 'node:module';
 const fixtureRoot=dirname(fileURLToPath(import.meta.url));
 const baseline=resolve(fixtureRoot,'..');
 const require=createRequire(baseline+'/mobile/package.json');
-const {transformSync}=require('esbuild');
+// Fixture compiler ownership: esbuild's worker service is unref'ed and its
+// stop() does not join worker termination. Its supported synchronous path
+// uses execFileSync, so every transform child exits before this call returns.
+// This process-local loader choice is restored before any fixture executes.
+const esbuild=(()=>{
+ const prior=process.env.ESBUILD_WORKER_THREADS;
+ process.env.ESBUILD_WORKER_THREADS='0';
+ try{return require('esbuild');}
+ finally{if(prior===undefined)delete process.env.ESBUILD_WORKER_THREADS;else process.env.ESBUILD_WORKER_THREADS=prior;}
+})();
+const {transformSync}=esbuild;
+try {
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const pins=new Map();
 const syntheticLocksPath=baseline+'/scripts/synthetic-schedule-locks.mjs';
@@ -268,3 +279,7 @@ assert.equal(f.calls.some(row=>row.method==='authorizedRequest'&&row.httpMethod!
 console.log(JSON.stringify({status:'PASS_ACTUAL_NORMAL_BRIDGE_FLIGHT_AND_PENDING_WAKE',bridgeChecks,
  actual_normal_module_files:pins.size,receipt:false,native_owner:false,OS_settlement:false,
  scope:'Actual normal graph with synthetic native/DOM/vendor/authenticated accepted-session HTTP gate. No real Java frame/nativeSDK/backend/receipt proof.'}));
+
+} finally {
+ await esbuild.stop();
+}

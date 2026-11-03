@@ -424,7 +424,9 @@ public final class AndroidProviderAdapterTest {
         guardedStore(provider, keys, work).commit(0,
             ProviderRecordStoreTest.values(key(ProviderEnvelopeCrypto.Domain.EVENT, "epoch-success"), "original"),
             Collections.emptySet());
-        assertEquals(original.values, work.disk);
+        var expectedWork = new java.util.LinkedHashMap<String,Object>(original.values);
+        expectedWork.put("native_work_mutation_epoch.v1","1");
+        assertEquals("only exact pre-write mutation metadata changes; all original work is retained",expectedWork,work.disk);
         assertFalse("a provider write is part of the captured native store lifetime", gate.matchesReadOnly(original));
         assertTrue(gate.matchesReadOnly(gate.observeReadOnly()));
     }
@@ -438,7 +440,9 @@ public final class AndroidProviderAdapterTest {
                 ProviderRecordStoreTest.values(key(ProviderEnvelopeCrypto.Domain.EVENT, "epoch-failure"), "pending"),
                 Collections.emptySet()));
         assertEquals(1, provider.commits); assertTrue(provider.disk.isEmpty());
-        assertEquals(original.values, work.disk);
+        var expectedWork = new java.util.LinkedHashMap<String,Object>(original.values);
+        expectedWork.put("native_work_mutation_epoch.v1","1");
+        assertEquals("only the required pre-write mutation epoch changes; no original work row is changed",expectedWork,work.disk);
         assertFalse("a false commit cannot preserve a prior all-store observation", gate.matchesReadOnly(original));
     }
 
@@ -452,7 +456,9 @@ public final class AndroidProviderAdapterTest {
                 EnrollmentMetadata.empty(), "", "", false, "");
             if (failure) ProviderRecordStoreTest.failure("custodial_native_vault_commit_failed", () -> persistence.commit(0, next));
             else { persistence.commit(0, next); assertEquals(next, persistence.load()); }
-            assertEquals(1, vault.commits); assertEquals(original.values, work.disk);
+            assertEquals(1, vault.commits); var expectedWork = new java.util.LinkedHashMap<String,Object>(original.values);
+        expectedWork.put("native_work_mutation_epoch.v1","1");
+        assertEquals("only exact pre-write mutation metadata changes; all original work is retained",expectedWork,work.disk);
             assertFalse("vault attempts invalidate prior observations even on false", gate.matchesReadOnly(original));
         }
     }

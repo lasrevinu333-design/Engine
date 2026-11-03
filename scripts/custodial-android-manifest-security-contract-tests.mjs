@@ -552,7 +552,7 @@ assert.throws(
 
 const activationName = 'org.memphiszoo.custodial.vault.AssignedDeviceActivationReceiver';
 const activationOf = (manifest) => componentOf(manifest, 'receiver', activationName);
-assert.equal(proof.components.receivers.length, 8);
+assert.equal(proof.components.receivers.length, 9);
 assert.equal(proof.components.receivers.filter((name) => name === activationName).length, 1);
 const activationMutations = [
   ['missing receiver', (m) => { applicationOf(m).children = applicationOf(m).children.filter((n) => n !== activationOf(m)); }, /receiver component set differs/],
@@ -573,6 +573,18 @@ const activationMutations = [
 for (const [label, mutate, expected] of activationMutations) {
   assert.throws(mutated(mutate), expected, `assigned activation must reject ${label}`);
 }
+// The newly named maintenance receiver admits exactly these protected actions.
+const retainedName=CUSTODIAL_ANDROID_PACKAGE+'.vault.RetainedEnrollmentMaintenanceReceiver';
+const retainedOf=m=>componentOf(m,'receiver',retainedName);
+assert.equal(proof.components.receivers.filter(name=>name===retainedName).length,1);
+for(const [label,mutate,expected] of [
+ ['missing permission',m=>{delete retainedOf(m).attributes['android:permission'];},/attributes differ/],
+ ['weaker permission',m=>{retainedOf(m).attributes['android:permission']='android.permission.INTERNET';},/android:permission differs/],
+ ['extra action',m=>retainedOf(m).children[0].children.push(node('action',{'android:name':'org.example.UNREVIEWED'})),/child graph differs/],
+ ['missing action',m=>retainedOf(m).children[0].children.pop(),/child graph differs/],
+ ['wrong Application',m=>{applicationOf(m).attributes['android:name']='android.app.Application';},/android:name differs/],
+ ['missing Application',m=>{delete applicationOf(m).attributes['android:name'];},/attributes differ/],
+])assert.throws(mutated(mutate),expected,'retained maintenance must reject '+label);
 const acceptanceSchema = JSON.parse(readFileSync(new URL('../mobile/scripts/custodial-android-release-acceptance.schema.json', import.meta.url), 'utf8'));
 function exactCurrentManifestBranches(value) {
   assert.ok(Array.isArray(value.oneOf));
@@ -607,8 +619,8 @@ assert.deepEqual(manifestSchema.permissions.prefixItems.map(x=>x.const),qualifie
 assert.equal(manifestSchema.permissions.minItems,12);
 assert.equal(manifestSchema.permissions.maxItems,12);
 assert.deepEqual(manifestSchema.components.properties.receivers.prefixItems.map((item) => item.const), proof.components.receivers);
-assert.equal(manifestSchema.components.properties.receivers.minItems, 8);
-assert.equal(manifestSchema.components.properties.receivers.maxItems, 8);
+assert.equal(manifestSchema.components.properties.receivers.minItems, 9);
+assert.equal(manifestSchema.components.properties.receivers.maxItems, 9);
 assert.equal(manifestSchema.components.properties.receivers.items, false);
 assert.equal(acceptanceSchema.properties.verifier.properties.android_manifest_security_verifier_version.const, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
 console.log(`ASSIGNED_ACTIVATION_MANIFEST_DENIALS_PASS ${activationMutations.length}`);

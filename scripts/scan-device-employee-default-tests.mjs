@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
+import {createSyntheticScheduleLocks} from './synthetic-schedule-locks.mjs';
 
 if (process.argv[2] === '--native-bootstrap-writer-only') {
   await nativeBootstrapWriterCases();
@@ -24,7 +26,9 @@ script = script.replace(
 const appNode = { innerHTML: '' };
 const syncNode = { textContent: '', addEventListener() {} };
 const debugNode = { innerHTML: '' };
-const formNode = { addEventListener() {} };
+// This renderer fixture records form submission; network/start execution is outside its scope.
+let requestedSubmits = 0;
+const formNode = { addEventListener() {}, requestSubmit() { requestedSubmits += 1; } };
 const storage = new Map();
 const locationState = {
   href: 'https://example.test/Engine/index.html?device=kiosk_02&code=AQUARIUM',
@@ -43,13 +47,13 @@ const context = {
   clearTimeout() {},
   navigator: { onLine: true },
   crypto: { randomUUID: () => '00000000-0000-4000-8000-000000000000' },
-  localStorage: {
-    getItem: (key) => storage.has(key) ? storage.get(key) : null,
-    setItem: (key, value) => storage.set(key, String(value)),
-    removeItem: (key) => storage.delete(key),
-    key: (index) => Array.from(storage.keys())[index] || null,
+  localStorage: new (class StorageArea {
+    getItem(key) { return storage.has(key) ? storage.get(key) : null; }
+    setItem(key, value) { storage.set(key, String(value)); }
+    removeItem(key) { storage.delete(key); }
+    key(index) { return Array.from(storage.keys())[index] || null; }
     get length() { return storage.size; }
-  },
+  })(),
   sessionStorage: {
     getItem: () => null,
     setItem() {}
@@ -88,6 +92,12 @@ const context = {
     throw new Error(`unexpected fetch in test: ${body.fn || _url}`);
   }
 };
+// Use actual browser identity/admission owners; only browser ports are synthetic.
+// Preload the actual module so a task turn deterministically drains its import.
+await import('../mobile/src/custodial/protected-browser-admission.js');
+const locks = createSyntheticScheduleLocks();
+context.navigator.locks = locks;
+context.window.navigator = context.navigator;
 context.window.window = context.window;
 context.window.document = context.document;
 context.window.localStorage = context.localStorage;
@@ -95,6 +105,22 @@ context.window.sessionStorage = context.sessionStorage;
 context.globalThis = context;
 
 vm.createContext(context);
+const identitySource = fs.readFileSync(new URL('../memphis-device-identity.js',import.meta.url),'utf8');
+function newIdentityDocument() {
+  assert.equal(locks.pending, 0, 'the previous synthetic document must have no writer in flight');
+  vm.runInContext(identitySource,context,{
+    filename:fileURLToPath(new URL('../memphis-device-identity.js',import.meta.url)),
+    importModuleDynamically:vm.constants.USE_MAIN_CONTEXT_DEFAULT_LOADER
+  });
+}
+async function settleIdentityWrites() {
+  await new Promise(setImmediate);
+  assert.equal(locks.pending, 0, 'actual protected identity writer must settle before readback');
+}
+// Match the actual page's prerequisite order; exercise the real completion taxonomy.
+vm.runInContext(fs.readFileSync(new URL('../memphis-completion-taxonomy.js',import.meta.url),'utf8'),context,{filename:'memphis-completion-taxonomy.js'});
+// The facade separates window from globalThis; browsers expose the same taxonomy on both.
+context.window.MemphisCompletionTaxonomy=context.MemphisCompletionTaxonomy;
 vm.runInContext(script, context, { filename: 'index.html' });
 
 assert.equal(context.normalizeDeviceIdentifier('kiosk_02'), 'KIOSK_02');
@@ -124,7 +150,9 @@ assert.equal(context.isReadonlyScanEmployeeDevice('KIOSK_11'), false);
 locationState.href = 'https://example.test/Engine/index.html?code=AQUARIUM&device=kiosk_01';
 locationState.search = '?code=AQUARIUM&device=kiosk_01';
 storage.clear();
+newIdentityDocument();
 assert.equal(context.resolveDeviceId(), 'KIOSK_01', 'startup should resolve and normalize the explicit scan device before lock/init work');
+await settleIdentityWrites();
 assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_01');
 assert.equal(storage.get('memphisAssignedDeviceId'), 'KIOSK_01');
 
@@ -148,7 +176,9 @@ delete context.fully;
 locationState.href = 'https://example.test/Engine/index.html?device=kiosk_02&code=AQUARIUM';
 locationState.search = '?device=kiosk_02&code=AQUARIUM';
 
+newIdentityDocument();
 const resolvedDevice = await context.ensureDeviceIdInUrl();
+await settleIdentityWrites();
 assert.equal(resolvedDevice, 'KIOSK_02');
 assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_02');
 assert.equal(storage.get('mz_employee_hub_device_id'), 'KIOSK_02');
@@ -164,7 +194,9 @@ const fullyStub = { getDeviceId: () => '9df6e8a3-9df6e8a3', getDeviceName: () =>
 context.window.fully = fullyStub;
 context.fully = fullyStub;
 storage.set('mz_scan_device_id', 'KIOSK_01');
+newIdentityDocument();
 const blankDeviceScanResolvedDevice = await context.ensureDeviceIdInUrl();
+await settleIdentityWrites();
 assert.equal(blankDeviceScanResolvedDevice, 'KIOSK_05');
 assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_05');
 assert.match(locationState.search, /device=KIOSK_05/);
@@ -179,7 +211,9 @@ locationState.href = 'https://example.test/Engine/index.html?code=TETON_MENS_RES
 locationState.search = '?code=TETON_MENS_RESTROOM';
 storage.clear();
 storage.set('mz_scan_device_id', 'KIOSK_05');
+newIdentityDocument();
 const storedScanResolvedDevice = await context.ensureDeviceIdInUrl();
+await settleIdentityWrites();
 assert.equal(storedScanResolvedDevice, 'KIOSK_05');
 assert.match(locationState.search, /device=KIOSK_05/);
 
@@ -188,7 +222,9 @@ locationState.search = '?code=TETON_MENS_RESTROOM';
 storage.clear();
 context.window.fully = { getDeviceName: () => 'kiosk_05', getDeviceId: () => '9df6e8a3-9df6e8a3' };
 context.fully = context.window.fully;
+newIdentityDocument();
 const fullyNameResolvedDevice = await context.ensureDeviceIdInUrl();
+await settleIdentityWrites();
 assert.equal(fullyNameResolvedDevice, 'KIOSK_05');
 assert.equal(storage.get('mz_scan_device_id'), 'KIOSK_05');
 assert.match(locationState.search, /device=KIOSK_05/);
@@ -199,7 +235,9 @@ locationState.href = 'https://example.test/Engine/index.html?code=TETON_MENS_RES
 locationState.search = '?code=TETON_MENS_RESTROOM';
 storage.clear();
 storage.set('memphisAssignedDeviceId', 'device-random-stale');
+newIdentityDocument();
 const blankScanResolvedDevice = await context.ensureDeviceIdInUrl();
+await settleIdentityWrites();
 assert.equal(blankScanResolvedDevice, '');
 assert.doesNotMatch(locationState.search, /device=/);
 
@@ -213,11 +251,13 @@ assert.match(
 for (let kioskNumber = 2; kioskNumber <= 10; kioskNumber += 1) {
   const kioskId = `KIOSK_${String(kioskNumber).padStart(2, '0')}`;
   const assignedName = `Assigned Employee ${kioskNumber}`;
+  const beforeSubmits = requestedSubmits;
   await context.renderEmployeeSelect({
     location_code: 'AQUARIUM',
     location_name: 'Aquarium Restrooms',
     assigned_device_employee_name: assignedName
   }, kioskId);
+  assert.equal(requestedSubmits, beforeSubmits + 1, `${kioskId} should request the current assigned-employee automatic start`);
   assert.ok(
     appNode.innerHTML.includes(`<div class="location">Aquarium Restrooms</div><div class="employeeLine scanEmployeeDisplay">${assignedName}</div>`),
     `${kioskId} should center the assigned employee name directly below the location`
