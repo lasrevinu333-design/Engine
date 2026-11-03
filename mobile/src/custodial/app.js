@@ -12,13 +12,8 @@ const els = {
   home: document.getElementById('home'),
   name: document.getElementById('employee-name'),
   role: document.getElementById('employee-role'),
-  phoneLock: document.getElementById('phone-lock'),
-  phoneLockClock: document.getElementById('phone-lock-clock'),
-  phoneLockDate: document.getElementById('phone-lock-date'),
-  phoneLockName: document.getElementById('phone-lock-name'),
   homeClock: document.getElementById('home-clock'),
   homeDate: document.getElementById('home-date'),
-  phoneUnlock: document.getElementById('phone-unlock'),
   boot: document.getElementById('boot'),
   bootTitle: document.getElementById('boot-title'),
   bootStatus: document.getElementById('boot-status'),
@@ -32,7 +27,7 @@ let profile = null;
 let restoreRunning = null;
 let restoreAgain = false;
 let previousAssignmentState = null;
-let phoneLockClockTimer = null;
+let homeClockTimer = null;
 let restoreRetryTimer = null;
 const readinessObservation = createReadinessObservation();
 let readinessManagerRequired = false;
@@ -41,7 +36,7 @@ let readinessConnected = navigator.onLine === true;
 function readinessPrincipal() { return window.MemphisMobile?.principalIdentity?.() || ''; }
 function paintReadiness(input) {
   const result = readinessPresentation(classifyReadiness(input), input);
-  for (const id of ['home-readiness', 'lock-readiness', 'boot-readiness', 'assignment-readiness']) {
+  for (const id of ['home-readiness', 'boot-readiness', 'assignment-readiness']) {
     const element = document.getElementById(id);
     if (!element) continue;
     element.hidden = result.hidden;
@@ -82,18 +77,13 @@ function invalidateReadiness({refresh=true}={}) {
 const homeFactsUI=installHomeFacts({getProfile:()=>profile,getDeviceId:deviceId,isVisible:()=>!els.home.hidden,security,
   requestJson:(path,options)=>window.MemphisMobile.requestJson(path,options)});
 installHourlyForecastKeyboard(document.getElementById('home-weather-hours'));
-const PHONE_UNLOCKED_KEY = 'mz_custodial_phone_unlocked_since_wake_v1';
 
 function safe(error) { return error instanceof Error ? error.message : String(error || 'Unknown error'); }
 function setStatus(element, text = '', kind = '') { element.textContent = text; element.className = `status${kind ? ` ${kind}` : ''}`; }
 function deviceId() { return String(security.getStatus().deviceId || '').trim().toUpperCase(); }
 function currentProfile(value) { return window.MemphisMobile?.profileMatchesPrincipal?.(value) === true; }
-function phoneUnlockedSinceWake() { try { return sessionStorage.getItem(PHONE_UNLOCKED_KEY) === '1'; } catch { return false; } }
-function setPhoneUnlocked(value) { try { if (value) sessionStorage.setItem(PHONE_UNLOCKED_KEY, '1'); else sessionStorage.removeItem(PHONE_UNLOCKED_KEY); } catch {} }
-function updatePhoneLockClock() {
+function updateHomeClock() {
   const now = new Date();
-  els.phoneLockClock.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  els.phoneLockDate.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
   els.homeClock.textContent = now.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit' });
   els.homeDate.textContent = now.toLocaleDateString('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric' });
 }
@@ -103,22 +93,21 @@ function setEmployeeIdentity(value) {
   if (!name) return false;
   els.name.textContent = name;
   els.role.textContent = employeeRole(value);
-  els.phoneLockName.textContent = name;
   return true;
 }
-function showPhoneLock(value = profile) {
+function refreshPhoneIdentity(value = profile) {
   if (!setEmployeeIdentity(value)) return false;
-  updatePhoneLockClock();
-  if (!phoneLockClockTimer) phoneLockClockTimer = window.setInterval(updatePhoneLockClock, 1000);
-  els.phoneLock.hidden = false;
+  updateHomeClock();
+  if (!homeClockTimer) homeClockTimer = window.setInterval(updateHomeClock, 1000);
   return true;
 }
-function hidePhoneLock() { els.phoneLock.hidden = true; }
-function unlockPhone() { setPhoneUnlocked(true); hidePhoneLock(); }
-function relockPhone() { invalidateReadiness(); setPhoneUnlocked(false); if (profile) showPhoneLock(profile); }
 function showOnly(element) {
   for (const page of [els.home, els.boot, els.assignment]) page.hidden = page !== element;
-  if (element !== els.home) { hidePhoneLock(); homeFactsUI.stop(); }
+  if (element !== els.home) {
+    homeFactsUI.stop();
+    if (homeClockTimer) window.clearInterval(homeClockTimer);
+    homeClockTimer = null;
+  }
 }
 function clearRestoreRetry() {
   if (restoreRetryTimer) window.clearTimeout(restoreRetryTimer);
@@ -207,7 +196,7 @@ function showCachedPhoneIdentity() {
   const cached = cachedProfile();
   if (!cached || !employeeName(cached) || !currentProfile(cached)) return null;
   profile = cached;
-  showPhoneLock(cached);
+  refreshPhoneIdentity(cached);
   return cached;
 }
 function showHome(value = profile) {
@@ -217,8 +206,7 @@ function showHome(value = profile) {
   profile = value;
   setEmployeeIdentity(value);
   showOnly(els.home);
-  if (phoneUnlockedSinceWake()) hidePhoneLock();
-  else showPhoneLock(value);
+  refreshPhoneIdentity(value);
   // The existing restore coordinator starts optional facts after its last pass.
   return true;
 }
@@ -253,8 +241,8 @@ function showAssignmentNeeded(_message = '', status = null) {
   reportUnresolvedProtectedRecovery(status);
   showOnly(els.assignment);
   els.assignmentStatus.textContent = status?.quarantined
-    ? 'A manager must restore this phone’s assignment.'
-    : 'Your manager assigns this phone. No employee sign-in is needed.';
+    ? 'Saved phone setup needs repair. Your work has not been erased.'
+    : 'Custodial could not verify this phone’s saved setup. Your work has not been erased.';
 }
 async function prepareOfflineAuthority() {
   if (!navigator.onLine || !deviceId()) return false;
@@ -356,7 +344,6 @@ function restore(options = {}) {
   return restoreRunning;
 }
 
-els.phoneUnlock.addEventListener('click', unlockPhone);
 security.subscribe((status) => {
   const assignmentState = `${status.state || ''}|${status.deviceId || ''}|${status.quarantined === true}|${status.generation}|${window.MemphisMobile?.principalIdentity?.() || ''}`;
   const changed = assignmentState !== previousAssignmentState;
@@ -364,7 +351,7 @@ security.subscribe((status) => {
   if (changed) {
     invalidateReadiness({refresh:false});
     profile = null;
-    els.name.textContent = ''; els.role.textContent = ''; els.phoneLockName.textContent = '';
+    els.name.textContent = ''; els.role.textContent = '';
     els.activeCleaning.hidden = true;
     showBoot();
   }
@@ -388,10 +375,9 @@ void Network.addListener('networkStatusChange', ({ connected }) => {
   readinessConnected = connected === true; invalidateReadiness();
   if (connected) void restore({ quiet: !els.home.hidden });
 });
-void App.addListener('pause', () => { relockPhone(); });
+void App.addListener('pause', () => { invalidateReadiness(); });
 void App.addListener('resume', () => {
   invalidateReadiness();
-  relockPhone();
   void StatusBar.hide().catch(() => {});
   void restore({ quiet: !els.home.hidden });
 });
