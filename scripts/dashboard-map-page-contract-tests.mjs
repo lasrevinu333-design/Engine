@@ -40,7 +40,7 @@ const fixture=({session=structuredClone(principal),required=session,response={ok
 if(!permissionCurrentnessOnly){
 pass('dedicated manager map uses existing Hub authentication and clear normal return navigation',()=>{
  assert.match(html,/<a[^>]+href="\.\/dashboard\.html">Dashboard<\/a>/);
- assert.match(html,/<a[^>]+href="\.\/start_page1\.html">[\s\S]*?Back to Hub<\/a>/);
+ assert.match(html,/<a\b(?=[^>]*\bid="map-hub-link")(?=[^>]*\bhref="\.\/start_page1\.html")(?=[^>]*\baria-label="Back to Operations Hub")[^>]*>← Back<\/a>/);
  assert.match(hub,/id="dashboard-link"[^>]+href="\.\/dashboard\.html"/);
  assert.match(hub,/id="dashboard-map-link"[^>]+href="\.\/operations-dashboard\.html"/);
  assert.match(hubController,/dashboardMapLink\.href=dashboardMapUrl\.toString\(\)/);
