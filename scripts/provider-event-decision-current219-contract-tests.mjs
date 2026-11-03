@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
+import {assertBoundCurrentProviderSource} from './current-provider-comparison-source-boundary.mjs';
+import {normalizeCurrentFirstAudio} from './native-first-audio-source-boundary.mjs';
 import {providerDecisionCurrent219Pins as pins,validateProviderDecisionCurrent219Pins,withoutProviderDecisionCurrent219} from './provider-event-decision-current219-source-boundary.mjs';
 
 // Called by the mandatory owning wire contract. Only the exact bounded pure
@@ -9,12 +11,14 @@ import {providerDecisionCurrent219Pins as pins,validateProviderDecisionCurrent21
 export function runProviderDecisionCurrent219ContractTests(){
  const sha=x=>createHash('sha256').update(x).digest('hex');let checks=0;
  const check=(name,fn)=>{fn();checks++;console.log('PASS CURRENT219',name);};
- const current=readFileSync(pins.path,'utf8'),prior=withoutProviderDecisionCurrent219(pins.path,current);
+ const actual=readFileSync(pins.path,'utf8');
+ check('complete actual source is bound before historical comparison',()=>assertBoundCurrentProviderSource(pins.path,actual));
+ const current=normalizeCurrentFirstAudio(pins.path,actual),prior=withoutProviderDecisionCurrent219(pins.path,current);
  check('actual source exact and prior complete runner preserved',()=>{assert.equal(pins.base,'de9246596a4eae802c60946d7603910a13390978');assert.equal(sha(current),pins.current_sha256);assert.equal(sha(prior),'3b9c9f6e8ad88bd686f65d830f9ff6cbddbd29b4a18da913553827fc783eca9e');assert.equal(withoutProviderDecisionCurrent219(pins.path,prior),prior);});
  check('both old JSON authorities untouched',()=>{assert.equal(sha(readFileSync('scripts/fixtures/provider-event-decision-wire-byte-deltas.json')),'4ec48c4024fca21ed44aa57e311c8b97df55a0322fa08ad5f58bb142a782013d');assert.equal(sha(readFileSync('scripts/fixtures/provider-event-decisions-byte-deltas.json')),'904a8e1caf413dc7b22189bc3772599b6d394faf4763fe7e726cdd149694e3f8');});
  const manifest=pins.migration_manifest,historical=manifest.filter(row=>row.file!=='20261003121757_employee_message_source_admission.sql');
  check('portable manifest is exact source-derived219 not observed engine acceptance',()=>{assert.equal(pins.backend_source.commit,'08e27b65c6b62111a09a089a7447376ebb937b6a');assert.equal(pins.backend_source.tree,'6d3d3ef9685075f6befa7d28e3b9b0a9777d2b5b');assert.equal(sha(JSON.stringify(manifest)),pins.migration_manifest_sha256);assert.equal(pins.migration_manifest_sha256,'4795b9525622e1512005f85ae1c5994971dccc3d54a987a743bdcfef8bf9ce32');assert.equal(sha(JSON.stringify(historical)),'24503cfe852d7668ac94744b2f9ed21d8d2556906b917c7016e0f6c2d3b8d7a1');});
- const matches=[...current.matchAll(/\/\/ BEGIN exact event-decision migration authority[^\n]*\n([\s\S]*?)\/\/ END exact event-decision migration authority\./g)];
+ const matches=[...actual.matchAll(/\/\/ BEGIN exact event-decision migration authority[^\n]*\n([\s\S]*?)\/\/ END exact event-decision migration authority\./g)];
  assert.equal(matches.length,1);const block=matches[0][1];
  assert.doesNotMatch(block,/readFile|process\.|exec|spawn|require\(|import |fetch|new Function/);
  const evaluate=runInNewContext(`(json,profile,useDefault)=>{${block};const rows=JSON.parse(json);return JSON.stringify(useDefault?assertProviderDecisionSqlManifest(rows):assertProviderDecisionSqlManifest(rows,JSON.parse(profile)));}`,{assert,sha});
@@ -35,6 +39,15 @@ export function runProviderDecisionCurrent219ContractTests(){
  }
  for(const mutate of [x=>x.splice(205,1),x=>x.push({...x[205]}),x=>x[205].sha256='0'.repeat(64),x=>x[205].file='20261003121758_employee_message_source_admission.sql',x=>x[205].extra=true])
   check('only exact MESSAGE row can be subtracted',()=>{const bad=structuredClone(manifest);mutate(bad);assert.throws(()=>validate(bad));});
+ check('actual consumer selects only an explicit supported profile before allocation and binds owning migration',()=>{
+  const call="assertProviderDecisionSqlManifest(proof.migration_manifest, value.migration_profile || 'CURRENT_219')";
+  assert.equal(actual.split(call).length-1,1);assert.ok(actual.indexOf(call)<actual.indexOf('const owned = mkdtempSync'));
+  for(const text of ["proof.migration_manifest.find(row=>row.file==='20261004000000_native_provider_event_decision_lookup.sql')","proof.owning_migration.file, '20261004000000_native_provider_event_decision_lookup.sql'","value.native_input.frontend, frontendBinding","NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256"])assert.ok(actual.includes(text),text);
+ });
+ check('actual integrated227 consumer rejects unqualified or malformed manifests',()=>{
+  const rows=Array.from({length:227},(_,i)=>({file:String(20261001000000+i)+'_synthetic.sql',sha256:'a'.repeat(64)}));
+  for(const bad of [manifest,historical,rows,rows.slice(1),[...rows.slice(1),rows[1]],rows.map((r,i)=>i===0?{...r,extra:true}:r)])assert.throws(()=>validate(bad,'INTEGRATED_227'));
+ });
  check('live consumption invokes current profile before native allocation and retains exact provenance',()=>{assert.equal((current.match(/assertProviderDecisionSqlManifest\(proof\.migration_manifest, 'CURRENT_219'\)/g)||[]).length,1);assert.ok(current.indexOf("assertProviderDecisionSqlManifest(proof.migration_manifest, 'CURRENT_219')")<current.indexOf('const owned = mkdtempSync'));for(const text of ["proof.migration_manifest_sha256, sha(JSON.stringify(proof.migration_manifest)+'\\n')","proof.owning_migration, proof.migration_manifest.at(-1)","value.native_input.frontend, frontendBinding","frontendBinding.jars","NATIVE_PROVIDER_EVENT_DECISION_FIXTURE_SHA256"])assert.ok(current.includes(text),text);});
  for(const changed of [current+'\n// extra',current.slice(1),prior+' ',current.replace('Xmx256m','Xmx512m'),current.replace('timeout: 120000','timeout: 240000'),current.replace("proof.migration_manifest, 'CURRENT_219'","proof.migration_manifest, 'HISTORICAL_218'")])
   check('outside or unauthorized in-hunk source mutation rejected',()=>assert.throws(()=>withoutProviderDecisionCurrent219(pins.path,changed)));
@@ -44,5 +57,5 @@ export function runProviderDecisionCurrent219ContractTests(){
   x=>x.migration_manifest.pop(),x=>x.migration_manifest.reverse(),x=>x.migration_manifest[0].sha256='0'.repeat(64),x=>x.backend_source.commit='0'.repeat(40)])
   check('malformed extra or reordered finite metadata refuses normalization',()=>{const bad=structuredClone(pins);mutate(bad);assert.throws(()=>validateProviderDecisionCurrent219Pins(bad));});
  for(const bad of [null,{},[],{hunks:[]},'other'])check('unknown pin container rejected',()=>assert.throws(()=>validateProviderDecisionCurrent219Pins(bad)));
- return {status:'PASS',checks,scope:'current219 manifest actual pure consumer and finite reverse source delta only',jvm:false,sql:false,browser:false};
+ return {status:'PASS',checks,scope:'actual expanded pure consumer with historical219 and218 regressions; integrated227 rejection only; no current311 SQL qualification',jvm:false,sql:false,browser:false};
 }

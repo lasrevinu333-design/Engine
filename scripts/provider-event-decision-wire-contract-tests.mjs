@@ -1,3 +1,5 @@
+import {assertBoundCurrentProviderSource} from './current-provider-comparison-source-boundary.mjs';
+import {normalizeCurrentFirstAudio} from './native-first-audio-source-boundary.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -6,9 +8,10 @@ import {withoutProviderDecisionCurrent219} from './provider-event-decision-curre
 import {runProviderDecisionCurrent219ContractTests} from './provider-event-decision-current219-contract-tests.mjs';
 const sha=x=>createHash('sha256').update(x).digest('hex');let checks=0;
 const check=(name,fn)=>{fn();checks++;console.log('PASS',name);};
-const rawCurrent=readFileSync(pins.path,'utf8');
-check('current219 helper and invoked owning test are exact dependencies',()=>{assert.equal(sha(readFileSync('scripts/provider-event-decision-current219-source-boundary.mjs')),'d09dece33d9c2e17b1b6ab54b33e9fd1f90ca55b7b768028609939580a4fd048');assert.equal(sha(readFileSync('scripts/provider-event-decision-current219-contract-tests.mjs')),'ddcf15771ca413317e21766b8677eac83c3cd796a02ce2ec38fb64b2b1525962');});
-check('mandatory owning current219 consumer tests actually execute',()=>{assert.deepEqual(runProviderDecisionCurrent219ContractTests(),{status:'PASS',checks:74,scope:'current219 manifest actual pure consumer and finite reverse source delta only',jvm:false,sql:false,browser:false});});
+const actualCurrent=readFileSync(pins.path,'utf8');assertBoundCurrentProviderSource(pins.path,actualCurrent);
+const rawCurrent=normalizeCurrentFirstAudio(pins.path,actualCurrent);
+check('current219 helper and invoked owning test are exact dependencies',()=>{assert.equal(sha(readFileSync('scripts/provider-event-decision-current219-source-boundary.mjs')),'d09dece33d9c2e17b1b6ab54b33e9fd1f90ca55b7b768028609939580a4fd048');assert.equal(sha(normalizeCurrentFirstAudio('provider-event-decision-current219-contract-tests.mjs',assertBoundCurrentProviderSource('provider-event-decision-current219-contract-tests.mjs',readFileSync('scripts/provider-event-decision-current219-contract-tests.mjs','utf8')))),'ddcf15771ca413317e21766b8677eac83c3cd796a02ce2ec38fb64b2b1525962');});
+check('mandatory owning current219 consumer tests actually execute',()=>{assert.deepEqual(runProviderDecisionCurrent219ContractTests(),{status:'PASS',checks:77,scope:'actual expanded pure consumer with historical219 and218 regressions; integrated227 rejection only; no current311 SQL qualification',jvm:false,sql:false,browser:false});});
 const current=withoutProviderDecisionCurrent219(pins.path,rawCurrent);
 check('exact wire predecessor after separately pinned219 delta and preserved Fa34d source',()=>{assert.equal(pins.base,'a34d1ac609644fb7cf20c24f6b4d31e9e841e759');assert.equal(sha(current),pins.current_sha256);assert.equal(sha(withoutProviderDecisionWire(pins.path,rawCurrent)),'bbbc0947510c17bdc07ea39040e08afd63f0181d590103042541af70320b8764');});
 const prior=withoutProviderDecisionWire(pins.path,current);
@@ -20,7 +23,7 @@ for(const mutate of [x=>x.extra=true,x=>x.base='0'.repeat(40),x=>x.path='../othe
  x=>x.hunks[0].old_count++,x=>x.hunks[0].new_count++,x=>x.hunks[0].after.push(''),x=>x.hunks[0].before.push(''),x=>x.pinned.pop(),x=>x.pinned[0].sha256='0'.repeat(64)])
  check('malformed/extra/reordered full delta or new-test pin rejects',()=>{const bad=structuredClone(pins);mutate(bad);assert.throws(()=>validateProviderDecisionWirePins(bad));});
 for(const bad of [null,{},[],{hunks:[]},'other'])check('unknown pin object rejects',()=>assert.throws(()=>validateProviderDecisionWirePins(bad)));
-check('new Java test is an exact pinned input, not an untracked dependency',()=>{assert.equal(pins.pinned.length,1);assert.equal(sha(readFileSync(pins.pinned[0].path)),pins.pinned[0].sha256);});
+check('new Java test is an exact pinned input, not an untracked dependency',()=>{assert.equal(pins.pinned.length,1);assert.equal(sha(normalizeCurrentFirstAudio(pins.pinned[0].path,assertBoundCurrentProviderSource(pins.pinned[0].path,readFileSync(pins.pinned[0].path,'utf8')))),pins.pinned[0].sha256);});
 check('all previous F6 pins remain verbatim',()=>assert.equal(sha(readFileSync('scripts/fixtures/provider-event-decisions-byte-deltas.json')),'904a8e1caf413dc7b22189bc3772599b6d394faf4763fe7e726cdd149694e3f8'));
 check('exact owning portable helper with finite219 predecessor layer',()=>assert.equal(sha(readFileSync('scripts/provider-event-decision-wire-source-boundary.mjs')),'c0cfce6400bededdb018b8b807ef1abc5cd99d18a20da65c1a47ea03abd1925f'));
 check('prepare is a single finite class and never default suite skipping',()=>{assert.ok(current.includes("process.argv[2] === '--prepare-event-decision-fixture'"));assert.ok(current.includes('assert.ok(!(prepareDecision && decisionFixture)'));assert.ok(current.includes("...(prepareDecision ? [`org.memphiszoo.custodial.vault.${wireClass}`, preparationDirectory] : ['org.junit.runner.JUnitCore'"));assert.equal((current.match(/tests.push\(wireClass\)/g)||[]).length,1);assert.equal((prior.match(/tests.push\('NativeProviderEventDecisionsTest'\)/g)||[]).length,1);});

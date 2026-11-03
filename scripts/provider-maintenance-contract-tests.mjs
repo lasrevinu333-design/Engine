@@ -1,3 +1,4 @@
+import {normalizeCurrentNativeAudioSequence} from './native-audio-sequence-source-boundary.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -19,7 +20,7 @@ for(const row of pins.files){
 for(const name of ['VaultEngine.java','OfflineAuthorityTime.java','NativeNfcScanHandoff.java','CustodialNativeVaultPlugin.java','CustodialNativeRuntime.java']){
  assert.equal(sha(read(name)),pins.preserved[name],'whole protected source unchanged: '+name);checks++;
 }
-assert.equal(sha(readFileSync('mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml')),pins.preserved.manifest);checks++;
+assert.equal(sha(normalizeCurrentNativeAudioSequence('AndroidManifest.xml',readFileSync('mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml','utf8'))),pins.preserved.manifest);checks++;
 const journal=read('NativeProviderJournal.java'),owner=read('NativeProviderRuntimeOwner.java'),failure=read('NativeProviderFailureDisposition.java');
 const freshness=pins.files.find(row=>row.name==='NativeProviderJournal.java').action_freshness_delta;
 assert.deepEqual(Object.keys(freshness).sort(),['added_lines','prior_sha256']);checks++;

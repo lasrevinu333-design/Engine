@@ -1058,6 +1058,47 @@
       "path": "mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml",
       "bytes": 2962,
       "sha256": "80eaafe4705676208fe71d76af95e8ce722544d63f30a2901b5ecd5319b4c055"
+    },
+    {
+      "path": "mobile/src/custodial/bridge.js",
+      "bytes": 163503,
+      "sha256": "d0cd2fc672a8814f7c6c47929bc7a5b5ead8297dfa8794ef5d983512b7bc2f18"
+    },
+    {
+      "path": "scripts/provider-event-decision-current219-contract-tests.mjs",
+      "bytes": 9160,
+      "sha256": "76e429e3e0080e8e16966c6e7f6eca713d4645c418e20901f161ac38d23a8696",
+      "basis": "bounded actual-consumer test repair; original retained separately"
+    },
+    {
+      "path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "bytes": 65190,
+      "sha256": "ce1455e0e6b93e85e9ad4f4dc8ae25212d03f99c71b9b7245a8c7345b0e4acd2"
+    },
+    {
+      "path": "mobile/src/custodial/native-security.js",
+      "bytes": 56463,
+      "sha256": "4aa5d1e3287029434a355bbd0b2b00a63b8cb646cb3ac084330c1fc74b5ead82"
+    },
+    {
+      "path": "mobile/src/custodial/provider-mirror-bridge.js",
+      "bytes": 8710,
+      "sha256": "a5d8a56394e6f5d7ea2d56e0a857325a746eefcb26e4909f944d3cdbd560f12a"
+    },
+    {
+      "path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+      "bytes": 41368,
+      "sha256": "b798b903ed6bbbe590d9543966496ce57859f0cc679deba49ba032d3a8d8e202"
+    },
+    {
+      "path": "memphis-device-reminders.js",
+      "bytes": 70932,
+      "sha256": "9046b9ee1857247c5427602dcd779bb5c37ead5290344d10d42353a55aca3313"
+    },
+    {
+      "path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+      "bytes": 63197,
+      "sha256": "525ffa19fc47383aa33842bc69ca3e4fa04ebcb7ca076f67fac52c39a45fc5f5"
     }
   ],
   "historical_source_packet": "diagnostic-audit-20261004",
@@ -1346,6 +1387,163 @@
           "sha256": "da680d0375c0936d64c9e1cf529881b5fe65dd96fabfab2a4698bd4c0bbe16fe"
         }
       ]
+    },
+    {
+      "name": "native-security.js",
+      "current_path": "mobile/src/custodial/native-security.js",
+      "current_sha256": "4aa5d1e3287029434a355bbd0b2b00a63b8cb646cb3ac084330c1fc74b5ead82",
+      "comparison_input_sha256": [
+        "4aa5d1e3287029434a355bbd0b2b00a63b8cb646cb3ac084330c1fc74b5ead82"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/native-security.js",
+      "comparison_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",
+      "historical_f6_source_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",
+      "final_reference_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "verify-custodial-dex-semantics.mjs",
+      "current_path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+      "current_sha256": "b798b903ed6bbbe590d9543966496ce57859f0cc679deba49ba032d3a8d8e202",
+      "comparison_input_sha256": [
+        "b798b903ed6bbbe590d9543966496ce57859f0cc679deba49ba032d3a8d8e202"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/verify-custodial-dex-semantics.mjs",
+      "comparison_sha256": "f260e6c67a153bf3878f4e6b94506322baa6f4b76091e5b0646e298122e74ad6",
+      "historical_f6_source_sha256": "f260e6c67a153bf3878f4e6b94506322baa6f4b76091e5b0646e298122e74ad6",
+      "final_reference_sha256": "f260e6c67a153bf3878f4e6b94506322baa6f4b76091e5b0646e298122e74ad6",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "memphis-device-reminders.js",
+      "current_path": "memphis-device-reminders.js",
+      "current_sha256": "9046b9ee1857247c5427602dcd779bb5c37ead5290344d10d42353a55aca3313",
+      "comparison_input_sha256": [
+        "9046b9ee1857247c5427602dcd779bb5c37ead5290344d10d42353a55aca3313"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/memphis-device-reminders.js",
+      "comparison_sha256": "31429725ea97d9e4628c3dc0f28f9c2ff06fbae7c3b1531a548af2cdab367918",
+      "historical_f6_source_sha256": "4f12d3a7cc7e158fe10dad5364c6d447c0f333ffd5d770b079dcf884531fe1df",
+      "final_reference_sha256": "4f12d3a7cc7e158fe10dad5364c6d447c0f333ffd5d770b079dcf884531fe1df",
+      "reconstruction_edges": [
+        {
+          "fixture": "provider-required-kind-byte-deltas.json",
+          "direction": "forward",
+          "sha256": "b782d86c472b720bce028beeff6b3cdf845ab5a47cbafadd492f575d14591d5c"
+        },
+        {
+          "fixture": "provider-no-wake-byte-delta.json",
+          "direction": "forward",
+          "sha256": "24edd4dc7ad983ec21d8761dc319bba2c007b887da20cb6589c439fa010c8c78"
+        },
+        {
+          "fixture": "native-schedule-wire-byte-delta.json",
+          "direction": "forward",
+          "sha256": "31429725ea97d9e4628c3dc0f28f9c2ff06fbae7c3b1531a548af2cdab367918"
+        }
+      ]
+    },
+    {
+      "name": "custodial-android-release-acceptance.schema.json",
+      "current_path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+      "current_sha256": "525ffa19fc47383aa33842bc69ca3e4fa04ebcb7ca076f67fac52c39a45fc5f5",
+      "comparison_input_sha256": [
+        "525ffa19fc47383aa33842bc69ca3e4fa04ebcb7ca076f67fac52c39a45fc5f5"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/custodial-android-release-acceptance.schema.json",
+      "comparison_sha256": "09868fbf07fc37b7c8cf09e8402470f7f396e2f3b2c298f79a405cc67c96560d",
+      "historical_f6_source_sha256": "03eec86c1d2a746567a77a9b4d59574b3a152bf8a4bbaf425ff8e845cdaff428",
+      "final_reference_sha256": "03eec86c1d2a746567a77a9b4d59574b3a152bf8a4bbaf425ff8e845cdaff428",
+      "reconstruction_edges": [
+        {
+          "fixture": "qualified-provider-schema-byte-delta.json",
+          "direction": "forward",
+          "sha256": "44fe431c3ed16fd5d5a31d613e85f4cda498b8915266e4e7f529e223fbe87933"
+        },
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "09868fbf07fc37b7c8cf09e8402470f7f396e2f3b2c298f79a405cc67c96560d"
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderEventDecisionSqlWireTest.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderEventDecisionSqlWireTest.java",
+      "current_sha256": "1c015ee1d936773e47e29e05589e40574dc18b7aea76d8a20114df8d17dd367d",
+      "comparison_input_sha256": [
+        "1c015ee1d936773e47e29e05589e40574dc18b7aea76d8a20114df8d17dd367d"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeProviderEventDecisionSqlWireTest.java",
+      "comparison_sha256": "798f5affbc5bfb4de1971da072d91893c5e9958eccde2d2bb164f29acc7c9494",
+      "historical_f6_source_sha256": "798f5affbc5bfb4de1971da072d91893c5e9958eccde2d2bb164f29acc7c9494",
+      "final_reference_sha256": "798f5affbc5bfb4de1971da072d91893c5e9958eccde2d2bb164f29acc7c9494",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "native-notification-arrival-boundary-tests.mjs",
+      "current_path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "current_sha256": "ce1455e0e6b93e85e9ad4f4dc8ae25212d03f99c71b9b7245a8c7345b0e4acd2",
+      "comparison_input_sha256": [
+        "ce1455e0e6b93e85e9ad4f4dc8ae25212d03f99c71b9b7245a8c7345b0e4acd2"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/native-notification-arrival-boundary-tests.mjs",
+      "comparison_sha256": "20cb1d753f65768955884b4b6ecfe9a1ee01dae5a824dc287924abd551f00933",
+      "historical_f6_source_sha256": "fa3efe4598cc4327d0ae82110f9cacadb311b9880d96da342f58e5c14047a90c",
+      "final_reference_sha256": "fa3efe4598cc4327d0ae82110f9cacadb311b9880d96da342f58e5c14047a90c",
+      "reconstruction_edges": [
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "20cb1d753f65768955884b4b6ecfe9a1ee01dae5a824dc287924abd551f00933"
+        }
+      ]
+    },
+    {
+      "name": "NativeAttestation.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeAttestation.java",
+      "current_sha256": "059d74346a6f6d68f051b626830b6bd927cc794b262e9012071e8d2a388cb3b8",
+      "comparison_input_sha256": [
+        "059d74346a6f6d68f051b626830b6bd927cc794b262e9012071e8d2a388cb3b8",
+        "67878656f3d64e1b6a109093f895d0a7f30cc67a7cf7f1e23fd579090a0d0530"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeAttestation.java",
+      "comparison_sha256": "792dad91d7542f82847ccf2c195990b9a6632d1c18a0dc18cd73c34e2a647fa6",
+      "historical_f6_source_sha256": "792dad91d7542f82847ccf2c195990b9a6632d1c18a0dc18cd73c34e2a647fa6",
+      "final_reference_sha256": "792dad91d7542f82847ccf2c195990b9a6632d1c18a0dc18cd73c34e2a647fa6",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "bridge.js",
+      "current_path": "mobile/src/custodial/bridge.js",
+      "current_sha256": "d0cd2fc672a8814f7c6c47929bc7a5b5ead8297dfa8794ef5d983512b7bc2f18",
+      "comparison_input_sha256": [
+        "d0cd2fc672a8814f7c6c47929bc7a5b5ead8297dfa8794ef5d983512b7bc2f18"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/bridge.js",
+      "comparison_sha256": "9fd4404231a2b45464cd6b21ae0cd9bda05e0b2a07c0853b3eac9e19920fb393",
+      "historical_f6_source_sha256": "f19bef25304276cb3872b1340cd96f6188d119bb89f8171225896f8d23893175",
+      "final_reference_sha256": "f19bef25304276cb3872b1340cd96f6188d119bb89f8171225896f8d23893175",
+      "reconstruction_edges": [
+        {
+          "fixture": "retained-native-bridge-byte-delta.json",
+          "direction": "forward",
+          "sha256": "9fd4404231a2b45464cd6b21ae0cd9bda05e0b2a07c0853b3eac9e19920fb393"
+        }
+      ]
+    },
+    {
+      "name": "provider-event-decision-current219-contract-tests.mjs",
+      "current_path": "scripts/provider-event-decision-current219-contract-tests.mjs",
+      "current_sha256": "76e429e3e0080e8e16966c6e7f6eca713d4645c418e20901f161ac38d23a8696",
+      "comparison_input_sha256": [
+        "76e429e3e0080e8e16966c6e7f6eca713d4645c418e20901f161ac38d23a8696"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/provider-event-decision-current219-contract-tests.mjs",
+      "comparison_sha256": "ddcf15771ca413317e21766b8677eac83c3cd796a02ce2ec38fb64b2b1525962",
+      "historical_f6_source_sha256": "ddcf15771ca413317e21766b8677eac83c3cd796a02ce2ec38fb64b2b1525962",
+      "final_reference_sha256": "ddcf15771ca413317e21766b8677eac83c3cd796a02ce2ec38fb64b2b1525962",
+      "reconstruction_edges": []
     },
     {
       "name": "NativeCompletionJournal.java",

@@ -67,7 +67,7 @@ assert.equal(mutationCalls,2,'cacheless read-ahead attempt and response persiste
 assert.equal(element('employee').textContent, 'Fresh Employee', 'fresh server data must render even when optional cache persistence fails');
 assert.equal(element('content').hidden, false, 'fresh schedule content must remain visible');
 assert.match(element('areas').innerHTML, /Fresh Area/, 'fresh assignment must be shown');
-assert.match(element('state-text').textContent, /could not save a copy/i, 'cache failure must be disclosed without relabeling a successful network read as offline');
+assert.match(element('state-text').textContent, /could not save a schedule copy/i, 'cache failure must be disclosed without relabeling a successful network read as offline');
 assert.equal(element('retry').hidden, false, 'cache failure retains the current manual retry affordance');
 assert.equal(stored.size, 0, 'failed protected cache persistence must not fabricate a saved snapshot');
 

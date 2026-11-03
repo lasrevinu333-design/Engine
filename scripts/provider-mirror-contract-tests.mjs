@@ -1,3 +1,5 @@
+import {custodialNewProducerAdmissionsEnabled} from '../mobile/src/custodial/new-producer-scope.js';
+import {assertBoundCurrentProviderSource} from './current-provider-comparison-source-boundary.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -35,7 +37,9 @@ for(const [name,hash] of Object.entries({
 }))check(sha(withoutProviderEventDecisions(name,read(name))),hash,'unchanged whole protected source outside exact F6 delta '+name);
 check(sha(normalizeCurrentNativeAudioSequence('AndroidManifest.xml',readFileSync('mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml','utf8'))),'5714fc43190e46dfe043749b8a5b9bf2903bed60cd2bc86ef2077875248c854a','baseline manifest preserved outside exact private-audio source declaration');
 const plugin=read('CustodialNativeVaultPlugin.java'),runtime=withoutReleaseAdmission('CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
-check([...plugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,'exact additive native method allowlist');
+const actualPlugin=readFileSync(dir+'CustodialNativeVaultPlugin.java','utf8');assertBoundCurrentProviderSource('CustodialNativeVaultPlugin.java',actualPlugin);
+check([...actualPlugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,'actual current plugin matches the actual compiled verifier allowlist');
+check([...plugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.filter(name=>name!=='checkRemovalAdmission'),'historical additive method set before separately checked current removal admission');
 check(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.length,37,'29 original plus seven finite methods and reviewed removal admission');
 for(const type of ['NativeProviderIngressRuntime','NativeProviderComponentRuntime']){assert.match(runtime,new RegExp('return '+type+'\\.SUSPENDED;'));checks++;}
 assert.match(runtime,/new NativeProviderRuntimeOwner.Delivery\(NativeProviderTime.Profiles.NONE,/);checks++;
@@ -64,7 +68,7 @@ const api={
  async providerClaimNext(){calls.push('next');return{claim:null};},
  async providerMirrorDetach(){calls.push('detach');return{detached:true};},
 };
-const context={nativeVault:true,URL,document:{hidden:false,addEventListener:add},window:{location:{href:'https://localhost/employee-schedule.html?hub=employee'},addEventListener:add},
+const context={custodialNewProducerAdmissionsEnabled,nativeVault:true,URL,document:{hidden:false,addEventListener:add},window:{location:{href:'https://localhost/employee-schedule.html?hub=employee'},addEventListener:add},
  security:{getStatus:()=>({ready})},App:{addListener:add},getNativeProviderMirrorBridge:()=>createNativeProviderMirrorBridge(api),
  createProviderMirror:value=>{options=value;return createProviderMirror({...value,repeat:(fn,ms)=>{const id=++serial;timers.set(id,{fn,ms});return id;},clearRepeat:id=>timers.delete(id)});}};
 vm.createContext(context);vm.runInContext(bridgeSource.slice(from,to),context);

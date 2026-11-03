@@ -19,7 +19,7 @@ equal(inherited[0].origin,{kind:'inherited_capability_d743',base:'5749155796d434
 equal(inherited[0].prior_sha256,'429c336d07a481b9b548cf432e6fd1917ec24715d15b76fb9d1c9d8770b680f3','exact original bridge');
 equal(inherited[0].current_sha256,'04195aaf8c725da5fba681e3e1604bf1b3941e256c4f30dd831a5218b1179188','exact accepted d743 bridge');
 for(const row of pins.files){
- const current=withoutProviderRetainedSchedule(row.name,withoutProviderEventDecisions(row.name,withoutRequiredKinds(row.name,withoutRetainedNativeBridge(row.name,readFileSync(row.path,'utf8')))));equal(sha(current),row.current_sha256,'whole current owning source '+row.name);
+ const current=withoutProviderRetainedSchedule(row.name,withoutProviderEventDecisions(row.name,withoutRequiredKinds(row.name,withoutRetainedNativeBridge(row.name,normalizeCurrentNativeAudioSequence(row.path,readFileSync(row.path,'utf8'))))));equal(sha(current),row.current_sha256,'whole current owning source '+row.name);
  const prior=withoutProviderClassification(row.name,current);equal(sha(prior),row.prior_sha256,'whole original source '+row.name);
  equal(withoutProviderClassification(row.name,prior),prior,'exact prior normalization idempotent');
  for(const mutated of [current+'\n// hostile unowned delta',current.slice(1),current.replace(row.hunks[0].after[0],row.hunks[0].after[0]+' ')]){

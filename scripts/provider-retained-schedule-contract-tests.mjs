@@ -1,3 +1,4 @@
+import {assertBoundCurrentProviderSource} from './current-provider-comparison-source-boundary.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -17,7 +18,7 @@ equal(pins.current_sha256,'f19bef25304276cb3872b1340cd96f6188d119bb89f8171225896
 equal(pins.hunks.length,1,'one bounded reconciliation hunk');
 equal([pins.hunks[0].old_start,pins.hunks[0].old_count,pins.hunks[0].new_start,pins.hunks[0].new_count],
  [1916,2,1916,8],'no shifted or additional source ownership');
-const current=withoutRetainedNativeBridge(pins.path,readFileSync(pins.path,'utf8'));
+const current=withoutRetainedNativeBridge(pins.path,normalizeCurrentNativeAudioSequence(pins.path,assertBoundCurrentProviderSource(pins.path,readFileSync(pins.path,'utf8'))));
 function requireCurrent(source){
  assert.equal(sha(source),pins.current_sha256,'owning source must include this correction');
  return withoutProviderRetainedSchedule(pins.path,source);
