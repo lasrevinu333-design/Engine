@@ -802,7 +802,7 @@ try {
         getReadinessObservation: async () => ({ observation: 'CONFIRMED', read_only: true,
           native_clock_continuity: 'CONFIRMED', protected_work_admission: 'CLEAR',
           pending_occurrences: false, unfinished_occurrence: false, rollback_fence_active: false }) };
-      window.installHomeFacts = () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; } });
+      window.installHomeFacts = () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; }, async restoreProfileFacts() { return true; } });
       window.Network = { addListener: async (event, fn) => listeners.set(event, fn) };
       window.App = { addListener: async (event, fn) => listeners.set(event, fn) };
       window.StatusBar = { hide: async () => {} };
