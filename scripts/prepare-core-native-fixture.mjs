@@ -14,7 +14,7 @@ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
 const tracked=execFileSync('git',['ls-files','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean).sort();
 const sha=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const sourceRows=tracked.map(path=>{const p=resolve(root,path);assert.ok(p.startsWith(root+'/'));assert.ok(lstatSync(p).isFile()&&!lstatSync(p).isSymbolicLink());return {path,bytes:lstatSync(p).size,sha256:sha(p)};});
-const workspace=mkdtempSync(join(tmpdir(),'custodial-core-native-fixture-'));
+const workspace=realpathSync(mkdtempSync(join(tmpdir(),'custodial-core-native-fixture-')));
 chmodSync(workspace,0o700);
 const snapshot=join(workspace,'source');
 for(const row of sourceRows){const target=join(snapshot,row.path);mkdirSync(dirname(target),{recursive:true});copyFileSync(join(root,row.path),target);chmodSync(target,lstatSync(join(root,row.path)).mode&0o777);}
