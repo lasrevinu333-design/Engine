@@ -39,6 +39,8 @@ try {
  });
  await page.addStyleTag({content:css});await page.addScriptTag({content:bundle});
  await page.getByRole('button',{name:'Earlier messages',exact:true}).waitFor({state:'visible',timeout:10000});
+ await page.getByRole('button',{name:'Back',exact:true}).waitFor({state:'visible',timeout:10000});
+ assert.match(await page.evaluate(()=>window.MemphisMessengerRoute.resolveBackUrl()),/\/start_page1\.html$/,'compiled Back retains its approved Home destination');
  assert.equal(await page.getByText('Oldest retained fixture',{exact:true}).count(),0);
  const readBefore=await page.evaluate(()=>window.__calls.filter(c=>c.path.endsWith('/read')).length);
  await page.getByRole('button',{name:'Earlier messages',exact:true}).click();

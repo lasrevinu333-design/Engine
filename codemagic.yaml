@@ -983,6 +983,8 @@ workflows:
           test -z "$(git status --porcelain --untracked-files=normal)"
       - *install
       - *custodial_android_toolchain
+      - name: Verify generated messenger behavior
+        script: node scripts/messenger-bundle-browser-tests.mjs
       - name: Build and sign full-workflow TEST APK with retained fleet identity
         script: |
           #!/usr/bin/env bash
