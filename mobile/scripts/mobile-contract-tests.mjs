@@ -422,7 +422,7 @@ assert.match(custodialJs, /function employeeRole\(value\)/);
 assert.match(custodialHtml, /id="phone-lock-name"/);
 assert.match(custodialHtml, /id="phone-unlock"/);
 assert.match(custodialJs, /els\.phoneLockName\.textContent = name/);
-assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*try \{ await window\.MemphisScanSync\?\.recoverLocalCompletionIntents\?\.\(\); \} catch \{ return showManagerNeeded\(\); \}\s*const preStart = await reconcileProtectedStartup\(\);[\s\S]{0,180}try \{\s*profile = await request/,
+assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*try \{ await window\.MemphisScanSync\?\.recoverLocalCompletionIntents\?\.\(\); \} catch \{ return showSetupRepairRequired\(\); \}\s*const preStart = await reconcileProtectedStartup\(\);[\s\S]{0,180}try \{\s*profile = await request/,
   'the protected cached employee identity must reach the wake screen before fail-closed local completion recovery, startup reconciliation, and the network profile returns');
 assert.match(custodialBridge, /fn: 'tool_get_system_settings',[\s\S]{0,500}fn: 'tool_get_location_scan_state'/,
   'interrupted-start recovery must prove the exact native transport before reading server cleaning authority');
@@ -525,7 +525,7 @@ assert.match(custodialBridge, /clearRollbackFence/);
    security:{subscribe:fn=>{callback=fn;}},queueMicrotask:fn=>queued.push(fn),
    els:{name:{textContent:'original'},role:{textContent:'staff'},phoneLockName:{textContent:'original'},activeCleaning:{hidden:false},home:{hidden:true}},
    invalidateReadiness:options=>{calls.push('withdraw');if(options?.refresh!==false)calls.push('probe');},
-   showBoot:()=>calls.push('boot'),showAssignmentNeeded:()=>calls.push('assignment'),showManagerNeeded:()=>calls.push('manager'),
+   showBoot:()=>calls.push('boot'),showAssignmentNeeded:()=>calls.push('assignment'),showSetupRepairRequired:()=>calls.push('manager'),
    restore:()=>{calls.push('restore');return Promise.resolve();}};
   runInNewContext(source,context);return{calls,queued,emit:(status,p)=>{if(p!==undefined)principal=p;callback(status);},flush:()=>{while(queued.length)queued.shift()();}};
  };
@@ -578,7 +578,8 @@ assert.match(custodialJs, /security\.getStatus\(\)\.state === 'removing' \|\| pe
 assert.match(custodialJs, /MemphisMobile\?\.resumePendingSecurityWorkflow/);
 assert.doesNotMatch(custodialJs, /els\.device|enroll-submit|manager code/i);
 assert.match(custodialJs, /local_committed_pending_server_confirmation/);
-assert.match(custodialJs, /This phone needs a manager/);
+assert.match(custodialJs, /Phone setup needs repair/);
+assert.doesNotMatch(custodialJs, /This phone needs a manager|Ask a manager/i);
 assert.doesNotMatch(custodialJs, /localStorage\.(?:setItem|removeItem)/, 'Custodial enrollment UI must mutate protected state only through the serialized store');
 assert.match(custodialScanTarget, /incoming\.hostname === 'lasrevinu333-design\.github\.io'/);
 assert.match(custodialScanTarget, /if \(!customScan && !webScan\) return null/);
