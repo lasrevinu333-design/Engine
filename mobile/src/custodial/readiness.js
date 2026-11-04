@@ -3,22 +3,22 @@ export function classifyReadiness(input = {}) {
   const { security = {}, queue, nativeState, sessionState } = input;
   const result = (state, label, detail) => Object.freeze({ state, label, detail });
   if (security.quarantined === true || input.integrityFailure === true || nativeState?.observation === 'DO_NOT_USE' || ['corrupted', 'ambiguous'].includes(sessionState)) {
-    return result('do_not_use', 'Do not use', 'Protected phone or saved-work integrity needs a manager. Saved work is retained.');
+    return result('do_not_use', 'Do not use', 'Protected phone or saved-work integrity could not be verified. Repair is required; saved work is retained.');
   }
   if (security.initialized === true && security.available === false) {
-    return result('do_not_use', 'Do not use', 'Protected phone security is unavailable. Ask a manager; saved work is retained.');
+    return result('do_not_use', 'Do not use', 'Protected phone security is unavailable. Repair is required; saved work is retained.');
   }
   // A retained queue entry that is not a record cannot be interpreted safely.
   // Keep it visible as an integrity problem; never discard or rewrite the row.
   if (Array.isArray(queue) && queue.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
-    return result('do_not_use', 'Do not use', 'A saved-work record could not be read safely. Ask a manager; saved work is retained.');
+    return result('do_not_use', 'Do not use', 'A saved-work record could not be read safely. Repair is required; saved work is retained.');
   }
   if (input.managerRequired === true || input.enrollmentPending === true || input.authRejected === true
     || nativeState?.rollback_fence_active === true
     || nativeState?.observation === 'NEEDS_MANAGER' || nativeState?.protected_work_admission === 'RECOVERY_REQUIRED'
     || ['unenrolled', 'removing'].includes(security.state)
     || (Array.isArray(queue) && queue.some(row => row.dead_letter === true || row.recoverable === false || ['quarantined', 'dead-letter', 'legacy-quarantine'].includes(row.state)))) {
-    return result('needs_manager', 'Needs manager', 'A manager must resolve assignment or protected-work recovery. Nothing has been erased.');
+    return result('needs_manager', 'Phone repair needed', 'Phone verification or saved-work recovery could not finish. Nothing has been erased.');
   }
   if ((Array.isArray(queue) && queue.length > 0) || nativeState?.pending_occurrences === true || nativeState?.unfinished_occurrence === true) {
     return result('needs_internet', 'Needs internet', 'Saved work is pending confirmation. Reconnect and let automatic sync finish; an open cleaning still uses the same tag to finish.');
@@ -41,18 +41,18 @@ export function classifyReadiness(input = {}) {
 // not advertise an ordinary outage. Actionable integrity/recovery stays shown.
 export function readinessPresentation(result, input = {}) {
   if (!result || !['ready', 'needs_internet', 'needs_manager', 'do_not_use'].includes(result.state)) {
-    return Object.freeze({ state: 'needs_manager', hidden: false, label: 'Phone needs verification', detail: 'Ask a manager; saved work is retained.' });
+    return Object.freeze({ state: 'needs_manager', hidden: false, label: 'Phone needs verification', detail: 'Verification could not finish; saved work is retained.' });
   }
   const actionable = ['needs_manager', 'do_not_use'].includes(result.state);
   if (!actionable && input.localReadinessUnavailable === true) {
     return Object.freeze({ ...result, hidden: false, label: 'Saved work verification needed',
-      detail: 'The phone could not check protected saved work. Do not reset it; ask a manager for help.' });
+      detail: 'The phone could not check protected saved work. Repair is required; do not reset the phone.' });
   }
   // This is an authoritative native work-verification constraint, not a
   // navigator/network-status observation. Retain a notice without blaming Wi-Fi.
   if (!actionable && input.nativeState?.observation === 'NEEDS_INTERNET') {
     return Object.freeze({ ...result, hidden: false, label: 'Work verification needed',
-      detail: 'The phone must verify current permission before new cleaning. Saved work is retained; ask a manager for help.' });
+      detail: 'The phone must verify current permission before new cleaning. Saved work is retained.' });
   }
   return Object.freeze({ ...result, hidden: !actionable,
     label: actionable ? result.label : '', detail: actionable ? result.detail : '' });

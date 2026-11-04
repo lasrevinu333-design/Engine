@@ -127,13 +127,13 @@ function clearRestoreRetry() {
 function showBoot(title = 'Please wait', message = 'Opening your work phone…') {
   showOnly(els.boot); els.bootTitle.textContent = title; els.bootStatus.textContent = message;
 }
-function showManagerNeeded() {
+function showSetupRepairRequired() {
   readinessManagerRequired = true; invalidateReadiness();
   clearRestoreRetry();
-  showBoot('This phone needs a manager.', 'Your saved work has not been erased. Ask a manager for help.');
+  showBoot('Phone setup needs repair', 'Custodial could not finish verifying this phone. Your saved work is retained.');
 }
 function showNoConnection() {
-  showBoot('Phone verification needed', 'This phone has no verified saved assignment. Ask a manager for help. Your saved work is retained.');
+  showBoot('Phone verification needed', 'Custodial has not verified this phone’s employee identity yet. Verification will retry automatically. Your saved work is retained.');
   clearRestoreRetry();
   restoreRetryTimer = window.setTimeout(() => void restore(), 5000);
 }
@@ -146,12 +146,12 @@ function resumeProtectedCleaning() {
     return false;
   }
   if (resolved.state !== 'open') {
-    showManagerNeeded();
+    showSetupRepairRequired();
     return true;
   }
   const location = String(resolved.session?.location_name || resolved.session?.location_code || '').trim();
   if (!location) {
-    showManagerNeeded();
+    showSetupRepairRequired();
     return true;
   }
   if (window.MemphisUI?.isUnstartedScanSession?.(resolved.session)) {
@@ -176,10 +176,10 @@ function pendingEnrollmentOperation() {
   if (!['pending_server', 'local_committed_pending_server_confirmation'].includes(status)) return null;
   return { ...operation, device_id: selected, flow, status };
 }
-async function request(path, { method = 'GET', body = null } = {}) {
+async function request(path, { method = 'GET', body = null, expectedGeneration = null } = {}) {
   const requestJson = window.MemphisMobile?.requestJson;
   if (typeof requestJson !== 'function') throw new Error('The phone connection is unavailable.');
-  return requestJson(path, { method, body });
+  return requestJson(path, { method, body, expectedGeneration });
 }
 async function saveProfile() {
   if (!profile) return false;
@@ -281,15 +281,38 @@ async function restoreNow({ quiet = false } = {}) {
     status = security.getStatus();
     if (status.quarantined) return showAssignmentNeeded('', status);
     if (pendingEnrollmentOperation()) return showAssignmentNeeded('', status);
-    return showManagerNeeded();
+    return showSetupRepairRequired();
   }
   if (status.quarantined) return showAssignmentNeeded('', status);
-  if (status.ready !== true || status.available !== true) return showManagerNeeded();
+  if (status.ready !== true || status.available !== true) return showSetupRepairRequired();
   if (status.state !== 'enrolled' || !deviceId()) return showAssignmentNeeded();
+  // A receiver-activated phone already has a native credential, but the
+  // protected employee principal is captured by the authenticated status read.
+  // Recovery needs that principal; requiring recovery first deadlocks initial
+  // activation. Existing-principal offline recovery keeps its original path.
+  if (!readinessPrincipal()) {
+    const bootstrapDevice = deviceId(), bootstrapGeneration = status.generation;
+    try {
+      if (!Number.isSafeInteger(bootstrapGeneration) || bootstrapGeneration < 1) return showSetupRepairRequired();
+      const authenticated = await request(`/device-auth/status?device_id=${encodeURIComponent(bootstrapDevice)}`,
+        { expectedGeneration: bootstrapGeneration });
+      const captured = security.getStatus();
+      if (deviceId() !== bootstrapDevice || captured.state !== 'enrolled' || captured.ready !== true
+        || captured.available !== true || captured.quarantined !== false
+        || !readinessPrincipal() || authenticated?.authenticated !== true || !currentProfile(authenticated))
+        return showSetupRepairRequired();
+    } catch (error) {
+      const failed = security.getStatus();
+      if (deviceId() !== bootstrapDevice || failed.state !== 'enrolled' || failed.quarantined
+        || failed.available !== true) return showAssignmentNeeded('', failed);
+      if ([401, 403].includes(Number(error?.status || 0))) return showSetupRepairRequired();
+      return showNoConnection();
+    }
+  }
   const cached = showCachedPhoneIdentity();
-  try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showManagerNeeded(); }
+  try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showSetupRepairRequired(); }
   const preStart = await reconcileProtectedStartup();
-  if (preStart?.state === 'manager_required') return showManagerNeeded();
+  if (preStart?.state === 'manager_required') return showSetupRepairRequired();
   const requestedDevice = deviceId();
   if (!requestedDevice) return showAssignmentNeeded();
   try {
@@ -330,7 +353,7 @@ async function restoreNow({ quiet = false } = {}) {
       profile = null;
       return showAssignmentNeeded('', failed);
     }
-    if (Number(error?.status || 0) === 401 || Number(error?.status || 0) === 403) return showManagerNeeded();
+    if (Number(error?.status || 0) === 401 || Number(error?.status || 0) === 403) return showSetupRepairRequired();
     if (cached && employeeName(cached) && currentProfile(cached)) {
       profile = cached;
       if (resumeProtectedCleaning()) return;
@@ -369,7 +392,7 @@ security.subscribe((status) => {
     showBoot();
   }
   if (status.quarantined) showAssignmentNeeded('', status);
-  else if (status.initialized && status.available === false) showManagerNeeded();
+  else if (status.initialized && status.available === false) showSetupRepairRequired();
   else if (changed && status.initialized && status.state !== 'enrolled') {
     profile = null;
     showAssignmentNeeded('', status);

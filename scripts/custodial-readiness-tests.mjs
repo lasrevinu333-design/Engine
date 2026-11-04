@@ -30,7 +30,7 @@ await check('support code is a read-only bounded observation, never arbitrary da
 await check('four exact labels with deterministic integrity/manager/pending priority', () => {
   assert.equal(classifyReadiness(positive).label, 'Ready for work');
   assert.equal(classifyReadiness({ ...positive, queue: [{}] }).label, 'Needs internet');
-  assert.equal(classifyReadiness({ ...positive, authRejected: true }).label, 'Needs manager');
+  assert.equal(classifyReadiness({ ...positive, authRejected: true }).label, 'Phone repair needed');
   assert.equal(classifyReadiness({ ...positive, security: { ...security, quarantined: true }, authRejected: true }).label, 'Do not use');
 });
 for (const field of ['principalPresent', 'profileMatches', 'serverConfirmed', 'snapshotAnchored', 'startupClear', 'connected']) {
@@ -158,7 +158,7 @@ await check('local verification failure warns but retains ordinary cached work',
 });
 await check('actual auth rejection and startup recovery need manager', async () => {
   for (const options of [{ authReject: true }, { startup: 'manager_required' }]) {
-    const f = fixture(options); await f.flush(); assert.match(f.elements.get('boot-readiness').textContent, /^Needs manager/);
+    const f = fixture(options); await f.flush(); assert.match(f.elements.get('boot-readiness').textContent, /^Phone repair needed/);
     assert.equal(f.elements.get('home').hidden, true);
   }
 });
@@ -182,7 +182,7 @@ await check('pause removes positive observation without consuming or authorizing
 await check('queued error observation resets positive; replay does not erase payload', async () => {
   const f = fixture(); await f.flush(); const rows = [{ dead_letter: true, payload: { private: 'original' } }];
   f.queueEvent(rows, 'dead-letter'); await f.flush();
-  assert.match(f.elements.get('home-readiness').textContent, /^Needs manager/); assert.equal(f.queueBytes(), JSON.stringify(rows));
+  assert.match(f.elements.get('home-readiness').textContent, /^Phone repair needed/); assert.equal(f.queueBytes(), JSON.stringify(rows));
 });
 await check('principal replacement never keeps old positive label while snapshot response is outstanding', async () => {
   const f = fixture({ delaySnapshot: true }); await f.flush(); f.changePrincipal();
@@ -196,7 +196,7 @@ await check('actual controller shows malformed retained queue as integrity-visib
   assert.equal(f.queueBytes(), bytes);
 });
 await check('native current observation unknown, expired or recovery-required never promotes', async () => {
-  for (const [nativeObservation, label] of [['UNKNOWN', ''], ['NEEDS_INTERNET', 'Work verification needed'], ['NEEDS_MANAGER', 'Needs manager'], ['DO_NOT_USE', 'Do not use']]) {
+  for (const [nativeObservation, label] of [['UNKNOWN', ''], ['NEEDS_INTERNET', 'Work verification needed'], ['NEEDS_MANAGER', 'Phone repair needed'], ['DO_NOT_USE', 'Do not use']]) {
     const f = fixture({ nativeObservation });await f.flush();const e=f.elements.get('home-readiness');
     if(label){assert.match(e.textContent,new RegExp('^'+label));assert.equal(e.hidden,false);}else{assert.equal(e.textContent,'');assert.equal(e.hidden,true);assert.match(e.className,/needs_internet/);}
   }
