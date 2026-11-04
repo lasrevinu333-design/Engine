@@ -125,7 +125,7 @@ assert.match(schedule, /mobile=window\.MemphisMobile/);assert.match(schedule,/co
 assert.match(schedule,/const security=original\.native\?window\.MemphisCustodialSecurity:null/);assert.match(schedule,/const mutate=security\?\.mutateProtectedWork/);assert.match(schedule,/security\.mutateProtectedWork!==mutate/,'The captured native writer remains fenced');
 assert.match(schedule, /\/my-day-summary\?device_id=/);
 assert.doesNotMatch(schedule, /visitor-/);
-assert.match(schedule, /This phone needs a manager/);
+assert.match(schedule, /Phone setup could not be verified/);
 assert.match(schedule, /No regular areas are active right now\./);
 assert.match(schedule, /Your areas now/);
 assert.match(schedule, /current_items/);

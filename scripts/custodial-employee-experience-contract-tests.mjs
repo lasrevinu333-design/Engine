@@ -61,11 +61,12 @@ assert.match(home, /You are cleaning|id="active-cleaning-text"/);
 assert.match(home, /memphis-ui\.js/);
 assert.doesNotMatch(home, /Assigned Areas|bottomNav|navLabel|Scanner|Diagnostics|Refresh|employee-phone|areas-list/);
 assert.doesNotMatch(homeApp, /loadAreas|all_items|display_sections|included_locations/);
-assert.match(homeApp, /This phone needs a manager/);
+assert.match(homeApp, /Phone setup needs repair/);
+assert.doesNotMatch(homeApp, /This phone needs a manager|Ask a manager/);
 assert.match(homeApp, /restore\(\{ quiet: !els\.home\.hidden \}\)/);
 assert.doesNotMatch(home, /boot-retry|>Try Again</);
 assert.doesNotMatch(homeApp, /Tap Try Again/);
-assert.match(homeApp, /This phone has no verified saved assignment\. Ask a manager for help\. Your saved work is retained\./);
+assert.match(homeApp, /Custodial has not verified this phone’s employee identity yet\. Verification will retry automatically\. Your saved work is retained\./);
 assert.match(homeApp, /restoreRetryTimer = window\.setTimeout\(\(\) => void restore\(\), 5000\)/);
 assert.match(homeApp, /function resumeProtectedCleaning\(\)/);
 assert.match(homeApp, /resolveOpenScanSession/);
@@ -81,7 +82,7 @@ assert.match(custodialBridge, /24 \* 60 \* 60 \* 1000/);
 assert.match(custodialBridge, /record\.profile\.authenticated !== true/);
 assert.match(homeApp, /const cached = showCachedPhoneIdentity\(\);[\s\S]*profile = await request/,
   'a current protected cached identity must render before the network profile returns');
-assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showManagerNeeded\(\);[\s\S]*if \(cached && employeeName\(cached\) && currentProfile\(cached\)\)/,
+assert.match(homeApp, /Number\(error\?\.status \|\| 0\) === 401 \|\| Number\(error\?\.status \|\| 0\) === 403\) return showSetupRepairRequired\(\);[\s\S]*if \(cached && employeeName\(cached\) && currentProfile\(cached\)\)/,
   'an explicit authorization failure must still fail closed before the cached offline fallback');
 assert.match(homeApp, /if \(resumeProtectedCleaning\(\)\) return;/);
 // Manager-side assignment resumes the same protected startup, without an employee enrollment form.
@@ -178,7 +179,7 @@ assert.match(custodialBridge, /const queuedActionCount = queueActions\.length/);
 assert.match(custodialBridge, /queued_action_count: queuedActionCount/);
 assert.match(scanSync, /startupRecoveryPending: typeof window\.MemphisMobile\?\.reconcileRecoveredPreStart === 'function'/);
 assert.match(scanSync, /releaseStartupRecoveryGate/);
-assert.match(homeApp, /const preStart = await reconcileProtectedStartup\(\);[\s\S]{0,180}profile = await request/);
+assert.match(homeApp, /const preStart = await reconcileProtectedStartup\(\);\s*if \(preStart\?\.state === 'manager_required'\) return showSetupRepairRequired\(\);\s*const requestedDevice = deviceId\(\);\s*if \(!requestedDevice\) return showAssignmentNeeded\(\);\s*try \{\s*profile = await request/);
 assert.match(nativeRuntimeTests, /malformedScanJournalIsPreservedAndNeverReplacedWithEmptyState/);
 assert.match(nativeRuntimeTests, /laterExactManagerRecoveryPreservesCorruptJournalAndStartsNewJournalExactlyOnce/);
 assert.match(nativeRuntimeTests, /corruptionAfterManagerRecoveryRequiresAnotherManagerRecovery/);
@@ -255,7 +256,7 @@ assert.match(scanSync, /custodial-native-start-transport\.v1/);
 assert.match(scanSync, /custodial-native-completion-transport\.v1/);
 assert.match(scanSync, /originalNativeStartAttestation/);
 assert.match(scanSync, /originalNativeCompletionAttestation/);
-assert.match(scan, /This phone needs a manager\. Your saved work has not been erased/);
+assert.match(scan, /Phone verification could not finish\. Your saved work has not been erased/);
 assert.match(scan, /storage_unavailable\|manager_recovery/);
 assert.match(scan, /manager recovery\|saved answers/);
 assert.ok(scan.indexOf('/binding_missing|device_binding_mismatch') < scan.indexOf('/queue|saved(?: cleaning)? work'));

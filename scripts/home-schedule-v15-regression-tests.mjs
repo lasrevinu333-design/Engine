@@ -48,7 +48,7 @@ for(const event of ['online','memphis:schedule-refresh','memphis:native-notifica
   const actualFetch=f.context.fetch;f.context.fetch=()=>{fetching=true;return new Promise(()=>{});};
   const old=f.load();await until(()=>fetching);assert.equal(JSON.parse(f.stored.get(availabilityKey)).state,'READING');
   security.getStatus=()=>{if(retired&&inLock){retiredCaptures++;if(throwOld)throw Error('retired status failure');}return original();};
-  f.next=payload(21);f.context.fetch=actualFetch;retired=true;f.events.get(event)();await old;retired=false;await until(()=>f.cache()?.recurring_target.target.authorityRevision===21||f.node('state-text').textContent==='This phone needs a manager.');
+  f.next=payload(21);f.context.fetch=actualFetch;retired=true;f.events.get(event)();await old;retired=false;await until(()=>f.cache()?.recurring_target.target.authorityRevision===21||f.node('state-text').textContent==='Phone setup could not be verified. Saved work is retained.');
   await tick();assert.equal(f.cache().recurring_target.target.authorityRevision,21);assert.equal(JSON.parse(f.stored.get(availabilityKey)).state,'AVAILABLE');
   assert.equal(retiredCaptures,0,'retired cleanup must not even capture successor status');
   assert.equal(f.node('content').hidden,false);assert.equal(f.node('state-text').textContent,'');

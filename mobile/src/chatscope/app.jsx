@@ -1262,7 +1262,7 @@ function MessengerApp() {
     ].includes(raw);
     const employeeText = EMPLOYEE_CONTEXT && kind === 'error' && raw
       && !originalMessageNotice
-      && !/^(No connection|This phone needs a manager|Something went wrong|People could not|Could not|Messenger could not|A saved message belongs)/i.test(raw)
+      && !/^(No connection|Phone verification|Phone setup|Phone access changed|Something went wrong|People could not|Could not|Messenger could not|A saved message belongs)/i.test(raw)
       ? 'Something went wrong. Try again.'
       : raw;
     setStatus(employeeText);
@@ -1878,7 +1878,7 @@ function MessengerApp() {
     } catch { savingDrafts.current.delete(key); return; }
     if (paused) {
       savingDrafts.current.delete(key);
-      setNotice('This phone needs a manager before a message can be sent.', 'error');
+      setNotice('Phone verification must finish before sending. Saved messages are retained.', 'error');
       return;
     }
     if (identityRef.current !== mapped) { savingDrafts.current.delete(key); return; }
@@ -1924,7 +1924,7 @@ function MessengerApp() {
       savingDrafts.current.delete(key);
       try { assertManager(); } catch { return; }
       setNotice(employee || !EMPLOYEE_CONTEXT ? 'Message save could not be confirmed. Your draft remains.'
-        : securityPauseError(error) ? 'This phone needs a manager before a message can be sent.' : 'Message was not saved. Try again.', 'error');
+        : securityPauseError(error) ? 'Phone verification must finish before sending. Saved messages are retained.' : 'Message was not saved. Try again.', 'error');
       return;
     }
     savingDrafts.current.delete(key);
@@ -1961,7 +1961,7 @@ function MessengerApp() {
     if (identityRef.current !== mapped) return;
     if (outboxResult?.permanentIds?.has(id)) {
       publishMessages((rows) => rows.map((row) => row.id === id ? { ...row, failed: true, optimistic: false } : row));
-      setNotice('Saved message needs manager recovery. It was not sent automatically.', 'error');
+      setNotice('Saved message needs recovery. It was not sent automatically.', 'error');
       return;
     }
     const pendingOriginal = localStorage.getItem(outboxKey(id));
@@ -2126,7 +2126,7 @@ function MessengerApp() {
       setNotice('Saved message discarded.', 'ok');
     } catch {
       try { assertManager(); } catch { return; }
-      setNotice('Saved message could not be discarded. Ask a manager for help.', 'error');
+      setNotice('Saved message could not be discarded. The saved record is retained and needs repair.', 'error');
     }
   }, [currentDeviceId, setNotice]);
 
@@ -2154,7 +2154,7 @@ function MessengerApp() {
       setNotice('Saved deletion discarded.', 'ok');
     } catch {
       try { assertManager(); } catch { return; }
-      setNotice('Saved deletion could not be discarded. Ask a manager for help.', 'error');
+      setNotice('Saved deletion could not be discarded. The saved record is retained and needs repair.', 'error');
     }
   }, [currentDeviceId, setNotice]);
 
@@ -2261,7 +2261,7 @@ function MessengerApp() {
     } catch (error) {
       try { assertDeleteOwner(); } catch { return; }
       setNotice(employee ? 'Conversation removal save could not be confirmed. Original requests remain protected.'
-        : securityPauseError(error) ? 'This phone needs a manager before a conversation can be deleted.' : 'Conversation could not be saved for deletion. Try again.', 'error');
+        : securityPauseError(error) ? 'Phone verification must finish before deleting a conversation. Saved messages are retained.' : 'Conversation could not be saved for deletion. Try again.', 'error');
       return;
     }
     try {
@@ -2315,14 +2315,14 @@ function MessengerApp() {
       });
       await loadThreads().catch(() => null);
       try { assertManager(); } catch { return; }
-      setNotice('Saved deletion needs manager recovery. It was not applied automatically.', 'error');
+      setNotice('Saved deletion needs recovery. It was not applied automatically.', 'error');
     }
   }, [currentDeviceId, loadThreads, setNotice]);
 
   useEffect(() => {
     if (!deviceIdentity.ready) return undefined;
     if (isNativeCustodialAuthority() && !currentDeviceId) {
-      setNotice('This phone needs a manager.', 'error');
+      setNotice('Phone setup could not be verified. Saved messages are retained.', 'error');
       return undefined;
     }
     if (bootstrapStarted.current) return undefined;
@@ -2497,7 +2497,7 @@ function MessengerApp() {
       setIdentity(null); setThreads([]); setMessages([]); setSelectedId('');
       setNewConversation(false); setEmojiOpen(false); setAccessBlocked(true);
       for (const controller of activeMessengerRequests) controller.abort();
-      setNotice('This phone needs a manager. Access changed; saved messages are protected.', 'error');
+      setNotice('Phone access changed and needs verification. Saved messages are protected.', 'error');
     };
     const securityChanged = () => {
       const state = window.MemphisCustodialSecurity?.getStatus?.();
@@ -2633,7 +2633,7 @@ function MessengerApp() {
     {emojiOpen && <section ref={emojiPanel} className="mz-emoji-picker" id="messenger-emoji-picker" role="group" aria-label="Emoji picker">{EMOJI_CHOICES.map(([emoji,label]) => <button className="mz-button" key={label} type="button" aria-label={label} title={label} onClick={() => insertEmoji(emoji)}>{emoji}</button>)}</section>}
     {composerTooLong && <div className="mz-chat-status error" role="alert">Messages can be up to 2,000 characters.</div>}
     {deleteRecoveries.length > 0 && <section className="mz-chat-status error" role="alert" aria-label="Saved deletion recovery">
-      <strong>Saved deletion needs manager recovery.</strong><span> It was not applied automatically.</span>
+      <strong>Saved deletion needs recovery.</strong><span> It was not applied automatically.</span>
       {managerCanResolveDeleteRecoveries && deleteRecoveries.filter(recovery => !recovery.originalOwnerHeld).map((recovery, index) => <button
         className="mz-button danger"
         type="button"
@@ -2643,7 +2643,7 @@ function MessengerApp() {
       >Discard saved deletion</button>)}
     </section>}
     {messageRecoveries.length > 0 && <section className="mz-chat-status error" role="alert" aria-label="Saved message recovery">
-      <strong>Saved message needs manager recovery.</strong><span> It was not sent automatically.</span>
+      <strong>Saved message needs recovery.</strong><span> It was not sent automatically.</span>
       {messageRecoveries.filter((recovery) => recovery.discardable).map((recovery, index) => <button
         className="mz-button danger"
         type="button"

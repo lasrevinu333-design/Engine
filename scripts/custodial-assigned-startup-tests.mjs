@@ -48,6 +48,10 @@ await check('employee controller never requests a code or asks the employee to e
 await check('startup and readiness never direct custodians to manager assignment or PIN approval',()=>{
   assert.doesNotMatch(source,/This phone needs a manager|Ask a manager|showManagerNeeded/);
   assert.doesNotMatch(html,/Needs manager|Ask a manager|manager assignment|Manager code/i);
+  for(const path of ['index.html','events-view.js','employee-schedule.html','chatscope-messenger.js',
+    'mobile/src/custodial/employee-schedule-runtime.js','mobile/src/chatscope/app.jsx']){
+    assert.doesNotMatch(readFileSync(new URL('../'+path,import.meta.url),'utf8'),/This phone needs a manager|Ask (?:a|your) manager/i,path);
+  }
   for(const input of [{managerRequired:true},{authRejected:true},{security:{quarantined:true}},{sessionState:'corrupted'}]){
     const shown=readinessPresentation(classifyReadiness(input),input);
     assert.equal(shown.hidden,false);assert.doesNotMatch(shown.label+' '+shown.detail,/manager|PIN|approval/i);

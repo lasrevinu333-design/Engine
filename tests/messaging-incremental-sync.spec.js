@@ -91,7 +91,7 @@ async function observeOriginalGroupEffects(page, phase = null) {
 
 async function expectOriginalGroupDenial(page) {
   const held=page.getByText('Group result not confirmed. The original group is saved.',{exact:true});
-  const withdrawn=page.getByText('This phone needs a manager. Access changed; saved messages are protected.',{exact:true});
+  const withdrawn=page.getByText('Phone access changed and needs verification. Saved messages are protected.',{exact:true});
   await expect(held.or(withdrawn)).toBeVisible();
   if(await withdrawn.isVisible())await expect(page.getByRole('dialog',{name:'Start conversation'})).toHaveCount(0);
   else await expect(page.getByRole('dialog',{name:'Start conversation'})).toBeVisible();

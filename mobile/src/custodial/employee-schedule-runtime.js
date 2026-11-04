@@ -342,7 +342,7 @@ export function installEmployeeSchedule(options) {
       if(data?.projection_status==='blocked_recurring_authority'){
         clearTimeout(boundary);els.employee.textContent=String(data.employee_name||'Employee');els.date.textContent=date(data.service_date);
         els.content.hidden=true;els.areas.innerHTML='';els.lunch.hidden=true;els.lunchAreas.innerHTML='';
-        els.notice.textContent='Your schedule needs a manager’s updated plan. Your saved cleaning work is preserved.';els.notice.hidden=false;
+        els.notice.textContent='Your schedule needs an updated plan. Your saved cleaning work is preserved.';els.notice.hidden=false;
         state(cacheWarning?'The blocked schedule could not be saved. Phone confirmation is still pending.':'Phone confirmation is pending.',true);
         try{commitDisplayedBinding(selected,source,{receipt:false,owns:owned,offline,cacheWarning});reconcileAlerts(owned);}catch{if(!owned())return;clearPresentation();state('Schedule changed during display. Updating…',true);}return;
       }
@@ -354,7 +354,7 @@ export function installEmployeeSchedule(options) {
       els.lunch.hidden=!lunch.length;els.lunchAreas.innerHTML=rows(lunch);
       if(els.upcoming&&els.upcomingAreas){const upcoming=upcomingItems(data);els.upcoming.hidden=!upcoming.length;
         els.upcomingAreas.innerHTML=displayRows(upcoming).map(item=>`<li class="area"><div class="areaName">${esc(name(item))}</div><div class="areaDetail">${esc(`Starts ${friendlyTime(item.coverage_start)} · ${details(item)}`)}</div></li>`).join('');}
-      state(cacheWarning?'This phone could not save a schedule copy. Ask a manager for help.':offline?'Showing a saved schedule. Could not check for changes.':data?.stale===true?'Showing the latest saved schedule.':'',offline||cacheWarning);scheduleBoundary(data);
+      state(cacheWarning?'This phone could not save a schedule copy. Phone storage needs repair.':offline?'Showing a saved schedule. Could not check for changes.':data?.stale===true?'Showing the latest saved schedule.':'',offline||cacheWarning);scheduleBoundary(data);
       try{const committed=commitDisplayedBinding(selected,source,{owns:owned,offline,cacheWarning});if(committed===DISPLAY_SUPERSEDED)return null;reconcileAlerts(owned);return owned()?committed:null;
       }catch{if(!owned())return;clearPresentation();state('Schedule changed during display. Updating…',true);return;}
     }
@@ -430,7 +430,7 @@ export function installEmployeeSchedule(options) {
         if(!ownsRecovery())return;
         const usable=available(ownsRecovery)&&ownsRecovery()&&!authorityUnavailable(ownsRecovery);if(!ownsRecovery())return;
         if(usable&&cached?.data)render(cached.data,{offline:true,cacheWarning:cached.cache_unconfirmed===true,owns:ownsRecovery});
-        else{clearPresentation();state(error?.message==='identity'?'This phone needs a manager.':'Schedule could not update.',true);}
+        else{clearPresentation();state(error?.message==='identity'?'Phone setup could not be verified. Saved work is retained.':'Schedule could not update.',true);}
       }finally{clearTimeout(timeout);if(activeRequest===controller)activeRequest=null;loading=false;if(queued){queued=false;void load('queued');}}
     }
     // The native document owns these SAME normal functions. Every original

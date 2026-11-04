@@ -795,7 +795,7 @@ test('manager recovery preserves queued Finish Cleaning evidence instead of trea
   await waitForDelayedGetState(page);
   await waitForQueuedActionSeed(page);
   await releaseNativeState(page);
-  await expect(page.locator('#boot-title')).toHaveText('This phone needs a manager.');
+  await expect(page.locator('#boot-title')).toHaveText('Phone setup needs repair');
   expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
   const retained = await page.evaluate((id) => ({
     active: localStorage.getItem(`session:${id}`),
@@ -858,7 +858,7 @@ test('queued interrupted-start retirement resumes after process death following 
   await waitForDelayedGetState(page);
   await waitForQueuedActionSeed(page);
   await releaseNativeState(page);
-  await expect(page.locator('#boot-title')).toHaveText('This phone needs a manager.');
+  await expect(page.locator('#boot-title')).toHaveText('Phone setup needs repair');
   expect(await page.evaluate(() => window.MemphisScanSync.listActions().then((rows) => rows.length))).toBe(1);
   const preservedArchive = await page.evaluate((id) =>
     localStorage.getItem(`mz_custodial_prestart_recovery:${id}`), sessionId);
@@ -942,7 +942,7 @@ test('manager recovery preserves a native-started session when completion-draft 
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
   await waitForDelayedGetState(page);
   await releaseNativeState(page);
-  await expect(page.locator('#boot-title')).toHaveText('This phone needs a manager.');
+  await expect(page.locator('#boot-title')).toHaveText('Phone setup needs repair');
   const retained = await page.evaluate((id) => ({
     active: localStorage.getItem(`session:${id}`),
     index: localStorage.getItem('mz_phone_scan_resume:KIOSK_08'),
@@ -1105,7 +1105,7 @@ test('manager recovery never retires a local pre-start when the server says that
   await page.goto(`/${OUTPUT_ROOT}/index.html`);
   await waitForDelayedGetState(page);
   await releaseNativeState(page);
-  await expect(page.locator('#boot-title')).toHaveText('This phone needs a manager.');
+  await expect(page.locator('#boot-title')).toHaveText('Phone setup needs repair');
   const retained = await page.evaluate((id) => ({
     active: localStorage.getItem(`session:${id}`),
     index: localStorage.getItem('mz_phone_scan_resume:KIOSK_08'),

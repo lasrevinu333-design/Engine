@@ -100,7 +100,7 @@ function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(.
  function halt(){active=false;initializing=false;cancel();fsSeq++;for(const id of[poll,guard])if(id!==null)w.clearInterval(id);poll=guard=null;
   if(frame!==null)w.cancelAnimationFrame(frame);frame=null;lastFrame=null;}
  function deny(){halt();owner=null;feed=null;content.replaceChildren();fingerprint='';page.dataset.denied='true';
-  message(isNative(w)?'This phone needs a manager. Saved work has not been erased.':'Access changed. Return to the map and sign in again.');}
+  message(isNative(w)?'Phone access could not be verified. Saved work has not been erased.':'Access changed. Return to the map and sign in again.');}
  function current(renewing=false){const p=read();if(same(owner,p))return true;if(renewing&&owner?.kind==='manager'&&!p)return true;deny();return false;}
  function render(force=false){
   if(!active||!owner||!current()||!feed)return;
