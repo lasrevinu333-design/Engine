@@ -68,6 +68,10 @@ test('the actual credential store becomes enrolled with the original principal a
   assert.deepEqual(store.getStatus().principal,n.principal);
   assert.equal(store.getPendingEnrollmentOperation(),null);assertCompleted(f);
 });
+test('first activation reconciles before the normal authenticated employee-profile fetch',async()=>{
+  const f=fixture(),n=nativeState();delete n.principal;
+  await reconcile(f,n);assertCompleted(f);assert.equal(n.principal,undefined);
+});
 for(const failure of [
   ...[false,true].map(after=>({op:'set',key:archiveKey,after})),
   ...keys.CUSTODIAL_DEVICE_KEYS.map(key=>({op:'set',key})),
@@ -89,7 +93,7 @@ for(const [name,change] of Object.entries({
   wrong_enrolled_at:n=>{n.assigned_activation.enrolled_at='2026-01-01T00:00:00Z';},
   wrong_flow:n=>{n.assigned_activation.flow='recovery';},
   extra_proof:n=>{n.assigned_activation.extra=true;},
-  absent_principal:n=>{delete n.principal;},
+  invalid_principal:n=>{n.principal={};},
   wrong_principal_operation:n=>{n.principal.credential_operation_id=oldId;},
   wrong_principal_device:n=>{n.principal.device_id='KIOSK_09';},
   wrong_credential:n=>{n.principal.credential_id=oldId;},

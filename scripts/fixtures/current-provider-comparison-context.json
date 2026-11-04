@@ -1061,8 +1061,8 @@
     },
     {
       "path": "mobile/src/custodial/bridge.js",
-      "bytes": 163503,
-      "sha256": "d0cd2fc672a8814f7c6c47929bc7a5b5ead8297dfa8794ef5d983512b7bc2f18"
+      "bytes": 163882,
+      "sha256": "59567edb4d463b40f776ac102196fd4b67c0c0738555e09527ffba95d56fd8a4"
     },
     {
       "path": "scripts/provider-event-decision-current219-contract-tests.mjs",
@@ -1077,8 +1077,8 @@
     },
     {
       "path": "mobile/src/custodial/native-security.js",
-      "bytes": 56463,
-      "sha256": "4aa5d1e3287029434a355bbd0b2b00a63b8cb646cb3ac084330c1fc74b5ead82"
+      "bytes": 61344,
+      "sha256": "ad24f811f464e9cdee70f7820b7040ec54efbc86c13e8feddf282599a4122e64"
     },
     {
       "path": "mobile/src/custodial/provider-mirror-bridge.js",
@@ -1391,9 +1391,9 @@
     {
       "name": "native-security.js",
       "current_path": "mobile/src/custodial/native-security.js",
-      "current_sha256": "4aa5d1e3287029434a355bbd0b2b00a63b8cb646cb3ac084330c1fc74b5ead82",
+      "current_sha256": "ad24f811f464e9cdee70f7820b7040ec54efbc86c13e8feddf282599a4122e64",
       "comparison_input_sha256": [
-        "4aa5d1e3287029434a355bbd0b2b00a63b8cb646cb3ac084330c1fc74b5ead82"
+        "ad24f811f464e9cdee70f7820b7040ec54efbc86c13e8feddf282599a4122e64"
       ],
       "comparison_path": "scripts/fixtures/historical-provider-comparison/native-security.js",
       "comparison_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",
@@ -1516,9 +1516,9 @@
     {
       "name": "bridge.js",
       "current_path": "mobile/src/custodial/bridge.js",
-      "current_sha256": "d0cd2fc672a8814f7c6c47929bc7a5b5ead8297dfa8794ef5d983512b7bc2f18",
+      "current_sha256": "59567edb4d463b40f776ac102196fd4b67c0c0738555e09527ffba95d56fd8a4",
       "comparison_input_sha256": [
-        "d0cd2fc672a8814f7c6c47929bc7a5b5ead8297dfa8794ef5d983512b7bc2f18"
+        "59567edb4d463b40f776ac102196fd4b67c0c0738555e09527ffba95d56fd8a4"
       ],
       "comparison_path": "scripts/fixtures/historical-provider-comparison/bridge.js",
       "comparison_sha256": "9fd4404231a2b45464cd6b21ae0cd9bda05e0b2a07c0853b3eac9e19920fb393",

@@ -326,11 +326,15 @@ function preserveSupersededEnrollment(local, current, installation, existing, ra
     || proof.installation_seal !== installation.installation_seal
     || proof.enrolled_at !== installation.enrolled_at
     || proof.lineage_operation_id !== installation.enrollment_operation_id
-    || principal?.schema_version !== 'custodial-protected-principal.v1'
-    || principal.credential_operation_id !== proof.operation_id
-    || principal.credential_id !== current.active_credential_id
-    || principal.device_id !== proof.device_id || principal.installation_seal !== proof.installation_seal
-    || principal.enrolled_at !== proof.enrolled_at
+    // First activation obtains the employee principal through the normal
+    // authenticated status request AFTER local binding. Requiring it here
+    // creates a circular startup dependency. A present principal must match;
+    // absence grants local reconciliation only, never work/readiness authority.
+    || (current.principal != null && (principal?.schema_version !== 'custodial-protected-principal.v1'
+      || principal.credential_operation_id !== proof.operation_id
+      || principal.credential_id !== current.active_credential_id
+      || principal.device_id !== proof.device_id || principal.installation_seal !== proof.installation_seal
+      || principal.enrolled_at !== proof.enrolled_at))
     || [CUSTODIAL_RESTORE_QUARANTINE_KEY, CUSTODIAL_RECOVERY_RECORD_KEY,
       CUSTODIAL_REMOVAL_OPERATION_KEY].some(key => local.getItem(key) != null)
     || CUSTODIAL_DEVICE_KEYS.some(key => {
