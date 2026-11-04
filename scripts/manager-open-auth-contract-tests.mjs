@@ -52,8 +52,8 @@ assert.match(messengerApp,/Memphis AI/);
 assert.doesNotMatch(messengerApp,/window\.fetch\s*=|MutationObserver/);
 assert.match(legacyChatScope,/messages\.html/);
 assert.match(phoneAssignments,/Phone Assignments/);
-assert.match(phoneAssignmentsJs,/Generate App Code/);
-assert.match(phoneAssignmentsJs,/enrollment-code/);
+assert.match(phoneAssignmentsJs,/Activate \/ recover phone/);
+assert.match(phoneAssignmentsJs,/activation-operations/);
 
 assert.match(managerMobile,/Phone Assignments/);
 assert.match(managerMobile,/Correct record/);
