@@ -142,7 +142,7 @@ async function exercisePhoneAssignment({ initialAssignment, actualAssignment, in
       },
     },
     window: {
-      MemphisAuth: { readSession: () => ({owner:true,trusted_device:true,access_level:'full_access',read_only:false}) },
+      MemphisAuth: { readSession: () => ({permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:true},trusted_device:true,access_level:'full_access',read_only:false}) },
       MemphisMobile: {
         requestEnvelope: async (path, options = {}) => {
           if (options.method === 'GET') return {ok:true,data};

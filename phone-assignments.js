@@ -36,7 +36,7 @@
     els.toast.className = `uxToast show ${kind}`.trim();
     state.toastTimer = setTimeout(() => { els.toast.className = 'uxToast'; }, 2600);
   }
-  const ownerAccess = () => { const session=window.MemphisAuth?.readSession?.(); return session?.owner===true && session?.trusted_device===true && session?.access_level==='full_access' && session?.read_only!==true; };
+  const ownerAccess = () => { const session=window.MemphisAuth?.readSession?.(); return session?.permissions?.schema==='custodial.manager-permissions.v1' && session?.permissions?.read===true && session?.permissions?.owner===true && session?.trusted_device===true && session?.access_level==='full_access' && session?.read_only===false; };
   async function authHeaders() {
     if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
     const session = await window.MemphisAuth?.requireOpsManagerSession?.({
