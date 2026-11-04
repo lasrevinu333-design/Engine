@@ -727,7 +727,7 @@ if(process.argv.includes('--home-realm-only')||process.argv.includes('--home-kno
       assert(await page.locator('#home').isVisible());
       assert(await page.locator('#active-cleaning').isVisible());
       const saved=await page.evaluate(()=>homeRealmFixture.saved());
-      await page.evaluate(()=>homeRealmFixture.failure());await label('#home-readiness','Needs manager');
+      await page.evaluate(()=>homeRealmFixture.failure());await label('#home-readiness','Phone repair needed');
       assert.equal(await page.evaluate(()=>homeRealmFixture.saved()),saved);
       const queued=await page.evaluate(()=>JSON.parse(homeRealmFixture.queue()));
       assert.equal(queued[0].dead_letter,true);assert.equal(queued[0].payload.original,'protected');
@@ -839,7 +839,7 @@ try {
     assert.equal(await page.locator('#active-cleaning').isVisible(), true);
     assert.equal(await page.locator('#active-cleaning-text').textContent(), 'You are cleaning Original Place. Tap the same physical tag when you are done.');
     await page.evaluate(() => readinessFixture.deadLetter());
-    await verify('Needs manager');
+    await verify('Phone repair needed');
     assert.equal(await page.evaluate(() => JSON.parse(readinessFixture.bytes())[0].payload.original), JSON.parse(saved)[0].payload.original);
     await page.evaluate(() => readinessFixture.quarantine());
     await verify('Do not use', '#assignment-readiness');

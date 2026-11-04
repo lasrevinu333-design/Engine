@@ -1268,7 +1268,7 @@ test('permanent authorization failure is not mislabeled as backend unavailable',
   });
   const page = await context.newPage();
   await page.goto(`/index.html?code=TETM&device=${DEVICE_ID}`);
-  await expect(page.getByRole('heading', { name: 'This Phone Needs a Manager' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Phone Verification Needed' })).toBeVisible();
   await expect(page.getByText('Reconnecting')).toHaveCount(0);
   await context.close();
 });
