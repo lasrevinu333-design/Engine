@@ -1,4 +1,5 @@
 import { PROTECTED_BROWSER_HOLD_KEY, PROTECTED_BROWSER_MUTATION_KEY } from './protected-browser-admission.js';
+import { CUSTODIAL_SUPERSEDED_ENROLLMENT_PREFIX } from './security-keys.js';
 
 const firewallInstallations = new WeakMap();
 
@@ -43,7 +44,9 @@ export const CUSTODIAL_PROTECTED_STORAGE_PREFIXES = Object.freeze([
 ]);
 
 function storeOwnedKey(key) {
-  return CUSTODIAL_PROTECTED_STORAGE_KEYS.includes(String(key || ''));
+  const value = String(key || '');
+  return CUSTODIAL_PROTECTED_STORAGE_KEYS.includes(value)
+    || value.startsWith(CUSTODIAL_SUPERSEDED_ENROLLMENT_PREFIX);
 }
 
 function protectedWorkKey(key) {

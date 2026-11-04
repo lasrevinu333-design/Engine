@@ -254,6 +254,8 @@ assert.equal(local.getItem('memphisAssignedDeviceId'), 'KIOSK_08', 'credential s
 
 status = { initialized: true, ready: false, available: true, quarantined: false };
 assert.throws(() => local.setItem('mz_scan_device_id', 'KIOSK_08'), /cannot change/);
+assert.throws(() => local.setItem('memphisZooCustodialSupersededEnrollmentV1:preserved', 'replacement'), /cannot change/);
+assert.throws(() => local.removeItem('memphisZooCustodialSupersededEnrollmentV1:preserved'), /cannot change/);
 assert.throws(() => local.removeItem('memphis_zoo_custodial_device_credential'), /cannot change/);
 
 status = { initialized: true, ready: true, available: true, quarantined: false };

@@ -5,6 +5,7 @@ export const CUSTODIAL_INSTALLATION_MARKER_KEY = 'memphisZooCustodialInstallatio
 export const CUSTODIAL_RESTORE_QUARANTINE_KEY = 'memphisZooCustodialRestoreQuarantine';
 export const CUSTODIAL_RECOVERY_RECORD_KEY = 'memphisZooCustodialRecoveryRecord';
 export const CUSTODIAL_ENROLLMENT_OPERATION_KEY = 'memphisZooCustodialEnrollmentOperationV1';
+export const CUSTODIAL_SUPERSEDED_ENROLLMENT_PREFIX = 'memphisZooCustodialSupersededEnrollmentV1:';
 export const CUSTODIAL_REMOVAL_OPERATION_KEY = 'memphisZooCustodialRemovalOperationV1';
 export const CUSTODIAL_REMOVAL_COMPLETION_KEY = 'memphisZooCustodialRemovalCompletionV1';
 

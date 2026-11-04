@@ -7,6 +7,7 @@ import {
   CUSTODIAL_CREDENTIAL_KEY,
   CUSTODIAL_DEVICE_KEYS,
   CUSTODIAL_ENROLLMENT_OPERATION_KEY,
+  CUSTODIAL_SUPERSEDED_ENROLLMENT_PREFIX,
   CUSTODIAL_INSTALLATION_MARKER_KEY,
   CUSTODIAL_INSTALLATION_RECORD_KEY,
   CUSTODIAL_INSTALLATION_SEAL_KEY,
@@ -295,6 +296,59 @@ function preparedRecoveryDisposition(local, existing, { activeOperationId, activ
   return '';
 }
 
+// The receiver can finish a new activation while an earlier, uncommitted
+// renderer intent is still saved. The native vault cannot replace a pending
+// native operation without settling it first. Preserve the entire renderer
+// intent as history; do not infer cancellation/expiry or replay it against the
+// now-active credential. Ordinary ACTIVE alone is deliberately insufficient.
+function preserveSupersededEnrollment(local, current, installation, existing, raw) {
+  if (!existing || existing.operation_id === installation.credential_operation_id) return false;
+  const allowed = new Set(['schema_version', 'operation_id', 'device_id', 'flow', 'status',
+    'recovery_id', 'created_at', 'server_result_received_at', 'local_committed_at',
+    'resume_expires_at', 'credential_id']);
+  const proof = current.assigned_activation;
+  const principal = protectedPrincipal(current.principal);
+  if (Object.keys(existing).some(key => !allowed.has(key))
+    || existing.schema_version !== 1 || !normalizedOperationId(existing.operation_id)
+    || existing.flow !== 'enrollment' || existing.status !== 'pending_server'
+    || canonicalDeviceId(existing.device_id) !== installation.device_id
+    || ['recovery_id', 'credential_id', 'server_result_received_at', 'local_committed_at']
+      .some(key => existing[key] != null && existing[key] !== '')
+    || current.active !== true || current.credential_present !== true
+    || current.removal_pending === true || current.removal_finalized === true
+    || current.pending_operation_id || current.removal_operation_id
+    || !proof || Object.keys(proof).sort().join('|') !== ['schema_version', 'operation_id',
+      'device_id', 'flow', 'installation_seal', 'enrolled_at', 'lineage_operation_id'].sort().join('|')
+    || proof.schema_version !== 'native-assigned-activation.v1'
+    || proof.operation_id !== installation.credential_operation_id
+    || proof.operation_id !== current.active_enrollment_operation_id
+    || proof.device_id !== installation.device_id || proof.flow !== current.active_enrollment_flow
+    || proof.installation_seal !== installation.installation_seal
+    || proof.enrolled_at !== installation.enrolled_at
+    || proof.lineage_operation_id !== installation.enrollment_operation_id
+    || principal?.schema_version !== 'custodial-protected-principal.v1'
+    || principal.credential_operation_id !== proof.operation_id
+    || principal.credential_id !== current.active_credential_id
+    || principal.device_id !== proof.device_id || principal.installation_seal !== proof.installation_seal
+    || principal.enrolled_at !== proof.enrolled_at
+    || [CUSTODIAL_RESTORE_QUARANTINE_KEY, CUSTODIAL_RECOVERY_RECORD_KEY,
+      CUSTODIAL_REMOVAL_OPERATION_KEY].some(key => local.getItem(key) != null)
+    || CUSTODIAL_DEVICE_KEYS.some(key => {
+      const value = local.getItem(key);
+      return value != null && value !== '' && canonicalDeviceId(value) !== installation.device_id;
+    })
+    || (local.getItem(CUSTODIAL_INSTALLATION_MARKER_KEY)
+      && local.getItem(CUSTODIAL_INSTALLATION_MARKER_KEY) !== installation.installation_seal)) return false;
+  const key = CUSTODIAL_SUPERSEDED_ENROLLMENT_PREFIX + normalizedOperationId(existing.operation_id);
+  const retained = JSON.stringify({schema_version: 1, disposition: 'preserved_uncommitted_intent',
+    current_operation_id: proof.operation_id, device_id: proof.device_id, original_journal: raw});
+  const previous = local.getItem(key);
+  if (previous != null && previous !== retained) throw securityError('custodial_native_active_reconciliation_mismatch');
+  if (previous == null) local.setItem(key, retained);
+  if (local.getItem(key) !== retained) throw securityError('custodial_native_original_local_state_changed');
+  return true;
+}
+
 function recoveryResolutionForNativeCommit(local, { operation, operationId, deviceId, flow, now, nativeAssignedActivation = null, installation = null }) {
   const recovery = readJson(local, CUSTODIAL_RECOVERY_RECORD_KEY);
   const quarantine = readJson(local, CUSTODIAL_RESTORE_QUARANTINE_KEY);
@@ -416,6 +470,12 @@ export function createNativeProtectedStorage(plugin, webStorage) {
       CUSTODIAL_INSTALLATION_MARKER_KEY, CUSTODIAL_RESTORE_QUARANTINE_KEY,
       CUSTODIAL_RECOVERY_RECORD_KEY, CUSTODIAL_ENROLLMENT_OPERATION_KEY,
       CUSTODIAL_REMOVAL_OPERATION_KEY, CUSTODIAL_REMOVAL_COMPLETION_KEY];
+    // Capture the exact operation-specific history slot before the native await.
+    // Unknown journal bytes remain subject to the existing refusal below.
+    try {
+      const operation = normalizedOperationId(JSON.parse(local.getItem(CUSTODIAL_ENROLLMENT_OPERATION_KEY))?.operation_id);
+      if (operation) keys.push(CUSTODIAL_SUPERSEDED_ENROLLMENT_PREFIX + operation);
+    } catch { /* Unreadable journals are never retired. */ }
     const expected = new Map(keys.map(key => [key, local.getItem(key)]));
     const assertCurrent = () => {
       for (const [key, raw] of expected) if (local.getItem(key) !== raw) {
@@ -613,6 +673,11 @@ export function createNativeProtectedStorage(plugin, webStorage) {
             throw securityError('custodial_native_active_reconciliation_mismatch');
           }
           if (!reconcilable) return current;
+          if (preserveSupersededEnrollment(local, current, installation, existing, existingRaw)) {
+            // History is durably read back first. Delete the active pointer only
+            // after all current binding/recovery writes below have succeeded.
+            existing = null;
+          }
           if (existing && (
             existing.operation_id !== activeOperationId
             || canonicalDeviceId(existing.device_id) !== activeDeviceId
