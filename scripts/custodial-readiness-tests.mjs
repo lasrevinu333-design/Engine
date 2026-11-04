@@ -134,7 +134,7 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
 }
 await check('actual controller presents positive existing restore/anchor and readonly queue observations', async () => {
   const f = fixture(); await f.flush();
-  for (const id of ['home-readiness', 'boot-readiness', 'assignment-readiness']) {
+  for (const id of ['home-readiness', 'lock-readiness', 'boot-readiness', 'assignment-readiness']) {
     assert.equal(f.elements.get(id).hidden,true);assert.equal(f.elements.get(id).textContent,'');
     assert.match(f.elements.get(id).className,/phoneReadiness ready/);
   }
@@ -209,7 +209,7 @@ await check('security generation change invalidates an outstanding same-principa
   f.disconnect();f.releaseReadiness();await f.flush();assert.equal(f.elements.get('home-readiness').textContent,'');assert.match(f.elements.get('home-readiness').className,/needs_internet/);
 });
 await check('HTML has independent readable status on Home, lock, boot and assignment, no color-only meaning', () => {
-  for (const id of ['home-readiness', 'boot-readiness', 'assignment-readiness']) assert.match(html, new RegExp(`id="${id}"[^>]*role="status"`));
+  for (const id of ['home-readiness', 'lock-readiness', 'boot-readiness', 'assignment-readiness']) assert.match(html, new RegExp(`id="${id}"[^>]*role="status"`));
   assert.match(html, /overflow-wrap:anywhere/);
 });
 await check('collector cannot authorize, drain, sync, rewrite or date-expire protected work', () => {

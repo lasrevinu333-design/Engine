@@ -814,10 +814,12 @@ try {
       };
     });
     await page.addScriptTag({ content: implementation });
-    await page.locator('#home').waitFor({state:'visible'});
-    assert.equal(await page.locator('#phone-lock, #phone-unlock').count(),0,'Home opens directly without a second lock');
-    assert.equal(await page.locator('#home-readiness').isVisible(),false,'ordinary Ready presentation stays quiet');
-    assert.equal(await page.locator('#home-readiness').textContent(),'');
+    await page.locator('#phone-lock').waitFor({state:'visible'});
+    assert.equal(await page.locator('#lock-readiness').isVisible(), false, 'approved ordinary Ready presentation stays quiet');
+    assert.equal(await page.locator('#lock-readiness').textContent(), '');
+    const unlockBox = await page.locator('#phone-unlock').boundingBox();
+    assert.ok(unlockBox && unlockBox.x >= 0 && unlockBox.x + unlockBox.width <= viewport.width && unlockBox.y + unlockBox.height <= viewport.height, `Unlock remains reachable at ${viewport.width}`);
+    await page.locator('#phone-unlock').click();
     async function verify(label, target = '#home-readiness') {
       await page.waitForFunction(({ selector, label }) => document.querySelector(selector).textContent.startsWith(`${label} —`), { selector: target, label });
       assert.equal(await page.locator(target).isVisible(), true);
