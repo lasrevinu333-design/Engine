@@ -245,10 +245,26 @@ assert.equal(current304Source.retained_source304_successor.expected_fingerprint_
 assert.equal(current304Source.retained_source304_successor.source_capture_scope,'ACTUAL_FRESH304_CONSTRUCTION_AND_READ_ONLY_CATALOG_BEFORE_INITIAL_ACTIVATION');
 for(const flag of ['production','production_applicability','independent_review','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(current304Source[flag],false);
 assert.equal(current304Source.preserved_source303_binding.sha256,createHash('sha256').update(current303Bytes).digest('hex'));
-const CANONICAL_SCHEMA_FINGERPRINT = current304Source.schema_fingerprint;
-const ACTIVE_SCHEMA_TRANSITION = current304Source.schema_transition;
+// Retain every historical capture above. The current compatibility target is
+// bound independently to the audited fresh311 catalog and actual populated capture.
+const current311Bytes=readFileSync(resolve(root,'scripts/fixtures/current311-schema-source-binding.json'));
+assert.equal(createHash('sha256').update(current311Bytes).digest('hex'),'2f54a4007531a483fddfdf97127dc63c76d7eb29ef2ad325c20c5c50e8369427');
+const current311Source=JSON.parse(current311Bytes);
+assert.equal(current311Source.schema,'custodial.frontend-source311-binding.v1');
+assert.equal(current311Source.canonical_source_count,311);
+assert.equal(current311Source.schema_fingerprint,'fea262d4eb49204e7c920662cef476c36015c28330435cafd238a358defd79dc');
+assert.equal(current311Source.fresh_catalog_evidence.sha256,'927f3e36d8ad4b75082162c2f772bc297625fa99c55994201bf647ace8016125');
+assert.equal(current311Source.populated_capture.run_id,41749829802);
+assert.equal(current311Source.populated_capture.rollback_verified,true);
+assert.equal(current311Source.preserved_source304_binding_sha256,createHash('sha256').update(current304Bytes).digest('hex'));
+for(const flag of ['production','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(current311Source[flag],false);
+const CANONICAL_SCHEMA_FINGERPRINT = current311Source.schema_fingerprint;
+const ACTIVE_SCHEMA_TRANSITION = current311Source.schema_transition;
 assert.equal(ACTIVE_SCHEMA_TRANSITION.from_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
-assert.equal(ACTIVE_SCHEMA_TRANSITION.expires_at,PRIOR294_SCHEMA_TRANSITION.expires_at);
+assert.equal(ACTIVE_SCHEMA_TRANSITION.to_fingerprint,CANONICAL_SCHEMA_FINGERPRINT);
+assert.equal(ACTIVE_SCHEMA_TRANSITION.transition_id,'custodial-existing235-to-current311-20261104');
+assert.equal(ACTIVE_SCHEMA_TRANSITION.expires_at,'2026-11-05T01:00:00Z');
+assert.notEqual(ACTIVE_SCHEMA_TRANSITION.transition_id,current304Source.schema_transition.transition_id);
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 
 function createFrontendGitFixture({
@@ -318,7 +334,7 @@ assert.ok(
 );
 if(process.argv.includes('--source-schema-binding-only')) {
   assert.deepEqual(frontendDeploymentManifest.api_contract_versions,frontendManifest.api_contract_versions);
-  console.log('PASS_EXACT_RETAINED_SOURCE302_COMPATIBILITY_DECLARATIONS_ONLY; no build, SQL, production or pair admission');
+  console.log('PASS_EXACT_SOURCE311_COMPATIBILITY_DECLARATIONS_ONLY; no build, SQL, production or pair admission');
   process.exit(0);
 }
 const runtimeFiles = discoverRuntimeFiles(root);
