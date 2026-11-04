@@ -182,13 +182,13 @@ const managerHub = read('start_page1.html');
 const managerHubScript = read('ops-hub.js');
 assert.match(managerHub, /id="device-security-link"/);
 assert.match(managerHub, /device-security\.html/);
-assert.match(managerHub, /id="manager-access-link"/);
-assert.match(managerHub, /manager-access\.html/);
+assert.doesNotMatch(managerHub, /id="manager-access-link"/);
+assert.doesNotMatch(managerHub, /manager-access\.html/);
 assert.match(managerHubScript, /isReadOnlySession/);
 assert.match(managerHubScript, /showAccessRequired/);
 assert.match(managerHubScript, /window\.location\.replace/);
 assert.match(managerHubScript, /deviceSecurityLink/);
-assert.match(managerHubScript, /managerAccessLink/);
+assert.doesNotMatch(managerHubScript, /managerAccessLink/);
 assert.match(managerHubScript, /hasRole\('SECURITY_ADMIN'/);
 
 console.log('DEVICE_CREDENTIAL_FRONTEND_FOUNDATION_TESTS_PASS');

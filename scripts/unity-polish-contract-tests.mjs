@@ -15,7 +15,6 @@ const secondaryPages = new Map([
   ['events.html', 'contextual'],
   ['gemini-admin.html', 'manager'],
   ['guest-issues.html', 'manager'],
-  ['manager-access.html', 'manager'],
   ['schedule-employee-day.html', 'manager'],
   ['schedule-simple.html', 'manager'],
   ['schedule-weekly.html', 'manager'],

@@ -60,7 +60,7 @@ jobs:
               && grep -Fq 'Named manager enrollment required' <<<"$hub_client" \
               && grep -Fq 'Insights &amp; Inspections' <<<"$hub" \
               && grep -Fq 'operational-insights.js' <<<"$insights" \
-              && grep -Fq 'Generate Personal Code' <<<"$access" \
+              && grep -Fq 'window.location.replace' <<<"$access" \
               && grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer" \
               && grep -Fq 'id="chatscope-root"' <<<"$messenger" \
               && grep -Fq 'chatscope-messenger.js' <<<"$messenger" \
@@ -88,9 +88,10 @@ jobs:
           grep -Fq 'Insights &amp; Inspections' <<<"$hub"
           grep -Fq 'operational-insights.js' <<<"$insights"
           ! grep -Fq 'messages-chatscope.html' <<<"$hub"
-          grep -Fq 'OPERATIONS LEADERSHIP ACCESS' <<<"$access"
-          grep -Fq 'Generate Personal Code' <<<"$access"
-          grep -Fq 'Trusted Devices' <<<"$access"
+          grep -Fq 'start_page1.html' <<<"$access"
+          grep -Fq 'window.location.replace' <<<"$access"
+          ! grep -Eq 'revoke|Generate Personal Code|Trusted Devices|Remove enrollment' <<<"$access"
+          ! grep -Fq 'manager-access.html' <<<"$hub"
           ! grep -Eq 'shared 48-hour|shared enrollment|Generate New 48-Hour Passcode|ops/shared-enrollment|ops/pairing/consume|ops/pairing-links' <<<"$auth$hub$hub_client$entry$access"
           grep -Fq 'Memphis Zoo Operations Viewer' <<<"$viewer"
           grep -Fq 'id="chatscope-root"' <<<"$messenger"

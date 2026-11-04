@@ -12,7 +12,7 @@
     attendanceValue:document.getElementById('attendance-value'),attendanceMeta:document.getElementById('attendance-meta'),hubStatus:document.getElementById('hub-status'),buildStamp:document.getElementById('build-stamp'),
     messagesLink:document.getElementById('messages-link'),scheduleLink:document.getElementById('schedule-link'),eventsLink:document.getElementById('events-link'),eventsAdminLink:document.getElementById('events-admin-link'),
     dashboardLink:document.getElementById('dashboard-link'),insightsLink:document.getElementById('insights-link'),guestIssuesLink:document.getElementById('guest-issues-link'),feedbackLink:document.getElementById('feedback-link'),
-    notificationsLink:document.getElementById('notifications-link'),phoneAssignmentsLink:document.getElementById('phone-assignments-link'),managerAccessLink:document.getElementById('manager-access-link'),
+    notificationsLink:document.getElementById('notifications-link'),phoneAssignmentsLink:document.getElementById('phone-assignments-link'),
     deviceSecurityLink:document.getElementById('device-security-link'),releaseCanaryLink:document.getElementById('release-canary-link'),geminiConsoleLink:document.getElementById('gemini-console-link'),moxieLink:document.getElementById('moxie-link'),
   };
 
@@ -38,12 +38,11 @@
     const feedbackUrl=preserveAnnieOrigin(new URL('./system-feedback.html',window.location.href));
     const notificationsUrl=preserveAnnieOrigin(new URL('./notifications.html',window.location.href));
     const phoneAssignmentsUrl=preserveAnnieOrigin(new URL('./phone-assignments.html',window.location.href));
-    const managerAccessUrl=preserveAnnieOrigin(new URL('./manager-access.html',window.location.href));
     const deviceSecurityUrl=preserveAnnieOrigin(new URL('./device-security.html',window.location.href));
     const releaseCanaryUrl=preserveAnnieOrigin(new URL('./admin.html#release-canary-controls',window.location.href));
     const geminiConsoleUrl=preserveAnnieOrigin(new URL('./gemini-admin.html',window.location.href));
     const moxieUrl=new URL(ANNIE_RETURN_URL);
-    const urls=[messagesUrl,scheduleUrl,eventsUrl,eventsAdminUrl,dashboardUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,managerAccessUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl];
+    const urls=[messagesUrl,scheduleUrl,eventsUrl,eventsAdminUrl,dashboardUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl];
     for(const url of urls)url.searchParams.set('hub','manager');
     if(state.currentDeviceId){for(const url of urls)url.searchParams.set('device',state.currentDeviceId);moxieUrl.searchParams.set('device',state.currentDeviceId);}
     els.messagesLink.href=messagesUrl.toString();
@@ -56,7 +55,6 @@
     els.feedbackLink.href=feedbackUrl.toString();
     els.notificationsLink.href=notificationsUrl.toString();
     els.phoneAssignmentsLink.href=phoneAssignmentsUrl.toString();
-    els.managerAccessLink.href=managerAccessUrl.toString();
     els.deviceSecurityLink.href=deviceSecurityUrl.toString();
     els.releaseCanaryLink.href=releaseCanaryUrl.toString();
     els.geminiConsoleLink.href=geminiConsoleUrl.toString();
@@ -70,7 +68,7 @@
     const displayName=String(session?.manager_display_name||'').trim();
     const title=String(session?.manager_job_title||'').trim();
     const isAnnie=displayName==='Annie Feist'||title==='Operations Admin';
-    for(const element of [els.insightsLink,els.phoneAssignmentsLink,els.managerAccessLink,els.geminiConsoleLink])if(element)element.hidden=!custodial;
+    for(const element of [els.insightsLink,els.phoneAssignmentsLink,els.geminiConsoleLink])if(element)element.hidden=!custodial;
     if(els.deviceSecurityLink)els.deviceSecurityLink.hidden=!(custodial||security);
     if(els.releaseCanaryLink)els.releaseCanaryLink.hidden=!(director||security);
     if(els.moxieLink)els.moxieLink.hidden=!(custodial||isAnnie);

@@ -90,7 +90,6 @@ const pageMatrix = [
   ['events.html?hub=manager', 'Back', /start_page1\.html$/],
   ['gemini-admin.html', 'Back', /start_page1\.html$/],
   ['guest-issues.html', 'Back', /start_page1\.html$/],
-  ['manager-access.html', 'Back', /start_page1\.html$/],
   ['schedule-employee-day.html', 'Back', /start_page1\.html$/],
   ['schedule-simple.html', 'Back', /start_page1\.html$/],
   ['schedule-weekly.html', 'Back', /start_page1\.html$/],

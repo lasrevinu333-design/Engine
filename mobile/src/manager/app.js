@@ -12,7 +12,7 @@ const els = {
   code: document.getElementById('code'), label: document.getElementById('device-label'), enrollStatus: document.getElementById('enroll-status'),
   hubStatus: document.getElementById('hub-status'), refresh: document.getElementById('refresh'), logout: document.getElementById('logout'),
   moxie: document.getElementById('moxie-tile'), gemini: document.getElementById('gemini-tile'), insights: document.getElementById('insights-tile'),
-  managerAccess: document.getElementById('manager-access-tile'), deviceSecurity: document.getElementById('device-security-tile'),
+  deviceSecurity: document.getElementById('device-security-tile'),
   todayOverdue: document.getElementById('today-overdue'), todayDueSoon: document.getElementById('today-due-soon'),
   todayInProgress: document.getElementById('today-in-progress'), todayOpenProblems: document.getElementById('today-open-problems'),
   todayGuestCount: document.getElementById('today-guest-count'), todayGuestMeta: document.getElementById('today-guest-meta'),
@@ -86,7 +86,7 @@ function renderAuthenticated(session, person = {}) {
   const moxieUser = custodialAdmin || displayName === 'Annie Feist' || title === 'Operations Admin';
   if (els.moxie) els.moxie.hidden = !moxieUser;
   if (els.insights) els.insights.hidden = !custodialAdmin;
-  for (const tile of [els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
+  for (const tile of [els.gemini, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
 }
 
 function renderEnrollment(message = '') {

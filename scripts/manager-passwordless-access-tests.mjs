@@ -27,15 +27,9 @@ assert.match(entry,/auth-api\/ops\/manager-codes\/consume/);
 assert.match(entry,/read-only Viewer/i);
 assert.doesNotMatch(entry,/shared enrollment|48-hour passcode/i);
 
-for(const text of ['OPERATIONS LEADERSHIP ACCESS','Leadership Accounts','Generate Personal Code','Trusted Devices','Rename','Revoke'])assert.match(access,new RegExp(text));
-assert.match(access,/single-use, 15-minute code/i);
-assert.match(access,/leadership-api\/roster/);
-assert.match(access,/leadership-api\/managers\/.*enrollment-code/);
-assert.match(access,/auth-api\/ops\/trusted-devices/);
-assert.match(access,/CUSTODIAL_MANAGER/);
-assert.match(access,/displayed only now/i);
-assert.doesNotMatch(access,/48-Hour|shared enrollment|Generate PC Invite|Generate Phone Invite|Copy Invite Link|Display Invite QR|QRCode|ops_pairing_token|enrollment_url/i);
-assert.doesNotMatch(access,/type="password"|localStorage\.[gs]etItem\([^)]*(passcode|manager)/i);
+assert.match(access,/window\.location\.replace/);
+assert.match(access,/start_page1\.html/);
+assert.doesNotMatch(access,/fetch\(|MemphisAuth|localStorage|sessionStorage|revoke|Generate Personal Code|Trusted Devices|Remove enrollment/i);
 
 assert.match(hub,/ops-hub\.js/);
 assert.match(hubController,/Named manager enrollment required/);

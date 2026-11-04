@@ -64,20 +64,16 @@ for (const label of ['Schedule', 'Messages', 'Events', 'Feedback']) assert.match
 assert.doesNotMatch(custodialMobile,/Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialMobile,/>Scanner</);
 
-assert.match(access,/OPERATIONS LEADERSHIP ACCESS/);
-assert.match(access,/Generate Personal Code/);
-assert.match(access,/leadership-api\/roster/);
-assert.match(access,/leadership-api\/managers\/.*enrollment-code/);
-assert.match(access,/auth-api\/ops\/trusted-devices/);
-assert.match(access,/hasRole\('CUSTODIAL_MANAGER'/);
-assert.doesNotMatch(access,/48-Hour|shared enrollment|Generate PC Invite|Generate Phone Invite|ops_pairing_token/i);
+assert.match(access,/window\.location\.replace/);
+assert.match(access,/start_page1\.html/);
+assert.doesNotMatch(access,/fetch\(|MemphisAuth|localStorage|sessionStorage|revoke|Generate Personal Code|Trusted Devices|Remove enrollment/i);
 
 assert.match(viewer,/read-only/i);
 assert.doesNotMatch(viewer,/Messenger|Moxie|Scheduler|Device Security|Manager Access/i);
 
 assert.match(liveWorkflow,/Named Leadership Browser Live Acceptance/);
 assert.match(liveWorkflow,/manager-codes\/consume/);
-assert.match(liveWorkflow,/Generate Personal Code/);
+assert.match(liveWorkflow,/window\.location\.replace/);
 assert.match(liveWorkflow,/ops-manager-auth\.v5\.named-leadership/);
 assert.match(liveWorkflow,/! grep -Fq 'messenger-runtime-patch\.js'/);
 assert.match(liveWorkflow,/grep -Fq 'employeeDeviceAuthority'/);
