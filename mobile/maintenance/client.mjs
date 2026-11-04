@@ -73,7 +73,7 @@ export function verifyInstalledManifest(text){
   const block=lines.slice(i,j).join('\n');
   if(block.includes(`"${RECEIVER}"`)){if(start!==-1)fail('maintenance_receiver_ambiguous');start=i;end=j;}
  }
- if(start<0)fail('maintenance_receiver_missing');const block=lines.slice(start,end).join('\n');
+ if(start<0)fail('maintenance_receiver_missing');const block=lines.slice(start,end).join('\n').replaceAll('A: http://schemas.android.com/apk/res/android:','A: android:');
  if(!/A: android:permission[^\n]*="android.permission.DUMP"/.test(block)
   ||!/A: android:exported[^\n]*(?:0xffffffff|true)/.test(block)
   ||!block.includes('org.memphiszoo.custodial.ACTIVATE_ASSIGNED_DEVICE')||!block.includes('org.memphiszoo.custodial.ASSIGNED_ACTIVATION_STATUS'))fail('maintenance_receiver_policy_mismatch');

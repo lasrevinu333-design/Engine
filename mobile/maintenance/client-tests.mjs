@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
-import {API,CLIENT,PACKAGE,RECEIVER,ADB,sha,privateRead,privateWrite,withWorkstationLock,validatePolicy,preflight,broadcastInput,apiRequest,validateSession,validateStatus,activateOperation} from './client.mjs';
+import {API,CLIENT,PACKAGE,RECEIVER,ADB,sha,privateRead,privateWrite,withWorkstationLock,validatePolicy,verifyInstalledManifest,preflight,broadcastInput,apiRequest,validateSession,validateStatus,activateOperation} from './client.mjs';
 const op='11000000-0000-4000-8000-000000000030',employee='11000000-0000-4000-8000-000000000006';
 const station='CUSTODIAL-MAINTENANCE-11000000-0000-4000-8000-000000000003';
 const serial='ZT4223BDKT',token='s'.repeat(43),apk=Buffer.from('Synthetic admitted APK only');
@@ -29,6 +29,9 @@ function run(binary,args,options={}){
 }
 let checks=0;const check=(name,fn)=>{fn();checks++;console.log('PASS',name);};
 check('admitted identity and retained phone state before claim',()=>assert.equal(preflight(policy,'KIOSK_08',{run}).uid,10487));
+check('actual aapt2 full Android namespace retains exact DUMP boundary',()=>verifyInstalledManifest(manifest.replaceAll('A: android:','A: http://schemas.android.com/apk/res/android:').replace('(type 0x12)0xffffffff','true')));
+check('foreign namespace cannot substitute the Android permission',()=>assert.throws(()=>verifyInstalledManifest(manifest.replaceAll('A: android:','A: http://wrong.invalid/android:'))));
+check('aapt2 full namespace without DUMP remains refused',()=>assert.throws(()=>verifyInstalledManifest(manifest.replaceAll('A: android:','A: http://schemas.android.com/apk/res/android:').replace('android.permission.DUMP','android.permission.INTERNET'))));
 for(const [label,mutate] of [
  ['wrong serial',p=>p.recipients.KIOSK_08.serial='other-device'],['wrong package',p=>p.package_name='org.memphiszoo.infrastructure'],
  ['wrong UID',p=>p.recipients.KIOSK_08.uid=1],['missing release',p=>delete p.apk_sha256]])
