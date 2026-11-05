@@ -990,6 +990,8 @@ workflows:
       - *custodial_android_toolchain
       - name: Verify generated messenger behavior
         script: node scripts/messenger-bundle-browser-tests.mjs
+      - name: Verify active scan startup and pending setup recovery
+        script: node scripts/custodial-scan-startup-race-tests.mjs
       - name: Build and sign full-workflow TEST APK with retained fleet identity
         script: |
           #!/usr/bin/env bash

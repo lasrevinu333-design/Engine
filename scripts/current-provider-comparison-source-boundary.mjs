@@ -7,7 +7,7 @@ import {approvedPreservationComparisonPins} from './current-approved-preservatio
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const sha=value=>createHash('sha256').update(value).digest('hex');
 export function validateCurrentProviderComparisonContext(value){
- assert.equal(sha(JSON.stringify(value)),'cca7518e8e8b97d66a54aa5809ecc740cca8434c5d691b4b8a6044302cb06ef6','Exact current-bound historical comparison context; original fixtures stay unchanged');
+ assert.equal(sha(JSON.stringify(value)),'2c93c120b5adf3a5c9dee8b0b80d0fa657a0e5a713d21afe7e55700f6d846adf','Exact current-bound historical comparison context; original fixtures stay unchanged');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
  assert.equal(sha(JSON.stringify(approvedPreservationComparisonPins.current_java_inventory)),value.current_inventory_sha256);
  return value;
