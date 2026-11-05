@@ -2185,9 +2185,12 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
   async function resumePendingSecurityWorkflow() {
     if (credentialStore.getRemovalRecord()) return removeEnrollment();
     // A protected receiver may have completed activation while this renderer
-    // retained an earlier intent. Reconcile native ACTIVE before choosing any
-    // browser resume operation; the adapter preserves/refuses mismatched state.
-    if (nativeVault && (await getNativeCustodialVaultState()).state === 'ACTIVE') {
+    // retained an earlier intent. Reconcile that pending intent before choosing
+    // a browser resume operation; the adapter preserves/refuses mismatched state.
+    // A normal ACTIVE page was already initialized from native state. Repeating
+    // that transition here changes its generation after page requests dispatch.
+    if (nativeVault && credentialStore.getPendingEnrollmentOperation()
+        && (await getNativeCustodialVaultState()).state === 'ACTIVE') {
       await credentialStore.ensureSecurityState();
     }
     const enrollment = credentialStore.getPendingEnrollmentOperation();
