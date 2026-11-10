@@ -450,11 +450,11 @@ export function fixture({reduced=false,legacyDialog=false,audience='manager'}={}
   querySelectorAll(selector){const result=[];for(const child of this.children){if(selector==='.mzMapPin'?child.pin:selector==='[data-location-select]'?!!child.dataset.locationSelect:selector==='[data-board]'?!!child.dataset.board:selector==='button,select,[tabindex="0"]'?['button','select'].includes(child.tag)||child.attrs.tabindex==='0':false)result.push(child);result.push(...child.querySelectorAll(selector));}return result;}
   querySelector(selector){if(selector==='[data-map-viewport]')return viewport;return null;}
  }
- const doc=new Node('document'),elements={};doc.createElement=tag=>new Node(tag);doc.getElementById=x=>elements[x];doc.hidden=false;doc.fullscreenEnabled=false;
+ const doc=new Node('document'),elements={};doc.documentElement=new Node('html');doc.createElement=tag=>new Node(tag);doc.getElementById=x=>elements[x];doc.hidden=false;doc.fullscreenEnabled=false;
  const html=readFileSync(new URL('../'+(audience==='public_readonly'?'ops-viewer.html':'operations-dashboard.html'),import.meta.url),'utf8');
  for(const match of html.matchAll(/<(\w+)\b[^>]*\bid="([^"]+)"[^>]*>/g)){const node=new Node(match[1]);elements[match[2]]=node;node.id=match[2];}
  const main=new Node('main'),viewport=new Node(),map=elements['dashboard-map'],dialog=elements['operations-board'],content=elements['operations-board-content'];
- doc.body=new Node('body');doc.append(main,dialog);main.append(elements['operations-panels'],map);doc.querySelector=selector=>selector==='main'?main:null;
+ doc.body=new Node('body');doc.append(doc.documentElement);doc.documentElement.append(main,dialog);main.append(elements['operations-panels'],map);doc.querySelector=selector=>selector==='main'?main:null;
  dialog.append(elements['operations-board-pause'],elements['operations-board-speed'],elements['operations-board-fullscreen'],elements['operations-board-close'],content);content.attrs.tabindex='0';map.append(viewport);
  const triggers=['tickets','events','schools','locations','activity'].map(kind=>{const node=new Node('button');node.dataset.board=kind;main.append(node);return node;});
  for(let i=0;i<47;i++){const node=new Node('button');node.pin=true;node.x=i*100;node.dataset={locationId:`location-${i}`,status:i<9?'overdue':'clean'};node.attrs['aria-label']=`Location ${i} — ${node.dataset.status}`;viewport.append(node);}
@@ -508,20 +508,20 @@ test('fullscreen refusal stays a readable viewport board; fallback isolates focu
 });
 test('map fullscreen fallback exits and never alters pins',async()=>{
  const f=fixture();const positions=f.viewport.children.map(x=>x.x);
- f.elements['operations-map-fullscreen'].emit('click');await Promise.resolve();assert.equal(f.elements['dashboard-map'].classList.contains('is-expanded'),true);
- f.doc.emit('keydown',{key:'Escape'});assert.equal(f.elements['dashboard-map'].classList.contains('is-expanded'),false);
+ f.elements['operations-map-fullscreen'].emit('click');await Promise.resolve();assert.equal(f.doc.documentElement.classList.contains('dashboard-expanded'),true);
+ f.doc.emit('keydown',{key:'Escape'});assert.equal(f.doc.documentElement.classList.contains('dashboard-expanded'),false);
  assert.deepEqual(f.viewport.children.map(x=>x.x),positions);f.clean();
 });
 for(const nativeFullscreen of [false,true])test(`map refresh retains ${nativeFullscreen?'browser':'CSS'} fullscreen for the same owner`,async()=>{
- const f=fixture(),target=f.elements['dashboard-map'];
+ const f=fixture(),target=f.doc.documentElement;
  if(nativeFullscreen){f.doc.fullscreenEnabled=true;target.requestFullscreen=async()=>{f.doc.fullscreenElement=target;};}
  f.elements['operations-map-fullscreen'].emit('click');await new Promise(resolve=>setImmediate(resolve));
  for(let i=0;i<3;i++){f.controller.unavailable({preserveBoard:true,preserveMap:true});
   assert.equal(f.elements['operations-map-fullscreen'].attrs['aria-pressed'],'true');
-  if(nativeFullscreen)assert.equal(f.doc.fullscreenElement,target);else assert.equal(target.classList.contains('is-expanded'),true);
+  if(nativeFullscreen)assert.equal(f.doc.fullscreenElement,target);else assert.equal(target.classList.contains('dashboard-expanded'),true);
  }
  f.window.MemphisAuth.readSession=()=>null;f.controller.unavailable({preserveBoard:true,preserveMap:true});await Promise.resolve();
- if(nativeFullscreen)assert.equal(f.doc.fullscreenElement,null);else assert.equal(target.classList.contains('is-expanded'),false);
+ if(nativeFullscreen)assert.equal(f.doc.fullscreenElement,null);else assert.equal(target.classList.contains('dashboard-expanded'),false);
  f.clean();
 });
 test('nearby chooser preserves coordinates and selects canonical stable ID',()=>{
@@ -1167,5 +1167,27 @@ test('real-size City ticker uses approved reading speed and unchanged refresh do
   await loaded(f,{operations:source});f.controller.tick();
   assert.equal(track.children[0],first);assert.equal(writes,priorWrites);
   track.parentElement.clientWidth=160000;f.window.emit('resize');assert.equal(styles.get('--ticker-distance'),'0px');
+ }finally{f.clean();}
+});
+
+
+test('long ticker keeps its records and scroll position through pending, failed and partial feed refreshes',async()=>{
+ const f=fixture({audience:'public_readonly'}),track=f.elements['ops-city-ticker'];
+ track.parentElement={clientWidth:204,scrollLeft:0,parentElement:f.elements['operations-panels']};
+ track.getBoundingClientRect=()=>({width:154889});track.style={setProperty(){}};
+ const source={...payload,data:{...payload.data,city:{state:'current',coverage:'city_active_zoo',generated_at:new Date(noon).toISOString(),rows:[{id:'1',work_order_id:'1001',facility:'15Z05 Birdhouse',status:'Approved',description:'Original repair'}]}}};
+ try{
+  await loaded(f,{operations:source});const original=track.children[0];f.step(0);f.step(100);
+  assert.equal(track.parentElement.scrollLeft,4.2);
+  let release;const gate=new Promise(resolve=>{release=resolve;});
+  const pending=f.controller.refresh({preserveSummary:true,isCurrent:()=>true,fetchImpl:async()=>{await gate;throw Error('unavailable');}});
+  f.step(200);assert.equal(track.children[0],original);assert.equal(track.parentElement.scrollLeft,8.4);
+  release();await pending;f.step(300);assert.equal(track.children[0],original);
+  assert.equal(track.parentElement.parentElement.dataset.stale,'true');
+  await loaded(f,{operations:{...source,data:{...source.data,city:{state:'unavailable',rows:[]}}}});
+  f.step(400);assert.equal(track.children[0],original);assert.equal(track.parentElement.scrollLeft,16.8);
+  await loaded(f,{operations:source});assert.equal(track.parentElement.parentElement.dataset.stale,'false');
+  assert.equal(track.children[0],original);assert.equal(track.parentElement.scrollLeft,16.8);
+  f.controller.suspend();assert.equal(f.frames.size,0);
  }finally{f.clean();}
 });

@@ -14,11 +14,14 @@
     if(!DATA||!document?.getElementById('operations-panels'))return null;
     const cleaningView=publicRead?DATA.publicCleaning:DATA.cleaning;
     const el=id=>document.getElementById(id),panel=el('operations-panels'),dialog=el('operations-board'),content=el('operations-board-content');
+    const page=document.documentElement||document.querySelector('main');
     const listeners=[],listen=(target,event,fn,options)=>{target?.addEventListener(event,fn,options);listeners.push([target,event,fn,options]);};
     let active=false,closed=false,epoch=0,abort=null,requestTimer=null,map=null,summary=null,ops=null,board=null,opener=null;
     let frame=null,lastFrame=null,hold=false,paused=false,motionPaused=false,mapExpanded=false,fsEpoch=0;
     let boardToken=null,priorHistory=null,boardFingerprint='',lastMinute=null,nearbyIds=null,fallbackInert=null;
     let owner=null,currentRead=null,cleaning=null,lastAttendance=null,lastWeather=null;
+    let tickerFrame=null,tickerTime=null;const tickerMotion=new Map();
+    const delayedFeeds=new Set();
     const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const txt=(id,value)=>{const node=el(id);if(node&&node.textContent!==String(value))node.textContent=value;};
     const make=(tag,value,klass)=>{const node=document.createElement(tag);if(value!=null)node.textContent=value;if(klass)node.className=klass;return node;};
@@ -34,7 +37,24 @@
         track.dataset.motionSize=signature;
         track.style.setProperty('--ticker-distance',distance+'px');
         track.style.setProperty('--ticker-duration',duration+'s');
+        const prior=tickerMotion.get(kind);
+        tickerMotion.set(kind,{track,viewport:track.parentElement,distance,speed:kind==='locations'?34:42,
+          position:Math.min(distance,prior?.position||0)});
       }
+      if(active&&!closed&&tickerFrame===null&&tickerMotion.size)tickerFrame=window.requestAnimationFrame(scrollTickers);
+    }
+    function scrollTickers(time){
+      tickerFrame=null;if(!active||closed)return;
+      const dt=tickerTime===null?0:Math.max(0,Math.min(100,time-tickerTime));tickerTime=time;
+      if(!motionPaused&&!motion?.matches&&!document.hidden&&!board)for(const item of tickerMotion.values()){
+        const band=item.viewport.parentElement;
+        if(band?.matches?.(':hover,:focus-within'))continue;
+        item.position=item.distance>0?(item.position>=item.distance?0:Math.min(item.distance,item.position+item.speed*dt/1000)):0;
+        // Scroll the viewport instead of translating an enormous GPU layer.
+        // Long City feeds remain painted at every position, including refresh.
+        item.viewport.scrollLeft=item.position;
+      }
+      tickerFrame=window.requestAnimationFrame(scrollTickers);
     }
     function recordTicker(id,rows,empty){
       const track=el(id);if(!track)return;
@@ -64,7 +84,9 @@
       if(kind==='city')return DATA.cityWorkOrders(ops?.city);
       return DATA.schools(ops?.schools,now());}
     function renderBoard(force=false){if(!board)return;
-      const v=DATA.operationalView(board,view(board)),fingerprint=JSON.stringify(v);if(!force&&fingerprint===boardFingerprint)return;
+      const v=DATA.operationalView(board,view(board));
+      if(delayedFeeds.has(board))v.note+=' Update delayed. Showing the last received records.';
+      const fingerprint=JSON.stringify(v);if(!force&&fingerprint===boardFingerprint)return;
       boardFingerprint=fingerprint;const top=content.scrollTop,focused=document.activeElement?.dataset?.locationSelect;
       txt('operations-board-title',v.title);txt('operations-board-note',v.note);
       const cardNode=card=>{
@@ -104,6 +126,11 @@
       const spice=view('spiceworks'),city=view('city');
       txt('ops-spiceworks-ticker',spice.cards.length?spice.cards.map(card=>`${card.title} · ${card.lines[0]}`).join('   •   '):spice.note);
       recordTicker('ops-city-ticker',city.cards.map(card=>`${card.title} · ${card.status} · ${card.lines[1]}`),city.note);
+      for(const kind of ['events','schools','spiceworks','city']){
+        const track=el('ops-'+kind+'-ticker'),band=track?.parentElement?.parentElement;
+        const delayed=delayedFeeds.has(kind);
+        if(band){band.dataset.stale=String(delayed);band.title=delayed?'Update delayed. Showing the last received records.':'';}
+      }
       measureTickers();
     }
     function renderFeeds(){
@@ -160,19 +187,29 @@
           if(!publish())return;const attendance=DATA.attendance(value);
           if(attendance.value!=='Unavailable')lastAttendance=attendance;
           txt('ops-attendance',attendance.value==='Unavailable'&&lastAttendance?lastAttendance.value:attendance.value);
-          txt('ops-attendance-note',attendance.value==='Unavailable'&&lastAttendance?'Last known gate count · current update unavailable':attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);
+          txt('ops-attendance-note',attendance.value==='Unavailable'&&lastAttendance?`${lastAttendance.note} · Update delayed`:attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);
         }),
         load(WEATHER,false).catch(()=>null).then(value=>{
           if(!publish())return;const weather=DATA.weather(value,now());
           if(weather.value!=='Unavailable')lastWeather=weather;
           txt('ops-weather',weather.value==='Unavailable'&&lastWeather?lastWeather.value:weather.value);
-          txt('ops-weather-note',weather.value==='Unavailable'&&lastWeather?'Last known weather · current update unavailable':weather.note);el('ops-weather-note').dataset.stale=String(weather.stale);txt('ops-hour',weather.hour);
+          txt('ops-weather-note',weather.value==='Unavailable'&&lastWeather?`${lastWeather.note} · Update delayed`:weather.note);el('ops-weather-note').dataset.stale=String(weather.stale);txt('ops-hour',weather.value==='Unavailable'&&lastWeather?lastWeather.hour:weather.hour);
         })
       ];
       // Public tickers use only the existing sanitized viewer projection.
       // No manager headers, source mail, or schedule reads are used there.
       tasks.push(load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`).catch(()=>null).then(value=>{
-        if(!publish())return;try{ops=DATA.operations(value);}catch{ops=null;}renderFeeds();
+        if(!publish())return;let replacement=null;try{replacement=DATA.operations(value);}catch{}
+        delayedFeeds.clear();
+        if(replacement){
+          for(const [field,kind] of [['schools','schools'],['spiceworks','tickets'],['spiceworks_activity','spiceworks'],['city','city']]){
+            if(replacement[field]?.state==='unavailable'&&ops?.[field]?.state!=='unavailable'&&ops?.[field]){
+              replacement[field]=ops[field];delayedFeeds.add(kind);
+            }
+          }
+          ops=replacement;
+        }else if(ops)for(const kind of ['events','schools','spiceworks','city','tickets'])delayedFeeds.add(kind);
+        renderFeeds();
       }));
       await Promise.allSettled(tasks);
       if(generation===epoch&&requestTimer!==null){window.clearTimeout(requestTimer);requestTimer=null;}
@@ -219,23 +256,23 @@
     }
     async function fullscreen(target){
       if(!active||closed)return;const expected=++fsEpoch;
-      if(target===el('dashboard-map')&&mapExpanded){await exitMap();return;}
+      if(target===page&&mapExpanded){await exitMap();return;}
       try{if(!document.fullscreenEnabled||!target.requestFullscreen)throw new Error('fallback');await target.requestFullscreen();}
       catch{if(!active||closed||expected!==fsEpoch)return;
         if(target===dialog)txt('operations-board-note',`${view(board).note}\nNative fullscreen unavailable; this board fills the browser window.`);
-        else target.classList.add('is-expanded');}
+        else {target.classList.add('dashboard-expanded');el('operations-map-fullscreen').title='Browser fullscreen is unavailable. The dashboard fills the page.';}}
       if(!active||closed||expected!==fsEpoch){if(document.fullscreenElement===target)void document.exitFullscreen?.().catch(()=>{});return;}
-      if(target===el('dashboard-map')){mapExpanded=true;el('operations-map-fullscreen').setAttribute('aria-pressed','true');txt('operations-map-fullscreen','Exit map full screen');}
+      if(target===page){mapExpanded=true;el('operations-map-fullscreen').setAttribute('aria-pressed','true');txt('operations-map-fullscreen',document.fullscreenElement===page?'Exit full screen':'Exit expanded view');}
     }
-    async function exitMap(){const target=el('dashboard-map');fsEpoch++;mapExpanded=false;target.classList.remove('is-expanded');
+    async function exitMap(){const target=page;fsEpoch++;mapExpanded=false;target.classList.remove('dashboard-expanded');
       if(document.fullscreenElement===target)await document.exitFullscreen?.().catch(()=>{});
-      el('operations-map-fullscreen').setAttribute('aria-pressed','false');txt('operations-map-fullscreen','⛶ Map full screen');}
-    function unavailable({preserveBoard=false,preserveMap=false}={}){cancel();currentRead=null;summary=null;cleaning=null;ops=null;lastAttendance=null;lastWeather=null;
+      el('operations-map-fullscreen').setAttribute('aria-pressed','false');el('operations-map-fullscreen').title='';txt('operations-map-fullscreen','⛶ Full screen');}
+    function unavailable({preserveBoard=false,preserveMap=false}={}){cancel();currentRead=null;summary=null;cleaning=null;ops=null;delayedFeeds.clear();lastAttendance=null;lastWeather=null;
       const preserveOwner=active&&!closed&&sameOwner();
       if(!preserveBoard||!preserveOwner)closeBoard({history:false,focus:false});
       if(!preserveMap||!preserveOwner)void exitMap();
       txt('ops-attendance','Unavailable');txt('ops-attendance-note','Current gate count unavailable.');txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderFeeds();}
-    function suspend(){active=false;unavailable();panel.hidden=true;el('ops-locations-button').hidden=true;}
+    function suspend(){active=false;if(tickerFrame!==null)window.cancelAnimationFrame(tickerFrame);tickerFrame=null;tickerTime=null;unavailable();panel.hidden=true;el('ops-locations-button').hidden=true;}
     function activate(renderer){if(closed)return;map=renderer;owner=publicRead?null:session();active=publicRead||!!owner;
       panel.hidden=!active;el('ops-locations-button').hidden=!active;if(active)tick();else unavailable();}
     function stop(){if(closed)return;suspend();closed=true;for(const [target,event,fn,options]of listeners)target?.removeEventListener(event,fn,options);listeners.length=0;map=null;}
@@ -257,8 +294,8 @@
     listen(el('operations-motion'),'click',()=>{motionPaused=!motionPaused;document.body.classList.toggle('motionPaused',motionPaused);
       el('operations-motion').setAttribute('aria-pressed',String(motionPaused));txt('operations-motion',motionPaused?'Resume motion':'Pause motion');});
     listen(el('operations-board-fullscreen'),'click',()=>void fullscreen(dialog));
-    listen(el('operations-map-fullscreen'),'click',()=>void fullscreen(el('dashboard-map')));
-    listen(document,'fullscreenchange',()=>{if(mapExpanded&&document.fullscreenElement!==el('dashboard-map')&&!el('dashboard-map').classList.contains('is-expanded'))void exitMap();});
+    listen(el('operations-map-fullscreen'),'click',()=>void fullscreen(page));
+    listen(document,'fullscreenchange',()=>{if(mapExpanded&&document.fullscreenElement!==page&&!page.classList.contains('dashboard-expanded'))void exitMap();});
     listen(document,'keydown',event=>{if(event.key==='Escape'&&!board&&mapExpanded){event.preventDefault();void exitMap();}});
     listen(window,'popstate',()=>{if(board)closeBoard({history:false});});
     listen(window,'resize',measureTickers);

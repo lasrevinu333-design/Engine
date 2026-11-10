@@ -97,8 +97,8 @@ test('operations skin excludes pins and normal public map owns usable height sep
  assert.match(css,/\.operationsPage button:not\(\.mzMapPin\)\{min-height:34px/);
  assert.match(css,/\.operationsPage \.commandPage\.mapPage\{height:auto;min-height:100dvh/);
  assert.match(css,/\.commandMap:not\(:fullscreen\):not\(\.is-expanded\)\{flex:none/);
- assert.match(css,/\.commandMap:not\(:fullscreen\):not\(\.is-expanded\) \.mzMapViewport\{height:clamp\(280px,40vw,760px\);min-height:280px/);
- assert.match(css,/\.commandMap:fullscreen,\.commandMap\.is-expanded\{[^}]*height:100dvh/);
+ assert.match(css,/\.mzMapViewport\{height:auto;aspect-ratio:1282 \/ 550;min-height:240px/);
+ assert.match(css,/:root:fullscreen,:root\.dashboard-expanded\{[^}]*overflow:auto/);
 });
 
 test('requested separate tickers preserve public viewing and exclude manager access and schedules',()=>{
@@ -156,8 +156,8 @@ test('same-owner refresh retains attendance and weather until replacement; faile
   const pending=f.controller.refresh({preserveSummary:true,isCurrent:()=>true,fetchImpl:async()=>{await gate;throw Error('Synthetic unavailable source');}});
   f.controller.tick();assert.equal(f.elements['ops-weather'].textContent,'62°F');assert.equal(f.elements['ops-attendance'].textContent,'99');
   release();await pending;
-  assert.equal(f.elements['ops-weather'].textContent,'62°F');assert.match(f.elements['ops-weather-note'].textContent,/Last known.*unavailable/);
-  assert.equal(f.elements['ops-attendance'].textContent,'99');assert.match(f.elements['ops-attendance-note'].textContent,/Last known.*unavailable/);
+  assert.equal(f.elements['ops-weather'].textContent,'62°F');assert.match(f.elements['ops-weather-note'].textContent,/Update delayed/);
+  assert.equal(f.elements['ops-attendance'].textContent,'99');assert.match(f.elements['ops-attendance-note'].textContent,/Update delayed/);
   f.controller.suspend();assert.equal(f.elements['ops-weather'].textContent,'Unavailable');assert.equal(f.elements['ops-attendance'].textContent,'Unavailable');
  }finally{release?.();f.clean();}
 });
