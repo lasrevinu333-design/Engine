@@ -164,7 +164,8 @@
     if(value.rows.some(row=>!row?.id||!states.includes(row.status)||!row.facility?.startsWith('15Z')))return unavailable;
     return{title:'Open City work orders',cards:value.rows.map(row=>({id:row.id,source:'City of Memphis',
       title:`${row.work_order_id?'#'+row.work_order_id:'Request '+row.id} · ${text(row.facility)}`,state:'OPEN',
-      status:row.status,lines:[row.status,text(row.description,'Description unavailable.'),`Requested: ${stamp(row.requested_at)}`]})),
+      status:row.status,lines:[row.status,text(row.description,'Description unavailable.'),`Requested: ${stamp(row.requested_at)}`,
+        ...(row.facility_label_conflict===true?['City facility labels differ; verify the location.']:[])]})),
       note:`City active list · ${value.rows.length} Zoo work orders · updated ${stamp(value.generated_at)}.`};
   }
   function attendance(payload){const d=payload?.data;
