@@ -444,7 +444,7 @@ export function fixture({reduced=false,legacyDialog=false,audience='manager'}={}
  const main=new Node('main'),viewport=new Node(),map=elements['dashboard-map'],dialog=elements['operations-board'],content=elements['operations-board-content'];
  doc.body=new Node('body');doc.append(main,dialog);main.append(elements['operations-panels'],map);doc.querySelector=selector=>selector==='main'?main:null;
  dialog.append(elements['operations-board-pause'],elements['operations-board-speed'],elements['operations-board-fullscreen'],elements['operations-board-close'],content);content.attrs.tabindex='0';map.append(viewport);
- const triggers=['tickets','events','schools','locations'].map(kind=>{const node=new Node('button');node.dataset.board=kind;main.append(node);return node;});
+ const triggers=['tickets','events','schools','locations','activity'].map(kind=>{const node=new Node('button');node.dataset.board=kind;main.append(node);return node;});
  for(let i=0;i<47;i++){const node=new Node('button');node.pin=true;node.x=i*100;node.dataset={locationId:`location-${i}`,status:i<9?'overdue':'clean'};node.attrs['aria-label']=`Location ${i} — ${node.dataset.status}`;viewport.append(node);}
  if(legacyDialog){dialog.showModal=null;dialog.close=null;}
  const window=new Node('window'),motion=new Node();motion.matches=reduced;window.matchMedia=()=>motion;window.document=doc;

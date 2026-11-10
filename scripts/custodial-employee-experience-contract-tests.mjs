@@ -227,14 +227,14 @@ assert.match(scan, /Tap this same physical tag again when you are done/);
 assert.match(scan, /indexScanSession/);
 assert.doesNotMatch(scan, /function findAnyOpenLocalSessionForDevice\(deviceId\)\{cleanupStaleLocalSessions\(\);const sessions=\[\]/);
 assert.match(scan, /<h1 class="title-amber">Finish Cleaning<\/h1>/);
-assert.match(scan, /Full cleaning finished/);
-// OC24-02 separates problems from services; reporting one must not imply cleaning.
-assert.match(scan, /Finished cleaning\?/);
-assert.match(scan, /Something needs attention\?/);
-assert.match(scan, /<section id="completion-issues" hidden><div class="sectionTitle">What needs attention\?/);
-assert.match(scan, /attention_needed.*checked.*value!=="yes"/);
-assert.match(scan, /Saved problem details remain\. Choose Yes to include them, or review and clear them yourself\./);
-assert.match(scan, /value="checked_no_cleaning_needed" required><span>Checked—no cleaning needed/);
+// Owner-restored original checkbox presentation preserves explicit completion outcomes.
+assert.match(scan, /Services Performed/);
+assert.match(scan, /Maintenance Issues Found/);
+assert.match(scan, /Submit Completion/);
+assert.doesNotMatch(scan, /<section id="completion-issues" hidden/);
+assert.match(scan, /hasIssueEvidence/);
+assert.match(scan, /your answers have not been cleared/);
+assert.match(scan, /Saved selection: checked—no cleaning needed/);
 assert.match(scan, /Saved work must finish sending before new cleaning can start/);
 assert.match(scan, /getSystemSettingsSafe\(\)\{try\{return await rpcOne\("tool_get_system_settings"\)\}catch\{return null\}\}/);
 assert.match(scan, /getActiveEmployeesSafe\(\)\{try\{return await rpcArray\("tool_list_active_employees"\)\}catch\{throw Object\.assign\(new Error\("Active employee list unavailable\."\),\{code:"employee_list_unavailable"\}\)\}\}/);

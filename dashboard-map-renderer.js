@@ -8,6 +8,7 @@
   // expansion, coordinate change, or alternative artwork selection.
   const ASSETS=Object.freeze({
     artwork:'./dashboard-map-assets/Memphis-Zoo-Approved-Overall-Fit-Art-Only-20261010.png',
+    horizontalArtwork:'./dashboard-map-assets/Memphis-Zoo-Transparent-Framed-Clean-Base-20261003.png',
     icons:Object.freeze({
       men:'./dashboard-map-assets/custodial-men-icon.svg',
       women:'./dashboard-map-assets/custodial-women-icon.svg',
@@ -63,6 +64,9 @@
   }
   function create({section,auth,audience='manager',fetchImpl:fetch=root.fetch.bind(root),document=root.document,window=root}){
     const publicRead=audience==='public_readonly';
+    const horizontal=section?.dataset?.mapPresentation==='original-horizontal';
+    const displayPoint=point=>horizontal?FIT.rasterToNative(point):point;
+    const displayWidth=horizontal?1282:FIT.WIDTH,displayHeight=horizontal?550:FIT.HEIGHT;
     if(!MAP||!FIT?.transformAnchors||!section||(!publicRead&&!auth?.readSession))throw new Error('Map staging requires the exact source bridge and accepted overall fit');
     const viewport=section.querySelector('[data-map-viewport]');
     const surface=section.querySelector('[data-map-surface]');
@@ -97,18 +101,18 @@
       // resize observation fits it; never manufacture a scroll-sized surface.
       if(viewport.clientWidth<=0||viewport.clientHeight<=0)return;
       const fit=MAP.fitViewport({width:viewport.clientWidth,height:viewport.clientHeight,
-        canvasWidth:anchors.width,canvasHeight:anchors.height});
+        canvasWidth:displayWidth,canvasHeight:displayHeight});
       surface.style.width=`${fit.width}px`;
       surface.style.height=`${fit.height}px`;
-      artwork.src=ASSETS.artwork;
-      artwork.setAttribute?.('width',String(anchors.width));artwork.setAttribute?.('height',String(anchors.height));
-      gpsLayer?.setAttribute('viewBox',`0 0 ${anchors.width} ${anchors.height}`);
+      artwork.src=horizontal?ASSETS.horizontalArtwork:ASSETS.artwork;
+      artwork.setAttribute?.('width',String(displayWidth));artwork.setAttribute?.('height',String(displayHeight));
+      gpsLayer?.setAttribute('viewBox',`0 0 ${displayWidth} ${displayHeight}`);
       const urgent=[];
       for(const marker of markers){
         const button=buttons.get(marker.locationId),view=MAP.presentation(marker,{interaction,
           reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true});
         if(!button)continue;
-        const point=MAP.screenPoint(marker.canvasPoint,{fitScale:fit.fitScale,zoom:1});
+        const point=MAP.screenPoint(displayPoint(marker.canvasPoint),{fitScale:fit.fitScale,zoom:1});
         button.style.left=`${point.x}px`;button.style.top=`${point.y}px`;
         button.style.width=`${view.sizePx}px`;button.style.height=`${view.sizePx}px`;
         button.dataset.status=marker.status;button.dataset.pulse=view.pulse;
@@ -176,7 +180,14 @@
           }
         }
         if(!gate.isCurrent(ticket))return false;
-        gpsLayer.replaceChildren(...nodes);
+        if(horizontal&&nodes.length){
+          // The same inverse display transform carries every GPS point, path,
+          // and accuracy ring. The sealed geographic registration is unchanged.
+          const zero=FIT.rasterToNative({x:0,y:0}),x=FIT.rasterToNative({x:1,y:0}),y=FIT.rasterToNative({x:0,y:1});
+          const group=document.createElementNS(svg,'g');
+          group.setAttribute('transform',`matrix(${x.x-zero.x} ${x.y-zero.y} ${y.x-zero.x} ${y.y-zero.y} ${zero.x} ${zero.y})`);
+          group.append(...nodes);gpsLayer.replaceChildren(group);
+        }else gpsLayer.replaceChildren(...nodes);
         gpsStatus.textContent=`Advisory GPS on owner-accepted overall visual fit: ${current} recent measured position${current===1?'':'s'}, ${tracks} path segment${tracks===1?'':'s'}. Dashed rings show reported device accuracy ONLY; map/absolute error is unknown and the walking domain is unverified. Gaps are not inferred.${discarded?` ${discarded} readings or incomplete paths withheld.`:''}${unknownChronology?` ${unknownChronology} work path${unknownChronology===1?'':'s'} withheld because capture chronology is unknown.`:''}`;
         return true;
       }catch{if(gate.isCurrent(ticket))clearGps('Advisory GPS unavailable: accepted reference or measured active-work history did not pass source checks. Absolute map accuracy remains unverified.');return false;}
@@ -194,6 +205,7 @@
     function addPin(anchor){
       const button=document.createElement('button');button.type='button';button.className='mzMapPin';
       button.dataset.locationId=anchor.locationId;
+      button.dataset.approvedLocationName=anchor.name;
       const image=document.createElement('img');image.src=ASSETS.icons[anchor.iconKind];image.alt='';
       image.setAttribute('aria-hidden','true');
       const callout=document.createElement('span');callout.className='mzMapCallout';callout.dataset.mapCallout='';

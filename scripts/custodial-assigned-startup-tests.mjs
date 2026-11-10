@@ -8,7 +8,7 @@ const { classifyReadiness, createReadinessObservation, readinessPresentation, re
 const html=readFileSync(new URL('../mobile/src/custodial/index.html',import.meta.url),'utf8');
 const results=[];
 async function check(name,fn){try{await fn();results.push({name,passed:true});}catch(error){results.push({name,passed:false,error:error.message});}}
-function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPrincipal=false,capturePrincipal=true,mismatchedProfile=false,offline=false,recoveryBlocked=false}={}){
+function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPrincipal=false,capturePrincipal=true,mismatchedProfile=false,offline=false,recoveryBlocked=false,recoveryConnectionRequired=false,completionError=null}={}){
   let releaseResponse;const responseReady=delay?new Promise(resolve=>{releaseResponse=resolve;}):Promise.resolve();
   let status={native:true,initialized:true,ready:true,available:true,quarantined:false,generation:1,state:enrolled?'enrolled':'unenrolled',deviceId:enrolled?'KIOSK_08':''};
   let subscriber;const elements=new Map(),calls=[],memory=new Map();
@@ -16,7 +16,7 @@ function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPri
   const element=id=>{if(!elements.has(id))elements.set(id,{hidden:id!=='boot',textContent:'',value:'',className:'',disabled:false,addEventListener(){},insertAdjacentHTML(){}});return elements.get(id);};
   const security={native:true,ready:Promise.resolve(),getStatus:()=>({...status}),ensureSecurityState:async()=>({...status}),getPendingEnrollmentOperation:()=>null,subscribe:fn=>{subscriber=fn;}};
   const window={MemphisCustodialSecurity:security,MemphisUI:{resolveOpenScanSession:()=>({state:'none'})},
-    MemphisScanSync:{reconcileStartupRecovery:async()=>{calls.push('protected-recovery');return {state:!principal||recoveryBlocked?'manager_required':'not_applicable'};},recoverLocalCompletionIntents:async()=>{calls.push('completion-recovery');}},
+    MemphisScanSync:{reconcileStartupRecovery:async()=>{calls.push('protected-recovery');return {state:!principal||recoveryBlocked?'manager_required':recoveryConnectionRequired?'connection_required':'not_applicable'};},recoverLocalCompletionIntents:async()=>{calls.push('completion-recovery');if(completionError)throw Object.assign(Error('synthetic retained-work failure'),{code:completionError});}},
     MemphisMobile:{whenReady:async()=>{},resumePendingSecurityWorkflow:async()=>{calls.push('resume');},readCustodialHomeCache:()=>cached,saveCustodialHomeCache:async()=>true,
       principalIdentity:()=>status.state==='enrolled'?principal:'',
       profileMatchesPrincipal:value=>Boolean(principal)&&status.state==='enrolled'&&value?.authenticated===true&&value?.canonical_device_id==='KIOSK_08'&&value?.fixture_principal===principal,
@@ -87,6 +87,17 @@ for(const options of [{reject:true},{offline:true},{capturePrincipal:false},{mis
     assert.ok(!f.calls.includes('protected-recovery'));
     assert.ok(!f.calls.includes('completion-recovery'));
   }
+});
+for(const options of [{completionError:'custodial_native_network_unavailable'},{recoveryConnectionRequired:true}])await check(`saved-work network failure remains held without a repair diagnosis ${JSON.stringify(options)}`,async()=>{
+  const f=fixture({enrolled:true,...options});await f.ready();
+  assert.equal(f.elements.get('home').hidden,true);assert.equal(f.elements.get('assignment').hidden,true);
+  assert.equal(f.elements.get('boot-title').textContent,'Connection unavailable');
+  assert.match(f.elements.get('boot-status').textContent,/Nothing has been cleared/);
+  assert.ok(!f.calls.some(path=>path.startsWith('/device-auth/status')));
+});
+await check('saved-work integrity failure still requires repair',async()=>{
+  const f=fixture({enrolled:true,completionError:'custodial_secure_storage_unavailable'});await f.ready();
+  assert.equal(f.elements.get('home').hidden,true);assert.equal(f.elements.get('boot-title').textContent,'Phone setup needs repair');
 });
 await check('first-principal capture does not bypass protected recovery refusal',async()=>{
   const f=fixture({enrolled:true,missingPrincipal:true,recoveryBlocked:true});await f.ready();

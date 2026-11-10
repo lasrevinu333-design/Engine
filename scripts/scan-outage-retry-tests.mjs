@@ -106,5 +106,23 @@ await assert.rejects(heldOwner.mutateProtectedQueue(()=>{heldWrites++;}));checks
 check(heldWrites,0,'actual browser owner never admits through a hold');
 check(heldOwner.localStorage.getItem(PROTECTED_BROWSER_HOLD_KEY),holdBefore,'hold bytes preserved');
 assert.match(source,/automaticRetry:\s*isAutomaticOutageRetry\(error\)/,'worker wires the classifier');checks++;
+// Startup display classification must never release the gate or run queued work.
+const recoveryStart=source.indexOf('  async function reconcileStartupRecovery()'),recoveryEnd=source.indexOf('  // Ephemeral admission',recoveryStart);
+assert.ok(recoveryStart>=0&&recoveryEnd>recoveryStart);
+for(const code of ['custodial_native_network_unavailable','custodial_secure_storage_unavailable']){
+ for(const phase of ['completion_intents','prestart_reconcile']){
+  let releaseCalls=0,workerCalls=0;const failure=Object.assign(Error('synthetic bounded failure'),{code});
+  const ctx={state:{startupRecoveryPending:true,db:{},deviceId:'KIOSK_08'},ensureWorkerReady:async()=>{},securityPause:async()=>null,
+   recoverLocalCompletionIntents:async()=>{if(phase==='completion_intents')throw failure;},
+   window:{MemphisMobile:{ready:Promise.resolve(),reconcileRecoveredPreStart:async()=>{throw failure;}}},
+   releaseStartupRecoveryGate(){releaseCalls++;return true;},dispatchStatus(){},dispatchSecurityPause(){},safeText:String,
+   securityErrorIsPause:()=>false,navigator:{onLine:true,locks:{request:true}},runWorker:async()=>{workerCalls++;return true;},withQueueLock:async fn=>fn()};
+  const extracted=source.slice(recoveryStart,recoveryEnd);assertOwnerContextClosed(extracted,ctx,'startup recovery and sync');vm.runInNewContext(extracted,ctx);
+  const result=await ctx.reconcileStartupRecovery();
+  check(result.state,code==='custodial_native_network_unavailable'?'connection_required':'manager_required','typed recovery diagnosis '+phase);
+  check(await ctx.sync(),false,'pending startup still blocks sync');check(ctx.state.startupRecoveryPending,true,'startup hold retained');
+  check(releaseCalls,0,'no false recovery release');check(workerCalls,0,'no queued work replay');
+ }
+}
 console.log(JSON.stringify({status:'PASS_SCAN_OUTAGE_RETRY_SETTLEMENT',checks,
   limits:'actual settlement/classifier; synthetic transaction, not browser/native/Wi-Fi/dashboard or independent acceptance'}));

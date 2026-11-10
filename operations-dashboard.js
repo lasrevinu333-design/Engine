@@ -3,7 +3,8 @@
   const DATA=root.MemphisOperationsData;
   const API='https://memphis-zoo-mcp.onrender.com';
   const WEATHER='https://api.open-meteo.com/v1/forecast?latitude=35.1506&longitude=-89.9944&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability&temperature_unit=fahrenheit&timeformat=unixtime&timezone=America%2FChicago&forecast_days=2';
-  const KINDS=Object.freeze(['tickets','events','schools','locations']);
+  const KINDS=Object.freeze(['activity','tickets','events','schools','locations']);
+  const ACTIVITY_KINDS=Object.freeze(['tickets','events','schools']);
   // Close geographic/display neighbors, without changing any approved point.
   function nearby(pins,id){const seed=pins.find(p=>p.id===id);if(!seed)return[];
     return pins.filter(p=>p.id===id||Math.hypot(p.x-seed.x,p.y-seed.y)<=Math.max(22,p.radius)+Math.max(22,seed.radius)+8).map(p=>p.id);}
@@ -30,10 +31,11 @@
     function bound(read=currentRead){try{return active&&!closed&&sameOwner()
       &&(!read||(read.epoch===epoch&&read===currentRead&&read.isCurrent()&&active&&!closed&&read.epoch===epoch&&sameOwner()));
     }catch{return false;}}
-    function approved(){return pins().map(p=>({id:p.dataset.locationId}));}
+    function approved(){return pins().map(p=>({id:p.dataset.locationId,name:p.dataset.approvedLocationName}));}
     function locationBoard(){const v=cleaning||cleaningView(null,approved(),now());
       return{...v,title:nearbyIds?'Nearby locations':v.title,cards:v.cards.filter(p=>!nearbyIds||nearbyIds.includes(p.id))};}
     function view(kind){if(kind==='locations')return locationBoard();
+      if(kind==='activity'){const feeds=ACTIVITY_KINDS.map(kind=>view(kind));return{title:'Activity',cards:feeds.flatMap((feed,index)=>feed.cards.filter(card=>index!==1||card.active)),note:feeds.map(feed=>feed.note).join('\n')};}
       if(kind==='tickets'){const v=DATA.tickets(summary,ops?.spiceworks);return publicRead?{...v,note:'Read-only ticket details. '+v.note.split('\n').slice(1).join('\n')}:v;}
       if(kind==='events')return ops?DATA.events(ops.events,now()):{title:'Events',cards:[],note:'Structured event feed unavailable.'};
       return DATA.schools(ops?.schools,now());}
@@ -60,12 +62,17 @@
       txt('ops-date',new Intl.DateTimeFormat('en-US',{timeZone:DATA.ZONE,weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(at));
       const minute=Math.floor(now()/60000);
       if(minute!==lastMinute){lastMinute=minute;renderFeeds();}
-      else{const events=view('events'),text=ops?(events.cards.filter(c=>c.active).map(c=>c.title).join('   •   ')||'No active upcoming events.'):events.note;
-        if(el('ops-events-ticker').textContent!==text)txt('ops-events-ticker',text);}
+      else renderActivity();
 
     }
+    function renderActivity(){
+      const labels={tickets:'TICKETS',events:'EVENTS',schools:'SCHOOLS'};
+      const text=ACTIVITY_KINDS.map(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
+        return labels[kind]+': '+(cards.length?cards.map(card=>card.title).join(' • '):feed.note);}).join('   •   ');
+      if(el('ops-activity-ticker').textContent!==text)txt('ops-activity-ticker',text);
+    }
     function renderFeeds(){
-      for(const kind of KINDS){const v=view(kind);txt(`ops-${kind}-ticker`,v.cards.length?v.cards.filter(c=>kind!=='events'||c.active).map(c=>c.title).join('   •   ')||'No active upcoming events.':v.note);}
+      renderActivity();const locations=view('locations');txt('ops-locations-ticker',locations.cards.length?locations.cards.map(card=>card.title).join('   •   '):locations.note);
       const counts=new Map();for(const card of (cleaning||cleaningView(null,approved(),now())).cards)
         counts.set(card.state,(counts.get(card.state)||0)+1);
       el('ops-status-counts').replaceChildren(...[...counts].map(([status,n])=>{const node=make('span',`${n} ${status.replaceAll('_',' ')}`);node.dataset.status=status;return node;}));

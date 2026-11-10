@@ -39,4 +39,23 @@ check('truncated history is not rendered as a complete path',{session,truncated:
 check('unknown capture redacted marker withholds chronology and position',{session,observations:[observation('one',-20000),observation('unknown',null,false),observation('two',-10000)]},()=>{assert.equal(pathCalls,2);assert.equal(elements['gps-layer'].children.length,0);assert.match(elements['gps-status'].textContent,/capture chronology is unknown/);});
 check('known redacted gap does not connect adjacent valid positions',{session,observations:[observation('one',-20000),observation('gap',-15000,false),observation('two',-10000)]},()=>{assert.equal(pathCalls,3);assert.equal(elements['gps-layer'].children.filter(x=>x.attributes.points).length,0);assert.equal(elements['gps-layer'].children.length,2,'recent point and uncertainty ring only');});
 controller.stop();
+section.dataset={mapPresentation:'original-horizontal'};
+const horizontal=context.MemphisDashboardMapRenderer.create({section,auth:{readSession:()=>({manager_id:'synthetic-manager',credential_id:'synthetic-credential',token:'synthetic-token'})},document,window:context});
+await horizontal.init();
+const horizontalTicket=horizontal.beginRefresh();
+assert.equal(horizontal.acceptGps(horizontalTicket,{work:[{session,observations:[observation('one',-20000),observation('two',-10000)]}]}),true);
+const group=elements['gps-layer'].children[0],matrix=group.attributes.transform.match(/^matrix\((.*)\)$/)[1].split(' ').map(Number);
+assert.equal(matrix.length,6);assert.ok(matrix.every(Number.isFinite));
+const [a,b,c,d,e,f]=matrix;
+for(const point of [{x:10,y:20},{x:12,y:20},{x:10,y:22},{x:300,y:700}]){
+ const expected=FIT.rasterToNative(point);
+ assert.ok(Math.abs(a*point.x+c*point.y+e-expected.x)<1e-9);
+ assert.ok(Math.abs(b*point.x+d*point.y+f-expected.y)<1e-9);
+}
+assert.equal(group.children.filter(node=>node.attributes.points).length,1);
+assert.equal(group.children.filter(node=>node.attributes.r).length,2,'point and full uncertainty ring share the transform');
+assert.equal(elements['gps-layer'].attributes.viewBox,'0 0 1282 550');
+const unavailable=horizontal.beginRefresh();assert.equal(horizontal.acceptGps(unavailable,{work:[{session,incomplete:true}]}),true);
+assert.equal(elements['gps-layer'].children.length,0,'missing history cannot acquire a transformed placeholder');
+horizontal.stop();checks++;console.log('PASS original-horizontal GPS points, paths, and full uncertainty ring share exact inverse display transform');
 console.log(JSON.stringify({status:'PASS_CHANGED_RENDERER_PATH_CONTRACT_SOURCE_ONLY',cases:checks,geographic_calibration:false,actual_browser:false,phone:false}));

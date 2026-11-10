@@ -101,6 +101,9 @@ pass('local approved bytes create exactly 47 same-affine buttons and no status',
  assert.equal(elements.surface.style.width,`${2040*(600/2040)}px`);
 });
 const raw=JSON.parse(anchors),first=raw.locations[0],second=raw.locations[1];
+pass('renderer retains exact approved names separately from changing source status',()=>{
+ for(const [index,pin] of elements.layer.children.entries()) assert.equal(pin.dataset.approvedLocationName,raw.locations[index].name);
+});
 const row=(location,status,color,extra={})=>({location_id:location.locationId,status_code:status,status_color:color,
  latest_completed_at:'2026-10-04T14:00:00Z',open_session_status:null,...extra});
 const summary=rows=>({meta:{contracts:{dashboard:'dashboard.v1'},generated_at:'2026-10-04T15:00:00Z'},
@@ -221,4 +224,20 @@ pass('standalone page uses gated controller, no local opt-in bypass and preserve
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  for(const duration of ['4.8s','3.3s','2.4s'])assert.ok(css.includes(duration));
 });
+const horizontalElements=Object.fromEntries(selectors.map(key=>[key,new Element()]));
+const horizontalSection={dataset:{mapPresentation:'original-horizontal'},querySelector:selector=>horizontalElements[selector.match(/^\[data-map-(.*)\]$/)?.[1]]};
+const horizontal=renderer.create({section:horizontalSection,audience:'public_readonly',document,window,fetchImpl});
+await horizontal.init();
+pass('original horizontal presentation preserves every original approved pin and exact source artwork',()=>{
+ assert.equal(horizontalElements.artwork.src,'./dashboard-map-assets/Memphis-Zoo-Transparent-Framed-Clean-Base-20261003.png');
+ const fit=map.fitViewport({width:600,height:400,canvasWidth:1282,canvasHeight:550});
+ for(const [i,pin] of horizontalElements.layer.children.entries()){
+  const point=raw.locations[i].approvedOverlayCanvasPoint;
+  assert.ok(Math.abs(parseFloat(pin.style.left)-point.x*fit.fitScale)<1e-9);
+  assert.ok(Math.abs(parseFloat(pin.style.top)-point.y*fit.fitScale)<1e-9);
+  assert.equal(pin.dataset.locationId,raw.locations[i].locationId);assert.equal(pin.dataset.status,'unknown');
+ }
+ assert.equal(horizontalElements.artwork.attributes.width,'1282');assert.equal(horizontalElements.artwork.attributes.height,'550');
+});
+horizontal.stop();
 console.log('PASS standalone map renderer nonbrowser contract',checks,'NO_BROWSER_NO_BACKEND_NO_GPS_WRITE');

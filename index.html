@@ -351,19 +351,33 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
       const issues=isRestroom?RESTROOM_ISSUES:EXHIBIT_ISSUES;
       currentSessionUuid=context.sessionUuid||currentSessionUuid;
       updateDebugPanel();
-      appEl.innerHTML=`<div class="shell"><div class="card"><img src="${escapeAttr(CONFIG.FORM_HEADER_IMAGE_URL)}" alt="Memphis Zoo" class="formHeader"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL</div><h1 class="title-amber">How did it go?</h1><div class="location">${escapeHtml(locationName)}</div><div class="employeeLine">${escapeHtml(employeeName)}</div><form id="completion-form"><div class="sectionTitle">Finished cleaning?</div><div class="choiceRow" role="radiogroup" aria-label="Cleaning result"><label class="choiceButton"><input type="radio" name="work_result" value="full" required><span>Full cleaning finished</span></label><label class="choiceButton"><input type="radio" name="work_result" value="details" required><span>Selected services completed</span></label><label class="choiceButton"><input type="radio" name="work_result" value="checked_no_cleaning_needed" required><span>Checked—no cleaning needed</span></label></div><section id="completion-details" hidden><div class="sectionTitle">What did you clean?</div>${services.slice(1).map((service,i)=>{const label=serviceLabel(service);return`<div class="checkboxRow"><input type="checkbox" name="services" id="svc_${i}" value="${escapeAttr(label)}"><label for="svc_${i}" class="checkboxLabel"><span class="checkboxTitle">${escapeHtml(label)}</span></label></div>`}).join("")}<label>Something else you cleaned (optional)</label><input name="services_other" type="text" placeholder="Type it here"></section><div class="sectionTitle" id="attention-question">Something needs attention?</div><div class="choiceRow" role="radiogroup" aria-labelledby="attention-question"><label class="choiceButton"><input type="radio" name="attention_needed" value="no" required><span>No</span></label><label class="choiceButton"><input type="radio" name="attention_needed" value="yes" required><span>Yes</span></label></div><section id="completion-issues" hidden><div class="sectionTitle">What needs attention?</div>${issues.map((label,i)=>`<label class="choiceButton issueChoice"><input type="checkbox" name="issues" id="issue_${i}" value="${escapeAttr(label)}"><span>${escapeHtml(label)}</span></label>`).join("")}${isRestroom?`<div class="sectionTitle">Is anything out of order?</div><div class="radioWrap"><div class="radioRow"><input type="radio" name="out_of_order_signed" id="ooo_yes" value="Yes"><label for="ooo_yes" class="radioLabel">Yes</label></div><div class="radioRow"><input type="radio" name="out_of_order_signed" id="ooo_no" value="No"><label for="ooo_no" class="radioLabel">No</label></div></div><label>What is out of order? (optional)</label><textarea name="out_of_order_details" placeholder="Stall, sink, or urinal"></textarea>`:""}</section><label>Notes (optional)</label><textarea name="note" placeholder="Tell a manager what happened"></textarea><button class="submitBtn" type="submit">Finish</button><div id="completion-status" class="formStatus" aria-live="polite"></div></form></div></div>`;
+      appEl.innerHTML=`<div class="shell"><div class="card"><img src="${escapeAttr(CONFIG.FORM_HEADER_IMAGE_URL)}" alt="Memphis Zoo" class="formHeader"><div class="eyebrow">MEMPHIS ZOO CUSTODIAL SCAN</div><h1 class="title-amber">${isRestroom?"Restroom":"Exhibit"} Completion Form</h1><div class="location">${escapeHtml(locationName)}</div><div class="employeeLine">${escapeHtml(employeeName)}</div><form id="completion-form"><p class="helper">Select the services you performed before submitting.</p><input type="hidden" name="work_result" id="completion-work-result" value=""><input type="hidden" name="attention_needed" id="completion-attention" value="no"><div class="sectionTitle">Services Performed</div><section id="completion-details">${services.map((service,i)=>{const label=serviceLabel(service);return`<div class="checkboxRow"><input type="checkbox" name="services" id="svc_${i}" value="${escapeAttr(label)}"><label for="svc_${i}" class="checkboxLabel"><span class="checkboxTitle">${escapeHtml(label)}</span><span class="checkboxDesc">${escapeHtml(serviceDescription(service))}</span></label></div>`}).join("")}<label>Other Service Performed</label><input name="services_other" type="text" placeholder="Enter another service you performed"></section><label id="completion-retained-check-row" class="checkboxRow" hidden><input type="checkbox" id="completion-retained-check" name="retained_check_only" value="yes"><span>Saved selection: checked—no cleaning needed</span></label><section id="completion-issues"><div class="sectionTitle">Maintenance Issues Found</div>${issues.map((label,i)=>`<div class="checkboxRow"><input type="checkbox" name="issues" id="issue_${i}" value="${escapeAttr(label)}"><label for="issue_${i}" class="checkboxLabel"><span class="checkboxTitle">${escapeHtml(label)}</span></label></div>`).join("")}${isRestroom?`<div class="sectionTitle">Out of Order Status</div><div class="radioWrap"><div class="radioRow"><input type="radio" name="out_of_order_signed" id="ooo_yes" value="Yes"><label for="ooo_yes" class="radioLabel">Yes</label></div><div class="radioRow"><input type="radio" name="out_of_order_signed" id="ooo_no" value="No"><label for="ooo_no" class="radioLabel">No</label></div></div><label>Which stall(s), urinal(s), and/or sink(s) were out of order?</label><textarea name="out_of_order_details" placeholder="Enter details if applicable"></textarea>`:""}</section><label>Notes</label><textarea name="note" placeholder="Optional notes or issues"></textarea><button class="submitBtn" type="submit">Submit Completion</button><div id="completion-status" class="formStatus" aria-live="polite"></div></form></div></div>`;
       const completionForm=document.getElementById("completion-form");
-      const details=document.getElementById("completion-details");
       const formStatus=document.getElementById("completion-status");
-      const issueSection=document.getElementById("completion-issues");
+      const resultControl=document.getElementById("completion-work-result"),attentionControl=document.getElementById("completion-attention");
+      const retainedCheck=document.getElementById("completion-retained-check"),retainedCheckRow=document.getElementById("completion-retained-check-row");
       const hasIssueEvidence=form=>form.getAll("issues").length>0||String(form.get("out_of_order_signed")||"")==="Yes"||Boolean(String(form.get("out_of_order_details")||"").trim());
-      const showChoice=()=>{details.hidden=completionForm.querySelector('input[name="work_result"]:checked')?.value!=="details";issueSection.hidden=completionForm.querySelector('input[name="attention_needed"]:checked')?.value!=="yes"&&!hasIssueEvidence(new FormData(completionForm))};
+      // Original checkbox presentation feeds the same explicit wire outcomes.
+      // Mixed choices are refused, never silently cleared or sent as full work.
+      function selection(form){
+        const selected=form.getAll("services").map(String).filter(Boolean),other=String(form.get("services_other")||"").trim();
+        const full=selected.includes("Full cleaning services"),individual=selected.filter(value=>value!=="Full cleaning services");
+        const checkOnly=form.get("retained_check_only")==="yes";
+        if(full&&(individual.length||other)||checkOnly&&(selected.length||other))return {error:"Choose Full cleaning services or individual services. Review any saved check-only selection; your answers have not been cleared."};
+        if(!full&&!checkOnly&&!individual.length&&!other)return {error:"Select at least one service performed before submitting."};
+        if(other.toLowerCase()==="full cleaning services")return {error:"Select the Full cleaning services checkbox instead of entering it as another service."};
+        return {result:full?"full":checkOnly?"checked_no_cleaning_needed":"details",services:full?["Full cleaning services"]:checkOnly?[]:[...individual,...(other?[other]:[])],other,attention:hasIssueEvidence(form)};
+      }
       await restoreCompletionDraft(context.sessionUuid,completionForm);
-      // Old protected drafts predate this presentation field. Reveal saved issue
-      // evidence without clearing it or manufacturing a new cleaning service.
-      if(!completionForm.querySelector('input[name="attention_needed"]:checked')&&hasIssueEvidence(new FormData(completionForm)))completionForm.querySelector('input[name="attention_needed"][value="yes"]').checked=true;
-      showChoice();
-      const persistDraft=()=>{showChoice();void saveCompletionDraft(context.sessionUuid,completionForm).catch(()=>{formStatus.textContent="Your answers could not be saved. Try again."})};
+      // Prior protected drafts stored their full/check-only outcome separately
+      // from service checkboxes. Restore that exact selection visibly; no write.
+      if(resultControl.value==="full"){
+        const full=completionForm.querySelector('input[name="services"][value="Full cleaning services"]');if(full)full.checked=true;
+      }else if(resultControl.value==="checked_no_cleaning_needed"){retainedCheck.checked=true;retainedCheckRow.hidden=false;}
+      if(retainedCheck.checked)retainedCheckRow.hidden=false;
+      const updateSelection=()=>{const chosen=selection(new FormData(completionForm));resultControl.value=chosen.error?"":chosen.result;attentionControl.value=hasIssueEvidence(new FormData(completionForm))?"yes":"no";return chosen;};
+      updateSelection();
+      const persistDraft=()=>{updateSelection();void saveCompletionDraft(context.sessionUuid,completionForm).catch(()=>{formStatus.textContent="Your answers could not be saved. Try again."})};
       completionForm.addEventListener("input",persistDraft);
       completionForm.addEventListener("change",persistDraft);
       window.MemphisUI?.rememberScanView?.(localSession||{session_uuid:context.sessionUuid,device_id:context.deviceId,location_code:context.locationCode,status:"pending_submit"},"completion-form",context);
@@ -371,17 +385,10 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
         event.preventDefault();
         const formElement=event.currentTarget;
         const form=new FormData(formElement);
-        const result=String(form.get("work_result")||"");
-        if(!["full","details","checked_no_cleaning_needed"].includes(result)){formStatus.textContent="Choose one answer.";return}
-        const attention=String(form.get("attention_needed")||"");
-        if(!["yes","no"].includes(attention)){formStatus.textContent="Choose whether something needs attention.";return}
-        if(attention==="no"&&hasIssueEvidence(form)){formStatus.textContent="Saved problem details remain. Choose Yes to include them, or review and clear them yourself.";return}
-        if(attention==="yes"&&!hasIssueEvidence(form)){formStatus.textContent="Choose what needs attention, including Other issue when needed.";return}
-        let selectedServices=result==="full"?["Full cleaning services"]:result==="checked_no_cleaning_needed"?[]:form.getAll("services").map(String).filter(Boolean);
-        const servicesOther=String(form.get("services_other")||"").trim();
-        if(result==="details"&&servicesOther)selectedServices.push(servicesOther);
-        if(result==="details"&&selectedServices.some(value=>value.trim().toLowerCase()==="full cleaning services")){formStatus.textContent="Choose Full cleaning or the individual services, not both.";return}
-        if(result==="details"&&!selectedServices.length){formStatus.textContent="Choose at least one thing you cleaned.";return}
+        const chosen=selection(form);
+        if(chosen.error){formStatus.textContent=chosen.error;return}
+        const result=chosen.result,attention=chosen.attention?"yes":"no",selectedServices=chosen.services,servicesOther=chosen.other;
+        resultControl.value=result;attentionControl.value=attention;
         formStatus.textContent="";
         try{await saveCompletionDraft(context.sessionUuid,formElement)}catch{formStatus.textContent="Your answers could not be saved. Try again.";return}
         const responseJson={form_type:kind.formType,work_result:result,attention_needed:attention==="yes",services_performed:selectedServices,maintenance_issues_found:form.getAll("issues").map(String).filter(Boolean),note:String(form.get("note")||"").trim()};

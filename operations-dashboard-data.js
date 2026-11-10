@@ -75,7 +75,7 @@
     }
     const cards=approved.map(place=>{
       const id=String(place.id),row=duplicate.has(id.toLowerCase())?null:rows.get(id.toLowerCase());
-      const card={id,source:'Cleaning location',title:row?text(row.location_name||row.location_code):`Location ${id}`,
+      const card={id,source:'Cleaning location',title:row?text(row.location_name||row.location_code):text(place.name,'Location name unavailable'),
         state:'unknown',lines:[],location:true};
       if(!row){card.lines.push('Current cleaning record unavailable. Map colour is not a completion receipt.');return card;}
       const pending=row.open_session_status==='pending_submit',working=row.open_session_status==='active';

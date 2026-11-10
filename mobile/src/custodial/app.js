@@ -153,6 +153,10 @@ function showSetupRepairRequired() {
   clearRestoreRetry();
   showBoot('Phone setup needs repair', 'Custodial could not finish verifying this phone. Your saved work is retained.');
 }
+function showSavedWorkConnectionRequired() {
+  clearRestoreRetry();
+  showBoot('Connection unavailable', 'Custodial could not reach its server to verify saved work. Nothing has been cleared. Your original cleaning remains held for verification.');
+}
 function showNoConnection() {
   showBoot('Phone verification needed', 'Custodial has not verified this phone’s employee identity yet. Verification will retry automatically. Your saved work is retained.');
   clearRestoreRetry();
@@ -331,8 +335,12 @@ async function restoreNow({ quiet = false } = {}) {
     }
   }
   const cached = showCachedPhoneIdentity();
-  try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch { return showSetupRepairRequired(); }
+  try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch (error) {
+    return error?.code === 'custodial_native_network_unavailable'
+      ? showSavedWorkConnectionRequired() : showSetupRepairRequired();
+  }
   const preStart = await reconcileProtectedStartup();
+  if (preStart?.state === 'connection_required') return showSavedWorkConnectionRequired();
   if (preStart?.state === 'manager_required') return showSetupRepairRequired();
   const requestedDevice = deviceId();
   if (!requestedDevice) return showAssignmentNeeded();

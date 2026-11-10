@@ -1,7 +1,7 @@
 /* Layout/palette adapted from Eric's approved Operations mockup, without demo data. */
 .operationsPage{color-scheme:dark;background:#081722;color:#edf7ff}
 .commandPage.mapPage{max-width:none;padding:10px 14px;gap:8px;overflow:auto;background:radial-gradient(ellipse at 15% 0,#15323a 0,transparent 50%),#081722}
-.operationsPage button,.operationsPage select{font:inherit;color:inherit;border:1px solid #547185;border-radius:8px;background:#18364b;min-height:44px;padding:7px 12px;cursor:pointer}
+.operationsPage button:not(.mzMapPin),.operationsPage select{font:inherit;color:inherit;border:1px solid #547185;border-radius:8px;background:#18364b;min-height:44px;padding:7px 12px;cursor:pointer}
 .operationsPage :focus-visible{outline:3px solid #98dfff;outline-offset:3px}
 .operationsPage [hidden]{display:none!important}#operations-panels{flex:none;display:grid;gap:8px}
 .telemetry{display:grid;grid-template-columns:minmax(245px,1fr) minmax(180px,.65fr) minmax(400px,1.7fr);border:1px solid #3d5868;border-radius:16px;background:linear-gradient(110deg,#162e36,#102439);overflow:hidden}
@@ -16,8 +16,15 @@
 .commandMap:fullscreen,.commandMap.is-expanded{box-sizing:border-box;position:fixed;inset:0;z-index:1000;width:100vw;height:100vh;height:100dvh;margin:0!important;max-width:none;background:#0d1f2f;padding:12px!important}.is-expanded .mzMapViewport{height:100%}.motionPaused *{animation-play-state:paused!important}
 @keyframes opsTicker{0%,5%{transform:translateX(0)}95%,100%{transform:translateX(min(0px,calc(-100% + 180px)))}}@keyframes opsGlow{50%{opacity:.6;box-shadow:0 0 10px #8fdb5577}}@keyframes opsSun{to{transform:rotate(360deg)}}@keyframes opsCloud{50%{transform:translateX(5px)}}
 @media(max-width:1100px){.telemetry{grid-template-columns:1fr .7fr 1.2fr}.telemetry>section{padding:8px 12px}.weatherArt{width:45px}.weatherCard{gap:8px}.hourForecast{font-size:11px}.activityTickers{gap:5px}.feedButton{display:none}.tickerLabel{padding:8px;font-size:10px}.mapHeader .hubBrand h1{font-size:18px}.mapHeader .hubBrand img{width:32px;height:32px}}
-@media(max-height:600px) and (min-width:700px){.commandPage.mapPage{padding:5px;gap:4px}.commandPage .mapHeader{padding:4px 8px}.telemetry>section{padding:4px 9px}.bigClock{font-size:25px}.calendarDate,.metricNote,.hourForecast{font-size:10px}.attendanceValue{font-size:24px}.weatherArt{height:35px}.operationsPage .tickerBand{min-height:34px}.tickerTrack{padding:4px 0;font-size:13px}.commandPage .commandMap.mzMapStage{min-height:120px}.operationsHeading{gap:5px}.mapTitle h2{font-size:14px}.mapTitle img{height:22px;width:22px}.operationsPage button{min-height:34px}.mapAttention{font-size:10px}}
+@media(max-height:600px) and (min-width:700px){.commandPage.mapPage{padding:5px;gap:4px}.commandPage .mapHeader{padding:4px 8px}.telemetry>section{padding:4px 9px}.bigClock{font-size:25px}.calendarDate,.metricNote,.hourForecast{font-size:10px}.attendanceValue{font-size:24px}.weatherArt{height:35px}.operationsPage .tickerBand{min-height:34px}.tickerTrack{padding:4px 0;font-size:13px}.commandPage .commandMap.mzMapStage{min-height:120px}.operationsHeading{gap:5px}.mapTitle h2{font-size:14px}.mapTitle img{height:22px;width:22px}.operationsPage button:not(.mzMapPin){min-height:34px}.mapAttention{font-size:10px}}
 @media(max-width:699px){.telemetry{grid-template-columns:1fr 1fr}.telemetry .weatherCard{grid-column:1/-1;border-left:0;border-top:1px solid #3d5363}.activityTickers{grid-template-columns:1fr}.commandPage.mapPage{height:auto;min-height:100dvh;padding:6px}.commandPage .commandMap.mzMapStage{min-height:400px}.operationsHeading .statusCounts{order:3;width:100%;margin:0}.boardHeader{gap:6px}.boardHeader img{width:30px;height:30px}.boardCard{padding:14px}}
 @media(prefers-reduced-motion:reduce){.operationsPage *{animation:none!important;scroll-behavior:auto!important}}
 .operationsPage .mapTitle img{animation:memphisHello 7s ease-in-out infinite;transform-origin:50% 90%}
 @keyframes memphisHello{0%,85%,100%{transform:translateY(0)}90%{transform:translateY(-3px)}95%{transform:translateY(0)}}
+
+/* Keep the map usable when telemetry and controls exceed a short viewport. */
+.operationsPage .commandPage.mapPage{height:auto;min-height:100dvh;overflow:visible}
+.operationsPage .commandMap:not(:fullscreen):not(.is-expanded){flex:none}
+.operationsPage .commandMap:not(:fullscreen):not(.is-expanded) .mzMapViewport{height:clamp(280px,40vw,760px);min-height:280px}
+
+.operationsPage .activityBand{width:100%}.operationsPage .activityBand .tickerLabel{padding-inline:16px}.operationsPage .activityBand .tickerTrack{font-size:16px}.operationsPage .operationsHeading>.uxButton{min-height:44px;font-size:12px}

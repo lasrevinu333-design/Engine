@@ -4,7 +4,7 @@
   function create({window=root,document=root.document,fetchImpl=root.fetch.bind(root),renderer=root.MemphisDashboardMapRenderer,boards=root.MemphisOperationsDashboard}={}){
     const el=id=>document.getElementById(id),section=el('dashboard-map'),status=el('map-page-status');
     const requests=new Set(),listeners=[];
-    let state='new',generation=0,scheduleGeneration=0,timer=null,clock=null,map=null;
+    let state='new',generation=0,timer=null,clock=null,map=null;
     const operations=boards.create({window,document,audience:'public_readonly'});
     const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push([target,event,fn]);};
     const current=attempt=>state==='active'&&attempt===generation;
@@ -35,45 +35,16 @@
         return false;
       }
     }
-    const make=(tag,text,klass)=>{const node=document.createElement(tag);node.textContent=text;if(klass)node.className=klass;return node;};
-    const shown=value=>typeof value==='string'&&value.trim()?value:'Not provided';
-    function clearSchedule(message){el('schedule-status').textContent=message;el('schedule-roster').replaceChildren();el('schedule-assignments').replaceChildren();}
-    async function schedule(){
-      if(state!=='active')return false;const attempt=++scheduleGeneration,date=el('schedule-date').value;
-      clearSchedule('Reading published schedule…');
-      try{
-        const data=await read('/viewer-api/schedule?service_date='+encodeURIComponent(date));
-        if(state!=='active'||attempt!==scheduleGeneration||el('schedule-date').value!==date)return false;
-        if(data?.service_date!==date||data.projection_status!=='current'||!Array.isArray(data.roster)||!Array.isArray(data.assignments)){
-          clearSchedule('A current published schedule is unavailable for this date.');return false;
-        }
-        el('schedule-status').textContent='Published schedule for '+date+' · all times Central';
-        el('schedule-roster').replaceChildren(...data.roster.map(row=>{
-          const card=make('article','','boardCard');
-          card.append(make('h3',shown(row.employee_name||row.slot_label)),make('p','Shift: '+shown(row.shift_start)+' – '+shown(row.shift_end)),
-            make('p','Lunch: '+shown(row.lunch_start)+' – '+shown(row.lunch_end)));
-          if(row.active===false||row.staffing_state)card.append(make('p',row.active===false?'Not working':shown(row.staffing_state)));
-          return card;
-        }));
-        el('schedule-assignments').replaceChildren(...data.assignments.map(row=>{
-          const card=make('article','','boardCard');card.append(make('h3',shown(row.group_name)),
-            make('p',shown(row.assigned_employee_name)+' · '+shown(row.coverage_start)+' – '+shown(row.coverage_end)),
-            make('p',Array.isArray(row.included_locations)?row.included_locations.join(', '):'Locations unavailable'),
-            make('p',[row.coverage_purpose,row.service_mode,row.status].filter(v=>typeof v==='string'&&v).join(' · ')));
-          return card;
-        }));return true;
-      }catch{if(state==='active'&&attempt===scheduleGeneration)clearSchedule('Published schedule unavailable. Refresh to read it again.');return false;}
-    }
     function suspend(){
-      if(state==='closed'||state==='suspended')return;state='suspended';generation++;scheduleGeneration++;
+      if(state==='closed'||state==='suspended')return;state='suspended';generation++;
       for(const request of requests)request.abort();requests.clear();
       window.clearInterval(timer);window.clearInterval(clock);timer=null;clock=null;
-      operations.suspend();map?.suspend();section.hidden=true;clearSchedule('Schedule paused. Reopening reads the current source.');
+      operations.suspend();map?.suspend();section.hidden=true;
     }
     function stop(){if(state==='closed')return;suspend();state='closed';map?.stop();operations.stop();for(const [target,event,fn]of listeners)target.removeEventListener(event,fn);}
     function activate(){state='active';section.hidden=false;operations.activate(map);
-      timer=window.setInterval(()=>{if(!document.hidden){void refresh();void schedule();}},30000);
-      clock=window.setInterval(()=>operations.tick(),1000);void refresh();void schedule();}
+      timer=window.setInterval(()=>{if(!document.hidden){void refresh();}},30000);
+      clock=window.setInterval(()=>operations.tick(),1000);void refresh();}
     async function resume(){
       if(state!=='suspended')return false;state='resuming';const attempt=generation;
       try{const ready=await map.resume();if(state!=='resuming'||generation!==attempt)return false;if(!ready)throw Error('map_resume');activate();return true;}
@@ -81,19 +52,17 @@
     }
     async function init(){
       if(state!=='new')return false;state='initializing';
-      el('schedule-date').value=new Date().toLocaleDateString('en-CA',{timeZone:'America/Chicago'});
-      listen(el('refresh-dashboard'),'click',()=>void refresh());listen(el('refresh-schedule'),'click',()=>void schedule());
-      listen(el('schedule-date'),'change',()=>void schedule());
+      listen(el('refresh-dashboard'),'click',()=>void refresh());
       listen(window,'pagehide',event=>event.persisted?suspend():stop());listen(window,'pageshow',event=>{if(event.persisted)void resume();});
-      listen(window,'offline',()=>{generation++;scheduleGeneration++;map?.invalidate();operations.unavailable();clearSchedule('Offline. Current schedule unavailable.');status.textContent='Offline. Current operations unavailable.';});
-      listen(window,'online',()=>{void refresh();void schedule();});
+      listen(window,'offline',()=>{generation++;map?.invalidate();operations.unavailable();status.textContent='Offline. Current operations unavailable.';});
+      listen(window,'online',()=>{void refresh();});
       try{map=renderer.create({section,audience:'public_readonly',fetchImpl,window,document});
         if(!await map.init())throw Error('map_assets');if(state!=='initializing')return false;activate();return true;
       }catch{if(state==='initializing'){status.textContent='Approved map assets unavailable. Reload to retry.';stop();}return false;}
     }
-    return Object.freeze({init,refresh,schedule,suspend,resume,stop});
+    return Object.freeze({init,refresh,suspend,resume,stop});
   }
   root.MemphisPublicViewer=Object.freeze({create});
   if(typeof module!=='undefined'&&module.exports)module.exports=root.MemphisPublicViewer;
-  if(root.document?.getElementById('schedule-date'))void create().init();
+  if(root.document?.getElementById('refresh-dashboard'))void create().init();
 })(typeof globalThis!=='undefined'?globalThis:this);

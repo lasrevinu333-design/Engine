@@ -3546,13 +3546,18 @@
     })().catch(error=>{
       state.lastError=safeText(error?.message||'Protected startup requires recovery');
       dispatchStatus({status:'recovery-paused'});
-      return {state:'manager_required'};
+      // A bounded transport failure does not establish damaged saved work.
+      // Keep the original startup gate closed until reconciliation succeeds.
+      return {state:error?.code==='custodial_native_network_unavailable'?'connection_required':'manager_required'};
     }).finally(()=>{state.startupRecoveryFlight=null;});
     return state.startupRecoveryFlight;
   }
 
   async function sync() {
-    if (state.startupRecoveryPending && (await reconcileStartupRecovery()).state==='manager_required') return false;
+    if (state.startupRecoveryPending) {
+      await reconcileStartupRecovery();
+      if (state.startupRecoveryPending) return false;
+    }
     try {
       await ensureWorkerReady();
     } catch (error) {
