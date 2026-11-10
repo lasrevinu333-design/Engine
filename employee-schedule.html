@@ -389,7 +389,7 @@
         if(isNative){const mobile=window.MemphisMobile,request=mobile.requestJson;requireCaller(owns);await readStep(request.call(mobile,`/device-auth/status?device_id=${encodeURIComponent(id)}`,{signal:controller.signal}),controller.signal);}
         requireCaller(owns);const principal=identity(owns);if(!principal||!current(principal,version))throw new Error('identity');requireCaller(owns);
         readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);
-        const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}`,{cache:'no-store',signal:controller.signal}),controller.signal);
+        const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(zooNow().date)}`,{cache:'no-store',signal:controller.signal}),controller.signal);
         // An HTTP response, including503 or malformed JSON, must not restore
         // old availability when its separate unavailable write failed.
         receivedAuthority=true;

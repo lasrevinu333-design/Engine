@@ -66,7 +66,7 @@ scan-outage-retry-tests scan-outage-storage-fence-tests scan-retry-after-tests s
  gps-calibration-integrity-tests custodial-initial-release-scope-tests runtime-sanitation-source-tests custodial-generated-runtime-sanitation-tests custodial-navigation-assets-tests
  custodial-original-home-dom-tests custodial-home-facts-tests custodial-hourly-keyboard-contract-tests custodial-home-ready-profile-order-tests custodial-home-authenticated-restore-tests home-recurring-convergence-tests
  employee-schedule-recurring-delivery-tests employee-schedule-application-receipt-tests
- employee-schedule-cache-resilience-tests employee-schedule-section-tests
+ employee-schedule-cache-resilience-tests employee-schedule-section-tests employee-schedule-calendar-date-tests
  home-schedule-v8-regression-tests home-schedule-v9-regression-tests home-schedule-v10-regression-tests
  home-schedule-v11-regression-tests home-schedule-v12-regression-tests home-schedule-v13-regression-tests
  home-schedule-v14-regression-tests home-schedule-v15-regression-tests home-schedule-v16-regression-tests
@@ -76,14 +76,14 @@ scan-outage-retry-tests scan-outage-storage-fence-tests scan-retry-after-tests s
  notification-response-fence-tests notification-browser-authority-tests notification-reentrant-security-tests
  native-notification-arrival-boundary-tests notification-ownership-principal-settlement-tests
  notification-schedule-ownership-tests`.trim().split(/\s+/).map(name => `scripts/${name}.mjs`);
-  assert.equal(expected.length, 64);
+  assert.equal(expected.length, 65);
   const mapSuites=['dashboard-map-staging-tests','dashboard-map-renderer-tests','dashboard-map-page-contract-tests'].map(name=>`scripts/${name}.mjs`);
   const repairSuites=['scripts/feedback-credential-restart-tests.mjs', 'scripts/scan-unsupported-original-preservation-tests.mjs', 'scripts/scan-deferred-protected-write-tests.mjs', 'scripts/removal-resume-witness-tests.mjs', 'scripts/shared-events-view-tests.mjs', 'scripts/manager-home-bfcache-tests.mjs', 'scripts/public-dashboard-view-tests.mjs', 'scripts/manager-name-first-login-tests.mjs', 'scripts/server-revalidation-principal-enrichment-tests.mjs', 'scripts/owner-test-readiness-diagnostic-tests.mjs'];
   assert.deepEqual(CORE_SUITES.filter(x=>x!=='scripts/provider-event-decision-wire-contract-tests.mjs'&&!mapSuites.includes(x)&&!repairSuites.includes(x)), expected);
   expected.splice(expected.indexOf('scripts/provider-event-decisions-contract-tests.mjs')+1,0,'scripts/provider-event-decision-wire-contract-tests.mjs');
-  assert.equal(expected.length,65);
+  assert.equal(expected.length,66);
   expected.splice(expected.indexOf('scripts/operations-dashboard-tests.mjs')+1,0,...mapSuites);
-  assert.equal(expected.length,68);expected.push(...repairSuites);assert.equal(expected.length,78);assert.deepEqual(CORE_SUITES,expected);
+  assert.equal(expected.length,69);expected.push(...repairSuites);assert.equal(expected.length,79);assert.deepEqual(CORE_SUITES,expected);
   assert.equal(new Set(CORE_SUITES).size, CORE_SUITES.length);
   assert.equal(Object.isFrozen(CORE_SUITES), true);
 });

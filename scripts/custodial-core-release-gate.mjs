@@ -54,6 +54,7 @@ export const CORE_SUITES = Object.freeze([
   'employee-schedule-application-receipt-tests',
   'employee-schedule-cache-resilience-tests',
   'employee-schedule-section-tests',
+  'employee-schedule-calendar-date-tests',
   'home-schedule-v8-regression-tests',
   'home-schedule-v9-regression-tests',
   'home-schedule-v10-regression-tests',

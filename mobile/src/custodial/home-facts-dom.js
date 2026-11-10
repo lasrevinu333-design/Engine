@@ -1,4 +1,4 @@
-import {homeBinding,homeIdentity,HOME_WEATHER_URL,HOME_WEATHER_ALERTS_URL,weatherHoursHtml,weatherAlertsHtml} from './home-facts.js';
+import {homeBinding,homeIdentity,zooServiceDate,HOME_WEATHER_URL,HOME_WEATHER_ALERTS_URL,weatherHoursHtml,weatherAlertsHtml} from './home-facts.js';
 import {createHomeFacts,HOME_IDENTITY_SUPERSEDED} from './home-facts-runtime.js';
 import {createScheduleHomeConvergence} from './schedule-home-convergence.js';
 import {principalIdentity} from './protected-principal.js';
@@ -170,7 +170,9 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
       requireCurrent();
       const observedAvailability=await schedule.begin(id,{signal});
       requireCurrent();
-      let day;try{day=await requestJson(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}`,{signal});}
+      // Request the same displayed calendar day that acceptance/cache fencing
+      // requires; the server's default operational day changes at04:00.
+      let day;try{day=await requestJson(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}&service_date=${encodeURIComponent(zooServiceDate())}`,{signal});}
       catch(error){
         requireCurrent();
         // A received HTTP failure is not a cancelled/offline request. Keep the
