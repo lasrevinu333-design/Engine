@@ -1279,6 +1279,71 @@
     return legacyMigrationFailure(row,declaredVersion,'the record lacks a supported schema and exact operation identity');
   }
 
+  // Historical v63 checksum representation only. Never enqueue or restore this
+  // lossy view: raw originals are always reclassified by fencedDowngradeRows.
+  function historicalBackupNormalizeRecord(action = {}) {
+    const operationId = operationIdFor(action);
+    const logicalIdentity = logicalIdentityFor(action, operationId);
+    const semanticFingerprint = semanticFingerprintFor(action);
+    const completionClientId = completionClientIdFor(action);
+    const forwardReplay = action.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION;
+    const type = forwardReplay ? safeText(action.forward_action_type || action.type) : safeText(action.type);
+    const deadLetter = forwardReplay ? action.current_dead_letter === true : action.dead_letter === true;
+    return {
+      ...action,
+      type,
+      schema_version: CONFIG.SCHEMA_VERSION,
+      operation_id: operationId,
+      logical_identity: logicalIdentity,
+      semantic_fingerprint: semanticFingerprint || null,
+      completion_client_id: completionClientId || null,
+      logical_key: safeText(action.logical_key) || (safeText(action.type) === 'commit_workflow' && semanticFingerprint
+        ? `${safeText(action.type)}:${logicalIdentity}:${semanticFingerprint}`
+        : `${safeText(action.type)}:${logicalIdentity}`),
+      created_at: Number(action.created_at || now()),
+      retry_count: Number(action.retry_count || 0),
+      last_error: action.last_error || null,
+      last_attempt_at: action.last_attempt_at || null,
+      next_attempt_at: Number(action.next_attempt_at || 0),
+      dead_letter: deadLetter,
+      state: action.recoverable === false
+        ? 'legacy-quarantine'
+        : (deadLetter
+          ? (safeText(action.state) === 'quarantined' ? 'quarantined' : 'dead-letter')
+          : safeText(action.state || 'pending')),
+      lease_owner: action.lease_owner || null,
+      lease_token: action.lease_token || null,
+      lease_until: Number(action.lease_until || 0),
+    };
+  }
+
+  function historicalBackupStorageRecord(action = {}) {
+    const rawForwardFence = action.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION
+      && safeText(action.type).startsWith('forward-replay-fenced:');
+    const current = historicalBackupNormalizeRecord({
+      ...action,
+      forward_replay_contract: rawForwardFence ? action.forward_replay_contract : undefined,
+      forward_action_type: rawForwardFence ? action.forward_action_type : undefined,
+      current_dead_letter: rawForwardFence ? action.current_dead_letter : undefined,
+      dead_letter: rawForwardFence ? action.current_dead_letter === true : action.dead_letter === true,
+    });
+    return {
+      ...current,
+      replay_binding: replayBindingFor(current),
+      forward_replay_contract: CONFIG.REQUIRED_SCAN_CONTRACT_VERSION,
+      current_dead_letter: current.dead_letter === true,
+      // Build 22 understands dead_letter but not the v6 authority contract. It
+      // therefore preserves current work without calling a retired endpoint.
+      dead_letter: true,
+      forward_action_type: current.type,
+      type: `forward-replay-fenced:${current.type}`,
+    };
+  }
+
+  function historicalBackupFencedRows(rows) {
+    return rows.map(row=>historicalBackupStorageRecord(historicalBackupNormalizeRecord(row)));
+  }
+
   function fencedDowngradeRows(rows = []) {
     // Classify ORIGINAL bytes before the normalization that stamps schema 6.
     // Deterministic conversion is also used to verify the durable backup.
@@ -1499,9 +1564,13 @@
         || !Array.isArray(result.rows) || !result.rows.every(row => row && typeof row === 'object' && !Array.isArray(row)
           && Number.isSafeInteger(row.id) && row.id >= 1 && !seen.has(row.id) && seen.add(row.id))
         || typeof metadata.canonical_rows !== 'string' || canonicalRows(result.rows) !== metadata.canonical_rows
-        || typeof metadata.canonical_fenced_rows !== 'string' || canonicalRows(fencedDowngradeRows(result.rows)) !== metadata.canonical_fenced_rows)
+        || typeof metadata.canonical_fenced_rows !== 'string')
         throw storageFailure('queue downgrade backup', new Error('Unconfirmed backup originals are retained.'));
-      return { ...metadata, rows: result.rows };
+      const current = canonicalRows(fencedDowngradeRows(result.rows));
+      const representation = current === metadata.canonical_fenced_rows ? 'current'
+        : canonicalRows(historicalBackupFencedRows(result.rows)) === metadata.canonical_fenced_rows ? 'historical-v63' : null;
+      if (!representation) throw storageFailure('queue downgrade backup', new Error('Unconfirmed backup representation is retained.'));
+      return { ...metadata, rows: result.rows, representation };
     } finally { db.close(); }
   }
 
@@ -1546,7 +1615,9 @@
     if (!retained || retained.source_version !== backup.source_version || retained.canonical_rows !== backup.canonical_rows
       || retained.canonical_fenced_rows !== backup.canonical_fenced_rows || !queueOpeningRowsMatch(retained.rows, backup.rows)) throw storageFailure('queue downgrade restore', new Error('Original backup changed; retained without restore.'));
     const fencedRows = fencedDowngradeRows(backup.rows);
-    const expectedFenced = backup.canonical_fenced_rows;
+    const expectedFenced = canonicalRows(fencedRows);
+    const historicalRows = backup.representation === 'historical-v63'
+      ? new Map(historicalBackupFencedRows(backup.rows).map(row=>[row.id,row])) : new Map();
     const existing = await openExistingDatabase(CONFIG.DB_NAME);
     let restored = null;
     try {
@@ -1557,7 +1628,8 @@
         const rows = await readRawRows(existing); queueOpeningCheckpoint(context);
         if (existing.version === CONFIG.DB_VERSION) {
           const expected = new Map(fencedRows.map(row => [row.id, row]));
-          if (!rows.every(row => expected.has(row.id) && queueOpeningRowsMatch([row], [expected.get(row.id)])))
+          if (!rows.every(row => expected.has(row.id) && (queueOpeningRowsMatch([row], [expected.get(row.id)])
+            || historicalRows.has(row.id) && queueOpeningRowsMatch([row], [historicalRows.get(row.id)]))))
             throw storageFailure('queue downgrade restore', new Error('Changed primary originals are retained.'));
           if (canonicalRows(rows) !== expectedFenced) {
             await new Promise((resolve, reject) => {
@@ -1567,8 +1639,7 @@
               current.onsuccess = () => { try {
                 queueOpeningCheckpoint(context);
                 if (!Array.isArray(current.result) || !queueOpeningRowsMatch(current.result, rows)) throw storageFailure('queue downgrade restore', new Error('Primary changed during restore.'));
-                const present = new Set(rows.map(row => row.id));
-                for (const row of fencedRows) if (!present.has(row.id)) { queueOpeningCheckpoint(context); store.put(row); }
+                for (const row of fencedRows) { queueOpeningCheckpoint(context); store.put(row); }
               } catch (error) { failure = error; transaction.abort(); } };
               transaction.oncomplete = () => { try { if (failure) throw failure; queueOpeningCheckpoint(context); resolve(); } catch (error) { reject(error); } };
               transaction.onerror = () => { failure = failure || transaction.error || storageFailure('queue downgrade restore', new Error('Restore transaction was unconfirmed.')); };
@@ -2666,11 +2737,26 @@
     try { window.dispatchEvent(new CustomEvent('memphis-scan-sync', { detail })); } catch (_err) {}
   }
 
+  const liveQueueOwners = new WeakSet();
+  async function withOwnedQueueLock(context, operation) {
+    if (!context) return withQueueLock(operation);
+    if (!context.queueOwner || !liveQueueOwners.has(context.queueOwner)) throw queueSecurityUnavailable();
+    const result = await operation(context);
+    if (!liveQueueOwners.has(context.queueOwner)) throw queueSecurityUnavailable();
+    return result;
+  }
+
   async function withQueueLock(operation, { ifAvailable = false } = {}) {
     if (typeof navigator.locks?.request === 'function') {
       const options = { mode: 'exclusive' };
       if (ifAvailable) options.ifAvailable = true;
-      return navigator.locks.request(CONFIG.WEB_LOCK_NAME, options, (lock) => lock ? operation({ recoverClaimsImmediately: true }) : false);
+      return navigator.locks.request(CONFIG.WEB_LOCK_NAME, options, async lock => {
+        if (!lock) return false;
+        const queueOwner = Object.freeze({});
+        liveQueueOwners.add(queueOwner);
+        try { return await operation(Object.freeze({ queueOwner, recoverClaimsImmediately: true })); }
+        finally { liveQueueOwners.delete(queueOwner); }
+      });
     }
     // The shipping protected-work owner already requires the shared browser
     // lock. A localStorage TTL record cannot replace that owner: the legacy
@@ -2818,7 +2904,7 @@
     return value.result;
   }
 
-  async function processAction(item) {
+  async function processAction(item, lockContext = null) {
     const preserveLocal = originalLocal => {
       const original=structuredClone(item),localBefore=structuredClone(originalLocal);
       const db=state.db,worker=state.workerId,transaction=db?.transaction;
@@ -2844,7 +2930,7 @@
         if(context)queueOpeningCheckpoint(context);
       };
       requireOriginal();
-      return patch=>withQueueLock(()=>mutateProtectedQueue(async context=>{
+      return patch=>withOwnedQueueLock(lockContext,()=>mutateProtectedQueue(async context=>{
         requireOriginal(context);
         const rows=await readRawRows(db);
         requireOriginal(context);
@@ -3314,7 +3400,7 @@
             requireEnrollment: true,
             expectedGeneration: item.security_generation ?? null,
           });
-          const result = await processAction(item);
+          const result = await processAction(item, lockContext.shortQueueLocks === true ? null : lockContext);
           const retired = await critical(() => finishClaim(item, { succeeded: true, result }));
           if (!retired) {
             state.lastError = 'Saved work remains pending because original queue ownership changed.';

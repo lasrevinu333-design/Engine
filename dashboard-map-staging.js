@@ -87,7 +87,7 @@
       if(marker.status==='due_soon'||marker.status==='overdue')ids.add(marker.locationId);
       // No loading/unknown/black transition silently erases an urgent label.
       // Only an authoritative blue/green cleaning change clears it.
-      if(marker.statusSource==='AUTHENTICATED_DASHBOARD_SUMMARY'
+      if(['AUTHENTICATED_DASHBOARD_SUMMARY','PUBLIC_READONLY_DASHBOARD_SUMMARY'].includes(marker.statusSource)
         &&(marker.status==='in_progress'||marker.status==='okay'))ids.delete(marker.locationId);
     }
     return Object.freeze({...previous,urgentIds:Object.freeze([...ids])});

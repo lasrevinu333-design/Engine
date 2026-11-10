@@ -53,7 +53,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
   }
   function retire({persisted=false}={}){
     if(state.retired)return;
-    state.resumeBinding=persisted?resumeBinding(state.session):'';
+    state.resumeBinding=persisted?(state.resumeBinding||resumeBinding(state.session)):'';
     state.suspended=persisted;state.retired=!persisted;state.generation++;weather.stop();
     for(const interval of intervals)clearInterval(interval);intervals.clear();
     clearManagerView();state.session=null;state.sessionBinding='';
@@ -77,7 +77,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
   window.addEventListener('pageshow',event=>{
     if(event?.persisted!==true||!state.suspended||state.retired)return;
     if(window.MemphisAuth!==state.auth){retire();return;}
-    const expectedBinding=state.resumeBinding;state.suspended=false;state.resumeBinding='';
+    const expectedBinding=state.resumeBinding;state.suspended=false;
     void init({resuming:true,expectedBinding}).catch(error=>{if(!state.retired&&!state.suspended)setStatus(safe(error),'error');});
   });
   const checkIdentity=()=>{if(state.session)current(state.generation);
@@ -195,7 +195,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
     if(resuming?(!expectedBinding||resumeBinding(session)!==expectedBinding):priorSession&&(session!==priorSession||sessionBinding(session)!==priorBinding)){retire();return;}
     if(!session||!window.MemphisAuth.isOpsManager(session)){showAccessRequired();return;}
     if(!priorSession&&window.MemphisAuth.isCustodialManagementAdmin?.(session))state.currentDeviceId=resolveDeviceId();
-    state.session=session;
+    state.session=session;state.resumeBinding='';
     state.sessionBinding=sessionBinding(session);
     if(!current(generation))return;
     const returnPath=new URLSearchParams(window.location.search).get('return');

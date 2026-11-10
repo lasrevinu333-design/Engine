@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 const source=fs.readFileSync(process.env.SCAN_SYNC_SOURCE||new URL('../memphis-scan-sync.js',import.meta.url),'utf8');
-const segment=(a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,start);assert(start>=0&&end>start);return source.slice(start,end);};
+const segment=(a,b,text=source)=>{const start=text.indexOf(a),end=text.indexOf(b,start);assert(start>=0&&end>start);return text.slice(start,end);};
 const clone=value=>structuredClone(value);
 function memoryIndexedDb(version,row) {
   const logs=[],records=new Map([['mz_scan_queue',{version,stores:new Map([['actions',{keyPath:'id',rows:new Map([[row.id,clone(row)]]),indexes:[]} ]])}]]);
@@ -41,6 +41,13 @@ function memoryIndexedDb(version,row) {
   return {indexedDB,records,logs};
 }
 const operation='11111111-1111-4111-8111-111111111111',session='22222222-2222-4222-8222-222222222222';
+function fixtureContext(model,calls=[],stop=Error('transport boundary'),text=source) {
+  const part=(a,b)=>segment(a,b,text);
+  const c={CONFIG:{DB_NAME:'mz_scan_queue',STORE_NAME:'actions',DB_VERSION:4,MAX_KNOWN_DB_VERSION:6,SCHEMA_VERSION:6,ROLLBACK_BACKUP_DB_NAME:'mz_scan_queue_v6_to_v4_backup',REQUIRED_SCAN_CONTRACT_VERSION:'scan.v4.snapshot-bound-authority',API_URL:'/rpc'},window:{setTimeout},indexedDB:model.indexedDB,structuredClone,state:{db:null,deviceId:'KIOSK_08'},nativeQueueSecurityRequired:true,queueMutationSecurity:()=>({}),exactSessionForPayload:()=>null,storageFailure:(context,error)=>Object.assign(new Error(context+': '+error.message),{cause:error}),fetch:async(url,args)=>{calls.push({url,body:JSON.parse(args.body)});throw stop;}};
+  vm.createContext(c);
+  vm.runInContext(part('  function safeText(','  function canonicalJson(')+part('  function operationIdFor(','  function listActions(')+part('  async function rpc(','  async function persistServerCompletionReceipt(')+part('  async function verifiedServerCompletionReceipt(','  function processResultFailure('),c);
+  return c;
+}
 const output=[];
 for(const dbVersion of [4,5,6]) for(const kind of ['future','opaque-legacy','valid-current','valid-legacy']) {
   const original={id:1,schema_version:99,type:'finish_session',operation_id:operation,created_at:1700000000000,last_error:'ORIGINAL-DIAGNOSTIC',payload:{p_device_id:'KIOSK_08',p_session_uuid:session,saved_answer:'SAVED-ANSWER'}};
@@ -50,9 +57,7 @@ for(const dbVersion of [4,5,6]) for(const kind of ['future','opaque-legacy','val
   const held=kind==='future'||kind==='opaque-legacy';
   const model=memoryIndexedDb(dbVersion,original),calls=[];
   const stop=Object.assign(new Error('Audit stops at transport boundary'),{code:'AUDIT_STOP'});
-  const c={CONFIG:{DB_NAME:'mz_scan_queue',STORE_NAME:'actions',DB_VERSION:4,MAX_KNOWN_DB_VERSION:6,SCHEMA_VERSION:6,ROLLBACK_BACKUP_DB_NAME:'mz_scan_queue_v6_to_v4_backup',REQUIRED_SCAN_CONTRACT_VERSION:'scan.v4.snapshot-bound-authority',API_URL:'/rpc'},window:{setTimeout},indexedDB:model.indexedDB,structuredClone,state:{db:null,deviceId:'KIOSK_08'},nativeQueueSecurityRequired:true,queueMutationSecurity:()=>({}),exactSessionForPayload:()=>null,storageFailure:(context,error)=>Object.assign(new Error(context+': '+error.message),{cause:error}),fetch:async(url,args)=>{calls.push({url,body:JSON.parse(args.body)});throw stop;}};
-  vm.createContext(c);
-  vm.runInContext(segment('  function safeText(','  function canonicalJson(')+segment('  function operationIdFor(','  function listActions(')+segment('  async function rpc(','  async function persistServerCompletionReceipt(')+segment('  async function verifiedServerCompletionReceipt(','  function processResultFailure('),c);
+  const c=fixtureContext(model,calls,stop);
   const checkpoints={count:0,assertCurrent(){this.count++;}};
   await c.openDb(checkpoints);
   const record=model.records.get('mz_scan_queue'),rows=[...record.stores.get('actions').rows.values()].map(clone);
@@ -77,3 +82,25 @@ for(const dbVersion of [4,5,6]) for(const kind of ['future','opaque-legacy','val
   output.push({kind,initial_physical_db_version:dbVersion,original_row_schema:original.schema_version,original_retained:held?true:null,backup_retained:model.records.has('mz_scan_queue_v6_to_v4_backup'),selected:!!selected,transport_calls:calls,deletions:model.logs,owner_checkpoints:checkpoints.count});
 }
 console.log(JSON.stringify({scope:'Actual immutable openDb + all downgrade backup/restore/content-migration owners, selector and processAction/rpc. Synthetic IndexedDB successful event semantics; no native transport, server execution or phone proof. Transport stub stops before response.',cases:output},null,2));
+
+// The actual previous-release writer creates the interrupted backup; the current
+// opener must recover raw originals at all durable stages, never replay its lossy view.
+const previousSource=fs.readFileSync(new URL('./fixtures/scan-backup-v63-owner.js',import.meta.url),'utf8');
+for(const version of [5,6])for(const kind of ['legacy','future','opaque','current'])for(const stage of ['backup-verified','primary-deleted','fenced-v4-written']){
+ const original={id:1,schema_version:kind==='current'?6:kind==='future'?99:4,type:'finish_session',operation_id:kind==='opaque'?'opaque-original':operation,
+  created_at:1700000000000,last_error:'KEEP-DIAGNOSTIC',payload:{p_device_id:'KIOSK_08',p_session_uuid:session,saved_answer:'KEEP-ANSWER'}};
+ const model=memoryIndexedDb(version,original),old=fixtureContext(model,[],null,previousSource),ctx={assertCurrent(){}};
+ const interrupted=Error('synthetic interruption '+stage);old.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point===stage)throw interrupted;};
+ await assert.rejects(old.openDb(ctx),e=>e===interrupted);
+ const backup=clone([...model.records.get('mz_scan_queue_v6_to_v4_backup').stores.get('actions').rows.values()]);
+ assert.deepEqual(backup,[original]);
+ const current=fixtureContext(model);let verified=false;
+ current.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point==='fenced-v4-verified'){verified=true;assert(model.records.has('mz_scan_queue_v6_to_v4_backup'));}};
+ await current.openDb(ctx);assert(verified);assert(!model.records.has('mz_scan_queue_v6_to_v4_backup'));
+ const rows=[...model.records.get('mz_scan_queue').stores.get('actions').rows.values()];
+ assert.equal(rows.length,1);assert.equal(rows[0].payload.saved_answer,'KEEP-ANSWER');assert.equal(rows[0].last_error,'KEEP-DIAGNOSTIC');
+ const selected=current.nextClaimableAction(rows);
+ if(kind==='future'||kind==='opaque'){assert.equal(selected,null);assert.deepEqual(rows[0].preserved_original_record,original);}
+ else{assert.equal(selected.operation_id,operation);assert.equal(selected.type,'finish_session');}
+ console.log('PASS historical interrupted backup',version,kind,stage);
+}

@@ -596,6 +596,11 @@ async function scanIndexConfirmationCallers(){
     assert.equal(index.sessions[0].location_code,f.session.location_code);
     assert.equal(JSON.parse(f.rows.get(f.key)).device_id,'KIOSK_08');
   });
+  for(const change of ['generation','principal'])await run('page-save-lock-wait-'+change,async()=>{
+    const f=fixture();f.before(()=>{if(change==='generation')f.status.generation++;else f.status.principal.employee_id='00000000-0000-4000-8000-000000000099';});
+    await assert.rejects(()=>f.context.saveLocalSession(f.session));
+    assert.equal(f.rows.has(f.key),false);assert.equal(f.rows.has(f.index),false);assert.equal(f.admissions(),0);
+  });
   await run('page-owner-withdrawal-retains-session-no-index',async()=>{
     const f=fixture();let original;f.after(n=>{if(n===1){original=f.rows.get(f.key);f.status.generation++;}});
     await assert.rejects(()=>f.context.saveLocalSession(f.session),error=>

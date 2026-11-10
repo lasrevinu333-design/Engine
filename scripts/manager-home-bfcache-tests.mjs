@@ -25,3 +25,17 @@ for(const mode of ['same','renewed','revoked','successor','failure'])test('Manag
  f.emit('pagehide',{persisted:false});assert.equal(f.liveTimers.size,0);
  f.emit('pageshow',{persisted:true});await f.turn();assert.equal(f.liveTimers.size,0);
 });
+
+for(const mode of ['same','revoked','successor','old-response'])test('Manager Home overlapping BFCache '+mode,async()=>{
+ const f=await managerHomeFixture({attendance:{attendance:0}}),original=f.session(),timers=f.liveTimers.size;
+ let release,releaseOld;const response=new Promise(r=>release=r),old=new Promise(r=>releaseOld=r);let calls=0;
+ f.auth.requireOpsManagerSession=async()=>{calls++;return mode==='old-response'&&calls===1?old:response;};
+ f.emit('pagehide',{persisted:true});f.emit('pageshow',{persisted:true});await f.turn();
+ f.emit('pagehide',{persisted:true});f.emit('pageshow',{persisted:true});await f.turn();
+ const next=mode==='revoked'?null:{...original,...(mode==='successor'?{manager_id:'98000000-0000-4000-8000-000000000099'}:{})};
+ f.setSession(next);release(next);await f.turn();await f.turn();
+ if(mode==='old-response'){releaseOld({...original,manager_id:'98000000-0000-4000-8000-000000000099'});await f.turn();}
+ if(mode==='same'||mode==='old-response'){assert.equal(f.node('manager-name').textContent,original.manager_display_name);assert.ok(f.node('dashboard-link').href);assert.equal(f.liveTimers.size,timers);}
+ else{assert.equal(f.node('manager-name').textContent,'');assert.equal(f.node('dashboard-link').href,undefined);assert.equal(f.liveTimers.size,0);}
+ f.emit('pagehide',{persisted:false});assert.equal(f.liveTimers.size,0);
+});

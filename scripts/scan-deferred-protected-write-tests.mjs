@@ -14,7 +14,7 @@ const id=n=>'ab000000-0000-4000-8000-'+String(n).padStart(12,'0');
 
 // Actual queue owners, credential store, admission and storage firewall.
 // Only persistence, locks, native attestation and transport are synthetic.
-async function fixture(kind,change){
+async function fixture(kind,change,caller=false){
   class Storage{
     data=new Map();get length(){return this.data.size;}key(i){return [...this.data.keys()][i]??null;}
     getItem(k){return this.data.get(k)??null;}setItem(k,v){this.data.set(k,String(v));}removeItem(k){this.data.delete(k);}
@@ -44,8 +44,14 @@ async function fixture(kind,change){
   if(change==='already-proof')Object.assign(session,{native_completion_attestation_version:proof.p_native_completion_attestation_version,native_completion_attestation:proof.p_native_completion_attestation});
   const key='session:'+session.session_uuid;await store.runWhenReady(()=>storage.setItem(key,JSON.stringify(session)));
   const originalBytes=storage.getItem(key),rows=new Map(),calls=[];let nativeCalls=0,readHook=null;
-  const db={objectStoreNames:{contains:n=>n==='actions'},transaction(){
-    const tx={};tx.objectStore=()=>({getAll(){const req={};setTimeout(()=>{readHook?.();req.result=structuredClone([...rows.values()]);req.onsuccess?.();setTimeout(()=>tx.oncomplete?.({target:tx}),0);},0);return req;}});return tx;}};
+  const db={objectStoreNames:{contains:n=>n==='actions'},transaction(_name,mode){
+    const working=mode==='readwrite'?new Map(structuredClone([...rows])):rows;
+    let pending=0,terminal=false;
+    const tx={error:null,abort(){if(terminal)return;terminal=true;setTimeout(()=>tx.onabort?.({target:tx}),0);}};
+    const complete=()=>setTimeout(()=>{if(pending||terminal)return;terminal=true;if(mode==='readwrite'){rows.clear();for(const [k,v] of working)rows.set(k,v);}tx.oncomplete?.({target:tx});},0);
+    const request=fn=>{const req={};pending++;setTimeout(()=>{if(terminal)return;try{req.result=fn();req.onsuccess?.({target:req});}catch(e){req.error=e;tx.error=e;req.onerror?.({target:req});tx.abort();}finally{pending--;complete();}},0);return req;};
+    tx.objectStore=()=>({getAll(){return request(()=>{readHook?.();return structuredClone([...working.values()]);});},get(id){return request(()=>structuredClone(working.get(id)));},put(v){return request(()=>{working.set(v.id,structuredClone(v));return v.id;});},delete(id){return request(()=>working.delete(id));}});complete();return tx;
+  }};
   const mobile={principalIdentity:()=>JSON.stringify(store.getStatus().principal),nativeOfflineTimeAuthority:true,
     createOfflineCompletionAttestation:async()=>{
       assert.throws(()=>gate.requireMutation(),'Native waits must remain outside protected mutation');nativeCalls++;
@@ -60,24 +66,33 @@ async function fixture(kind,change){
   const stop=Object.assign(Error('Synthetic stop before HTTP'),{code:'SYNTHETIC_TRANSPORT_STOP'});
   const context={window:{localStorage:storage,MemphisCustodialSecurity:security,MemphisMobile:mobile,setTimeout,clearTimeout},
     navigator:{locks,onLine:true},indexedDB:indexedDb,localStorage:storage,structuredClone,TextEncoder,crypto:webcrypto,setTimeout,clearTimeout,console,
-    state:{db,workerId:'synthetic-worker',deviceId:p.device_id},
+    state:{sessionQuarantine:[],db,workerId:'synthetic-worker',deviceId:p.device_id},
     verifiedServerCompletionReceipt:async()=>null,
     persistClaimPayload:async(_item,payload)=>{calls.push({kind:'payload',payload:structuredClone(payload)});return true;},
     rpc:async(fn,payload)=>{assert.throws(()=>gate.requireMutation());calls.push({kind:'transport',fn,payload:structuredClone(payload)});throw stop;}};
-  const code=closedScanOwnerSource(source,['processAction','storageRecord'],context);vm.createContext(context);vm.runInContext(code,context);
+  let fence=caller==='recoverStaleRollbackFenceForNewWork';
+  if(caller){
+    Object.assign(context,{ensureWorkerReady:async()=>true,verifyWorkerBackendCompatibility:async()=>true,reportDeviceSyncStatus:async()=>true,scheduleSync(){},CustomEvent:class{}});
+    context.window.dispatchEvent=()=>{};delete context.persistClaimPayload;
+    Object.assign(mobile,{getOfflineAuthorityState:async()=>({occurrences_awaiting_acknowledgement:false,rollback_fence_active:fence,rollback_fence_id:fence?id(70):null}),beginRollbackFence:async()=>{fence=true;return{rollback_fence_active:true,rollback_fence_id:id(70)};},clearRollbackFence:async()=>{fence=false;}});
+    const previousRpc=context.rpc;context.rpc=(fn,p)=>fn==='tool_get_device_rollback_readiness'?{eligible:true,backend_queue_count:0,backend_open_session_count:0}:previousRpc(fn,p);
+    if(kind==='historical')await store.runWhenReady(()=>storage.setItem(key,JSON.stringify({...session,status:'closed'})));
+  }
+  const entries=['processAction','storageRecord','withOwnedQueueLock',...(caller?[caller,'withQueueLock']:[])];
+  const code=closedScanOwnerSource(source,entries,context);vm.createContext(context);vm.runInContext(code,context);
   const payload=kind==='historical'?{p_device_id:p.device_id,p_client_event_id:id(20),p_event_type:'scan_error',p_notes:'Original diagnostic',p_payload_json:{session_uuid:session.session_uuid,client_session_id:session.client_session_id}}:
     {p_device_id:p.device_id,p_client_session_id:session.client_session_id,p_client_completion_id:session.client_completion_id,
       p_location_code:session.location_code,p_client_started_at:session.started_at,p_client_ended_at:session.ended_at,
       p_native_finish_scan_entry_id:id(13),p_snapshot_id:session.offline_authority_snapshot_id,p_snapshot_employee_id:p.employee_id,p_snapshot_assignment_epoch:7,
       p_response_json:session.response_json};
-  let item={id:1,schema_version:6,type:kind==='historical'?'record_scan_event':'commit_workflow',operation_id:kind==='historical'?id(20):id(11),
+  let item={id:1,schema_version:6,state:caller?'processing':'pending',type:kind==='historical'?'record_scan_event':'commit_workflow',operation_id:kind==='historical'?id(20):id(11),
     created_at:Date.parse(session.started_at),lease_owner:'synthetic-worker',lease_token:'original-lease',lease_until:Date.now()+60000,
     security_generation:store.getStatus().generation,payload};
   rows.set(1,structuredClone(context.storageRecord(item)));
   item=structuredClone(context.normalizeRecord(rows.get(1)));
   if(kind==='historical'&&change==='session')readHook=()=>{readHook=null;raw.setItem(key,JSON.stringify({...session,device_id:'KIOSK_09'}));};
   if(kind==='historical'&&change==='event-conflict')readHook=()=>{readHook=null;raw.setItem(key,JSON.stringify({...session,scan_evidence:[{client_event_id:id(20),notes:'Concurrent original evidence'}]}));};
-  return{context,item,calls,stop,storage,key,originalBytes,session,store,nativeCalls:()=>nativeCalls};
+  return{context,item,calls,stop,storage,key,originalBytes,session,store,locks,rows,nativeCalls:()=>nativeCalls};
 }
 for(const kind of ['completion','historical'])for(const change of kind==='historical'?['none','session','event-conflict']:['none','generation','lease','session','evidence','already-proof','invalid-proof']){
   test(`deferred ${kind} protected writer: ${change}`,async()=>{
@@ -99,3 +114,19 @@ for(const kind of ['completion','historical'])for(const change of kind==='histor
     }
   });
 }
+
+for(const caller of ['sync','drainForNewWork','rollbackReadiness','recoverStaleRollbackFenceForNewWork'])for(const kind of ['historical','completion'])test(`complete ${caller} caller preserves deferred ${kind}`,{timeout:5000},async()=>{
+ const f=await fixture(kind,'none',caller);
+ const result=await f.context[caller](id(70));
+ assert.equal(f.locks.pending,0,'All queue, network-worker and protected-work locks must settle');
+ const saved=JSON.parse(f.storage.getItem(f.key));
+ if(kind==='historical'){assert.equal(saved.scan_evidence[0].notes,'Original diagnostic');assert.equal(f.rows.size,0);}
+ else{assert.equal(saved.native_completion_attestation,'b'.repeat(64));assert.equal(f.rows.size,1,'Transport stop retains the exact queued completion');assert.equal([...f.rows.values()][0].operation_id,f.item.operation_id);}
+ assert.notEqual(result,undefined);
+});
+test('queue ownership cannot be forged or reused after release',async()=>{
+ const f=await fixture('historical','none','sync');let expired;
+ await f.context.withQueueLock(owner=>{expired=owner;});
+ for(const owner of [{queueOwner:{}},expired])await assert.rejects(()=>f.context.withOwnedQueueLock(owner,()=>assert.fail('Invalid owner must not enter')));
+ assert.equal(f.locks.pending,0);
+});

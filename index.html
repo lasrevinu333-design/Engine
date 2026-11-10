@@ -538,9 +538,17 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
     async function saveLocalSession(session){
       const requested=JSON.parse(JSON.stringify(session));
       const existed=Boolean(getLocalSessionById(requested.session_uuid));
+      const security=scanMutationSecurity(),original=security?scanProtectedOwner(security):null;
+      const queue=window.MemphisScanSync;
+      const requireOriginal=context=>{
+        if(scanMutationSecurity()!==security||window.MemphisScanSync!==queue)throw scanSecurityUnavailable();
+        if(original)scanRequireSameOwner(security,original,context);
+      };
       return mutateLocalSessions(async()=>{
+        requireOriginal();
         let confirmation=null,stored=null,open=false;
         await mutateCustodialWork(context=>{
+          requireOriginal(context);
           // Both the shared session lock and protected writer now belong to
           // this operation. Merge into the current SAME occurrence, after all
           // waits, so an accepted Start cannot be replaced by a stale page copy.
@@ -595,7 +603,7 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
           if(confirmation)context.assertCurrent();
           else if(open&&window.MemphisUI?.indexScanSession?.(stored,String(stored.status||"").toLowerCase().includes("pending")?"complete":"timer")!==true)
             throw managerRecoveryError("Saved cleaning work needs manager recovery.");
-        });
+        },{requireEnrollment:true,...(original?{expectedGeneration:original.generation}:{})});
         if(open&&confirmation){
           // The prior native FIFO callback has CLOSED. A fresh bounded writer
           // verifies those exact original pins; never nest admission or infer

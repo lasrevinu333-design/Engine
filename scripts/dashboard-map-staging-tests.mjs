@@ -125,3 +125,13 @@ pass('one shared image/icon viewport transform; glyph size screen-constant, no s
  checks++;console.log('PASS changed approved bytes rejected before any map construction');
 }
 console.log('PASS staging map pure source contract',checks,'NO_BROWSER_NO_BACKEND_NO_GPS_WRITE');
+
+for(const audience of ['manager','public'])for(const urgent of ['overdue','due_soon'])for(const next of ['okay','in_progress','unknown','not_cleaned']){
+ const projectAudience=status=>{const summary=envelope([row(first,status,{overdue:'red',due_soon:'yellow',okay:'green',in_progress:'blue',not_cleaned:'black'}[status],status==='in_progress'?{open_session_status:'active',open_session_uuid:'synthetic-session'}:{})]);
+  if(audience==='public')summary.meta.audience='public_readonly';
+  return map.project({anchors,summary,transport:audience==='public'?'CURRENT_PUBLIC_READONLY_RESPONSE':current});};
+ const initial=map.reconcileUrgency(map.initialInteraction(),projectAudience(urgent)),markers=projectAudience(next),after=map.reconcileUrgency(initial,markers),view=map.presentation(markers[0],{interaction:after});
+ const retained=!['okay','in_progress'].includes(next);
+ assert.equal(after.urgentIds.includes(first.locationId),retained);assert.equal(view.automatic,retained);assert.equal(view.sizePx,retained?42:24);
+ console.log('PASS admitted attention transition',audience,urgent,next);
+}
