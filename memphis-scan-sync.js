@@ -1362,6 +1362,16 @@
       :legacyMigrationFailure(raw,declared,'the record lacks a supported schema and exact operation identity'));
   }
 
+  function successfulLegacyBackupRecord(raw, captured) {
+    const declared=Number(raw.schema_version||0),legacy=declared>=1&&declared<=4?declared:(declared===0?4:0);
+    if(raw.recoverable===false||!legacy||!captured?.replay_binding)return null;
+    const payload=raw.payload&&typeof raw.payload==='object'?raw.payload:{};
+    const exactId=safeText(raw.operation_id||raw.client_id||payload.p_client_completion_id||payload.p_client_event_id||payload.p_operation_id);
+    if(!isUuid(exactId))return null;
+    // Known stored representation only: this does not establish eligibility.
+    return historicalBackupStorageRecord({...historicalBackupNormalizeRecord({...raw,operation_id:exactId},captured),source_schema_version:legacy,recoverable:true},captured);
+  }
+
   function confirmedBackupCapture(rows, encoded) {
     let captured;
     try{captured=JSON.parse(encoded);}catch{return null;}
@@ -1375,7 +1385,6 @@
     for(const raw of rows){
       const snapshot=byId.get(raw.id);if(!snapshot)return null;
       // Held originals are exact structured preservation, not normalized rows.
-      const declared=Number(raw.schema_version||0),legacy=declared>=1&&declared<=4?declared:(declared===0?4:0);
       const held=heldDowngradeRecord(raw);
       if(canonicalRows([snapshot])===canonicalRows([held]))continue;
       const binding=snapshot.replay_binding,supplied=raw.replay_binding||{};
@@ -1387,11 +1396,8 @@
         ||supplied.assignment_epoch!=null&&binding.assignment_epoch!==Number(supplied.assignment_epoch))return null;
       const normalized=historicalBackupNormalizeRecord(raw,snapshot);
       const options=[historicalBackupStorageRecord(normalized,snapshot)];
-      if(raw.recoverable!==false&&legacy){
-        const payload=raw.payload&&typeof raw.payload==='object'?raw.payload:{};
-        const exactId=safeText(raw.operation_id||raw.client_id||payload.p_client_completion_id||payload.p_client_event_id||payload.p_operation_id);
-        if(isUuid(exactId))options.push(historicalBackupStorageRecord({...historicalBackupNormalizeRecord({...raw,operation_id:exactId},snapshot),source_schema_version:legacy,recoverable:true},snapshot));
-      }
+      const migrated=successfulLegacyBackupRecord(raw,snapshot);
+      if(migrated)options.push(migrated);
       // This checks only a known writer's stored representation. Current
       // migration eligibility is deliberately checked again from raw originals
       // by fencedDowngradeRows; a captured success flag grants no authority.
@@ -1665,6 +1671,7 @@
     let fencedRows = fencedDowngradeRows(backup.rows,backup.capturedRows);
     let expectedFenced = canonicalRows(fencedRows);
     const historicalRows = new Map(backup.capturedRows.map(row=>[row.id,row]));
+    const recoveredRows = new Map(backup.rows.map(row=>[row.id,successfulLegacyBackupRecord(row,historicalRows.get(row.id))]));
     const existing = await openExistingDatabase(CONFIG.DB_NAME);
     let restored = null;
     try {
@@ -1685,7 +1692,8 @@
           expectedFenced=canonicalRows(fencedRows);
           const expected = new Map(fencedRows.map(row => [row.id, row]));
           if (!rows.every(row => expected.has(row.id) && (queueOpeningRowsMatch([row], [expected.get(row.id)])
-            || historicalRows.has(row.id) && queueOpeningRowsMatch([row], [historicalRows.get(row.id)]))))
+            || historicalRows.has(row.id) && queueOpeningRowsMatch([row], [historicalRows.get(row.id)])
+            || recoveredRows.get(row.id) && queueOpeningRowsMatch([row], [recoveredRows.get(row.id)]))))
             throw storageFailure('queue downgrade restore', new Error('Changed primary originals are retained.'));
           if (canonicalRows(rows) !== expectedFenced) {
             await new Promise((resolve, reject) => {
