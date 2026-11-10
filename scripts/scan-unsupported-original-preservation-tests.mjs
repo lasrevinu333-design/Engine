@@ -83,6 +83,48 @@ for(const dbVersion of [4,5,6]) for(const kind of ['future','opaque-legacy','val
 }
 console.log(JSON.stringify({scope:'Actual immutable openDb + all downgrade backup/restore/content-migration owners, selector and processAction/rpc. Synthetic IndexedDB successful event semantics; no native transport, server execution or phone proof. Transport stub stops before response.',cases:output},null,2));
 
+// The real GPS producer uses a text identity accepted by the existing SQL
+// signature, unlike Start/Finish/Completion UUID identities. Its exact identity
+// and original payload must survive queue storage and repeated reopening.
+const gpsId=`gps:${session}:${operation}`;
+const gpsEmployee='33333333-3333-4333-8333-333333333333';
+for(const variant of ['current','known-quarantine','foreign-device','foreign-employee','foreign-epoch',
+  'changed-payload','other-action','other-identity','server-refusal','missing-owner','held-original']){
+ const scratch=fixtureContext(memoryIndexedDb(4,{id:99}));
+ const action={id:1,type:'evaluate_location_proximity_v2',client_id:gpsId,created_at:1700000000000,
+  state:'pending',payload:{p_client_event_id:gpsId,p_session_uuid:session,p_device_identifier:'KIOSK_08',
+   p_location_code:'WAUW',p_latitude:35.15,p_longitude:-89.99,p_accuracy_m:12,p_observed_at:'2026-11-10T12:10:00.000Z'},
+  replay_binding:{client_session_id:session,employee_id:gpsEmployee,assignment_epoch:1}};
+ const stored=clone(scratch.storageRecord(action));
+ assert.equal(stored.operation_id,gpsId,'GPS producer identity must not be lost by normalization');
+ const original={...stored,operation_id:''};
+ if(variant==='foreign-device')original.payload.p_device_identifier='KIOSK_09';
+ if(variant==='foreign-employee')original.replay_binding.employee_id=operation;
+ if(variant==='foreign-epoch')original.replay_binding.assignment_epoch=2;
+ if(variant==='other-action'){original.type='forward-replay-fenced:start_session';original.forward_action_type='start_session';}
+ if(variant==='other-identity')original.client_id='opaque-original';
+ if(variant==='server-refusal'){original.current_dead_letter=true;original.state='dead-letter';}
+ if(variant==='held-original')original.recoverable=false;
+ let row=variant==='current'?stored:clone(scratch.legacyMigrationFailure(original,6,'the record lacks a supported schema and exact operation identity'));
+ if(variant==='changed-payload')row.payload={...row.payload,p_location_code:'CHNW'};
+ const saved=clone(row),model=memoryIndexedDb(4,row),calls=[],stop=Error('GPS transport boundary');
+ const c=fixtureContext(model,calls,stop),owner={native:true,getStatus:()=>({ready:true,available:true,quarantined:false,
+  state:'enrolled',generation:3,deviceId:'KIOSK_08',principal:{device_id:'KIOSK_08',employee_id:gpsEmployee,assignment_epoch:1}})};
+ c.queueMutationSecurity=()=>variant==='missing-owner'?{}:owner;
+ const ctx={generation:3,deviceId:'KIOSK_08',assertCurrent(){}};
+ await c.openDb(ctx);const actual=clone(model.records.get('mz_scan_queue').stores.get('actions').rows.get(1));
+ const eligible=variant==='current'||variant==='known-quarantine';
+ if(eligible){
+  const selected=c.nextClaimableAction([actual]);assert.equal(selected.operation_id,gpsId);
+  assert.deepEqual(selected.payload,action.payload);assert.equal(selected.dead_letter,false);
+  if(variant==='known-quarantine')assert.deepEqual(actual.preserved_gps_identity_quarantine,saved);
+  await assert.rejects(c.processAction(selected),e=>e===stop);assert.equal(calls.length,1);
+  assert.deepEqual(calls[0].body.args,action.payload,'No GPS ID, observation time, coordinates or session may be rebased');
+ }else{assert.deepEqual(actual,saved);assert.equal(c.nextClaimableAction([actual]),null);assert.equal(calls.length,0);}
+ await c.openDb(ctx);assert.deepEqual(clone(model.records.get('mz_scan_queue').stores.get('actions').rows.get(1)),actual);
+ console.log('PASS exact GPS queue identity',variant);
+}
+
 // The actual previous-release writer creates the interrupted backup; the current
 // opener must recover raw originals at all durable stages, never replay its lossy view.
 const previousSource=fs.readFileSync(new URL('./fixtures/scan-backup-v63-owner.js',import.meta.url),'utf8');

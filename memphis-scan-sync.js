@@ -1060,7 +1060,18 @@
     const candidate = safeText(action.operation_id || action.client_id
       || payload.p_client_completion_id || payload.p_client_event_id
       || payload.p_client_session_id || payload.p_operation_id || payload.p_session_uuid);
-    return isUuid(candidate) ? candidate : '';
+    return isUuid(candidate) || exactGpsOperationIdentity(action, candidate) ? candidate : '';
+  }
+  function exactGpsOperationIdentity(action, candidate) {
+    const forward = action?.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION;
+    const type = forward && action.type === `forward-replay-fenced:${action.forward_action_type}`
+      ? action.forward_action_type : action?.type;
+    if (type !== 'evaluate_location_proximity_v2' || typeof candidate !== 'string') return false;
+    const parts = candidate.split(':');
+    const payload = action.payload;
+    return parts.length === 3 && parts[0] === 'gps' && isUuid(parts[1]) && isUuid(parts[2])
+      && action.client_id === candidate && payload?.p_client_event_id === candidate
+      && payload.p_session_uuid === parts[1];
   }
   function canonicalizeSemanticValue(value) {
     if (Array.isArray(value)) return value.map(canonicalizeSemanticValue);
@@ -1288,7 +1299,7 @@
     const declaredVersion=Number(row?.schema_version||0);
     const legacyVersion=declaredVersion>=1&&declaredVersion<=4?declaredVersion:(declaredVersion===0?4:0);
     if(legacyVersion)return migrateLegacyRecord(row,legacyVersion,recordMigrationTime);
-    if(declaredVersion===CONFIG.SCHEMA_VERSION&&isUuid(operationIdFor(row)))return normalizeRecord(row);
+    if(declaredVersion===CONFIG.SCHEMA_VERSION&&operationIdFor(row))return normalizeRecord(row);
     return legacyMigrationFailure(row,declaredVersion,'the record lacks a supported schema and exact operation identity');
   }
 
@@ -1445,6 +1456,41 @@
       lease_until: 0,
       quarantine_reason: `Legacy queue v${sourceVersion} was preserved locally and not sent: ${reason}`,
     };
+  }
+
+  function recoverExactGpsIdentityQuarantine(row, context) {
+    // The shipped GPS producer uses gps:<session>:<sample> text IDs.
+    // Only the queue's UUID-only reopening check rejected these. Restore that
+    // exact representation under the same owner; do not invent an ID, change a
+    // payload, revive a server refusal, or release any cleaning completion.
+    const original = row?.preserved_original_record;
+    if (row?.recoverable !== false || row.source_schema_version !== 6 || !original
+      || original.schema_version !== 6 || original.preserved_original_record
+      || original.forward_replay_contract !== CONFIG.REQUIRED_SCAN_CONTRACT_VERSION
+      || original.type !== 'forward-replay-fenced:evaluate_location_proximity_v2'
+      || original.forward_action_type !== 'evaluate_location_proximity_v2'
+      || original.current_dead_letter !== false || original.recoverable === false
+      || !['pending','retrying'].includes(original.state) || original.lease_owner || original.lease_token
+      || Number(original.lease_until || 0) !== 0 || original.operation_id !== '') return row;
+    const operation = operationIdFor(original), payload = original.payload, binding = original.replay_binding;
+    if (!exactGpsOperationIdentity(original, operation)
+      || !Number.isFinite(payload.p_latitude) || payload.p_latitude < -90 || payload.p_latitude > 90
+      || !Number.isFinite(payload.p_longitude) || payload.p_longitude < -180 || payload.p_longitude > 180
+      || !Number.isFinite(Date.parse(payload.p_observed_at)) || !safeText(payload.p_location_code)) return row;
+    const expected = legacyMigrationFailure(original, 6, 'the record lacks a supported schema and exact operation identity');
+    if (!queueOpeningRowsMatch([row], [expected])) return row;
+    const security = queueMutationSecurity(), owner = security?.getStatus?.();
+    if (security?.native !== true || owner?.ready !== true || owner.available !== true
+      || owner.quarantined !== false || owner.state !== 'enrolled'
+      || owner.generation !== context?.generation || owner.deviceId !== context?.deviceId
+      || payload.p_device_identifier !== owner.deviceId || owner.principal?.device_id !== owner.deviceId
+      || !isUuid(owner.principal?.employee_id) || !Number.isSafeInteger(owner.principal?.assignment_epoch)
+      || owner.principal.assignment_epoch < 1 || binding?.employee_id !== owner.principal.employee_id
+      || binding.assignment_epoch !== owner.principal.assignment_epoch
+      || binding.client_session_id !== payload.p_session_uuid) return row;
+    queueOpeningCheckpoint(context);
+    return normalizeRecord({ ...original, operation_id: operation, recoverable: true,
+      preserved_gps_identity_quarantine: row });
   }
 
   function migrateLegacyRecord(action = {}, sourceVersion, recordMigrationTime = true) {
@@ -1753,7 +1799,7 @@
         try {
         queueOpeningCheckpoint(context);
         const declaredVersion = Number(current.value?.schema_version || 0);
-        const migrated = openingRecord(current.value);
+        const migrated = openingRecord(recoverExactGpsIdentityQuarantine(current.value, context));
         // The prior Retry-After parser could persist Infinity in a logically
         // retryable schema-6 row. Repair only its eligibility, once; never
         // revive a hold/quarantine or reinterpret an unknown future schema.

@@ -91,7 +91,9 @@ export function readinessSupportCode(input = {}) {
   const schema = value => Number.isInteger(value) && value >= 0 && value <= 6 ? String(value) : 'unknown';
   const details = held.slice(0, 4).map(row => {
     const original = row.preserved_original_record;
-    const originalType = original && typeof original === 'object' ? pick(original.type, actionTypes) : 'none';
+    const originalType = original && typeof original === 'object'
+      ? pick(typeof original.type === 'string' && original.type.startsWith('forward-replay-fenced:')
+        ? original.type.slice('forward-replay-fenced:'.length) : original.type, actionTypes) : 'none';
     const error = [
       ['semantic_completion_mismatch_requires_explicit_resolution', 'semantic-conflict'],
       ['Historical standalone scan evidence has no exact occurrence and requires manager reconciliation.', 'scan-session-missing'],

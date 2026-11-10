@@ -43,6 +43,13 @@ await check('held diagnostics distinguish retained legacy work without disclosin
   assert.match(code,/H:2 \[forward-replay-fenced:legacy-quarantine\/legacy-quarantine\/V4\/O:record_scan_event\/C0\/X:other;commit_workflow\/quarantined\/V6\/O:none\/C\?\/X:semantic-conflict\]/);
   assert.doesNotMatch(code,/private_fixture/);assert.equal(JSON.stringify(input),before);
   assert.equal(classifyReadiness(input).state,'needs_manager');
+  const gps = {queue:[{type:'forward-replay-fenced:legacy-quarantine',state:'legacy-quarantine',
+    recoverable:false,source_schema_version:6,preserved_original_record:{
+      type:'forward-replay-fenced:evaluate_location_proximity_v2',payload:{secret:'private_fixture_payload'}}}]};
+  assert.match(readinessSupportCode(gps), /\/V6\/O:evaluate_location_proximity_v2\/C0\/X:none/);
+  gps.queue[0].preserved_original_record.type='forward-replay-fenced:private_fixture_type';
+  assert.match(readinessSupportCode(gps), /\/O:unknown\//);
+  assert.doesNotMatch(readinessSupportCode(gps), /private_fixture/);
 });
 await check('four exact labels with deterministic integrity/manager/pending priority', () => {
   assert.equal(classifyReadiness(positive).label, 'Ready for work');
