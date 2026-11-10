@@ -99,11 +99,11 @@ assert.match(auth,/DEVICE_SECURITY_URL/);assert.match(auth,/X-Device-Security-CS
 assert.doesNotMatch(auth,/consumeSharedEnrollmentPasscode|createSharedEnrollmentWindow|disableSharedEnrollmentWindow|ops\/shared-enrollment/);
 assert.doesNotMatch(auth,/localStorage\.[gs]etItem\([^)]*(passcode|manager.*token|deviceSecurity)/i);assert.doesNotMatch(auth,/Fully Kiosk PIN/i);
 const enrollment=read('custodial-leadership-enrollment.mjs');
-assert.match(entry,/Leadership PIN/);assert.match(entry,/approved-name/);assert.match(entry,/read-only viewer/i);assert.match(entry,/custodial-leadership-enrollment\.mjs/);
+assert.match(entry,/Manager PIN/);assert.match(entry,/Choose your name, then enter the manager PIN/);assert.match(entry,/This browser will remember your access/);assert.match(entry,/approved-name/);assert.match(entry,/read-only viewer/i);assert.match(entry,/custodial-leadership-enrollment\.mjs/);
 assert.doesNotMatch(entry+enrollment,/map-password|map-login-form|manager-codes\/consume|personal enrollment code|48-hour/i);
-assert.match(enrollment,/request\('\/challenge',\{pin:value\}\)/);assert.match(enrollment,/request\('\/enroll',\{accountId\}\)/);assert.match(enrollment,/X-CSRF-Token/);assert.match(enrollment,/SELF_ASSERTED_NAME/);assert.match(enrollment,/mutationHeld/);
-for(const text of ['OPERATIONS LEADERSHIP ACCESS','This browser’s enrollment','Claimed name','Browser registration','Remove enrollment from this browser','Verified contact'])assert.ok(access.includes(text));
-assert.match(access,/custodial-leadership-api\/session/);assert.match(access,/clearSession\(\)/);assert.match(access,/verifiedAt/);
+assert.match(enrollment,/request\('\/challenge',\{pin:value\}\)/);assert.match(enrollment,/request\('\/enroll',\{accountId:matches\[0\]\.accountId\}\)/);assert.match(enrollment,/matches\.length!==1/);assert.match(enrollment,/X-CSRF-Token/);assert.match(enrollment,/SELF_ASSERTED_NAME/);assert.match(enrollment,/mutationHeld/);
+assert.match(access,/Open Operations Hub/);assert.match(access,/new URL\('\.\/start_page1\.html'/);assert.match(access,/window\.location\.replace\(target\.toString\(\)\)/);
+assert.doesNotMatch(access,/custodial-leadership-api|clearSession|revoke|enrollment-code/i);
 assert.doesNotMatch(access,/Generate Personal Code|data-code-manager|managers\/.*enrollment-code|one_time_code|QRCode|ops_pairing_token/);
 assert.doesNotMatch(access,/type="password"|localStorage\.[gs]etItem\([^)]*(passcode|manager)/i);
 assert.match(hub,/ops-hub\.js/);assert.match(hubController,/Named manager enrollment required/);assert.match(hubController,/ops-manager-hub\.html/);

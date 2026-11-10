@@ -61,7 +61,8 @@ jobs:
               && grep -Fq 'Named manager enrollment required' <<<"$hub_client" \
               && grep -Fq 'Operational Insights' <<<"$hub" \
               && grep -Fq 'operational-insights.js' <<<"$insights" \
-              && grep -Fq 'This browser’s enrollment' <<<"$access" \
+              && grep -Fq 'Open Operations Hub' <<<"$access" \
+              && grep -Fq 'window.location.replace(target.toString())' <<<"$access" \
               && grep -Fq 'Custodial Operations Center' <<<"$viewer" \
               && grep -Fq 'id="chatscope-root"' <<<"$messenger" \
               && grep -Fq 'chatscope-messenger.js' <<<"$messenger" \
@@ -82,8 +83,10 @@ jobs:
           done
 
           grep -Fq 'custodial-leadership-enrollment.mjs' <<<"$entry"
-          grep -Fq 'Leadership PIN' <<<"$entry"
-          grep -Fq 'Remember this browser' <<<"$entry"
+          grep -Fq 'Manager PIN' <<<"$entry"
+          grep -Fq 'Choose your name, then enter the manager PIN.' <<<"$entry"
+          grep -Fq 'This browser will remember your access.' <<<"$entry"
+          grep -Fq 'id="approved-name"' <<<"$entry"
           grep -Fq '/custodial-leadership-api' <<<"$auth"
           grep -Fq 'SELF_ASSERTED_NAME' <<<"$enrollment"
           grep -Fq "request('/challenge'" <<<"$enrollment"
@@ -94,9 +97,10 @@ jobs:
           grep -Fq 'Operational Insights' <<<"$hub"
           grep -Fq 'operational-insights.js' <<<"$insights"
           ! grep -Fq 'messages-chatscope.html' <<<"$hub"
-          grep -Fq 'OPERATIONS LEADERSHIP ACCESS' <<<"$access"
-          grep -Fq 'This browser’s enrollment' <<<"$access"
-          grep -Fq 'Remove enrollment from this browser' <<<"$access"
+          grep -Fq 'Open Operations Hub' <<<"$access"
+          grep -Fq "new URL('./start_page1.html'" <<<"$access"
+          grep -Fq 'window.location.replace(target.toString())' <<<"$access"
+          ! grep -Eq 'custodial-leadership-api|clearSession|revoke|enrollment-code' <<<"$access"
           ! grep -Eq 'shared 48-hour|shared enrollment|Generate New 48-Hour Passcode|ops/shared-enrollment|ops/pairing/consume|ops/pairing-links' <<<"$auth$hub$hub_client$entry$access"
           grep -Fq 'Custodial Operations Center' <<<"$viewer"
           grep -Fq 'id="chatscope-root"' <<<"$messenger"

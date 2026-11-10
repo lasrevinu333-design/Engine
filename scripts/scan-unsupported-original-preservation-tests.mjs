@@ -104,3 +104,82 @@ for(const version of [5,6])for(const kind of ['legacy','future','opaque','curren
  else{assert.equal(selected.operation_id,operation);assert.equal(selected.type,'finish_session');}
  console.log('PASS historical interrupted backup',version,kind,stage);
 }
+
+// Capture is a historical snapshot. A later wall clock or local-session view
+// cannot be used to reconstruct it, and a captured success is not replay proof.
+for(const writer of ['v63','current'])for(const version of [5,6])for(const change of ['clock','session-removed','session-changed','unsupported-neighbor'])for(const stage of ['backup-verified','primary-deleted','fenced-v4-written']){
+ const original={id:1,schema_version:4,type:'finish_session',operation_id:operation,
+  payload:{p_device_id:'KIOSK_08',p_session_uuid:session,saved_answer:'ORIGINAL-ANSWER'}};
+ if(change!=='clock')original.created_at=1700000000000;
+ const model=memoryIndexedDb(version,original),ctx={assertCurrent(){}},old=fixtureContext(model,[],null,writer==='v63'?previousSource:source);
+ const historicalSession={session_uuid:session,offline_authority_employee_id:'ORIGINAL-EMPLOYEE',offline_authority_assignment_epoch:7,offline_authority_snapshot_id:'ORIGINAL-SNAPSHOT'};
+ old.now=()=>1700000000000;old.exactSessionForPayload=()=>historicalSession;
+ const opaque={id:2,schema_version:99,type:'finish_session',operation_id:'opaque-original',payload:{saved_answer:'HELD-ANSWER'}};
+ if(change==='unsupported-neighbor')model.records.get('mz_scan_queue').stores.get('actions').rows.set(2,clone(opaque));
+ const stop=Error('captured '+stage);old.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point===stage)throw stop;};
+ await assert.rejects(old.openDb(ctx),e=>e===stop);
+ const current=fixtureContext(model);current.now=()=>1700000060000;
+ current.exactSessionForPayload=()=>change==='session-removed'?null:{...historicalSession,offline_authority_employee_id:'SUCCESSOR-EMPLOYEE',offline_authority_assignment_epoch:8};
+ await current.openDb(ctx);
+ const rows=[...model.records.get('mz_scan_queue').stores.get('actions').rows.values()],healthy=rows.find(row=>row.id===1);
+ assert.equal(model.records.get('mz_scan_queue').version,4);assert(!model.records.has('mz_scan_queue_v6_to_v4_backup'));
+ assert.equal(healthy.created_at,1700000000000);assert.equal(healthy.replay_binding.employee_id,'ORIGINAL-EMPLOYEE');
+ assert.equal(healthy.replay_binding.assignment_epoch,7);assert.equal(healthy.payload.saved_answer,'ORIGINAL-ANSWER');
+ assert.equal(current.nextClaimableAction(rows).operation_id,operation);
+ if(change==='unsupported-neighbor')assert.deepEqual(rows.find(row=>row.id===2).preserved_original_record,opaque);
+ console.log('PASS captured backup survives ambient change',writer,version,change,stage);
+}
+
+for(const stage of ['backup-verified','primary-deleted','fenced-v4-written']){
+ const original={id:1,schema_version:4,type:'commit_workflow',operation_id:operation,created_at:1700000000000,
+  payload:{p_device_id:'KIOSK_08',p_session_uuid:session,p_client_completion_id:operation,saved_answer:'RETAIN-WITHOUT-PROOF'}};
+ const model=memoryIndexedDb(5,original),ctx={assertCurrent(){}},writer=fixtureContext(model);
+ writer.exactSessionForPayload=()=>({session_uuid:session,context_id:'CAPTURED-CONTEXT',submission_proof:'CAPTURED-PROOF'});
+ const stop=Error('captured '+stage);writer.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point===stage)throw stop;};
+ await assert.rejects(writer.openDb(ctx),e=>e===stop);
+ const current=fixtureContext(model);await current.openDb(ctx);
+ const rows=[...model.records.get('mz_scan_queue').stores.get('actions').rows.values()];
+ assert.equal(current.nextClaimableAction(rows),null);assert.deepEqual(rows[0].preserved_original_record,original);
+ assert.equal(rows[0].recoverable,false);assert(!model.records.has('mz_scan_queue_v6_to_v4_backup'));
+ console.log('PASS captured eligibility never replaces current proof',stage);
+}
+
+for(const stage of ['backup-verified','primary-deleted','fenced-v4-written']){
+ const original={id:1,schema_version:4,type:'commit_workflow',operation_id:operation,created_at:1700000000000,
+  payload:{p_device_id:'KIOSK_08',p_session_uuid:session,p_client_completion_id:operation,saved_answer:'HELD-UNTIL-PROOF'}};
+ const model=memoryIndexedDb(5,original),ctx={assertCurrent(){}},writer=fixtureContext(model),stop=Error('held '+stage);
+ writer.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point===stage)throw stop;};
+ await assert.rejects(writer.openDb(ctx),e=>e===stop);
+ const current=fixtureContext(model);
+ current.exactSessionForPayload=()=>({session_uuid:session,context_id:'AVAILABLE-CONTEXT',submission_proof:'AVAILABLE-PROOF',offline_authority_employee_id:'ORIGINAL-EMPLOYEE'});
+ const backup=await current.readDowngradeBackup(ctx),restored=current.fencedDowngradeRows(backup.rows,backup.capturedRows);
+ assert.equal(restored[0].replay_binding.context_id,'AVAILABLE-CONTEXT');
+ assert.equal(restored[0].replay_binding.employee_id,'ORIGINAL-EMPLOYEE');
+ await current.openDb(ctx);
+ const rows=[...model.records.get('mz_scan_queue').stores.get('actions').rows.values()];
+ assert.equal(current.nextClaimableAction(rows).operation_id,operation);
+ assert.equal(rows[0].payload.saved_answer,'HELD-UNTIL-PROOF');
+ assert(!model.records.has('mz_scan_queue_v6_to_v4_backup'));
+ console.log('PASS held capture does not erase newly verified raw-row binding',stage);
+}
+
+for(const corrupt of ['captured-payload','captured-clock','captured-binding','duplicate-id','raw-original','primary-changed']){
+ const original={id:1,schema_version:4,type:'finish_session',operation_id:operation,created_at:1700000000000,
+  replay_binding:{employee_id:'PINNED-EMPLOYEE'},payload:{p_device_id:'KIOSK_08',p_session_uuid:session,saved_answer:'KEEP'}};
+ const model=memoryIndexedDb(5,original),ctx={assertCurrent(){}},writer=fixtureContext(model,[],null,previousSource),stop=Error('capture');
+ writer.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point==='fenced-v4-written')throw stop;};
+ await assert.rejects(writer.openDb(ctx),e=>e===stop);
+ const backup=model.records.get('mz_scan_queue_v6_to_v4_backup'),metadata=backup.stores.get('metadata').rows.get('capture'),captured=JSON.parse(metadata.canonical_fenced_rows);
+ if(corrupt==='captured-payload')captured[0].payload.saved_answer='CHANGED';
+ if(corrupt==='captured-clock')captured[0].created_at=null;
+ if(corrupt==='captured-binding')captured[0].replay_binding.employee_id='DIFFERENT';
+ if(corrupt==='duplicate-id')captured.push(clone(captured[0]));
+ if(corrupt==='raw-original')backup.stores.get('actions').rows.get(1).payload.saved_answer='CHANGED';
+ if(corrupt==='primary-changed')model.records.get('mz_scan_queue').stores.get('actions').rows.get(1).payload.saved_answer='CHANGED';
+ metadata.canonical_fenced_rows=writer.canonicalRows(captured);
+ const before=clone([...model.records.get('mz_scan_queue').stores.get('actions').rows.values()]);
+ await assert.rejects(fixtureContext(model).openDb(ctx));
+ assert(model.records.has('mz_scan_queue_v6_to_v4_backup'));
+ assert.deepEqual([...model.records.get('mz_scan_queue').stores.get('actions').rows.values()],before);
+ console.log('PASS malformed or changed backup remains held',corrupt);
+}

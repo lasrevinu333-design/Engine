@@ -1281,7 +1281,7 @@
 
   // Historical v63 checksum representation only. Never enqueue or restore this
   // lossy view: raw originals are always reclassified by fencedDowngradeRows.
-  function historicalBackupNormalizeRecord(action = {}) {
+  function historicalBackupNormalizeRecord(action = {}, captured = null) {
     const operationId = operationIdFor(action);
     const logicalIdentity = logicalIdentityFor(action, operationId);
     const semanticFingerprint = semanticFingerprintFor(action);
@@ -1300,7 +1300,7 @@
       logical_key: safeText(action.logical_key) || (safeText(action.type) === 'commit_workflow' && semanticFingerprint
         ? `${safeText(action.type)}:${logicalIdentity}:${semanticFingerprint}`
         : `${safeText(action.type)}:${logicalIdentity}`),
-      created_at: Number(action.created_at || now()),
+      created_at: Number(action.created_at || captured?.created_at || now()),
       retry_count: Number(action.retry_count || 0),
       last_error: action.last_error || null,
       last_attempt_at: action.last_attempt_at || null,
@@ -1317,7 +1317,7 @@
     };
   }
 
-  function historicalBackupStorageRecord(action = {}) {
+  function historicalBackupStorageRecord(action = {}, captured = null) {
     const rawForwardFence = action.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION
       && safeText(action.type).startsWith('forward-replay-fenced:');
     const current = historicalBackupNormalizeRecord({
@@ -1326,10 +1326,10 @@
       forward_action_type: rawForwardFence ? action.forward_action_type : undefined,
       current_dead_letter: rawForwardFence ? action.current_dead_letter : undefined,
       dead_letter: rawForwardFence ? action.current_dead_letter === true : action.dead_letter === true,
-    });
+    }, captured);
     return {
       ...current,
-      replay_binding: replayBindingFor(current),
+      replay_binding: captured ? captured.replay_binding : replayBindingFor(current),
       forward_replay_contract: CONFIG.REQUIRED_SCAN_CONTRACT_VERSION,
       current_dead_letter: current.dead_letter === true,
       // Build 22 understands dead_letter but not the v6 authority contract. It
@@ -1340,14 +1340,56 @@
     };
   }
 
-  function historicalBackupFencedRows(rows) {
-    return rows.map(row=>historicalBackupStorageRecord(historicalBackupNormalizeRecord(row)));
+  function fencedDowngradeRows(rows = [], capturedRows = []) {
+    // Classify ORIGINAL bytes before the normalization that stamps schema 6.
+    // Backup-time bindings remain comparison data, never replay admission. In
+    // particular, disappearance of a local proof can still quarantine a row.
+    const captured = new Map(capturedRows.map(row=>[row.id,row]));
+    return rows.map((row) => {
+      const opened=openingRecord(row,false), stored=storageRecord(opened), prior=captured.get(row.id);
+      if(!prior||opened.recoverable===false||!prior.replay_binding)return stored;
+      return {...stored,created_at:Number(row.created_at||prior.created_at),replay_binding:prior.replay_binding};
+    });
   }
 
-  function fencedDowngradeRows(rows = []) {
-    // Classify ORIGINAL bytes before the normalization that stamps schema 6.
-    // Deterministic conversion is also used to verify the durable backup.
-    return rows.map((row) => storageRecord(openingRecord(row,false)));
+  function confirmedBackupCapture(rows, encoded) {
+    let captured;
+    try{captured=JSON.parse(encoded);}catch{return null;}
+    if(!Array.isArray(captured)||captured.length!==rows.length||canonicalRows(captured)!==encoded)return null;
+    const byId=new Map();
+    for(const row of captured){
+      if(!row||typeof row!=='object'||Array.isArray(row)||!Number.isSafeInteger(row.id)||byId.has(row.id))return null;
+      byId.set(row.id,row);
+    }
+    const bindingKeys=['client_session_id','client_completion_id','occurrence_id','context_id','snapshot_id','employee_id','assignment_epoch'];
+    for(const raw of rows){
+      const snapshot=byId.get(raw.id);if(!snapshot)return null;
+      // Held originals are exact structured preservation, not normalized rows.
+      const declared=Number(raw.schema_version||0),legacy=declared>=1&&declared<=4?declared:(declared===0?4:0);
+      const held=raw.recoverable===false?storageRecord(raw):storageRecord(legacy
+        ?legacyMigrationFailure(raw,legacy,'the record lacks exact v6 identity or authority fields')
+        :legacyMigrationFailure(raw,declared,'the record lacks a supported schema and exact operation identity'));
+      if(canonicalRows([snapshot])===canonicalRows([held]))continue;
+      const binding=snapshot.replay_binding,supplied=raw.replay_binding||{};
+      if(!binding||typeof binding!=='object'||Array.isArray(binding)||Object.keys(binding).length!==bindingKeys.length
+        ||!bindingKeys.every(key=>Object.hasOwn(binding,key))||!Number.isFinite(snapshot.created_at)||snapshot.created_at<=0
+        ||bindingKeys.slice(0,-1).some(key=>typeof binding[key]!=='string'||safeText(binding[key])!==binding[key]
+          ||safeText(supplied[key])&&binding[key]!==safeText(supplied[key]))
+        ||binding.assignment_epoch!==null&&!Number.isFinite(binding.assignment_epoch)
+        ||supplied.assignment_epoch!=null&&binding.assignment_epoch!==Number(supplied.assignment_epoch))return null;
+      const normalized=historicalBackupNormalizeRecord(raw,snapshot);
+      const options=[historicalBackupStorageRecord(normalized,snapshot)];
+      if(raw.recoverable!==false&&legacy){
+        const payload=raw.payload&&typeof raw.payload==='object'?raw.payload:{};
+        const exactId=safeText(raw.operation_id||raw.client_id||payload.p_client_completion_id||payload.p_client_event_id||payload.p_operation_id);
+        if(isUuid(exactId))options.push(historicalBackupStorageRecord({...historicalBackupNormalizeRecord({...raw,operation_id:exactId},snapshot),source_schema_version:legacy,recoverable:true},snapshot));
+      }
+      // This checks only a known writer's stored representation. Current
+      // migration eligibility is deliberately checked again from raw originals
+      // by fencedDowngradeRows; a captured success flag grants no authority.
+      if(!options.some(option=>canonicalRows([option])===canonicalRows([snapshot])))return null;
+    }
+    return captured;
   }
 
   function downgradeTransition(point) {
@@ -1566,11 +1608,9 @@
         || typeof metadata.canonical_rows !== 'string' || canonicalRows(result.rows) !== metadata.canonical_rows
         || typeof metadata.canonical_fenced_rows !== 'string')
         throw storageFailure('queue downgrade backup', new Error('Unconfirmed backup originals are retained.'));
-      const current = canonicalRows(fencedDowngradeRows(result.rows));
-      const representation = current === metadata.canonical_fenced_rows ? 'current'
-        : canonicalRows(historicalBackupFencedRows(result.rows)) === metadata.canonical_fenced_rows ? 'historical-v63' : null;
-      if (!representation) throw storageFailure('queue downgrade backup', new Error('Unconfirmed backup representation is retained.'));
-      return { ...metadata, rows: result.rows, representation };
+      const capturedRows=confirmedBackupCapture(result.rows,metadata.canonical_fenced_rows);
+      if (!capturedRows) throw storageFailure('queue downgrade backup', new Error('Unconfirmed backup representation is retained.'));
+      return { ...metadata, rows: result.rows, capturedRows };
     } finally { db.close(); }
   }
 
@@ -1614,10 +1654,9 @@
     const retained = await readDowngradeBackup(context);
     if (!retained || retained.source_version !== backup.source_version || retained.canonical_rows !== backup.canonical_rows
       || retained.canonical_fenced_rows !== backup.canonical_fenced_rows || !queueOpeningRowsMatch(retained.rows, backup.rows)) throw storageFailure('queue downgrade restore', new Error('Original backup changed; retained without restore.'));
-    const fencedRows = fencedDowngradeRows(backup.rows);
+    const fencedRows = fencedDowngradeRows(backup.rows,backup.capturedRows);
     const expectedFenced = canonicalRows(fencedRows);
-    const historicalRows = backup.representation === 'historical-v63'
-      ? new Map(historicalBackupFencedRows(backup.rows).map(row=>[row.id,row])) : new Map();
+    const historicalRows = new Map(backup.capturedRows.map(row=>[row.id,row]));
     const existing = await openExistingDatabase(CONFIG.DB_NAME);
     let restored = null;
     try {

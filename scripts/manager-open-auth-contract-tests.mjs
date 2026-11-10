@@ -27,7 +27,7 @@ assert.doesNotMatch(auth,/Ops Manager password|Manager password|promptForOneTime
 assert.doesNotMatch(auth,/READ_ONLY_MANAGER_ENTRY|ops-manager-read-only\.html/);
 assert.doesNotMatch(auth,/localStorage\.[gs]etItem\([^)]*(passcode|manager.*token)/i);
 
-assert.match(entry,/type="password".*inputmode="numeric"/);assert.match(entry,/Leadership PIN/);assert.match(entry,/custodial-leadership-enrollment\.mjs/);
+assert.match(entry,/type="password".*inputmode="numeric"/);assert.match(entry,/Manager PIN/);assert.match(entry,/Choose your name, then enter the manager PIN/);assert.match(entry,/This browser will remember your access/);assert.match(entry,/custodial-leadership-enrollment\.mjs/);
 assert.doesNotMatch(entry,/map-password|manager-codes\/consume|personal enrollment code/i);assert.match(entry,/read-only viewer/i);
 
 assert.match(hub,/Memphis Zoo Ops/);
@@ -85,7 +85,9 @@ assert.match(viewer,/read-only/i);
 assert.doesNotMatch(viewer,/Messenger|Moxie|Scheduler|Device Security|Manager Access/i);
 
 assert.match(liveWorkflow,/Custodial Leadership Published Asset Verification/);
-assert.match(liveWorkflow,/custodial-leadership-enrollment\.mjs/);assert.match(liveWorkflow,/Leadership PIN/);assert.match(liveWorkflow,/SELF_ASSERTED_NAME/);
+assert.match(liveWorkflow,/custodial-leadership-enrollment\.mjs/);assert.match(liveWorkflow,/Manager PIN/);assert.match(liveWorkflow,/SELF_ASSERTED_NAME/);
+assert.match(liveWorkflow,/Open Operations Hub/);assert.match(liveWorkflow,/window\.location\.replace\(target\.toString\(\)\)/);
+assert.doesNotMatch(liveWorkflow,/This browser’s enrollment|OPERATIONS LEADERSHIP ACCESS|Remove enrollment from this browser/);
 assert.match(liveWorkflow,/ops-manager-auth\.v6\.http-only-boundary/);
 assert.match(liveWorkflow,/! grep -Fq 'messenger-runtime-patch\.js'/);
 assert.match(liveWorkflow,/grep -Fq 'employeeDeviceAuthority'/);
