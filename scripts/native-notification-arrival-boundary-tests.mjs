@@ -70,7 +70,7 @@ function assertNotificationOwnerContext(context,actualOwnerSource) {
   // This finite version-bound context contract is not a generic identifier parser.
   // Any owner-source change refuses before evaluation and requires its bindings
   // to be reviewed; missing current context names are reported directly.
-  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'3343031c5c1e4ba8c78b1efb031b14d03ec7c30c0b7688d3a8604c623e86271f','Frozen notification owner changed; review the exact current import/closure dependencies');
+  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'e167f859ff48b431199fdf47b70e0815b673e68e1c56819f432768f792fa068c','Frozen notification owner changed; review the exact current import/closure dependencies');
   for(const name of notificationOwnerContextNames)
     assert.ok(Object.hasOwn(context,name)&&context[name]!==undefined,'Missing notification owner context: '+name);
   assert.equal(context.nativeApplicationSource,null,'Fixture selects only the real existing null-default application-source route');

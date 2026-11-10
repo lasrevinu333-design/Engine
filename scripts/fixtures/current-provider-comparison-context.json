@@ -1078,7 +1078,7 @@
     {
       "path": "scripts/native-notification-arrival-boundary-tests.mjs",
       "bytes": 65190,
-      "sha256": "ce1455e0e6b93e85e9ad4f4dc8ae25212d03f99c71b9b7245a8c7345b0e4acd2"
+      "sha256": "522b7e3e15aa51141e5fe62f0aa8e913304b056dbd9b5c05944d876d55f7afc7"
     },
     {
       "path": "mobile/src/custodial/native-security.js",
@@ -1489,9 +1489,9 @@
     {
       "name": "native-notification-arrival-boundary-tests.mjs",
       "current_path": "scripts/native-notification-arrival-boundary-tests.mjs",
-      "current_sha256": "ce1455e0e6b93e85e9ad4f4dc8ae25212d03f99c71b9b7245a8c7345b0e4acd2",
+      "current_sha256": "522b7e3e15aa51141e5fe62f0aa8e913304b056dbd9b5c05944d876d55f7afc7",
       "comparison_input_sha256": [
-        "ce1455e0e6b93e85e9ad4f4dc8ae25212d03f99c71b9b7245a8c7345b0e4acd2"
+        "522b7e3e15aa51141e5fe62f0aa8e913304b056dbd9b5c05944d876d55f7afc7"
       ],
       "comparison_path": "scripts/fixtures/historical-provider-comparison/native-notification-arrival-boundary-tests.mjs",
       "comparison_sha256": "20cb1d753f65768955884b4b6ecfe9a1ee01dae5a824dc287924abd551f00933",
