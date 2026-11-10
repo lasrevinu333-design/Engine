@@ -49,7 +49,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
   function clearManagerView(){
     for(const link of managerLinks){link.hidden=true;link.removeAttribute('href');link.setAttribute('aria-disabled','true');}
     els.managerName.textContent='';els.managerTitle.textContent='';
-    els.accessMode.textContent='Named manager access must be verified';els.accessMode.className='accessMode';
+    els.accessMode.textContent='Restoring manager access…';els.accessMode.className='accessMode';
   }
   function retire({persisted=false}={}){
     if(state.retired)return;
@@ -207,8 +207,11 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
     if(!current(generation))return;
     const returnPath=new URLSearchParams(window.location.search).get('return');
     if(returnPath){try{const resolved=new URL(returnPath,window.location.href);if(resolved.origin===window.location.origin&&!resolved.pathname.includes('..')){window.location.replace(resolved.toString());return;}}catch{}}
-    const name=session.manager_display_name||'Operations Leadership';const title=session.manager_job_title||'';
-    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${window.MemphisAuth.isCustodialManagementAdmin?.(session)?"Leadership management · self-asserted name":session.permissions?.owner===true?"Owner · full control":"Read-only · absence routes, CoverAll and scan tickets"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
+    const leadership=window.MemphisAuth.isCustodialManagementAdmin?.(session);
+    const selectedName=leadership?session.claimed_manager_display_name:session.manager_display_name;
+    const fullNames={Haley:'Haley Lejman',Jennifer:'Jennifer Sheffield',Annie:'Annie Feist'};
+    const name=fullNames[selectedName]||selectedName||'Custodial management';const title=session.manager_job_title||'';
+    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${leadership?"Manager access":session.permissions?.owner===true?"Owner · full control":"Read-only"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
     updateLinks();applyRoleVisibility(session);setStatus('Access current.','ok');
     await Promise.allSettled([weather.start(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
     if(!current(generation))return;

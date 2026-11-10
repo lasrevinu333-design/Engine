@@ -277,6 +277,18 @@ test('OPS_HUB_BINDING_NEW owner and read-only current sessions preserve existing
   f.emit('pagehide');assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
  }
 });
+test('OPS_HUB_BINDING_NEW selected manager name is presentation only and preserves cohort authority',async()=>{
+ const f=await managerHomeFixture({configure:f=>{
+  f.auth.isCustodialManagementAdmin=s=>s===f.session();
+  Object.assign(f.session(),{manager_display_name:'Custodial leadership cohort',claimed_manager_display_name:'Haley',read_only:false,access_level:'full_access'});
+ }});
+ const principal=f.session().manager_id;
+ assert.equal(f.node('manager-name').textContent,'Haley Lejman');
+ assert.equal(f.node('access-mode').textContent,'Manager access · Haley Lejman');
+ assert.equal(f.session().manager_display_name,'Custodial leadership cohort');
+ assert.equal(f.session().manager_id,principal);assert.equal(f.session().permissions.owner,false);
+ f.emit('pagehide');assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
+});
 test('OPS_HUB_BINDING_NEW changed identity in feature body await cannot reactivate privileged link',async()=>{
  const body=homeDeferred();
  const f=await managerHomeFixture({configure:f=>{f.fetchOverride=url=>url.includes('guest-api')
