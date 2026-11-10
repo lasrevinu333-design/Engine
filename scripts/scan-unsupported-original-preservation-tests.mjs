@@ -208,6 +208,31 @@ for(const writerKind of ['v63','current'])for(const version of [5,6])for(const s
  console.log('PASS repeated recovery proof and clock matrix',writerKind,version,scenario);
 }
 
+for(const version of [4,5,6])for(const kind of ['future','legacy-held','already-held'])for(const stage of version===4?['none']:['none','backup-verified','primary-deleted','fenced-v4-written']){
+ const original={id:1,schema_version:kind==='future'?99:4,type:kind==='future'?'future-opaque':'commit_workflow',operation_id:operation,
+  extra:undefined,payload:{p_device_id:'KIOSK_08',p_session_uuid:session,p_client_completion_id:operation,saved_answer:'EXACT-ORIGINAL',
+   optional:undefined,nonfinite:Infinity,nan:NaN,negativeZero:-0,sparse:[,undefined,null]}};
+ if(kind==='already-held')original.recoverable=false;
+ const model=memoryIndexedDb(version,original),ctx={assertCurrent(){}},first=fixtureContext(model);
+ if(stage==='none')await first.openDb(ctx);
+ else{
+  const stop=Error('capture '+stage);first.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point===stage)throw stop;};
+  await assert.rejects(first.openDb(ctx),e=>e===stop);
+ }
+ const current=fixtureContext(model);await current.openDb(ctx);await current.openDb(ctx);
+ const rows=[...model.records.get('mz_scan_queue').stores.get('actions').rows.values()];
+ assert.equal(current.nextClaimableAction(rows),null);assert.equal(rows[0].recoverable,false);
+ assert.deepEqual(rows[0].preserved_original_record,original);
+ assert.equal(Object.hasOwn(rows[0].preserved_original_record,'extra'),true);
+ assert.equal(Object.hasOwn(rows[0].preserved_original_record.payload,'optional'),true);
+ assert.equal(rows[0].preserved_original_record.payload.nonfinite,Infinity);
+ assert(Number.isNaN(rows[0].preserved_original_record.payload.nan));
+ assert(Object.is(rows[0].preserved_original_record.payload.negativeZero,-0));
+ assert.equal(Object.hasOwn(rows[0].preserved_original_record.payload.sparse,0),false);
+ assert(!model.records.has('mz_scan_queue_v6_to_v4_backup'));
+ console.log('PASS held raw structured values survive capture and restart',version,kind,stage);
+}
+
 for(const corrupt of ['recovered-binding','recovered-clock','recovered-schema']){
  const original={id:1,schema_version:4,type:'commit_workflow',operation_id:operation,created_at:1700000000000,
   payload:{p_device_id:'KIOSK_08',p_session_uuid:session,p_client_completion_id:operation,saved_answer:'KEEP'}};

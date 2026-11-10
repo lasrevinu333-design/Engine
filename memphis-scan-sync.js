@@ -1349,7 +1349,7 @@
       const opened=openingRecord(row,false), stored=storageRecord(opened), prior=captured.get(row.id);
       // A verified held capture is already a durable quarantine decision.
       // Match ordinary openingRecord: later ambient proof never revives it.
-      if(prior?.recoverable===false)return prior;
+      if(prior?.recoverable===false)return heldDowngradeRecord(row);
       if(!prior||opened.recoverable===false||!prior.replay_binding)return stored;
       return {...stored,created_at:Number(row.created_at||prior.created_at),replay_binding:prior.replay_binding};
     });
