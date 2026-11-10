@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 const sha=value=>createHash('sha256').update(value).digest('hex');
-const PROFILE_SHA='eae28402d2e4d9f05db26f6f0297072140853f5e3e5eab54e930dc493cdf5492';
+const PROFILE_SHA='d69b29b9fe7e473af283309d25c277a2f365547ae4fbef85cbe19868ac85e8fe';
 export function validateApprovedPreservationComparisonPins(value){
  assert.equal(sha(JSON.stringify(value)),PROFILE_SHA,'Exact new approved-preservation comparison profile; historical pin tables remain unchanged');
  assert.equal(value.schema,'custodial.approved-local-preservation-source-comparison.v1');

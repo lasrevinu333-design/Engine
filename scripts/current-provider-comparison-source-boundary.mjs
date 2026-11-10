@@ -7,7 +7,7 @@ import {approvedPreservationComparisonPins} from './current-approved-preservatio
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const sha=value=>createHash('sha256').update(value).digest('hex');
 export function validateCurrentProviderComparisonContext(value){
- assert.equal(sha(JSON.stringify(value)),'8250c37a781d6f9caa1dc9175129204734ba85863b1e63c2c9af3b741eaca67c','Exact current-bound historical comparison context; original fixtures stay unchanged');
+ assert.equal(sha(JSON.stringify(value)),'157c5f8196c0c716092968a5450471f4a49d3e4554ecd27f155aa6345328de33','Exact current-bound historical comparison context; original fixtures stay unchanged');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
  assert.equal(sha(JSON.stringify(approvedPreservationComparisonPins.current_java_inventory)),value.current_inventory_sha256);
  return value;
@@ -39,7 +39,7 @@ export function assertBoundCurrentProviderSource(name,source){
  return source;
 }
 // Source comparison only. The shipping app never imports this module. A full
-// current input and the complete 192-file current inventory are checked before
+// current input and the complete 193-file current inventory are checked before
 // a genuine historical comparison view is supplied. Unknown bytes pass through
 // to the unchanged older strict guard; this is not a blanket section omission.
 export function normalizeBoundProviderComparison(name,source){

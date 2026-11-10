@@ -95,4 +95,21 @@ for(const changed of [null,{week_start:'2026-09-28',week_end:'2026-10-04',author
  await f.run('requestScheduleRefresh()');check(f.calls.length,0,'automatic read never acknowledges accepted original');
  await f.run('refreshSnapshot()');check(f.run('acks'),1,'explicit current read still acknowledges through current actions');check(f.run('state.pending.encoded'),'EXACT','automatic work did not replace original bytes');await f.cleanup();
 }
+
+// Actual API owner must grant the larger HTTP wait only to initial confirmation.
+for(const [path,method,wanted] of [['/static-weekly/manual-activation/confirm','POST',125000],
+ ['/static-weekly/manual-activation/preview','POST',60000],['/static-weekly/approved-initial/confirm','POST',60000],
+ ['/static-weekly/manual-activation/confirm','GET',60000],['/static-weekly/manual-activation/confirm-extra','GET',60000]]){
+ const f=fixture(),timeouts=[];f.context.AbortSignal={timeout:ms=>{timeouts.push(ms);return new AbortController().signal;}};
+ f.context.fetch=async()=>({ok:true,status:200,json:async()=>({ok:true,data:{observed:true}})});
+ await f.run(`api(${JSON.stringify(path)},{method:${JSON.stringify(method)},body:'{}'})`);
+ check(timeouts,[wanted],'exact initial-confirm HTTP timeout '+method+' '+path);await f.cleanup();
+}
+{
+ const f=fixture(),controller=new AbortController();f.context.originalSignal=controller.signal;
+ f.context.AbortSignal={timeout:()=>{throw Error('Explicit caller cancellation must be preserved');}};
+ let captured;f.context.fetch=async(url,options)=>{captured=options.signal;return {ok:true,status:200,json:async()=>({ok:true,data:{observed:true}})};};
+ await f.run("api('/static-weekly/manual-activation/confirm',{method:'POST',body:'{}',signal:originalSignal})");
+ check(captured,controller.signal,'existing caller signal is never replaced');await f.cleanup();
+}
 console.log(JSON.stringify({status:'PASS_MANAGER_REFRESH_CURRENT_SOURCE',checks,limits:'Actual current page/API/actions permissions and publication reader; synthetic DOM/auth/transport/timers. No browser, live manager, SQL, phone or numeric delivery SLA proof.'}));

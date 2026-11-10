@@ -911,9 +911,19 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 return new NativeReadinessObservation.Snapshot(captured.time,captured.principal,captured.legacy,captured.admissionBlocked,
                     () -> scanJournalReady && captured.stable.unchanged());
             });
-            resolve(call, observer.observe(call.getString("device_id"),call.getString("expected_principal_identity")));
+            Map<String,Object> observed=observer.observe(call.getString("device_id"),call.getString("expected_principal_identity"));
+            // Owner-test support only; no bridge/debug setting or protected
+            // state is changed, and only finite native fields may leave here.
+            try {
+                boolean testOnly=(getContext().getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_TEST_ONLY)!=0;
+                String diagnostic=ownerTestReadinessDiagnostic.changed(testOnly,observed);
+                if(diagnostic!=null)Log.i("CustodialReadiness",diagnostic);
+            } catch(RuntimeException unavailable) { /* Diagnostics cannot alter observation. */ }
+            resolve(call, observed);
         });
     }
+
+    private final OwnerTestReadinessDiagnostic ownerTestReadinessDiagnostic=new OwnerTestReadinessDiagnostic();
 
     @PluginMethod
     public void beginRollbackFence(PluginCall call) {

@@ -10,7 +10,7 @@ import {withoutQualifiedProviderSchema} from './qualified-provider-schema-source
 import {withoutRequiredKinds} from './provider-required-kind-source-boundary.mjs';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const f6=JSON.parse(readFileSync(new URL('./fixtures/provider-event-decisions-byte-deltas.json',import.meta.url)));
-let checks=0;assert.equal(assertCurrentProviderComparisonInventory(),192);checks++;
+let checks=0;assert.equal(assertCurrentProviderComparisonInventory(),193);checks++;
 for(const row of context.files){
  const actual=readFileSync(new URL('../'+row.current_path,import.meta.url),'utf8');
  assert.equal(assertBoundCurrentProviderSource(row.name,actual),actual);checks++;
@@ -27,4 +27,4 @@ for(const mutate of [v=>v.runtime_admission=true,v=>v.files.pop(),v=>v.files[0].
  const value=structuredClone(context);mutate(value);assert.throws(()=>validateCurrentProviderComparisonContext(value));checks++;
 }
 assert.equal(normalizeBoundProviderComparison('unrelated.java','unknown'),'unknown');checks++;
-console.log(JSON.stringify({status:'CURRENT_BOUND_HISTORICAL_PROVIDER_COMPARISON_PASS',checks,current_java_files:192,current_test_java_files:context.current_test_java_inventory.length,historical_files:context.files.length,historical_pins_rewritten:false,runtime_admission:false,release_admission:false,hardware_acceptance:false}));
+console.log(JSON.stringify({status:'CURRENT_BOUND_HISTORICAL_PROVIDER_COMPARISON_PASS',checks,current_java_files:193,current_test_java_files:context.current_test_java_inventory.length,historical_files:context.files.length,historical_pins_rewritten:false,runtime_admission:false,release_admission:false,hardware_acceptance:false}));

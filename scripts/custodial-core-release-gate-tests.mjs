@@ -78,19 +78,19 @@ scan-outage-retry-tests scan-outage-storage-fence-tests scan-retry-after-tests s
  notification-schedule-ownership-tests`.trim().split(/\s+/).map(name => `scripts/${name}.mjs`);
   assert.equal(expected.length, 64);
   const mapSuites=['dashboard-map-staging-tests','dashboard-map-renderer-tests','dashboard-map-page-contract-tests'].map(name=>`scripts/${name}.mjs`);
-  const repairSuites=['scripts/feedback-credential-restart-tests.mjs', 'scripts/scan-unsupported-original-preservation-tests.mjs', 'scripts/scan-deferred-protected-write-tests.mjs', 'scripts/removal-resume-witness-tests.mjs', 'scripts/shared-events-view-tests.mjs', 'scripts/manager-home-bfcache-tests.mjs', 'scripts/public-dashboard-view-tests.mjs', 'scripts/manager-name-first-login-tests.mjs', 'scripts/server-revalidation-principal-enrichment-tests.mjs'];
+  const repairSuites=['scripts/feedback-credential-restart-tests.mjs', 'scripts/scan-unsupported-original-preservation-tests.mjs', 'scripts/scan-deferred-protected-write-tests.mjs', 'scripts/removal-resume-witness-tests.mjs', 'scripts/shared-events-view-tests.mjs', 'scripts/manager-home-bfcache-tests.mjs', 'scripts/public-dashboard-view-tests.mjs', 'scripts/manager-name-first-login-tests.mjs', 'scripts/server-revalidation-principal-enrichment-tests.mjs', 'scripts/owner-test-readiness-diagnostic-tests.mjs'];
   assert.deepEqual(CORE_SUITES.filter(x=>x!=='scripts/provider-event-decision-wire-contract-tests.mjs'&&!mapSuites.includes(x)&&!repairSuites.includes(x)), expected);
   expected.splice(expected.indexOf('scripts/provider-event-decisions-contract-tests.mjs')+1,0,'scripts/provider-event-decision-wire-contract-tests.mjs');
   assert.equal(expected.length,65);
   expected.splice(expected.indexOf('scripts/operations-dashboard-tests.mjs')+1,0,...mapSuites);
-  assert.equal(expected.length,68);expected.push(...repairSuites);assert.equal(expected.length,77);assert.deepEqual(CORE_SUITES,expected);
+  assert.equal(expected.length,68);expected.push(...repairSuites);assert.equal(expected.length,78);assert.deepEqual(CORE_SUITES,expected);
   assert.equal(new Set(CORE_SUITES).size, CORE_SUITES.length);
   assert.equal(Object.isFrozen(CORE_SUITES), true);
 });
 const success = () => ({ status: 0, signal: null, stdout: '', stderr: '' });
 const silent = () => {};
 const regular = () => ({ isFile: () => true, isSymbolicLink: () => false });
-for(const name of ['dashboard-map-staging-tests','dashboard-map-renderer-tests','dashboard-map-page-contract-tests','provider-event-decision-wire-contract-tests','provider-event-decisions-contract-tests','provider-retained-schedule-contract-tests','custodial-hourly-keyboard-contract-tests','custodial-home-authenticated-restore-tests','custodial-home-ready-profile-order-tests','operations-dashboard-tests','provider-maintenance-contract-tests','provider-mirror-contract-tests','provider-mirror-renderer-tests','runtime-sanitation-source-tests','custodial-generated-runtime-sanitation-tests']){
+for(const name of ['dashboard-map-staging-tests','dashboard-map-renderer-tests','dashboard-map-page-contract-tests','provider-event-decision-wire-contract-tests','provider-event-decisions-contract-tests','provider-retained-schedule-contract-tests','custodial-hourly-keyboard-contract-tests','custodial-home-authenticated-restore-tests','custodial-home-ready-profile-order-tests','operations-dashboard-tests','provider-maintenance-contract-tests','provider-mirror-contract-tests','provider-mirror-renderer-tests','runtime-sanitation-source-tests','custodial-generated-runtime-sanitation-tests','owner-test-readiness-diagnostic-tests']){
   const suite=`scripts/${name}.mjs`;
   test(`${name} cannot be omitted from preflight`,()=>{
     assert.equal(CORE_SUITES.filter(value=>value===suite).length,1);let calls=0;
@@ -132,7 +132,7 @@ test('dispatcher invokes exact Node and complete ordered source inventory', () =
   const calls = [], messages = [];
   const result = runCoreReleaseGate({ clock: () => 0, log: message => messages.push(message),
     execute: (command, args, options) => { calls.push({ command, args, options }); return success(); } });
-  assert.equal(calls.length, 77);
+  assert.equal(calls.length, 78);
   calls.forEach((call, index) => {
     assert.equal(call.command, process.execPath);
     assert.deepEqual(call.args, [resolve(CORE_ROOT, CORE_SUITES[index])]);

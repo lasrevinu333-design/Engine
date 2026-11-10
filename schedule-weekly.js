@@ -151,7 +151,8 @@ async function api(path,options={}){
   if(approved||manual)requireSchedulerPermission('management');
   else if(!window.MemphisSchedulerActions.authorized(window.MemphisAuth,path,JSON.parse(request.body)))throw new Error('Scheduler capability changed before dispatch. The original saved request remains preserved.');
  }
- const response=await abortableScheduleRead(fetch(`${state.baseUrl}${path}`,{cache:'no-store',redirect:'error',signal:request.signal||AbortSignal.timeout(60000),...request,headers:{'Content-Type':'application/json',...auth}}),readSignal);readSignal?.throwIfAborted();
+ const timeoutMilliseconds=request.method==='POST'&&path==='/static-weekly/manual-activation/confirm'?125000:60000;
+ const response=await abortableScheduleRead(fetch(`${state.baseUrl}${path}`,{cache:'no-store',redirect:'error',signal:request.signal||AbortSignal.timeout(timeoutMilliseconds),...request,headers:{'Content-Type':'application/json',...auth}}),readSignal);readSignal?.throwIfAborted();
  if(unresolvedBinding)requireUnresolvedPreviewCurrent(unresolvedBinding);
  if(cancellationBinding)requireUnpublishedCancellationRequest(cancellationBinding);
  requirePreparationCurrent();

@@ -182,8 +182,8 @@
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java",
-      "bytes": 86536,
-      "sha256": "c7d1615c75a97575ae8da43299a943add20f4131ce110d885c8ee4225e6ee76e"
+      "bytes": 87269,
+      "sha256": "808dc8e29a0c1a0ef6ef0645697a5e40cda42498a2a588eab53c099396478001"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java",
@@ -859,6 +859,11 @@
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/OfflineAuthorityTime.java",
       "bytes": 41613,
       "sha256": "19976aebbcd1b889c1396d7e315e6e440591d0b58cb4329c82573ad12a7f7904"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/OwnerTestReadinessDiagnostic.java",
+      "bytes": 2139,
+      "sha256": "c6abfc0f29fe90dca4aa91528fe2c7ac3e4dd1d8d80b36c64b755039585d2fd5"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/PhysicalNfcTagIdentity.java",

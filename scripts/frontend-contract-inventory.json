@@ -2641,6 +2641,19 @@
       ]
     },
     {
+      "path": "scripts/owner-test-readiness-diagnostic-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current core regression; exact compiled source fixture required before invocation",
+      "invocations": [
+        {
+          "entry": "scripts/owner-test-readiness-diagnostic-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/paired-audio-registry-source-boundary.mjs",
       "role": "imported-support",
       "reason": "module imported by its owning contracts, not a standalone test"
