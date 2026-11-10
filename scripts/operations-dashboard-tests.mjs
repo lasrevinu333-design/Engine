@@ -536,7 +536,7 @@ test('unknown school departure stays planned on shared clock tick; next date rem
  const f=fixture();await loaded(f,{operations:{ok:true,data:{...payload.data,schools:{state:'current',generated_at:'2026-10-05T17:00:00Z',rows:[visit]}}}});f.triggers[2].emit('click');
  assert.match(f.text(f.content),/Departure not provided/);f.setNow(Date.parse('2026-10-05T18:00:00Z'));f.controller.tick();
  assert.match(f.text(f.content),/Synthetic school/);assert.doesNotMatch(f.text(f.content),/Daily visit history/);assert.match(f.elements['operations-board-note'].textContent,/57 identified people.*1 unclassified ticket units.*58 reported quantity/);
- f.setNow(Date.parse('2026-10-06T05:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(f.content),/Synthetic school/);assert.match(f.elements['operations-board-note'].textContent,/rollover does not confirm departure/);f.clean();
+ f.setNow(Date.parse('2026-10-06T05:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(f.content),/Synthetic school/);assert.match(f.elements['operations-board-note'].textContent,/arrival and departure unconfirmed/);f.clean();
 });
 test('request timeout uses one cancellable deadline and clears unavailable feeds',async()=>{
  const f=fixture();const requests=[];
@@ -563,13 +563,13 @@ test('PRODUCT record board separates saved pending work from the prior closed cl
   const calls=await loaded(f,{summary:recordSummary(recordRow())});f.triggers[3].emit('click');
   const pending=f.text(f.content);assert.match(pending,/Saved pending.*not accepted/i);
   assert.match(pending,/Current saved worker/);assert.match(pending,/Previous closed worker/);
-  assert.match(pending,/Prior closed cleaning record/);assert.match(pending,new RegExp(recordId(3)));
-  assert.match(pending,/original completion.*unavailable/i);assert.doesNotMatch(pending,/Receipt accepted|Queued.*completed/);
+  assert.match(pending,/Prior closed cleaning record/);assert(sourceSummaryText(recordSummary(recordRow())).includes(recordId(3)));assert.doesNotMatch(pending,new RegExp(recordId(3)));
+  assert.doesNotMatch(pending,/Recorded work:/);assert.doesNotMatch(pending,/Receipt accepted|Queued.*completed/);
   const closed={...recordRow(),status_code:'okay',open_session_status:null,open_session_uuid:null,open_session_employee_name:null,
    latest_completed_session_id:recordId(42),latest_completed_session_uuid:recordId(2),latest_completed_at:'2026-10-05T16:58:00.654321Z',latest_employee_name:'Current saved worker'};
   await loaded(f,{summary:recordSummary(closed)});const text=f.text(f.content);
   assert.match(text,/Closed cleaning record/);assert.match(text,/Current saved worker/);assert.doesNotMatch(text,/Previous closed worker|Saved pending/);
-  assert.match(text,new RegExp(recordId(2)));assert(calls.every(c=>c.options.method==='GET')); // readonly manager never writes
+  assert(sourceSummaryText(recordSummary(closed)).includes(recordId(2)));assert.doesNotMatch(text,new RegExp(recordId(2)));assert(calls.every(c=>c.options.method==='GET')); // readonly manager never writes
   for(const bad of [
    {...closed,latest_completed_session_uuid:null},
    {...closed,latest_employee_name:null},
@@ -713,13 +713,18 @@ const originalCompletion=()=>({schema:'custodial.dashboard-original-completion.v
  started_at:'2026-10-05T16:00:00.000Z',completed_at:'2026-10-05T16:30:00.123000Z',accepted_at:'2026-10-05T16:30:01.654321+00:00',
  work_result:'full',services_performed:['Full cleaning services'],schedule_authority_revision:null,schedule_authority_revision_available:false});
 
+// Diagnostic identity remains validated in the source projection. The owner
+// requested operational cards without internal IDs or proof-policy wording.
+const sourceSummaryText=summary=>D.cleaning(summary,[{id:recordId(1),name:'Fixture restroom'}],Date.parse(summary.meta.generated_at)).cards.flatMap(c=>c.lines).join(' ');
+const sourceRecordText=original=>sourceSummaryText(recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:original}));
+
 test('PRODUCT SQL UUID record keys and exact opaque session identities are displayed without numeric coercion',async()=>{
  const f=recordFixture();try{
   const key='98000000-0000-7000-0000-000000000041',session='native-attestation-session-1';
   const row={...recordRow(),open_session_status:null,open_session_uuid:null,latest_completed_session_id:key,latest_completed_session_uuid:session};
   await loaded(f,{summary:recordSummary(row)});f.triggers[3].emit('click');
-  const text=f.text(f.content);assert.match(text,/Closed cleaning record ·/);assert(text.includes(`Closed session: ${session} · Record ${key}`));
-  assert.doesNotMatch(text,/server-accepted original/i);
+  const text=f.text(f.content);assert.match(text,/Closed cleaning record ·/);assert(sourceSummaryText(recordSummary(row)).includes(`Closed session: ${session} · Record ${key}`));assert(!text.includes(session));
+  assert.doesNotMatch(text,/Recorded work:/i);
   for(const bad of [41,'41',null,{},key.slice(1),'98000000-0000-7000-0000-00000000004g']){
    await loaded(f,{summary:recordSummary({...row,latest_completed_session_id:bad})});
    assert.doesNotMatch(f.text(f.content),/Closed cleaning record ·/i);
@@ -734,20 +739,20 @@ test('PRODUCT canonical original text session identities preserve SQL character 
    const before=JSON.stringify(original);
    await loaded(f,{summary:recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:original})});
    f.triggers[3].emit('click');const text=f.text(f.content);
-   assert.match(text,/Server-accepted original record/);assert(text.includes(`Original session: ${session} · Client session: ${session}`));
-   assert(text.includes(original.client_completion_id));assert.match(text,/not physical or overall current-source proof/);
+   assert.match(text,/Recorded work:/);assert(sourceRecordText(original).includes(`Original session: ${session} · Client session: ${session}`));assert(!text.includes(session));
+   assert(sourceRecordText(original).includes(original.client_completion_id));assert(!text.includes(original.client_completion_id));
    assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
   }
   const original=originalCompletion();
   for(const bad of ['',null,7,{},' '.repeat(2),' session','session ','s'.repeat(201),'😀'.repeat(201),'session\0id']){
    for(const field of ['session_uuid','client_session_id']){
     await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:{...original,[field]:bad}})});
-    f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/server-accepted original/i);f.controller.closeBoard();
+    f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/Recorded work:/i);f.controller.closeBoard();
    }
   }
   for(const bad of ['opaque-completion-id','98000000-0000-7000-0000-000000000017']){
    await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:{...original,client_completion_id:bad}})});
-   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/server-accepted original/i);f.controller.closeBoard();
+   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/Recorded work:/i);f.controller.closeBoard();
   }
  }finally{f.clean();}
 });
@@ -761,9 +766,9 @@ test('PRODUCT original SQL timestamps preserve valid offsets and microsecond ord
   for(const time of times){
    const original={...originalCompletion(),...time},before=JSON.stringify(original);
    await loaded(f,{summary:recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:original})});
-   f.triggers[3].emit('click');const text=f.text(f.content);assert.match(text,/Server-accepted original record/);
-   for(const value of Object.values(time))assert(text.includes(value),'keep exact SQL offset/fraction string');
-   assert.match(text,/Native clock alignment: unavailable/);assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
+   f.triggers[3].emit('click');const text=f.text(f.content);assert.match(text,/Recorded work:/);
+   for(const value of Object.values(time))assert(sourceRecordText(original).includes(value),'keep exact SQL offset/fraction string in validated evidence');
+   assert.match(sourceRecordText(original),/Native clock alignment: unavailable/);assert.doesNotMatch(text,/Native clock alignment/);assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
   }
   for(const time of [
    {started_at:'2026-10-05T11:30:00.123456-05:00',completed_at:'2026-10-05T16:30:00.123456Z'},
@@ -773,7 +778,7 @@ test('PRODUCT original SQL timestamps preserve valid offsets and microsecond ord
   ]){
    const original={...originalCompletion(),...time},before=JSON.stringify(original);
    await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:original})});
-   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/server-accepted original/i);
+   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/Recorded work:/i);
    assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
   }
  }finally{f.clean();}
@@ -787,7 +792,7 @@ test('PRODUCT canonical work-result service relationships reject malformed origi
   ]){
    const original={...originalCompletion(),work_result,services_performed},before=JSON.stringify(original);
    await loaded(f,{summary:recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:original})});
-   f.triggers[3].emit('click');assert.match(f.text(f.content),/Server-accepted original record/);
+   f.triggers[3].emit('click');assert.match(f.text(f.content),/Recorded work:/);
    assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
   }
   for(const [work_result,services_performed] of [
@@ -799,7 +804,7 @@ test('PRODUCT canonical work-result service relationships reject malformed origi
   ]){
    const original={...originalCompletion(),work_result,services_performed},before=JSON.stringify(original);
    await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:original})});
-   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/server-accepted original/i);
+   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/Recorded work:/i);
    assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
   }
  }finally{f.clean();}
@@ -811,14 +816,14 @@ test('PRODUCT producer-valid large service selections retain receipt validity wi
    services_performed:['L'.repeat(2000)+'UNSHOWN_SUFFIX',...Array.from({length:200},(_,i)=>`service-${i}`)]};
   const before=JSON.stringify(original);
   await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:original})});f.triggers[3].emit('click');
-  const text=f.text(f.content);assert.match(text,/server-accepted original record/i);
+  const text=f.text(f.content);assert.match(text,/Recorded work:/i);
   assert.match(text,/Showing the first 200 of 201 original service entries/);
   assert.match(text,/limited to 2000 characters per entry/);assert(text.includes('service-198'));
   assert(!text.includes('service-199'));assert(!text.includes('UNSHOWN_SUFFIX'));assert(text.length<20000);
   assert.equal(JSON.stringify(original),before);
   for(const bad of [null,{},[''],['   '],['valid',{}],[...original.services_performed,{}]]){
    await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:{...original,services_performed:bad}})});
-   assert.doesNotMatch(f.text(f.content),/server-accepted original/i);
+   assert.doesNotMatch(f.text(f.content),/Recorded work:/i);
   }
  }finally{f.clean();}
 });
@@ -827,10 +832,10 @@ test('PRODUCT opaque pending identity cannot be promoted by matching original or
   const session='native-attestation-session-1',original={...originalCompletion(),session_uuid:session,client_session_id:session};
   const row={...recordRow(),open_session_uuid:session,latest_completed_session_uuid:session,latest_original_completion:original};
   await loaded(f,{summary:recordSummary(row)});f.triggers[3].emit('click');let text=f.text(f.content);
-  assert.match(text,/Saved pending.*not accepted/);assert.doesNotMatch(text,/server-accepted original|Closed cleaning record ·/i);
+  assert.match(text,/Saved pending.*not accepted/);assert.doesNotMatch(text,/Recorded work:|Closed cleaning record ·/i);
   await loaded(f,{summary:recordSummary({...row,open_session_uuid:session.toUpperCase()})});text=f.text(f.content);
-  assert.match(text,/Preceding server-accepted original record/);assert(text.includes(`Current session: ${session.toUpperCase()}`));
-  assert(text.includes(`Original session: ${session}`)); // Opaque identity is exact, never lowercased.
+  assert.match(text,/Recorded work:/);assert(sourceSummaryText(recordSummary({...row,open_session_uuid:session.toUpperCase()})).includes(`Current session: ${session.toUpperCase()}`));
+  assert(sourceRecordText(original).includes(`Original session: ${session}`));assert(!text.includes(session)); // Opaque identity is exact, never lowercased.
  }finally{f.clean();}
 });
 
@@ -839,7 +844,7 @@ test('PRODUCT canonical details completion is rendered as selective work without
   const original={...originalCompletion(),work_result:'details',services_performed:['Sweep the floor']};
   await loaded(f,{summary:recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:original})});
   f.triggers[3].emit('click');const text=f.text(f.content);
-  assert.match(text,/Server-accepted original record/);assert.match(text,/Recorded work: Selective cleaning/);
+  assert.match(text,/Recorded work:/);assert.match(text,/Recorded work: Selective cleaning/);
   assert.match(text,/Sweep the floor/);assert.doesNotMatch(text,/Check only|Full cleaning/);
   assert.equal(original.work_result,'details');
  }finally{f.clean();}
@@ -849,21 +854,21 @@ test('PRODUCT original completion presentation keeps original accepted tuple sep
   const original=originalCompletion(),summary=recordSummary({...recordRow(),latest_original_completion:original});
   const calls=await loaded(f,{summary});f.triggers[3].emit('click');const text=f.text(f.content);
   assert.match(text,/Saved pending.*not accepted/);assert.match(text,/Current saved worker/);
-  assert.match(text,/Preceding server-accepted original record/);assert.match(text,/Accepted original worker/);
+  assert.match(text,/Recorded work:/);assert.match(text,/Accepted original worker/);
   assert.doesNotMatch(text,/Previous closed worker/);
   for(const field of ['employee_id','location_id','session_uuid','client_session_id','client_completion_id','occurrence_id',
    'occurrence_fingerprint','payload_fingerprint','snapshot_id','credential_id','device_id','context_id','reconciliation_id','started_at','completed_at','accepted_at'])
-   assert(text.includes(original[field]),field);
-  assert.match(text,/Original assignment epoch: 4/);assert.match(text,/Full cleaning/);assert.match(text,/Full cleaning services/);
-  assert.match(text,/Original schedule authority revision: unavailable/);assert.match(text,/not.*physical.*current-source/i);
+   assert(sourceRecordText(original).includes(original[field]),field);
+  assert.match(sourceRecordText(original),/Original assignment epoch: 4/);assert.doesNotMatch(text,/Original assignment epoch/);assert.match(text,/Full cleaning/);assert.match(text,/Full cleaning services/);
+  assert.match(sourceRecordText(original),/Original schedule authority revision: unavailable/);assert.doesNotMatch(text,/Original schedule authority revision/);assert.doesNotMatch(text,/current-source proof/i);
   assert(calls.every(call=>call.options.method==='GET')); // Normal readonly manager has no mutation control/API.
   const newer={...original,session_uuid:recordId(2),client_completion_id:recordId(18),employee_name:'New accepted original',work_result:'selective',services_performed:['Sinks cleaned'],
    completed_at:'2026-10-05T16:55:00Z',accepted_at:'2026-10-05T16:56:00Z'};
   await loaded(f,{summary:recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:newer})});
-  assert.match(f.text(f.content),/Server-accepted original record/);assert.match(f.text(f.content),/New accepted original/);
+  assert.match(f.text(f.content),/Recorded work:/);assert.match(f.text(f.content),/New accepted original/);
   assert.doesNotMatch(f.text(f.content),/Accepted original worker|Saved pending/);assert.match(f.text(f.content),/Selective cleaning/);
   await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:null})});
-  assert.doesNotMatch(f.text(f.content),/server-accepted original/i);
+  assert.doesNotMatch(f.text(f.content),/Recorded work:/i);
  }finally{f.clean();}
 });
 test('PRODUCT original completion malformed or foreign receipt cannot promote bool/name/cache or invented revision',async()=>{
@@ -879,10 +884,10 @@ test('PRODUCT original completion malformed or foreign receipt cannot promote bo
    {...original,completed_at:'2026-10-05T16:30:00+01:00'},
    ...Object.keys(original).map(key=>{const copy={...original};delete copy[key];return copy;})];
   for(const receipt of cases){await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:receipt})});
-   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/server-accepted original/i);f.controller.closeBoard();}
+   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/Recorded work:/i);f.controller.closeBoard();}
   // A current uncompleted session cannot simultaneously be the accepted closed original.
   await loaded(f,{summary:recordSummary({...recordRow(),open_session_uuid:original.session_uuid,latest_original_completion:original})});
-  f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/server-accepted original/i);
+  f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/Recorded work:/i);
  }finally{f.clean();}
 });
 test('PRODUCT original completion check-only stays check-only and its original strings stay accessible text',async()=>{
@@ -890,13 +895,13 @@ test('PRODUCT original completion check-only stays check-only and its original s
   const original={...originalCompletion(),session_uuid:recordId(40),employee_name:'<img onerror=bad()>',work_result:'checked_no_cleaning_needed',services_performed:[]};
   await loaded(f,{summary:recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:original})});
   f.triggers[3].emit('click');const text=f.text(f.content);
-  assert.match(text,/Server-accepted original record/);assert.match(text,/Check only.*no cleaning reported needed/);
+  assert.match(text,/Recorded work:/);assert.match(text,/Check only.*no cleaning reported needed/);
   assert.match(text,/<img onerror=bad\(\)>/);assert.equal(f.content.querySelectorAll('img').length,0);
   assert.match(text,/Reported services: none \(check only\)/);assert.doesNotMatch(text,/Full cleaning|Selective cleaning/);
   // Previous ordinary cleaning projection survives as separate history, not a promoted check.
   assert.match(text,/Previous closed worker/);
   await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:{...original,services_performed:['Trash emptied']}})});
-  assert.doesNotMatch(f.text(f.content),/server-accepted original/i);
+  assert.doesNotMatch(f.text(f.content),/Recorded work:/i);
  }finally{f.clean();}
 });
 test('PRODUCT original receipt ownership snapshots source facts and withdraws accepted display on changed awaited named session',async()=>{
@@ -910,7 +915,7 @@ test('PRODUCT original receipt ownership snapshots source facts and withdraws ac
   assert.match(f.text(f.content),/Accepted original worker/);assert.doesNotMatch(f.text(f.content),/Mutated late worker/);
   held=new Promise(resolve=>{release=resolve;});const next=start();
   f.setSession({role:'ops_manager',manager_id:'another-manager',credential_id:'another-credential',device_id:'KIOSK_01',token:'another-session',read_only:true});
-  release();await next;assert.equal(f.dialog.open,false);assert.doesNotMatch(f.text(f.content),/server-accepted original/i);
+  release();await next;assert.equal(f.dialog.open,false);assert.doesNotMatch(f.text(f.content),/Recorded work:/i);
   assert(signals.slice(-3).every(signal=>signal.aborted));assert.equal(f.timeouts.size,0);
  }finally{release?.();f.clean();}
 });
@@ -919,16 +924,16 @@ test('PRODUCT SQL employee names remain valid verbatim receipt strings with boun
   for(const employee_name of ['', ' \t\u2000', 'Known worker '+ 'N'.repeat(2100)+'UNSHOWN_NAME_TAIL']){
    const original={...originalCompletion(),employee_name},before=JSON.stringify(original);
    await loaded(f,{summary:recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:original})});
-   f.triggers[3].emit('click');const text=f.text(f.content);assert.match(text,/Server-accepted original record/);
+   f.triggers[3].emit('click');const text=f.text(f.content);assert.match(text,/Recorded work:/);
    if(employee_name.trim()){
     assert(text.includes(employee_name.trim().slice(0,2000)));assert(!text.includes('UNSHOWN_NAME_TAIL'));
-   }else assert.match(text,/Original employee: Not provided/);
+   }else assert.match(text,/Recorded worker: Not provided/);
    assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
   }
   for(const employee_name of [null,7,{},[],true]){
    const original={...originalCompletion(),employee_name};
    await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:original})});
-   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/server-accepted original/i);f.controller.closeBoard();
+   f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/Recorded work:/i);f.controller.closeBoard();
   }
  }finally{f.clean();}
 });
@@ -940,14 +945,14 @@ test('PRODUCT DB receipt acceptance does not require agreement with the Node sum
    const summary=recordSummary({...recordRow(),open_session_status:null,open_session_uuid:null,latest_original_completion:original});
    assert(Date.parse(accepted_at)>Date.parse(summary.meta.generated_at),'explicitly model independent DB and Node clocks');
    await loaded(f,{summary});f.triggers[3].emit('click');const text=f.text(f.content);
-   assert.match(text,/Server-accepted original record/);assert(text.includes(accepted_at));
-   assert.match(text,/Native clock alignment: unavailable/);assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
+   assert.match(text,/Recorded work:/);assert(sourceRecordText(original).includes(accepted_at));
+   assert.match(sourceRecordText(original),/Native clock alignment: unavailable/);assert.doesNotMatch(text,/Native clock alignment/);assert.equal(JSON.stringify(original),before);f.controller.closeBoard();
   }
   // Node-generated summary currentness remains a separate policy; receipt bytes
   // do not manufacture a fresh summary when that policy refuses it.
   const original=originalCompletion(),summary=recordSummary({...recordRow(),latest_original_completion:original});
   summary.meta.generated_at='2026-10-05T17:02:00Z';
-  await loaded(f,{summary});f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/server-accepted original/i);
+  await loaded(f,{summary});f.triggers[3].emit('click');assert.doesNotMatch(f.text(f.content),/Recorded work:/i);
  }finally{f.clean();}
 });
 
@@ -958,9 +963,9 @@ test('PRODUCT original acceptance clock preserves legitimate earlier SQL transac
    {...originalCompletion(),accepted_at:'2026-10-05T16:30:00.122999Z'},
    {...originalCompletion(),started_at:'2026-10-05T16:25:00Z',accepted_at:'2026-10-05T16:21:00Z'}
   ]){await loaded(f,{summary:recordSummary({...recordRow(),latest_original_completion:original})});
-   f.triggers[3].emit('click');const text=f.text(f.content);assert.match(text,/server-accepted original record/i);
-   assert(text.includes(original.accepted_at));assert(text.includes(original.completed_at));
-   assert.match(text,/Native clock alignment: unavailable/);assert.match(text,/Original schedule authority revision: unavailable/);
+   f.triggers[3].emit('click');const text=f.text(f.content);assert.match(text,/Recorded work:/i);
+   assert(sourceRecordText(original).includes(original.accepted_at));assert(sourceRecordText(original).includes(original.completed_at));
+   assert.match(sourceRecordText(original),/Native clock alignment: unavailable/);assert.doesNotMatch(text,/Native clock alignment/);assert.match(sourceRecordText(original),/Original schedule authority revision: unavailable/);assert.doesNotMatch(text,/Original schedule authority revision/);
    assert.doesNotMatch(text,/clock (?:verified|aligned)|10.min(?:ute)?/i);f.controller.closeBoard();}
  }finally{f.clean();}
 });
@@ -999,18 +1004,18 @@ export async function originalCompletionDashboardPresentationProof({pendingSumma
    // The unchanged cleaning card does not display a separate verified-check
    // receipt. Its metadata remains in the summary; never invent an original.
    assert.doesNotMatch(text,/server-accepted original record|Recorded work: (?:Full|Selective) cleaning/i);
-   assert.match(text,/Original completion receipt.*unavailable or unconfirmed/i);
+   assert.doesNotMatch(text,/Recorded work:/);
    assert(!text.includes(result.client_completion_id));
    assert.deepEqual(expected.services_performed,[]);
   }else{
-   assert.match(text,/Server-accepted original record/);
+   assert.match(text,/Recorded work:/);
    for(const key of ['employee_id','employee_name','location_id','session_uuid','client_session_id','client_completion_id',
     'occurrence_id','occurrence_fingerprint','payload_fingerprint','reconciliation_id','context_id','snapshot_id','started_at','completed_at','accepted_at'])
-    assert(text.includes(accepted[key]),'actual rendered original '+key);
-   assert(text.includes('Original assignment epoch: '+accepted.assignment_epoch));
+    assert(sourceSummaryText(acceptedSummary).includes(accepted[key]),'actual validated original '+key);
+   assert(sourceSummaryText(acceptedSummary).includes('Original assignment epoch: '+accepted.assignment_epoch));
    assert(text.includes(accepted.work_result==='full'?'Recorded work: Full cleaning':'Recorded work: Selective cleaning'));
    for(const service of accepted.services_performed.slice(0,200))assert(text.includes(service.trim().slice(0,2000)));
-   assert.match(text,/Original schedule authority revision: unavailable/);assert.match(text,/Native clock alignment: unavailable/);
+   assert.match(sourceSummaryText(acceptedSummary),/Original schedule authority revision: unavailable/);assert.doesNotMatch(text,/Original schedule authority revision/);assert.match(sourceSummaryText(acceptedSummary),/Native clock alignment: unavailable/);assert.doesNotMatch(text,/Native clock alignment/);
   }
   assert(calls.every(call=>call.options.method==='GET'),'readonly manager never sends mutation');
   const wait=new Promise(resolve=>{release=resolve;}),signals=[];
@@ -1127,4 +1132,12 @@ test('City ticker requires the complete active Zoo source and displays original 
  assert.match(D.cityWorkOrders(source).cards[0].title,/#123/);
  for(const patch of [{coverage:'unknown'},{state:'snapshot'},{rows:[{...source.rows[0],status:'Closed - Complete'}]},{rows:[{...source.rows[0],facility:'21E01'}]}])
   assert.equal(D.cityWorkOrders({...source,...patch}).cards.length,0);
+});
+
+test('operational details retain work status while keeping internal proof diagnostics out of displayed cards',()=>{
+ const source={title:'Locations',note:'Authenticated diagnostic',cards:[{lines:['Work in progress — not completed.','Current worker: Karen','Current session: secret-id','Occurrence: private-id','Native clock alignment: unavailable','Reported services: floors','Original employee: Karen · 00000000-0000-4000-8000-000000000001']}]};
+ const out=D.operationalView('locations',source);
+ assert.deepEqual(out.cards[0].lines,['Work in progress — not completed.','Current worker: Karen','Reported services: floors','Recorded worker: Karen']);
+ assert.doesNotMatch(JSON.stringify(out),/Authenticated|private-id|secret-id|Native clock/);
+ assert.equal(source.cards[0].lines.length,7);
 });

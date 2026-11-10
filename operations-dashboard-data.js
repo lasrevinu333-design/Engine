@@ -253,6 +253,25 @@
     return {...view,cards:view.cards.map(card=>({...card,lines:card.lines.filter(line=>prefixes.some(prefix=>line.startsWith(prefix)))})),
       note:summary?.meta?.audience==='public_readonly'?`Read-only cleaning status · ${stamp(summary.meta.generated_at)}. Pending work is shown separately from closed cleaning history.`:'Current cleaning status unavailable.'};
   }
-  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,cleaning,publicCleaning});
+  function operationalView(kind,view){
+    const notes={locations:'Cleaning status and recorded work. Saved pending work is not complete.',
+      events:'Upcoming events and event history.',schools:'Planned school visits. Arrival and departure are not confirmed.',
+      tickets:'Ticket details. Recent changes may not yet be received.',activity:'Ticket details. Recent changes may not yet be received.'};
+    const line=(value)=>value.replace(/^Original employee: (.*?) · [a-f0-9-]+$/i,'Recorded worker: $1')
+      .replace(/^Started: .*? · /,'Started: ').replace(/^Completed: .*? · /,'Completed: ').replace(/^Accepted: .*? · /,'Saved: ')
+      .replace('Current cleaning record unavailable. Map colour is not a completion receipt.','Current cleaning record unavailable.')
+      .replace('GAP: source arrival/departure needs review; no departure or overnight visit inferred.','Visit time needs review.')
+      .replace('Expected later today — arrival not independently confirmed; departure time not provided.','Expected later today; arrival and departure unconfirmed.')
+      .replace('Expected arrival time has passed — arrival, presence and departure not independently confirmed.','Expected arrival time has passed; arrival and departure unconfirmed.')
+      .replace('Needs source review — not an approved operational event','Needs review')
+      .replace('Scheduled to have ended — departure not independently confirmed','Scheduled end has passed')
+      .replace('End time/instant not provided — not automatically expired','End time unavailable');
+    const allowed=/^(Saved pending|Work in progress|Current worker:|Prior closed cleaning record|Closed cleaning record|Recorded worker:|Reported services:|Recorded work:|Original employee:|Started:|Completed:|Accepted:|Current cleaning record unavailable)/;
+    const present=card=>({...card,lines:card.lines.filter(value=>kind!=='locations'||allowed.test(value)).map(line)});
+    const note=kind==='schools'?`${/Daily planned source counts: ([^.]+)\./.exec(view.note)?.[0].replace('source ','')||'School counts unavailable.'} Planned visits; arrival and departure unconfirmed.`
+      :['activity','tickets'].includes(kind)&&!view.cards.length&&/unavailable/i.test(view.note)?'Ticket details unavailable.':notes[kind]||view.note;
+    return{...view,note,cards:view.cards.map(present),...(view.history?{history:view.history.map(present)}:{})};
+  }
+  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,cleaning,publicCleaning,operationalView});
   root.MemphisOperationsData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

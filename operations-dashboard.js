@@ -43,7 +43,7 @@
       if(kind==='city')return DATA.cityWorkOrders(ops?.city);
       return DATA.schools(ops?.schools,now());}
     function renderBoard(force=false){if(!board)return;
-      const v=view(board),fingerprint=JSON.stringify(v);if(!force&&fingerprint===boardFingerprint)return;
+      const v=DATA.operationalView(board,view(board)),fingerprint=JSON.stringify(v);if(!force&&fingerprint===boardFingerprint)return;
       boardFingerprint=fingerprint;const top=content.scrollTop,focused=document.activeElement?.dataset?.locationSelect;
       txt('operations-board-title',v.title);txt('operations-board-note',v.note);
       const cardNode=card=>{
