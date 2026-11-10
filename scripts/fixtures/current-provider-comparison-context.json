@@ -5,7 +5,7 @@
   "native_authority": false,
   "hardware_acceptance": false,
   "historical_pins_rewritten": false,
-  "current_inventory_sha256": "6738d7d0543255fb7f0361b490db7126b7ca9cac989ee239da6a58eea3775d86",
+  "current_inventory_sha256": "0820783f0905972204e453d6c7b5d39d93428ffad09969b570a881c13d27e55d",
   "current_test_java_inventory": [
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/test/java/android/net/Uri.java",
@@ -1019,8 +1019,8 @@
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/RequestPolicyTest.java",
-      "bytes": 9086,
-      "sha256": "f73555df5a6d9ee5ec751f3338e046a28ddbc76a2d60e4d0c0d74a2157cbcbf3"
+      "bytes": 9660,
+      "sha256": "0781c00f63c3fa1966400c49159419b5c86df6fdab949330eb81364f21e53f4d"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/VaultEngineTest.java",
@@ -1066,8 +1066,8 @@
     },
     {
       "path": "mobile/src/custodial/bridge.js",
-      "bytes": 164997,
-      "sha256": "585d7474938cd3ca20c55d4aabbb3b1bca79a8d53685e457e1f0776abf11a903"
+      "bytes": 164999,
+      "sha256": "a2a8068fd37a8bc0526307a788fcef5eac0e806ef59b5e67898d04ccea2aea30"
     },
     {
       "path": "scripts/provider-event-decision-current219-contract-tests.mjs",
@@ -1252,9 +1252,9 @@
     {
       "name": "CustodialNativeVaultPlugin.java",
       "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java",
-      "current_sha256": "808dc8e29a0c1a0ef6ef0645697a5e40cda42498a2a588eab53c099396478001",
+      "current_sha256": "4f84946e73de86d8a98c47aecb81e1d4f288f2fd498b2495ec3385ad74319aa9",
       "comparison_input_sha256": [
-        "808dc8e29a0c1a0ef6ef0645697a5e40cda42498a2a588eab53c099396478001"
+        "4f84946e73de86d8a98c47aecb81e1d4f288f2fd498b2495ec3385ad74319aa9"
       ],
       "comparison_path": "scripts/fixtures/historical-provider-comparison/CustodialNativeVaultPlugin.java",
       "comparison_sha256": "2d15293fd5ce8b058c279d32c7a6a24951e1a75e1db266658ac4a4fce8f62490",
@@ -1522,9 +1522,9 @@
     {
       "name": "bridge.js",
       "current_path": "mobile/src/custodial/bridge.js",
-      "current_sha256": "585d7474938cd3ca20c55d4aabbb3b1bca79a8d53685e457e1f0776abf11a903",
+      "current_sha256": "a2a8068fd37a8bc0526307a788fcef5eac0e806ef59b5e67898d04ccea2aea30",
       "comparison_input_sha256": [
-        "585d7474938cd3ca20c55d4aabbb3b1bca79a8d53685e457e1f0776abf11a903"
+        "a2a8068fd37a8bc0526307a788fcef5eac0e806ef59b5e67898d04ccea2aea30"
       ],
       "comparison_path": "scripts/fixtures/historical-provider-comparison/bridge.js",
       "comparison_sha256": "9fd4404231a2b45464cd6b21ae0cd9bda05e0b2a07c0853b3eac9e19920fb393",

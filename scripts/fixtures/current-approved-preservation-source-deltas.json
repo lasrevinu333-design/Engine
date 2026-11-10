@@ -182,8 +182,8 @@
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java",
-      "bytes": 87269,
-      "sha256": "808dc8e29a0c1a0ef6ef0645697a5e40cda42498a2a588eab53c099396478001"
+      "bytes": 88777,
+      "sha256": "4f84946e73de86d8a98c47aecb81e1d4f288f2fd498b2495ec3385ad74319aa9"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java",
