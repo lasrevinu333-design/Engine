@@ -65,9 +65,7 @@
     }
     async function refreshSources(){
       const attempt=++generation,ticket=map.beginRefresh();
-      operations.unavailable({preserveBoard:true,preserveMap:true});status.textContent='Refreshing read-only operations…';
-      showSummary(null);
-      const feeds=operations.refresh({fetchImpl,summary:null,isCurrent:()=>current(attempt)}).catch(()=>{});
+      const feeds=operations.refresh({fetchImpl,preserveSummary:true,isCurrent:()=>current(attempt)}).catch(()=>{});
       try{
         const data=await read('/viewer-api/summary');
         if(!current(attempt))return false;
@@ -78,7 +76,7 @@
         operations.updateSummary({summary:data,isCurrent:()=>current(attempt)});showSummary(data);
         return true;
       }catch{
-        if(current(attempt)){map.fail(ticket);status.textContent='Current cleaning status unavailable. Attendance and weather show their own source status.';}
+        if(current(attempt)){map.fail(ticket);operations.summaryUnavailable?.();showSummary(null);status.textContent='Cleaning status unavailable. Please try again.';}
         return false;
       }finally{await feeds;}
     }

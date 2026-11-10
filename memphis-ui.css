@@ -262,7 +262,8 @@
 }
 
 @media (max-width: 560px) {
-  .mz-back-link {
+  .mz-back-link,
+  .operationsPage .mz-back-link {
     min-height: 46px;
     padding-inline: 0.9rem;
     font-size: 0.9rem;
@@ -282,6 +283,7 @@
 
 @media print {
   .mz-back-link,
+  .operationsPage .mz-back-link,
   [data-mz-hide-print] {
     display: none !important;
   }

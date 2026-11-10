@@ -3,8 +3,8 @@
   const DATA=root.MemphisOperationsData;
   const API='https://memphis-zoo-mcp.onrender.com';
   const WEATHER='https://api.open-meteo.com/v1/forecast?latitude=35.1506&longitude=-89.9944&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability&temperature_unit=fahrenheit&timeformat=unixtime&timezone=America%2FChicago&forecast_days=2';
-  const KINDS=Object.freeze(['activity','tickets','events','schools','locations']);
-  const ACTIVITY_KINDS=Object.freeze(['tickets','events','schools']);
+  const KINDS=Object.freeze(['activity','tickets','events','schools','spiceworks','city','locations']);
+  const ACTIVITY_KINDS=Object.freeze(['tickets']);
   // Close geographic/display neighbors, without changing any approved point.
   function nearby(pins,id){const seed=pins.find(p=>p.id===id);if(!seed)return[];
     return pins.filter(p=>p.id===id||Math.hypot(p.x-seed.x,p.y-seed.y)<=Math.max(22,p.radius)+Math.max(22,seed.radius)+8).map(p=>p.id);}
@@ -18,9 +18,9 @@
     let active=false,closed=false,epoch=0,abort=null,requestTimer=null,map=null,summary=null,ops=null,board=null,opener=null;
     let frame=null,lastFrame=null,hold=false,paused=false,motionPaused=false,mapExpanded=false,fsEpoch=0;
     let boardToken=null,priorHistory=null,boardFingerprint='',lastMinute=null,nearbyIds=null,fallbackInert=null;
-    let owner=null,currentRead=null,cleaning=null;
+    let owner=null,currentRead=null,cleaning=null,lastAttendance=null,lastWeather=null;
     const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    const txt=(id,value)=>{if(el(id))el(id).textContent=value;};
+    const txt=(id,value)=>{const node=el(id);if(node&&node.textContent!==String(value))node.textContent=value;};
     const make=(tag,value,klass)=>{const node=document.createElement(tag);if(value!=null)node.textContent=value;if(klass)node.className=klass;return node;};
     function pins(){return Array.from(el('dashboard-map').querySelectorAll('.mzMapPin'));}
     function session(){try{const s=window.MemphisAuth?.readSession?.();
@@ -39,6 +39,8 @@
       if(kind==='activity'){const feeds=activityKinds.map(kind=>view(kind));return{title:publicRead?'Open tickets':'Activity',cards:feeds.flatMap((feed,index)=>feed.cards.filter(card=>index!==1||card.active)),note:feeds.map(feed=>feed.note).join('\n')};}
       if(kind==='tickets'){const v=DATA.tickets(summary,ops?.spiceworks);return publicRead?{...v,note:'Read-only ticket details. '+v.note.split('\n').slice(1).join('\n')}:v;}
       if(kind==='events')return ops?DATA.events(ops.events,now()):{title:'Events',cards:[],note:'Structured event feed unavailable.'};
+      if(kind==='spiceworks')return {title:'Spiceworks · last 24 hours',cards:[],note:'Recent opened and closed ticket activity is unavailable.'};
+      if(kind==='city')return {title:'Open City work orders',cards:[],note:'Current City work orders are unavailable.'};
       return DATA.schools(ops?.schools,now());}
     function renderBoard(force=false){if(!board)return;
       const v=view(board),fingerprint=JSON.stringify(v);if(!force&&fingerprint===boardFingerprint)return;
@@ -67,32 +69,60 @@
 
     }
     function renderActivity(){
-      const labels={tickets:'TICKETS',events:'EVENTS',schools:'SCHOOLS'};
+      const labels={tickets:'TICKETS'};
       const text=activityKinds.map(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
-        return labels[kind]+': '+(cards.length?cards.map(card=>card.title).join(' • '):feed.note);}).join('   •   ');
+        return labels[kind]+': '+(cards.length?cards.map(card=>card.title).join(' • '):summary?'No open tickets':'Tickets unavailable');}).join('   •   ');
       if(el('ops-activity-ticker')?.textContent!==text)txt('ops-activity-ticker',text);
+      const events=ops?DATA.events(ops.events,now()).cards.filter(card=>card.active):[];
+      const eventText=events.length?events.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]} · ${card.lines[2]}`).join('   •   '):ops?'No upcoming events loaded':'Events unavailable';
+      if(el('ops-events-ticker')?.textContent!==eventText)txt('ops-events-ticker',eventText);
+      const schoolRows=ops?.schools?.rows?.filter(row=>!['CANCELLED','SUPERSEDED'].includes(row.status)&&/^\d{4}-\d{2}-\d{2}$/.test(row.date||'')&&row.date>=DATA.localDate(now()))||[];
+      const count=value=>DATA.count(value)===null?'Unknown':String(value);
+      const schoolText=schoolRows.length?schoolRows.map(row=>`${DATA.text(row.name)} · ${row.date} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`).join('   •   '):ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable';
+      if(el('ops-schools-ticker')?.textContent!==schoolText)txt('ops-schools-ticker',schoolText);
+      txt('ops-spiceworks-ticker','Recent opened and closed ticket activity unavailable');
+      txt('ops-city-ticker','Current City work orders unavailable');
     }
     function renderFeeds(){
-      renderActivity();const locations=view('locations');txt('ops-locations-ticker',locations.cards.length?locations.cards.map(card=>card.title).join('   •   '):locations.note);
+      renderActivity();const locations=view('locations');
+      const labels={okay:'Cleaned',in_progress:'In progress',due_soon:'Due soon',overdue:'Overdue',not_cleaned:'Not cleaned',pending_submit:'Saved pending',unknown:'Unavailable'};
+      const ticker=el('ops-locations-ticker');
+      if(ticker){
+        const fingerprint=JSON.stringify(locations.cards.map(card=>[card.id,card.title,card.state]));
+        if(ticker.dataset.locationsFingerprint!==fingerprint){
+          ticker.dataset.locationsFingerprint=fingerprint;
+          ticker.replaceChildren(...(locations.cards.length?locations.cards.map(card=>{
+            const state=Object.hasOwn(labels,card.state)?card.state:'unknown';
+            const item=make('span',`${card.title} — ${labels[state]}`,'locationTickerItem');
+            item.dataset.status=state;return item;
+          }):[make('span',locations.note)]));
+        }
+      }
       const counts=new Map();for(const card of (cleaning||cleaningView(null,approved(),now())).cards)
         counts.set(card.state,(counts.get(card.state)||0)+1);
       el('ops-status-counts').replaceChildren(...[...counts].map(([status,n])=>{const node=make('span',`${n} ${status.replaceAll('_',' ')}`);node.dataset.status=status;return node;}));
       renderBoard();
     }
     function cancel(){epoch++;abort?.abort();abort=null;if(requestTimer!==null)window.clearTimeout(requestTimer);requestTimer=null;}
+    function beginRefresh({isCurrent}){
+      cancel();currentRead={epoch,isCurrent};
+      if(typeof isCurrent!=='function'||!bound()){unavailable();return false;}
+      return true;
+    }
+    function summaryUnavailable(){summary=null;cleaning=null;renderFeeds();}
     function updateSummary({summary:next,isCurrent}){
       if(typeof isCurrent!=='function'||!isCurrent()||!bound())return false;
       summary=next;cleaning=cleaningView(next,approved(),now());renderFeeds();return true;
     }
-    async function refresh({headers,fetchImpl,isCurrent,summary:next}){
+    async function refresh({headers,fetchImpl,isCurrent,summary:next,preserveSummary=false}){
       if(!active||closed)return;cancel();const generation=epoch;abort=new AbortController();const signal=abort.signal;
       currentRead={epoch:generation,isCurrent};
       if(typeof isCurrent!=='function'||!bound()){unavailable();return;}
       requestTimer=window.setTimeout(()=>{if(generation===epoch)abort?.abort();},10000);
       // Snapshot the safe record presentation at admission, not from mutable
       // caller rows after an unrelated awaited feed. Never infer from pin text.
-      const nextCleaning=cleaningView(next,approved(),now());
-      summary=next;cleaning=nextCleaning;ops=null;renderFeeds();
+      if(!preserveSummary){summary=next;cleaning=cleaningView(next,approved(),now());}
+      renderFeeds();
       const load=async(url,privateFeed=true)=>{const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(publicRead?{credentials:'omit'}:privateFeed?{headers}:{})});
         if(!response.ok)throw new Error('feed_unavailable');return response.json();};
       const publish=()=>{
@@ -104,16 +134,20 @@
       const tasks=[
         load(`${API}/dashboard-api/current-attendance`).catch(()=>null).then(value=>{
           if(!publish())return;const attendance=DATA.attendance(value);
-          txt('ops-attendance',attendance.value);txt('ops-attendance-note',attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);
+          if(attendance.value!=='Unavailable')lastAttendance=attendance;
+          txt('ops-attendance',attendance.value==='Unavailable'&&lastAttendance?lastAttendance.value:attendance.value);
+          txt('ops-attendance-note',attendance.value==='Unavailable'&&lastAttendance?'Last known gate count · current update unavailable':attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);
         }),
         load(WEATHER,false).catch(()=>null).then(value=>{
           if(!publish())return;const weather=DATA.weather(value,now());
-          txt('ops-weather',weather.value);txt('ops-weather-note',weather.note);el('ops-weather-note').dataset.stale=String(weather.stale);txt('ops-hour',weather.hour);
+          if(weather.value!=='Unavailable')lastWeather=weather;
+          txt('ops-weather',weather.value==='Unavailable'&&lastWeather?lastWeather.value:weather.value);
+          txt('ops-weather-note',weather.value==='Unavailable'&&lastWeather?'Last known weather · current update unavailable':weather.note);el('ops-weather-note').dataset.stale=String(weather.stale);txt('ops-hour',weather.hour);
         })
       ];
-      // The public dashboard needs only cleaning and tickets from its summary.
-      // Do not request events, school visits or schedules for these two views.
-      if(!publicRead)tasks.push(load(`${API}/dashboard-api/operations`).catch(()=>null).then(value=>{
+      // Public tickers use only the existing sanitized viewer projection.
+      // No manager headers, source mail, or schedule reads are used there.
+      tasks.push(load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`).catch(()=>null).then(value=>{
         if(!publish())return;try{ops=DATA.operations(value);}catch{ops=null;}renderFeeds();
       }));
       await Promise.allSettled(tasks);
@@ -142,7 +176,7 @@
     }
     function openBoard(kind,trigger,ids=null){
       if(!active||closed)return;if(!bound()){unavailable();return;}
-      if(publicRead&&!['activity','tickets','locations'].includes(kind))return;
+      if(publicRead&&!['activity','tickets','events','schools','spiceworks','city','locations'].includes(kind))return;
       if(kind==='events'&&!publicRead){
         if(!active||closed)return;const session=window.MemphisAuth?.readSession?.();
         if(session?.role!=='ops_manager'||!session.manager_id||!session.credential_id)return;
@@ -172,7 +206,7 @@
     async function exitMap(){const target=el('dashboard-map');fsEpoch++;mapExpanded=false;target.classList.remove('is-expanded');
       if(document.fullscreenElement===target)await document.exitFullscreen?.().catch(()=>{});
       el('operations-map-fullscreen').setAttribute('aria-pressed','false');txt('operations-map-fullscreen','⛶ Map full screen');}
-    function unavailable({preserveBoard=false,preserveMap=false}={}){cancel();currentRead=null;summary=null;cleaning=null;ops=null;
+    function unavailable({preserveBoard=false,preserveMap=false}={}){cancel();currentRead=null;summary=null;cleaning=null;ops=null;lastAttendance=null;lastWeather=null;
       const preserveOwner=active&&!closed&&sameOwner();
       if(!preserveBoard||!preserveOwner)closeBoard({history:false,focus:false});
       if(!preserveMap||!preserveOwner)void exitMap();
@@ -208,7 +242,7 @@
     listen(viewport,'click',event=>{const pin=event.target.closest?.('.mzMapPin');if(!pin||!active)return;
       const candidates=nearby(pins().map(p=>{const r=p.getBoundingClientRect();return{id:p.dataset.locationId,x:r.left+r.width/2,y:r.top+r.height/2,radius:Math.max(r.width,r.height)/2};}),pin.dataset.locationId);
       if(candidates.length>1){event.preventDefault();event.stopPropagation();openBoard('locations',pin,candidates);}},true);
-    return Object.freeze({activate,refresh,updateSummary,tick,unavailable,suspend,stop,openBoard,closeBoard});
+    return Object.freeze({activate,beginRefresh,refresh,updateSummary,summaryUnavailable,tick,unavailable,suspend,stop,openBoard,closeBoard});
   }
   root.MemphisOperationsDashboard=Object.freeze({create,nearby,WEATHER});
   if(typeof module!=='undefined'&&module.exports)module.exports=root.MemphisOperationsDashboard;

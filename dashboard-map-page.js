@@ -76,20 +76,21 @@
       const requestEpoch=++readEpoch;
       const currentRead=()=>requestGeneration===generation&&requestEpoch===readEpoch&&checkPrincipal()
         &&requestGeneration===generation&&requestEpoch===readEpoch;
-      // Withdraw old feed/GPS work now, without discarding an empty same-owner
-      // board. An older failure must never clear a newer successful summary.
-      operations?.unavailable({preserveBoard:true,preserveMap:true});
-      status.textContent='Refreshing current cleaning status…';
+      // Cancel old reads while retaining the same manager's displayed facts
+      // during the replacement request. Source failures still invalidate them.
+      operations?.beginRefresh?.({isCurrent:currentRead});
       try{
         const headers=await auth.opsManagerAuthHeaders({expectedManagerId:owner.manager_id});
         if(!currentRead())return false;
+        void operations?.refresh({headers,fetchImpl,preserveSummary:true,
+          isCurrent:currentRead}).catch(()=>{});
         const response=await fetchImpl(API,{method:'GET',cache:'no-store',headers});
         const payload=await response.json().catch(()=>null);
         if(!currentRead())return false;
         if(!response.ok||payload?.ok!==true||!dashboardData(payload.data))
           throw new Error('The authenticated Dashboard summary is unavailable or changed');
         if(!map.accept(ticket,payload.data))return false;
-        status.textContent='Current authenticated Dashboard cleaning status';
+        status.textContent='';
         // GPS is advisory. Its separate read can fail or be absent without
         // changing the authenticated cleaning state or NFC workflow.
         if(gpsSource?.read){
@@ -97,13 +98,12 @@
             if(currentRead())map?.acceptGps?.(ticket,context);
           }).catch(()=>{if(currentRead())map?.unavailableGps?.(ticket);});
         }else map.unavailableGps?.(ticket);
-        void operations?.refresh({headers,fetchImpl,summary:payload.data,
-          isCurrent:currentRead}).catch(()=>{});
+        operations?.updateSummary?.({summary:payload.data,isCurrent:currentRead});
         return true;
       }catch{
         if(requestGeneration!==generation||requestEpoch!==readEpoch)return false;
-        map.fail(ticket);operations?.unavailable();
-        if(checkPrincipal())status.textContent='Current cleaning status unavailable. Approved locations remain visible without a claimed state.';
+        map.fail(ticket);operations?.summaryUnavailable?.();
+        if(checkPrincipal())status.textContent='Cleaning status unavailable. Please try again.';
         return false;
       }
     }

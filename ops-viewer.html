@@ -9,11 +9,11 @@
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css">
   <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
-  <link rel="stylesheet" href="./operations-dashboard.css">
+  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.10.location-status">
   <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
 </head><body class="mapWebPage operationsPage" data-memphis-context="viewer">
   <main class="mapPage commandPage">
-    <header class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt=""><h1>Custodial operations</h1></div><nav class="publicViewNav" aria-label="Read-only views"><a id="public-dashboard-link" href="#dashboard" aria-current="page">Dashboard</a><a id="public-map-link" href="#map">Map</a></nav><a class="uxButton compact" href="./start_page1.html">Manager sign-in</a><button id="refresh-dashboard" type="button">Refresh</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button></header>
+    <header class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt=""><h1>Custodial operations</h1></div><nav class="publicViewNav" aria-label="Read-only views"><a id="public-dashboard-link" href="#dashboard" aria-current="page">Dashboard</a><a id="public-map-link" href="#map">Map</a></nav><button id="refresh-dashboard" type="button">Refresh</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button></header>
     <p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Loading read-only operations…</p>
     <div id="operations-panels" hidden>
       <header class="telemetry" aria-label="Date, attendance and weather">
@@ -21,6 +21,10 @@
         <section class="attendanceCard"><div class="eyebrow">CURRENT ATTENDANCE</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div></section>
         <section class="weatherCard"><div class="weatherNow"><svg class="weatherArt" viewBox="0 0 120 84" aria-hidden="true"><g class="sunRays" stroke="#ffd46b" stroke-width="3"><path d="M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4"/></g><circle cx="45" cy="32" r="19" fill="#ffd46b"/><path class="weatherCloud" d="M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z" fill="#d8efff"/></svg><div><div class="eyebrow">MEMPHIS WEATHER</div><strong id="ops-weather">Unavailable</strong><div id="ops-weather-note" class="metricNote">Forecast source not yet read.</div></div></div><div id="ops-hour" class="hourForecast">Next-hour forecast unavailable.</div></section>
       </header>
+      <button type="button" class="tickerBand" data-board="events" aria-label="Upcoming events"><span class="tickerLabel">EVENTS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-events-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+      <button type="button" class="tickerBand" data-board="schools" aria-label="Today and upcoming school visits"><span class="tickerLabel">SCHOOLS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-schools-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+      <button type="button" class="tickerBand" data-board="spiceworks" aria-label="Spiceworks tickets opened and closed in the last 24 hours"><span class="tickerLabel">SPICEWORKS · 24H</span><span class="tickerWindow"><span class="tickerTrack" id="ops-spiceworks-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+      <button type="button" class="tickerBand" data-board="city" aria-label="Open City work orders"><span class="tickerLabel">CITY WORK ORDERS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-city-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
     </div>
     <section id="public-dashboard" aria-label="Read-only cleaning dashboard" hidden>
       <div id="public-status-counts" class="publicMetrics" aria-label="Cleaning and ticket counts"></div>
@@ -45,6 +49,6 @@
     <p id="operations-board-note" class="boardNote" role="status"></p><div id="operations-board-content" class="boardContent" tabindex="0" aria-label="Scrollable operations rows"></div>
   </dialog>
   <script src="./dashboard-map-staging.js"></script><script src="./custodial-gps-approved-overall-fit.js"></script><script src="./dashboard-map-renderer.js"></script>
-  <script src="./operations-dashboard-data.js"></script><script src="./operations-dashboard.js"></script>
-  <script src="./ops-viewer.js"></script>
+  <script src="./operations-dashboard-data.js"></script><script src="./operations-dashboard.js?v=2026.11.10.location-status"></script>
+  <script src="./ops-viewer.js?v=2026.11.10.refresh-stability"></script>
 </body></html>

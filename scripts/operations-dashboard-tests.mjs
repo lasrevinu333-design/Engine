@@ -656,7 +656,7 @@ test('PRODUCT caller record keeps the newest summary when an older read fails an
   assert.equal(await caller.init(),true);await new Promise(r=>setImmediate(r));
   f.triggers[3].emit('click');assert.equal(f.dialog.open,true);
   wait=new Promise(r=>{release=r;});const old=caller.refresh();await new Promise(r=>setImmediate(r));
-  assert.equal(f.dialog.open,true);assert.doesNotMatch(f.text(f.content),/worker/);
+  assert.equal(f.dialog.open,true);assert.match(f.text(f.content),/Current saved worker/);
   wait=null;response=recordSummary({...recordRow(),status_code:'okay',open_session_status:null,open_session_uuid:null,
    latest_completed_session_uuid:recordId(4),latest_employee_name:'Newest closed worker'});
   assert.equal(await caller.refresh(),true);await new Promise(r=>setImmediate(r));
@@ -667,6 +667,18 @@ test('PRODUCT caller record keeps the newest summary when an older read fails an
   assert.deepEqual(gps,[]);
  }finally{caller.stop();release?.();for(const resolve of gpsReads)resolve(null);await Promise.resolve();
   assert.equal(intervals.size,0);assert.equal(stopCount,1);f.clean();}
+});
+test('location ticker carries every authoritative status and keeps unknown distinct',async()=>{
+ const f=recordFixture();try{
+  for(const [state,label] of [['okay','Cleaned'],['in_progress','In progress'],['due_soon','Due soon'],['overdue','Overdue'],['not_cleaned','Not cleaned']]){
+   const row={...recordRow(),status_code:state,open_session_status:state==='in_progress'?'active':null,open_session_uuid:state==='in_progress'?recordId(2):null};
+   await loaded(f,{summary:recordSummary(row)});
+   const item=f.elements['ops-locations-ticker'].children[0];assert.equal(item.dataset.status,state);assert.match(item.textContent,new RegExp(label));
+   const same=item;f.controller.tick();assert.equal(f.elements['ops-locations-ticker'].children[0],same,'unchanged ticker items must not restart');
+  }
+  f.controller.summaryUnavailable();assert.equal(f.elements['ops-locations-ticker'].children[0].dataset.status,'unknown');
+  assert.match(f.elements['ops-locations-ticker'].children[0].textContent,/Unavailable/);
+ }finally{f.clean();}
 });
 test('PRODUCT caller record suspends exact operations reads and resumes only the same normal named session',async()=>{
  const f=recordPageAuthFixture(recordFixture()),page=require('../dashboard-map-page.js'),intervals=new Map();let release,feeds=0;

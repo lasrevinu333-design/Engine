@@ -16,15 +16,16 @@ test('public map refresh owns its generation and cannot accept old or suspended 
  const next=gate.begin();gate.close();assert.equal(gate.commit(next,summary),false);
  assert.throws(()=>createRefreshGate({readSession:()=>null,onState(){}}),/active named manager/);
 });
-test('public operational boards use anonymous reads and omit events, schools and schedule requests',async()=>{
+test('public operational tickers use sanitized anonymous reads without manager or schedule requests',async()=>{
  const f=fixture({audience:'public_readonly'}),calls=[];
  f.window.MemphisAuth={readSession(){assert.fail('public board must not read manager identity');}};
  try{
   await f.controller.refresh({headers:{Authorization:'DO_NOT_SEND'},isCurrent:()=>true,summary,fetchImpl:async(url,options)=>{
    calls.push({url,options});return{ok:true,json:async()=>url.endsWith('/operations')?{ok:true,data:{schema:'custodial.operations-board.v1',generated_at:summary.meta.generated_at,timezone:D.ZONE,events:[]}}:null};}});
-  assert.equal(calls.length,2);assert.ok(calls.some(call=>call.url.includes('/current-attendance')));assert.ok(calls.some(call=>call.url.includes('open-meteo.com')));
+  assert.equal(calls.length,3);assert.ok(calls.some(call=>call.url.includes('/current-attendance')));assert.ok(calls.some(call=>call.url.includes('open-meteo.com')));
   for(const call of calls){assert.equal(call.options.method,'GET');assert.equal(call.options.credentials,'omit');assert.equal(call.options.headers,undefined);}
-  f.triggers[1].emit('click');assert.equal(f.dialog.open,false);assert.equal(f.navigations.length,0);
+  f.triggers[1].emit('click');assert.equal(f.dialog.open,true);assert.equal(f.navigations.length,0);
+  assert.ok(calls.some(call=>call.url.endsWith('/viewer-api/operations')));assert.ok(!calls.some(call=>/schedule|dashboard-api\/operations/.test(call.url)));
  }finally{f.clean();}
 });
 function pageFixture(){
@@ -70,8 +71,8 @@ test('unavailable public locations retain approved names without claiming live w
   f.viewport.children[0].dataset.approvedLocationName='West Admin Upstairs Women\'s Restroom';
   f.viewport.children[0].attrs['aria-label']='DO NOT ADOPT stale worker and completion';
   f.controller.unavailable();
-  assert.match(f.elements['ops-locations-ticker'].textContent,/West Admin Upstairs Women's Restroom/);
-  assert.doesNotMatch(f.elements['ops-locations-ticker'].textContent,/Location location-|DO NOT ADOPT|stale worker/);
+  assert.match(f.text(f.elements['ops-locations-ticker']),/West Admin Upstairs Women's Restroom/);
+  assert.doesNotMatch(f.text(f.elements['ops-locations-ticker']),/Location location-|DO NOT ADOPT|stale worker/);
   f.triggers[3].emit('click');
   assert.equal(f.content.children[0].dataset.state,'unknown');
   assert.match(f.text(f.content.children[0]),/Current cleaning record unavailable/);
@@ -100,16 +101,14 @@ test('operations skin excludes pins and normal public map owns usable height sep
  assert.match(css,/\.commandMap:fullscreen,\.commandMap\.is-expanded\{[^}]*height:100dvh/);
 });
 
-test('manager retains Activity; public offers Dashboard and Map without schedules or event boards',()=>{
+test('requested separate tickers preserve public viewing and exclude manager access and schedules',()=>{
  for(const name of ['ops-viewer.html','operations-dashboard.html']){
   const html=readFileSync(new URL('../'+name,import.meta.url),'utf8');
-  assert.equal((html.match(/data-board="activity"/g)||[]).length,name==='ops-viewer.html'?0:1);
-  if(name==='ops-viewer.html')assert.doesNotMatch(html,/data-board="(?:tickets|events|schools)"/);
-  else {
-   assert.doesNotMatch(html,/<button[^>]*class="[^"]*tickerBand[^>]*data-board="(?:tickets|events|schools)"/);
-   assert.match(html,/<button type="button" data-board="events">Events<\/button>/);
+  for(const kind of ['events','schools','spiceworks','city'])assert.equal((html.match(new RegExp('id="ops-'+kind+'-ticker"','g'))||[]).length,1);
+  if(name==='ops-viewer.html'){
+   assert.match(html,/href="#dashboard"/);assert.match(html,/href="#map"/);assert.match(html,/Restroom status report/);assert.match(html,/Exhibit status report/);
+   assert.doesNotMatch(html,/close-ticket|<form|start_page1|Manager sign-in|Manager Hub/);
   }
-  if(name==='ops-viewer.html'){assert.match(html,/href="#dashboard"/);assert.match(html,/href="#map"/);assert.match(html,/Restroom status report/);assert.match(html,/Exhibit status report/);assert.doesNotMatch(html,/close-ticket|<form/);}
   assert.match(html,/data-map-presentation="original-horizontal"/);
   assert.doesNotMatch(html,/public-schedule|schedule-date|schedule-roster|schedule-assignments/);
  }
@@ -125,8 +124,8 @@ test('public ticket board has no event or school feed and does not fabricate una
 test('summary failure still starts independent attendance and forecast reads without presenting zero counts',async()=>{
  const f=pageFixture();try{
   f.pending.push(async()=>{throw Error('Synthetic database outage');});await f.page.init();await flush();
-  assert.equal(f.boardCalls.length,1);assert.equal(f.boardCalls[0].summary,null);assert.equal(f.boardCalls[0].isCurrent(),true);
-  assert.match(f.node('map-page-status').textContent,/cleaning status unavailable/);
+  assert.equal(f.boardCalls.length,1);assert.equal(f.boardCalls[0].preserveSummary,true);assert.equal(f.boardCalls[0].isCurrent(),true);
+  assert.match(f.node('map-page-status').textContent,/cleaning status unavailable/i);
   assert.ok(f.node('public-status-counts').children.every(tile=>tile.children[1].textContent==='—'));
   const reads=f.calls.length;assert.equal(f.node('public-dashboard').hidden,false);assert.equal(f.node('dashboard-map').hidden,true);
   f.window.location.hash='#map';f.listeners.get('hashchange')();assert.equal(f.node('dashboard-map').hidden,false);assert.equal(f.node('public-dashboard').hidden,true);
@@ -146,6 +145,21 @@ test('weather publishes while the attendance source is still pending; suspension
   f.controller.suspend();release({ok:true,json:async()=>({ok:true,data:{attendance:99}})});await pending;
   assert.equal(f.elements['ops-weather'].textContent,'Unavailable');assert.equal(f.elements['ops-attendance'].textContent,'Unavailable');
  }finally{f.clean();}
+});
+test('same-owner refresh retains attendance and weather until replacement; failed sources label last known values',async()=>{
+ const f=fixture({audience:'public_readonly'});let release;
+ try{
+  f.setNow(Date.parse(summary.meta.generated_at));
+  const forecast={current:{time:Date.parse(summary.meta.generated_at)/1000,temperature_2m:62},current_units:{temperature_2m:'°F'}};
+  await f.controller.refresh({summary:null,isCurrent:()=>true,fetchImpl:async url=>({ok:true,json:async()=>url.includes('attendance')?{ok:true,data:{attendance:99,stale:false,source_timestamp:summary.meta.generated_at}}:forecast})});
+  const gate=new Promise(r=>{release=r;});
+  const pending=f.controller.refresh({preserveSummary:true,isCurrent:()=>true,fetchImpl:async()=>{await gate;throw Error('Synthetic unavailable source');}});
+  f.controller.tick();assert.equal(f.elements['ops-weather'].textContent,'62°F');assert.equal(f.elements['ops-attendance'].textContent,'99');
+  release();await pending;
+  assert.equal(f.elements['ops-weather'].textContent,'62°F');assert.match(f.elements['ops-weather-note'].textContent,/Last known.*unavailable/);
+  assert.equal(f.elements['ops-attendance'].textContent,'99');assert.match(f.elements['ops-attendance-note'].textContent,/Last known.*unavailable/);
+  f.controller.suspend();assert.equal(f.elements['ops-weather'].textContent,'Unavailable');assert.equal(f.elements['ops-attendance'].textContent,'Unavailable');
+ }finally{release?.();f.clean();}
 });
 test('public dashboard shows actual current and recorded workers and keeps pending work out of clean totals',async()=>{
  const f=pageFixture(),id=n=>'98000000-0000-4000-8000-'+String(n).padStart(12,'0');
