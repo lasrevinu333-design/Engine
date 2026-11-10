@@ -10,8 +10,10 @@
   <link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css">
   <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
   <link rel="stylesheet" href="./operations-dashboard.css">
+  <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
 </head><body class="mapWebPage operationsPage" data-memphis-context="manager">
   <main class="mapPage commandPage">
+    <nav class="mz-nav-actions" aria-label="Application navigation"><a id="map-hub-link" class="mz-back-link" href="./start_page1.html" aria-label="Back to Operations Hub">Back</a></nav>
     <p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Checking manager access…</p>
     <div id="operations-panels" hidden>
       <header class="telemetry" aria-label="Date, attendance and weather">
@@ -22,7 +24,7 @@
       <button type="button" class="tickerBand activityBand" data-board="activity" aria-label="Open tickets, events and schools activity board"><span class="tickerLabel">ACTIVITY</span><span class="tickerWindow"><span class="tickerTrack" id="ops-activity-ticker">Current activity unavailable.</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
     </div>
     <section class="mzMapStage uxCard commandMap" id="dashboard-map" data-map-presentation="original-horizontal" aria-label="Custodial operations map" hidden>
-      <div class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h2>Custodial operations</h2></div><div id="ops-status-counts" class="statusCounts">Cleaning status unavailable</div><a id="map-hub-link" class="uxButton compact" href="./start_page1.html">← Back</a><a id="map-dashboard-link" class="uxButton compact secondary" href="./dashboard.html">Dashboard</a><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Map full screen</button></div>
+      <div class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h2>Custodial operations</h2></div><div id="ops-status-counts" class="statusCounts">Cleaning status unavailable</div><a id="map-dashboard-link" class="uxButton compact secondary" href="./dashboard.html">Dashboard</a><button type="button" data-board="events">Events</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Map full screen</button></div>
       <div class="mapScreenReader" data-map-status role="status">Map cleaning status unavailable until a current authenticated response</div>
       <div class="mzMapViewport" data-map-viewport aria-label="Whole approved zoo map"><div class="mzMapSurface" data-map-surface><img class="mzMapArtwork" data-map-artwork alt="Original approved horizontal illustrated Memphis Zoo map; cleaning icons are separate interactive controls" width="1282" height="550"><div class="mzMapLayer" data-map-layer></div></div></div>
       <div class="mzMapSelection" id="map-selection" data-map-selection role="status" aria-live="polite">Select a map pin or the locations board.</div>

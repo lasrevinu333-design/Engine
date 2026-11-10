@@ -14,7 +14,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
     accessMode:document.getElementById('access-mode'),managerName:document.getElementById('manager-name'),managerTitle:document.getElementById('manager-title'),
     clock:document.getElementById('clock'),date:document.getElementById('date'),weatherValue:document.getElementById('weather-value'),weatherMeta:document.getElementById('weather-meta'),
     attendanceValue:document.getElementById('attendance-value'),attendanceMeta:document.getElementById('attendance-meta'),hubStatus:document.getElementById('hub-status'),buildStamp:document.getElementById('build-stamp'),
-    messagesLink:document.getElementById('messages-link'),scheduleLink:document.getElementById('schedule-link'),
+    messagesLink:document.getElementById('messages-link'),scheduleLink:document.getElementById('schedule-link'),eventsLink:document.getElementById('events-link'),
     dashboardLink:document.getElementById('dashboard-link'),dashboardMapLink:document.getElementById('dashboard-map-link'),insightsLink:document.getElementById('insights-link'),guestIssuesLink:document.getElementById('guest-issues-link'),feedbackLink:document.getElementById('feedback-link'),
     notificationsLink:document.getElementById('notifications-link'),phoneAssignmentsLink:document.getElementById('phone-assignments-link'),
     deviceSecurityLink:document.getElementById('device-security-link'),releaseCanaryLink:document.getElementById('release-canary-link'),geminiConsoleLink:document.getElementById('gemini-console-link'),
@@ -29,7 +29,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
   function setStatus(text='',kind=''){els.hubStatus.textContent=text;els.hubStatus.className=`uxStatus${kind?` ${kind}`:''}`;}
   const coverageLink=document.getElementById('owner-coverage-link');
   const coverageHref=coverageLink?.href;
-  const managerLinks=[els.messagesLink,els.scheduleLink,els.dashboardLink,els.dashboardMapLink,els.insightsLink,
+  const managerLinks=[els.messagesLink,els.scheduleLink,els.eventsLink,els.dashboardLink,els.dashboardMapLink,els.insightsLink,
     els.guestIssuesLink,els.feedbackLink,els.notificationsLink,els.phoneAssignmentsLink,
     els.deviceSecurityLink,els.releaseCanaryLink,els.geminiConsoleLink,coverageLink].filter(Boolean);
   // A rejection fence only. MemphisAuth remains the session/role authority;
@@ -89,6 +89,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
     if(!current(state.generation))return;
     const messagesUrl=new URL('./messages.html',window.location.href);
     const scheduleUrl=new URL('./schedule-weekly.html',window.location.href);
+    const eventsUrl=new URL('./events.html',window.location.href);
     const dashboardMapUrl=new URL('./operations-dashboard.html',window.location.href);
     const dashboardUrl=new URL('./dashboard.html',window.location.href);
     const insightsUrl=new URL('./operational-insights.html',window.location.href);
@@ -99,11 +100,12 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
     const deviceSecurityUrl=new URL('./device-security.html',window.location.href);
     const releaseCanaryUrl=new URL('./admin.html#release-canary-controls',window.location.href);
     const geminiConsoleUrl=new URL('./gemini-admin.html',window.location.href);
-    const urls=[messagesUrl,scheduleUrl,dashboardUrl,dashboardMapUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl];
+    const urls=[messagesUrl,scheduleUrl,eventsUrl,dashboardUrl,dashboardMapUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl];
     for(const url of urls)url.searchParams.set('hub','manager');
     if(state.currentDeviceId){for(const url of urls)url.searchParams.set('device',state.currentDeviceId);}
     els.messagesLink.href=messagesUrl.toString();
     els.scheduleLink.href=scheduleUrl.toString();
+    els.eventsLink.href=eventsUrl.toString();
     els.dashboardLink.href=dashboardUrl.toString();
     els.dashboardMapLink.href=dashboardMapUrl.toString();
     els.insightsLink.href=insightsUrl.toString();

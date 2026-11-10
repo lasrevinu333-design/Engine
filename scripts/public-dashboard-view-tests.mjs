@@ -104,7 +104,11 @@ test('manager retains Activity; public offers Dashboard and Map without schedule
  for(const name of ['ops-viewer.html','operations-dashboard.html']){
   const html=readFileSync(new URL('../'+name,import.meta.url),'utf8');
   assert.equal((html.match(/data-board="activity"/g)||[]).length,name==='ops-viewer.html'?0:1);
-  assert.doesNotMatch(html,/data-board="(?:tickets|events|schools)"/);
+  if(name==='ops-viewer.html')assert.doesNotMatch(html,/data-board="(?:tickets|events|schools)"/);
+  else {
+   assert.doesNotMatch(html,/<button[^>]*class="[^"]*tickerBand[^>]*data-board="(?:tickets|events|schools)"/);
+   assert.match(html,/<button type="button" data-board="events">Events<\/button>/);
+  }
   if(name==='ops-viewer.html'){assert.match(html,/href="#dashboard"/);assert.match(html,/href="#map"/);assert.match(html,/Restroom status report/);assert.match(html,/Exhibit status report/);assert.doesNotMatch(html,/close-ticket|<form/);}
   assert.match(html,/data-map-presentation="original-horizontal"/);
   assert.doesNotMatch(html,/public-schedule|schedule-date|schedule-roster|schedule-assignments/);

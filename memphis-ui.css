@@ -67,7 +67,8 @@
   display: none;
 }
 
-.mz-back-link {
+.mz-back-link,
+.operationsPage .mz-back-link {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
