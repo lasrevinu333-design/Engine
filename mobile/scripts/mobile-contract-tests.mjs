@@ -308,7 +308,7 @@ for (const module of [
   'Today', 'Overdue', 'Due soon', 'Being cleaned now', 'Open problems', 'Events today',
   'Decisions', 'Coverage', 'Absence / PTO', 'Schedule change', 'Correct record', 'Maintenance problem',
   'Saved work needs review', 'Phone problem', 'Admin Tools', 'Phone enrollment', 'Phone assignment',
-  'Manager Access', 'Device Security', 'Diagnostics', 'Offline evidence details', 'Release / canary',
+  'Device Security', 'Diagnostics', 'Offline evidence details', 'Release / canary',
   'Rollback / recovery', 'Audit logs', 'Gemini administration',
 ]) assert.ok(managerHtml.includes(module), `manager app missing ${module}`);
 assert.match(managerHtml, /id="today-events-heading">Events today<\/h2>/);

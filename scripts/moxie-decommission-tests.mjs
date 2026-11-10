@@ -33,6 +33,6 @@ assert.doesNotMatch(read('ops-hub.js'), /moxie-link|ANNIE_RETURN_URL/);
 assert.doesNotMatch(read('mobile/src/chatscope/app.jsx'), /ANNIE_RETURN_URL|isAnnieOrigin/);
 assert.match(read('mobile/src/chatscope/home-assistant-entry.mjs'), /request\('\/memphis\/thread'/);
 assert.match(read('mobile/src/chatscope/app.jsx'), /createHomeAssistantEntry/);
-assert.match(read('mobile/src/manager/index.html'), /Manager Access/);
+assert.doesNotMatch(read('mobile/src/manager/index.html'), /Manager Access/); // Owner removed the extra access page.
 
 console.log('MOXIE_DECOMMISSION_FRONTEND_PASS');
