@@ -3968,8 +3968,8 @@
   "fixture_inputs": [
     {
       "path": "scripts/fixtures/current-approved-preservation-source-deltas.json",
-      "bytes": 120158,
-      "sha256": "a713abcce24bfe181450bf084ac6a88b0bd2def38ced6a6a62e589d30c3564c8",
+      "bytes": 120417,
+      "sha256": "4a41321427516b21e84961047da7a4f8dcc7eb3e869479acd7cd6819e7ee1c99",
       "purpose": "Explicit current approved-preservation source-comparison context, genuine L predecessors and all current Java identities; no historical evidence or runtime admission repinned."
     },
     {
