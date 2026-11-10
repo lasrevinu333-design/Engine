@@ -132,7 +132,7 @@ test('dispatcher invokes exact Node and complete ordered source inventory', () =
   const calls = [], messages = [];
   const result = runCoreReleaseGate({ clock: () => 0, log: message => messages.push(message),
     execute: (command, args, options) => { calls.push({ command, args, options }); return success(); } });
-  assert.equal(calls.length, 78);
+  assert.equal(calls.length, 79);
   calls.forEach((call, index) => {
     assert.equal(call.command, process.execPath);
     assert.deepEqual(call.args, [resolve(CORE_ROOT, CORE_SUITES[index])]);
