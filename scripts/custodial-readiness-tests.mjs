@@ -86,10 +86,11 @@ await check('generation and principal binding reject ambiguous late positive res
   const next = o.token('a'); assert.equal(o.accept(next, 'a', positive), true);
   o.invalidate(); assert.equal(o.read(next, 'a'), null);
 });
-function fixture({ connected = true, anchored = true, pending = [], nativePending = false, session = 'none', authReject = false, cacheOnly = false, startup = 'none', delaySnapshot = false, nativeObservation = 'CONFIRMED', delayReadiness = false, localReadinessFailure = false, ownerTestSupport = false } = {}) {
+function fixture({ connected = true, anchored = true, pending = [], nativePending = false, session = 'none', authReject = false, cacheOnly = false, startup = 'none', delaySnapshot = false, nativeObservation = 'CONFIRMED', delayReadiness = false, localReadinessFailure = false, ownerTestSupport = false, actualSessionRows = null } = {}) {
   const elements = new Map(), listeners = new Map(), calls = [], storage = new Map();
   let principal = 'principal-a', subscriber, releaseSnapshot, releaseReadiness;
-  let status = { ...security, deviceId: 'KIOSK_08' };
+  let status = { ...security, deviceId: 'KIOSK_08', principal: { device_id: 'KIOSK_08' } };
+  const protectedValues = new Map(Object.entries(actualSessionRows || {})), protectedReads = [], protectedWrites = [];
   let queue = structuredClone(pending);
   let nativeState = { ...positive.nativeState, observation: nativeObservation, pending_occurrences: nativePending };
   const readinessGate = delayReadiness ? new Promise(resolve => { releaseReadiness = resolve; }) : Promise.resolve();
@@ -100,7 +101,8 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
   };
   const identity = () => ({ authenticated: true, employee_name: 'Fixture Custodian', fixture_principal: principal });
   const oldProfile = identity();
-  const sec = { native: true, ready: Promise.resolve(), getStatus: () => ({ ...status }), ensureSecurityState: async () => ({ ...status }), subscribe: fn => { subscriber = fn; }, getPendingEnrollmentOperation: () => null };
+  const sec = { native: true, ready: Promise.resolve(), getStatus: () => ({ ...status }), ensureSecurityState: async () => ({ ...status }), subscribe: fn => { subscriber = fn; }, getPendingEnrollmentOperation: () => null,
+    mutateProtectedWork() { throw new Error('Readiness must not mutate protected work'); } };
   const window = { MemphisCustodialSecurity: sec, setInterval: () => 1, clearInterval() {}, setTimeout: () => 1, clearTimeout() {},
     addEventListener: (name, fn) => listeners.set(name, fn),
     MemphisUI: { resolveOpenScanSession: () => ({ state: session, session: { location_name: 'Original Fixture Place', immutable: 'original-finish' } }), isUnstartedScanSession: () => false },
@@ -123,6 +125,17 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
     classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode, installHourlyForecastKeyboard, installHomeFacts: () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; }, async restoreProfileFacts() { return true; } }),
     Network: { addListener: async (name, fn) => listeners.set(name, fn) }, App: { addListener: async (name, fn) => listeners.set(name, fn) }, StatusBar: { hide: async () => {} } };
   vm.createContext(context);
+  if (actualSessionRows !== null) {
+    const localStorage = { get length() { protectedReads.push('length'); return protectedValues.size; }, key: i => [...protectedValues.keys()][i] ?? null,
+      getItem: key => { protectedReads.push(key); return protectedValues.get(key) ?? null; },
+      setItem: (key,value) => { protectedWrites.push(key); protectedValues.set(key,String(value)); },
+      removeItem: key => { protectedWrites.push(key); protectedValues.delete(key); } };
+    window.localStorage = context.localStorage = localStorage;
+    window.location = { href: 'https://fixture.invalid/index.html?hub=employee' }; window.top = window; window.self = window;
+    context.URL = URL; context.document.readyState = 'loading'; context.document.addEventListener = () => {};
+    window.MemphisScanSync.isLocallyCompleted = () => false;
+    vm.runInContext(read('memphis-ui.js'), context, { filename: 'actual-memphis-ui.js' });
+  }
   vm.runInContext(app.replace(/^import .*;\s*$/gm, '').replace('void (async () => {', 'globalThis.__startup = (async () => {'), context);
   const flush = async () => { await context.__startup; for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve)); };
   return { elements, calls, flush, listeners, queueBytes: () => JSON.stringify(queue), releaseSnapshot: () => releaseSnapshot?.(),
@@ -131,7 +144,10 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
     releaseReadiness: () => releaseReadiness?.(),
     disconnect: () => { context.navigator.onLine = false; listeners.get('networkStatusChange')({ connected: false }); },
     queueEvent: (rows, state) => { queue = rows; listeners.get('memphis-scan-sync')({ detail: { status: state } }); },
-    setFence: () => { nativeState = { ...nativeState, rollback_fence_active: true }; } };
+    setFence: () => { nativeState = { ...nativeState, rollback_fence_active: true }; },
+    protectedReads, protectedWrites, protectedBytes: () => JSON.stringify([...protectedValues]),
+    setOwner: (patch, identity = principal) => { status = { ...status, ...patch }; principal = identity; },
+    observeNow: () => vm.runInContext('refreshReadiness()', context) };
 }
 await check('actual controller presents positive existing restore/anchor and readonly queue observations', async () => {
   const f = fixture(); await f.flush();
@@ -255,7 +271,38 @@ await check('collector cannot authorize, drain, sync, rewrite or date-expire pro
   assert.doesNotMatch(collector, /authorizeOfflineNewWork|\.sync\(|\.drain|recoverLocal|saveOffline|setItem|Date\./);
   assert.match(collector, /\.listActions\(\)/); assert.match(collector, /getReadinessObservation/);
   assert.doesNotMatch(collector, /getOfflineAuthorityState/);
-  assert.match(collector, /securityGeneration !== security.getStatus\(\).generation/);
+  assert.match(collector, /securityGeneration !== currentSecurity.generation/);
+});
+await check('real resolver is not asked to classify an unread store while protected owner verification is pending',async()=>{
+  for(const [patch,identity]of [[{ready:false},'principal-a'],[{generation:0},'principal-a'],[{},''],
+    [{principal:{device_id:'KIOSK_09'}},'principal-a'],[{deviceId:''},'principal-a']]){
+    const f=fixture({actualSessionRows:{}});await f.flush();const before=f.protectedBytes();f.protectedReads.length=0;
+    f.setOwner(patch,identity);await f.observeNow();const e=f.elements.get('home-readiness');
+    assert.equal(f.protectedReads.length,0,'No integrity inspection before its owner prerequisites');
+    assert.match(e.className,/needs_internet/);assert.doesNotMatch(e.className,/do_not_use|phoneReadiness ready/);
+    assert.equal(f.protectedBytes(),before);assert.equal(f.protectedWrites.length,0);
+    f.setOwner({ready:true,generation:1,deviceId:'KIOSK_08',principal:{device_id:'KIOSK_08'}},'principal-a');
+    f.queueEvent([],'observed');await f.flush();
+    assert.ok(f.protectedReads.length>0,'The ordinary observation event retries after owner recovery');
+    assert.match(e.className,/phoneReadiness ready/);assert.equal(f.protectedWrites.length,0);
+  }
+});
+await check('real malformed protected store remains Do not use after owner recovery and never changes bytes',async()=>{
+  const f=fixture({actualSessionRows:{'session:ac100000-0000-4000-8000-000000000001':'{malformed original'}});
+  await f.flush();const before=f.protectedBytes();await f.observeNow();const e=f.elements.get('home-readiness');
+  assert.match(e.className,/do_not_use/);assert.equal(e.hidden,false);
+  f.setOwner({ready:false});f.protectedReads.length=0;await f.observeNow();
+  assert.equal(f.protectedReads.length,0);assert.doesNotMatch(e.className,/phoneReadiness ready/);
+  f.setOwner({ready:true});await f.observeNow();assert.match(e.className,/do_not_use/);
+  assert.equal(f.protectedBytes(),before);assert.equal(f.protectedWrites.length,0);
+});
+await check('pending owner observation cannot suppress hard security or authoritative native refusal',async()=>{
+  for(const patch of [{ready:false,quarantined:true},{ready:false,available:false}]){
+    const f=fixture({actualSessionRows:{}});await f.flush();f.setOwner(patch);await f.observeNow();
+    assert.match(f.elements.get('home-readiness').className,/do_not_use/);assert.equal(f.protectedWrites.length,0);
+  }
+  const f=fixture({actualSessionRows:{},nativeObservation:'DO_NOT_USE'});await f.flush();f.setOwner({ready:false});await f.observeNow();
+  assert.match(f.elements.get('home-readiness').className,/do_not_use/);assert.equal(f.protectedWrites.length,0);
 });
 console.log(JSON.stringify({ scope: 'OFF-015 pure classifier and actual employee controller, synthetic read-only native/security/backend fixtures; not current native clock, independent audit or phone proof', passed: results.filter(r => r.passed).length, failed: results.filter(r => !r.passed).length, results }, null, 2));
 process.exitCode = results.some(r => !r.passed) ? 1 : 0;

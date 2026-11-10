@@ -74,13 +74,25 @@ async function refreshReadiness() {
     if (await window.MemphisScanSync?.ready === true && typeof window.MemphisScanSync?.listActions === 'function') queue = await window.MemphisScanSync.listActions();
     nativeState = await window.MemphisMobile?.getReadinessObservation?.(deviceId());
   } catch { localReadinessUnavailable = true; /* Read-only local verification failed; no recovery mutation. */ }
-  if (sequence !== readinessReadSequence || securityGeneration !== security.getStatus().generation
-    || !readinessObservation.current(token, readinessPrincipal())) return;
-  paintReadiness({ ...(readinessObservation.read(token, principal) || {}), security: security.getStatus(),
+  const currentSecurity = security.getStatus(), currentPrincipal = readinessPrincipal();
+  if (sequence !== readinessReadSequence || securityGeneration !== currentSecurity.generation
+    || !readinessObservation.current(token, currentPrincipal)) return;
+  const currentDevice = String(currentSecurity.deviceId || '').trim().toUpperCase();
+  // The resolver's conservative refusal also covers an owner still being
+  // verified, before any saved record can be read. Observe that as unknown;
+  // only an established protected owner can inspect saved-store integrity.
+  const canInspectSession = security.native === true && typeof security.mutateProtectedWork === 'function'
+    && currentSecurity.ready === true && currentSecurity.available === true && currentSecurity.quarantined === false
+    && Number.isSafeInteger(currentSecurity.generation) && currentSecurity.generation >= 1
+    && /^KIOSK_\d{2}$/.test(currentDevice) && currentSecurity.deviceId === currentDevice
+    && currentSecurity.principal?.device_id === currentDevice
+    && typeof currentPrincipal === 'string' && currentPrincipal.length > 0;
+  const sessionState = canInspectSession ? window.MemphisUI?.resolveOpenScanSession?.(currentDevice)?.state : undefined;
+  paintReadiness({ ...(readinessObservation.read(token, principal) || {}), security: currentSecurity,
     principalPresent: Boolean(principal), connected: readinessConnected,
     profileMatches: currentProfile(profile), enrollmentPending: Boolean(pendingEnrollmentOperation()),
     managerRequired: readinessManagerRequired, queue, nativeState, localReadinessUnavailable,
-    sessionState: window.MemphisUI?.resolveOpenScanSession?.(deviceId())?.state });
+    sessionState });
 }
 function invalidateReadiness({refresh=true}={}) {
   readinessObservation.invalidate();
