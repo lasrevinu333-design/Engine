@@ -78,7 +78,7 @@
         &&requestGeneration===generation&&requestEpoch===readEpoch;
       // Withdraw old feed/GPS work now, without discarding an empty same-owner
       // board. An older failure must never clear a newer successful summary.
-      operations?.unavailable({preserveBoard:true});
+      operations?.unavailable({preserveBoard:true,preserveMap:true});
       status.textContent='Refreshing current cleaning status…';
       try{
         const headers=await auth.opsManagerAuthHeaders({expectedManagerId:owner.manager_id});

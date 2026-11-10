@@ -44,6 +44,18 @@ function backupRow(encoded,key,current){
   return row&&key===BACKUP_PREFIX+current.deviceId+':'+row.body.operation_id?{backup,row}:null;
 }
 
+// Identity discovery only. A retained original is never an acceptance receipt.
+// Use the same closed backup/original codec as delivery, without rewriting bytes.
+export function feedbackRetirementIdentity(encoded,key){
+  if(typeof encoded!=='string'||encoded.length>ORIGINAL_LIMIT*2)return null;
+  let backup,original;
+  try{backup=JSON.parse(encoded);original=JSON.parse(backup.original_encoded);}catch{return null;}
+  const body=original?.body;
+  const current=binding({deviceId:body?.device_id,employeeId:body?.expected_employee_id,
+    credentialId:body?.expected_credential_id,assignmentEpoch:body?.expected_assignment_epoch});
+  return current&&backupRow(encoded,key,current)?current:null;
+}
+
 /** One shared delivery owner in every employee document; no guest-report dependency. */
 export function createFeedbackOutbox({storage,mutate,identity,request,online=()=>navigator.onLine!==false,lock=null,onStatus=()=>{}}) {
   let flight=null,savedRevision=0;

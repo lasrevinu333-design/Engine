@@ -523,7 +523,7 @@ async function legacyBrowserPreservationCases(){
 }
 
 async function scanIndexConfirmationCallers(){
-  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const html=readFileSync(process.env.SCAN_PAGE_SOURCE||new URL('../index.html',import.meta.url),'utf8');
   const uiSource=readFileSync(new URL('../memphis-ui.js',import.meta.url),'utf8');
   const part=(text,from,to)=>{const a=text.indexOf(from),b=text.indexOf(to,a);assert.ok(a>=0&&b>a,from);return text.slice(a,b);};
   const callerCode=part(html,'    let scanNativeSecurityRequired=','    guardedStart().catch(')
@@ -532,9 +532,10 @@ async function scanIndexConfirmationCallers(){
   const queueCode=slice('  function custodialSecurity()','  function dispatchSecurityPause(')
     +slice('  function queueOpeningCheckpoint(','  function queueOpeningConnection(')
     +slice('  function sessionKey(','  function allSessions(')
+    +slice('  function applyProcessResult(','  async function reportDeviceSyncStatus(')
     +slice('  const nativeLegacyCompletionBindings = new WeakMap();','  async function saveCompletedLocalWork(');
   function fixture({native=true}={}){
-    const rows=new Map(),queue=[],device='KIOSK_08';let active=false,admissions=0,afterAdmission=null,outer=false;
+    const rows=new Map(),queue=[],device='KIOSK_08';let active=false,admissions=0,afterAdmission=null,beforeLock=null,outer=false;
     const status={ready:true,available:true,quarantined:false,state:'enrolled',deviceId:device,generation:7,
       principal:{schema_version:'custodial-protected-principal.v1',device_id:device,
         employee_id:'00000000-0000-4000-8000-000000000001',credential_id:'00000000-0000-4000-8000-000000000002',
@@ -564,10 +565,14 @@ async function scanIndexConfirmationCallers(){
       storageFailure:(name,error)=>Error(name+': '+error.message),managerRecoveryError:message=>Error(message),
       state:{deviceId:device},currentDeviceId:device,
       sessionStorageKey:id=>'session:'+id,getLocalSessionById:id=>JSON.parse(rows.get('session:'+id)||'null'),
-      mutateLocalSessions:async operation=>{assert.equal(outer,false);outer=true;try{return await operation();}finally{outer=false;}}};
+      exactSessionForPayload:p=>JSON.parse(rows.get('session:'+(p.p_client_session_id||p.p_session_uuid))||'null'),
+      mutateLocalSessions:async operation=>{assert.equal(outer,false);if(beforeLock){const hook=beforeLock;beforeLock=null;await hook();}outer=true;try{return await operation();}finally{outer=false;}}};
     const context=vm.createContext(sandbox);vm.runInContext(uiSource,context,{filename:'actual-memphis-ui.js',timeout:1000});
     vm.runInContext(callerCode+queueCode,context,{filename:'actual-scan-confirmation-callers',timeout:1000});
-    window.MemphisScanSync={isLocallyCompleted:context.isLocallyCompleted};
+    const browserOwner=createProtectedBrowserAdmission({storage,locks:createSyntheticScheduleLocks()});
+    window.MemphisScanSync={isLocallyCompleted:context.isLocallyCompleted,
+      requireLegacyBrowserMutation:()=>browserOwner.requireMutation(),
+      mutateProtectedWork:fn=>browserOwner.mutate(()=>fn({assertCurrent:()=>browserOwner.requireMutation()}))};
     sandbox.enqueueUnlocked=async(action,expectedGeneration)=>context.mutateProtectedQueue(()=>{
       queue.push(structuredClone(action));return queue.length;
     },{requireEnrollment:true,...(expectedGeneration==null?{}:{expectedGeneration})});
@@ -580,7 +585,7 @@ async function scanIndexConfirmationCallers(){
       p_location_code:session.location_code,p_client_started_at:session.started_at,p_client_ended_at:session.ended_at,
       p_native_finish_scan_entry_id:session.native_finish_scan_entry_id,p_response_json:structuredClone(session.response_json)}};
     return {context,window,rows,queue,status,session,action,key:'session:'+id,index:'mz_phone_scan_resume:'+device,
-      after(fn){afterAdmission=fn;},admissions:()=>admissions,active:()=>active};
+      after(fn){afterAdmission=fn;},before(fn){beforeLock=fn;},acknowledge:fn=>native?security.mutateProtectedWork(fn):window.MemphisScanSync.mutateProtectedWork(fn),admissions:()=>admissions,active:()=>active};
   }
   const selected=process.argv.find(a=>a.startsWith('--case='))?.slice(7),passed=[];
   async function run(name,fn){if(selected&&!name.includes(selected))return;await fn();passed.push(name);console.log('PASS_SOURCE_VM '+name);}
@@ -619,6 +624,28 @@ async function scanIndexConfirmationCallers(){
   await run('never-marked-web-save-compatible',async()=>{
     const f=fixture({native:false});await f.context.saveLocalSession(f.session);
     assert.equal(f.admissions(),0);assert.equal(JSON.parse(f.rows.get(f.index)).sessions[0].session_uuid,f.session.session_uuid);
+  });
+  for(const native of [false,true])for(const kind of ['event','finish','successor'])await run(`accepted-start-merge-${native?'native':'web'}-${kind}`,async()=>{
+    const f=fixture({native});
+    const provisional={...f.session,status:'offline-provisional',state:'offline-provisional',server_acknowledged:false,
+      sync_status:'offline-provisional',scan_evidence:[],offline_authority_employee_id:'00000000-0000-4000-8000-000000000001'};
+    delete provisional.ended_at;delete provisional.native_finish_scan_entry_id;
+    f.rows.set(f.key,JSON.stringify(provisional));
+    const stale={...provisional,...(kind==='finish'?{status:'pending_submit',state:'submitting-completion',ended_at:f.session.ended_at,
+      native_finish_scan_entry_id:f.session.native_finish_scan_entry_id}:{scan_evidence:[{client_event_id:'event-1',event_type:'scan_start'}]})};
+    let newest;
+    f.before(()=>f.acknowledge(()=>{
+      f.context.applyProcessResult({type:'start_session',payload:{p_client_session_id:provisional.session_uuid,p_client_started_at:provisional.started_at}},
+        {client_session_id:provisional.session_uuid,context_id:'accepted-context',submission_proof:'accepted-proof'});
+      if(kind==='successor'){const row=JSON.parse(f.rows.get(f.key));row.offline_authority_employee_id='00000000-0000-4000-8000-000000000099';f.rows.set(f.key,JSON.stringify(row));}
+      newest=f.rows.get(f.key);
+    }));
+    if(kind==='successor'){await assert.rejects(()=>f.context.saveLocalSession(stale),/identity changed/);assert.equal(f.rows.get(f.key),newest);return;}
+    await f.context.saveLocalSession(stale);const saved=JSON.parse(f.rows.get(f.key));
+    assert.equal(saved.context_id,'accepted-context');assert.equal(saved.submission_proof,'accepted-proof');assert.equal(saved.server_acknowledged,true);
+    assert.equal(saved.client_completion_id,provisional.client_completion_id);assert.equal(saved.started_at,provisional.started_at);
+    assert.equal(saved.status,kind==='finish'?'pending_submit':'server-active');
+    if(kind==='finish')assert.equal(saved.ended_at,f.session.ended_at);else assert.equal(saved.scan_evidence[0].client_event_id,'event-1');
   });
   assert.ok(passed.length,'selected owning caller case must execute');
   console.log(JSON.stringify({status:'PASS_SOURCE_VM',cases:passed,actual_ui_and_caller_source:true,

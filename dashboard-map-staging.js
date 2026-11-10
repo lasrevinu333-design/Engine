@@ -59,7 +59,8 @@
       fail('exact approved anchors required');
     // Only the authenticated live-fetch adapter may explicitly supply this
     // classification. generated_at is syntax/source binding, not a TTL.
-    const valid=transport==='CURRENT_AUTHENTICATED_RESPONSE'
+    const publicRead=transport==='CURRENT_PUBLIC_READONLY_RESPONSE'&&summary?.meta?.audience==='public_readonly';
+    const valid=(transport==='CURRENT_AUTHENTICATED_RESPONSE'||publicRead)
       &&summary?.meta?.contracts?.dashboard==='dashboard.v1'
       &&Number.isFinite(Date.parse(summary?.meta?.generated_at||''))
       &&Array.isArray(summary?.restrooms)&&Array.isArray(summary?.exhibits);
@@ -76,7 +77,7 @@
       // contributes only cleaning state. Tickets and demo colors never enter.
       return Object.freeze({...anchor,status,statusLabel:LABELS[status],
         activeWork,
-        statusSource:status==='unknown'||status==='unconfirmed'?'UNCONFIRMED':'AUTHENTICATED_DASHBOARD_SUMMARY'});
+        statusSource:status==='unknown'||status==='unconfirmed'?'UNCONFIRMED':publicRead?'PUBLIC_READONLY_DASHBOARD_SUMMARY':'AUTHENTICATED_DASHBOARD_SUMMARY'});
     });
   }
   function initialInteraction(){return Object.freeze({hoveredId:null,focusedId:null,tappedId:null,urgentIds:Object.freeze([])});}

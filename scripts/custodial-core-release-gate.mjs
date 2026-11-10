@@ -76,6 +76,13 @@ export const CORE_SUITES = Object.freeze([
   'native-notification-arrival-boundary-tests',
   'notification-ownership-principal-settlement-tests',
   'notification-schedule-ownership-tests',
+  'feedback-credential-restart-tests',
+  'scan-unsupported-original-preservation-tests',
+  'scan-deferred-protected-write-tests',
+  'removal-resume-witness-tests',
+  'shared-events-view-tests',
+  'manager-home-bfcache-tests',
+  'public-dashboard-view-tests',
 ].map(name => `scripts/${name}.mjs`));
 export const CORE_SUITE_TIMEOUT_MS = 45_000;
 export const CORE_TOTAL_TIMEOUT_MS = 600_000;

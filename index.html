@@ -501,9 +501,9 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
       const priorEvidence=Array.isArray(local?.scan_evidence)?local.scan_evidence:[];
       const scanEvidence=requiresNativeCompletion?[...priorEvidence.filter(event=>event?.event_type!=="scan_finish"),{client_event_id:nativeFinishScanEntryId,event_type:"scan_finish",result:"ok",notes:"Physical NFC completion scan",scanned_at:endedAt,payload_json:{entry_source:"native-nfc"}}].slice(-100):priorEvidence;
       const pendingRecord={...local,session_uuid:local&&local.session_uuid||clientSessionId,client_session_id:clientSessionId,client_completion_id:clientCompletionId,location_name:local&&local.location_name||locationCode,location_code:local&&local.location_code||locationCode,location_type:localKind.locationType,form_type:localKind.formType,employee_name:local&&local.employee_name||"",device_id:deviceId,status:"pending_submit",state:"submitting-completion",started_at:startedAt,ended_at:endedAt,native_finish_scan_entry_id:nativeFinishScanEntryId||null,scan_evidence:scanEvidence,duration_display:local&&local.duration_display||"",server_acknowledged:local&&local.server_acknowledged===true,sync_status:local&&local.server_acknowledged===false?"offline-provisional":"awaiting_completion_form",native_completion_time_captured:requiresNativeCompletion,finish_capture_pending:false,geofence:local&&local.geofence||currentScanState&&currentScanState.geofence||null};
-      await saveLocalSession(pendingRecord);
+      const savedPending=await saveLocalSession(pendingRecord);
       if(completionAttestation?.entry_id===nativeFinishScanEntryId)currentScanEntryAttestation=null;
-      return pendingRecord;
+      return savedPending;
     }
         async function completeSessionMaybeQueued(sessionUuid,responseJson,employeeName,deviceId){const local=getLocalSessionById(sessionUuid)||await getLatestLocalSessionForLocation(currentScanState&&currentScanState.location_code||"",deviceId);const clientSessionId=local&&local.client_session_id||local&&local.session_uuid||sessionUuid;const clientCompletionId=local&&local.client_completion_id||await completionIdForSession(clientSessionId);const startedAt=local&&local.started_at||"";const reconciliation={context_id:local&&local.context_id||"",submission_proof:local&&local.submission_proof||""};const locationCode=local&&local.location_code||currentScanState&&currentScanState.location_code||"";const nativeFinishScanEntryId=String(local?.native_finish_scan_entry_id||"").toLowerCase();const requiresNativeCompletion=isReadonlyScanEmployeeDevice(deviceId)||window.MemphisMobile?.nativeOfflineTimeAuthority===true;let nativeCompletion=local&&local.native_completion_attestation?{p_client_ended_at:local.ended_at,p_native_finish_scan_entry_id:nativeFinishScanEntryId,p_native_completion_attestation_version:local.native_completion_attestation_version,p_native_completion_attestation:local.native_completion_attestation}:{};if(requiresNativeCompletion&&reconciliation.context_id&&(!nativeCompletion.p_client_ended_at||nativeCompletion.p_native_finish_scan_entry_id!==nativeFinishScanEntryId||nativeCompletion.p_native_completion_attestation_version!=="custodial-native-completion.v2"||!/^[0-9a-f]{64}$/.test(String(nativeCompletion.p_native_completion_attestation||"")))){const create=window.MemphisMobile?.createOfflineCompletionAttestation;if(typeof create!=="function")throw new Error("The protected native completion attestation is unavailable.");nativeCompletion=await create({deviceId,locationCode,clientSessionId,clientCompletionId,contextId:reconciliation.context_id,nativeFinishScanEntryId,clientStartedAt:startedAt});if(nativeCompletion.p_native_finish_scan_entry_id!==nativeFinishScanEntryId||nativeCompletion.p_native_completion_attestation_version!=="custodial-native-completion.v2"||!/^[0-9a-f]{64}$/.test(String(nativeCompletion.p_native_completion_attestation||""))||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(nativeCompletion.p_client_ended_at||"")))throw new Error("The protected device did not return a valid cleaning-completion attestation.")}const endedAt=nativeCompletion.p_client_ended_at||local&&local.ended_at||(requiresNativeCompletion?"":new Date().toISOString());if(requiresNativeCompletion&&(!/^[0-9a-f-]{36}$/.test(nativeFinishScanEntryId)||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(String(endedAt||""))))throw new Error("The protected cleaning-completion evidence was not preserved.");const payload={p_client_session_id:clientSessionId,p_client_completion_id:clientCompletionId,p_device_id:deviceId,p_location_code:locationCode,p_client_started_at:startedAt,p_client_ended_at:endedAt,p_native_finish_scan_entry_id:nativeFinishScanEntryId,...nativeCompletion,p_response_json:{...responseJson,__custodial_offline_reconciliation_v1:reconciliation},p_scan_evidence:Array.isArray(local&&local.scan_evidence)?local.scan_evidence:[],p_correlation_id:`scan:${clientSessionId}`};const journal={...local,session_uuid:local&&local.session_uuid||sessionUuid,client_session_id:clientSessionId,client_completion_id:clientCompletionId,location_code:payload.p_location_code,employee_name:local&&local.employee_name||employeeName||"",device_id:deviceId,status:"pending_submit",started_at:startedAt,ended_at:endedAt,native_finish_scan_entry_id:nativeFinishScanEntryId,native_completion_attestation_version:nativeCompletion.p_native_completion_attestation_version||null,native_completion_attestation:nativeCompletion.p_native_completion_attestation||null,response_json:responseJson,completion_pending:true,server_acknowledged:local&&local.server_acknowledged===true,sync_status:reconciliation.context_id?"submission_pending":"submission_waiting_for_activation"};const save=window.MemphisScanSync?.saveCompletedLocalWork;
       if(typeof save!=="function")throw managerRecoveryError("The local completion writer is unavailable.");
@@ -536,17 +536,55 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
       return Object.freeze({deviceId:original.deviceId,generation:original.generation,principalIdentity:identity,sessionRaw});
     }
     async function saveLocalSession(session){
+      const requested=JSON.parse(JSON.stringify(session));
+      const existed=Boolean(getLocalSessionById(requested.session_uuid));
       return mutateLocalSessions(async()=>{
-        const prior=getLocalSessionById(session&&session.session_uuid);
-        const preserveAcknowledgement=session&&session.completion_pending===true&&prior&&prior.server_acknowledged===true;
-        const preserveCompletionId=session&&session.completion_pending===true&&prior&&prior.client_completion_id;
-        const stored={...session,client_completion_id:preserveCompletionId||session&&session.client_completion_id,
-          server_acknowledged:preserveAcknowledgement?true:session&&session.server_acknowledged,updated_at:new Date().toISOString()};
-        const open=["active","server-active","pending_submit","pending_sync","offline-provisional"].includes(String(stored.status||"").toLowerCase());
-        if(open&&["ambiguous","corrupted"].includes(window.MemphisUI?.resolveOpenScanSession?.(stored.device_id)?.state))
-          throw managerRecoveryError("Saved cleaning work needs manager recovery.");
-        let confirmation=null;
+        let confirmation=null,stored=null,open=false;
         await mutateCustodialWork(context=>{
+          // Both the shared session lock and protected writer now belong to
+          // this operation. Merge into the current SAME occurrence, after all
+          // waits, so an accepted Start cannot be replaced by a stale page copy.
+          const prior=getLocalSessionById(requested.session_uuid);
+          if(existed&&!prior)throw managerRecoveryError("The original saved cleaning changed.");
+          const present=value=>value!==undefined&&value!==null&&value!=="";
+          const fixed=["session_uuid","client_session_id","device_id","location_code","started_at",
+            "offline_authority_employee_id","offline_authority_assignment_epoch","offline_authority_snapshot_id",
+            "offline_occurrence_id","occurrence_id","offline_actor_context_id","client_completion_id",
+            "context_id","submission_proof"];
+          if(prior&&fixed.some(key=>present(prior[key])&&present(requested[key])&&prior[key]!==requested[key]))
+            throw managerRecoveryError("The original saved cleaning identity changed.");
+          stored={...prior,...requested,updated_at:new Date().toISOString()};
+          if(prior){
+            for(const key of fixed)if(present(prior[key]))stored[key]=prior[key];
+            if(prior.ended_at){
+              for(const key of ["ended_at","native_finish_scan_entry_id","native_completion_attestation_version","native_completion_attestation"]){
+                if(present(prior[key])&&present(requested[key])&&prior[key]!==requested[key])
+                  throw managerRecoveryError("The original completion proof changed.");
+                if(present(prior[key]))stored[key]=prior[key];
+              }
+            }
+            const events=new Map();
+            for(const event of [...(prior.scan_evidence||[]),...(requested.scan_evidence||[])]){
+              const key=event.client_event_id;
+              if(events.has(key)&&JSON.stringify(events.get(key))!==JSON.stringify(event))
+                throw managerRecoveryError("The original scan evidence changed.");
+              events.set(key,event);
+            }
+            if(events.size)stored.scan_evidence=[...events.values()].slice(-200);
+            if(prior.server_acknowledged===true){
+              stored.server_acknowledged=true;
+              if(["active","offline-provisional"].includes(stored.status))stored.status=prior.status;
+              if(["active","offline-provisional"].includes(stored.state))stored.state=prior.state;
+              if(stored.sync_status==="offline-provisional")stored.sync_status=prior.sync_status;
+            }
+            if(["pending_submit","pending_sync","saved_pending_sync"].includes(prior.status)
+              &&["active","server-active","offline-provisional"].includes(stored.status)){
+              stored.status=prior.status;stored.state=prior.state;stored.sync_status=prior.sync_status;
+            }
+          }
+          open=["active","server-active","pending_submit","pending_sync","offline-provisional"].includes(String(stored.status||"").toLowerCase());
+          if(open&&["ambiguous","corrupted"].includes(window.MemphisUI?.resolveOpenScanSession?.(stored.device_id)?.state))
+            throw managerRecoveryError("Saved cleaning work needs manager recovery.");
           const encoded=JSON.stringify(stored);
           // Capture under THIS original session writer, never after adopting a
           // successor owner. These primitive pins grant no write authority.
@@ -567,6 +605,7 @@ Returning to that cleaning now…`);setTimeout(()=>{if(existingOpen.status==="pe
           if(typeof confirm!=="function"||await confirm(original,String(original.status||"").toLowerCase().includes("pending")?"complete":"timer",confirmation)!==true)
             throw managerRecoveryError("Saved cleaning work needs manager recovery.");
         }
+        return stored;
       });
     }
     async function removeLocalSession(sessionUuid){return mutateLocalSessions(async()=>{await clearCompletionDraft(sessionUuid);await mutateCustodialWork(()=>localStorage.removeItem(sessionStorageKey(sessionUuid)));window.MemphisUI?.clearScanView?.(sessionUuid,currentDeviceId)})}

@@ -28,11 +28,14 @@ const viewerHtml = readFileSync(new URL('../ops-viewer.html', import.meta.url), 
 const viewerScript = readFileSync(new URL('../ops-viewer.js', import.meta.url), 'utf8');
 const releaseManifest = JSON.parse(readFileSync(new URL('../frontend-release-manifest.json', import.meta.url), 'utf8'));
 assert.equal(releaseManifest.api_contract_versions.feedback, 'feedback.v3.enrolled-authority');
-assert.match(viewerHtml,/id="metrics"/,'Public viewer retains Dashboard aggregate cards');
-assert.match(viewerHtml,/id="viewer-event-board"/,'Published Events remain available in the read-only board');
-assert.deepEqual([...viewerScript.matchAll(/await get\('([^']+)'\)/g)].map(m=>m[1]),['/viewer-api/dashboard','/viewer-api/events?days=90'],'Only existing public dashboard and scheduled-event sources may be queried');
+// Owner authorized the full operational read-only link on November 9.
+assert.match(viewerHtml,/id="dashboard-map"/);
+assert.match(viewerHtml,/id="operations-board"/);
+assert.match(viewerHtml,/id="public-schedule"/);
+assert.match(viewerScript,/read\('\/viewer-api\/summary'\)/);
+assert.match(viewerScript,/read\('\/viewer-api\/schedule\?service_date='/);
 assert.match(viewerScript,/method:'GET',credentials:'omit'/);
-assert.doesNotMatch(viewerHtml, /Feedback|<form|<textarea|<select|type=["']submit["']/i);
+assert.doesNotMatch(viewerHtml, /Feedback|<form|<textarea|type=["']submit["']|memphis-auth\.js/i);
 assert.doesNotMatch(viewerScript, /feedback-api\/submit|method\s*:\s*["']POST["']/i);
 
 console.log('FEEDBACK_AUTHORITY_FRONTEND_CONTRACT_PASS');

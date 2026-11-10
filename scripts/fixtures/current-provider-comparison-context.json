@@ -1077,8 +1077,8 @@
     },
     {
       "path": "mobile/src/custodial/native-security.js",
-      "bytes": 61344,
-      "sha256": "ad24f811f464e9cdee70f7820b7040ec54efbc86c13e8feddf282599a4122e64"
+      "bytes": 62336,
+      "sha256": "147354240f054a26f028dd02c4995663959a93aaa8edecd00c7f59595d19eefb"
     },
     {
       "path": "mobile/src/custodial/provider-mirror-bridge.js",
@@ -1391,9 +1391,10 @@
     {
       "name": "native-security.js",
       "current_path": "mobile/src/custodial/native-security.js",
-      "current_sha256": "ad24f811f464e9cdee70f7820b7040ec54efbc86c13e8feddf282599a4122e64",
+      "current_sha256": "147354240f054a26f028dd02c4995663959a93aaa8edecd00c7f59595d19eefb",
       "comparison_input_sha256": [
-        "ad24f811f464e9cdee70f7820b7040ec54efbc86c13e8feddf282599a4122e64"
+        "ad24f811f464e9cdee70f7820b7040ec54efbc86c13e8feddf282599a4122e64",
+        "147354240f054a26f028dd02c4995663959a93aaa8edecd00c7f59595d19eefb"
       ],
       "comparison_path": "scripts/fixtures/historical-provider-comparison/native-security.js",
       "comparison_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",

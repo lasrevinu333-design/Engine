@@ -79,7 +79,7 @@ for (const [destination, label] of [
 assert.doesNotMatch(custodialMobile,/Assigned Areas|bottomNav|navLabel/);
 assert.doesNotMatch(custodialMobile,/>Scanner</);
 
-assert.match(access,/OPERATIONS LEADERSHIP ACCESS/);assert.match(access,/This browser’s enrollment/);assert.match(access,/custodial-leadership-api\/session/);assert.match(access,/clearSession\(\)/);assert.match(access,/self-asserted/i);assert.doesNotMatch(access,/Generate Personal Code|data-code-manager|enrollment-code|ops_pairing_token/i);
+assert.match(access,/Open Operations Hub/);assert.match(access,/window\.location\.replace/);assert.doesNotMatch(access,/custodial-leadership-api|clearSession|revoke|enrollment-code/i);assert.doesNotMatch(hub+managerMobile,/id="manager-access-(?:link|tile)"/);
 
 assert.match(viewer,/read-only/i);
 assert.doesNotMatch(viewer,/Messenger|Moxie|Scheduler|Device Security|Manager Access/i);

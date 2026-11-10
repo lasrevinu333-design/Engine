@@ -36,11 +36,16 @@
     els.toast.className = `uxToast show ${kind}`.trim();
     state.toastTimer = setTimeout(() => { els.toast.className = 'uxToast'; }, 2600);
   }
-  const ownerAccess = () => window.MemphisAuth?.hasPermission?.('write') === true || window.MemphisAuth?.isCustodialManagementAdmin?.() === true;
+  const ownerAccess = () => {
+    const auth=window.MemphisAuth,session=auth?.readSession?.();
+    return auth?.isCustodialManagementAdmin?.(session) === true || (session?.permissions?.schema==='custodial.manager-permissions.v1'
+      && session.permissions.read===true && session.permissions.owner===true && session.trusted_device===true
+      && session.access_level==='full_access' && session.read_only===false);
+  };
   async function authHeaders() {
     if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
     const session = await window.MemphisAuth?.requireOpsManagerSession?.({
-      accessLevel: 'read_only', interactive: true, redirect: false, throwOnFailure: true,
+      accessLevel: 'full_access', interactive: true, redirect: false, throwOnFailure: true,
     });
     if (!session?.token) throw new Error('Custodial Manager access is required.');
     if(typeof window.MemphisAuth.opsManagerAuthHeaders!=='function')throw new Error('Current manager authentication adapter unavailable.');

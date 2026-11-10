@@ -514,6 +514,20 @@ export function createNativeProtectedStorage(plugin, webStorage) {
   }
   return Object.freeze({
     nativeVault: true,
+    async readRemovalResumeWitness({operationId,deviceId}={}) {
+      const original=originalLocalState(),current=await state();
+      original.assertCurrent();
+      const removal=current.removal&&typeof current.removal==='object'?current.removal:{};
+      if(!normalizedOperationId(operationId)||!canonicalDeviceId(deviceId)
+        ||String(current.state||'').toUpperCase()!=='REMOVAL_REQUESTED'||current.removal_pending!==true
+        ||normalizedOperationId(removal.operation_id||current.removal_operation_id)!==operationId
+        ||canonicalDeviceId(removal.device_id||current.removal_device_id)!==deviceId)
+        throw securityError('custodial_native_removal_reconciliation_mismatch');
+      // A private read of the existing native operation, never ACTIVE authority
+      // or permission to create a different removal/enrollment.
+      return Object.freeze({operation_id:operationId,device_id:deviceId,
+        installation:authoritativeInstallation(current,{deviceId})});
+    },
     async reconcileLocalState() {
       const local = originalLocalState();
       const current = await state();

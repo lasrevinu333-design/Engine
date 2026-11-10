@@ -1,4 +1,5 @@
 import { protectedPrincipal } from './protected-principal.js';
+import { feedbackRetirementIdentity } from './feedback-outbox.js';
 import { CUSTODIAL_PROTECTED_STORAGE_PREFIXES } from './storage-firewall.js';
 import {
   CUSTODIAL_CREDENTIAL_KEY,
@@ -915,6 +916,7 @@ export function createCustodialCredentialStore({
       CUSTODIAL_REMOVAL_COMPLETION_KEY, CUSTODIAL_CREDENTIAL_KEY, ...removalCacheKeys,
     ], keys) : null;
     const identityMap = new Map();
+    const feedbackRetirementBindings = [];
     const originalDeviceKeys = {};
     const counts = {
       sessions: 0,
@@ -964,6 +966,18 @@ export function createCustodialCredentialStore({
       counts[kind] = (counts[kind] || 0) + 1;
       const value = localGet(key);
       const parsed = jsonObject(value);
+      if(key.startsWith('mz_employee_feedback_retirement_backup:')){
+        const source=`localStorage:${key}`;
+        const owner=feedbackRetirementIdentity(localRawGet(key,'feedback original state inspection'),key);
+        if(owner){
+          addIdentityCandidate(identityMap,owner.deviceId,`${source}.original.body.device_id`);
+          feedbackRetirementBindings.push(owner);
+        }else{
+          if(parsed)collectObjectIdentities(parsed,source,identityMap);
+          addIdentityCandidate(identityMap,UNOWNED_PRESERVED_WORK_IDENTITY,`${source}:invalid_feedback_original`);
+        }
+        continue; // Count and original bytes stay protected; no receipt/adoption.
+      }
       if(key.startsWith('mz_native_notification_outbox:event-open.v1:')){
         // Generic historical localGet normalizes strings. This closed codec
         // must inspect the ORIGINAL encoding without trimming or rewriting it.
@@ -1055,6 +1069,7 @@ export function createCustodialCredentialStore({
       scanDraftsAvailable: durableDrafts.available,
       scanDraftDatabaseExists: durableDrafts.databaseExists,
       originalDeviceKeys,
+      feedbackRetirementBindings,
       originalIdentities,
       canonicalIdentities: [...new Set(canonicalIdentities)].sort(),
       invalidIdentities: [...new Set(invalidIdentities)].sort(),
@@ -1200,7 +1215,11 @@ export function createCustodialCredentialStore({
         protected_device_id: record.device_id,
       });
     }
-    if (inspection.invalidIdentities.length || !oneIdentity) {
+    const principal=protectedPrincipal(record.principal);
+    const feedbackMatches=inspection.feedbackRetirementBindings.every(owner=>principal
+      &&owner.deviceId===principal.device_id&&owner.employeeId===principal.employee_id
+      &&owner.credentialId===principal.credential_id&&owner.assignmentEpoch===principal.assignment_epoch);
+    if (inspection.invalidIdentities.length || !oneIdentity || !feedbackMatches) {
       activateQuarantine('preserved_identity_mismatch', inspection, {
         protected_device_id: record.device_id,
       });
@@ -2321,7 +2340,8 @@ export function createCustodialCredentialStore({
       const protectedBefore = await protectedSnapshot();
       changes.assertCurrent();
       const protectedRecord = installationRecord(protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY]);
-      originalRequest.assertProtectedRecord(protectedRecord);
+      await originalRequest.assertProtectedRecord(protectedRecord);
+      changes.assertCurrent();
       pendingEnrollmentOperation = inspection.enrollmentOperation;
       if (pendingEnrollmentOperation) {
         throw new CustodialEnrollmentOperationError('enrollment_confirmation_required_before_removal');
@@ -2539,7 +2559,8 @@ export function createCustodialCredentialStore({
     try {
       if (status.initialized !== true) throw new CustodialSecurityTransitionError(status);
       const original = { generation: status.generation, credential: activeCredential,
-        deviceId: activeDeviceId, installationSeal: activeInstallationSeal, principal: activePrincipal };
+        deviceId: activeDeviceId, installationSeal: activeInstallationSeal, principal: activePrincipal,
+        removal:cloneJson(pendingRemovalOperation) };
       const keys = [...CUSTODIAL_DEVICE_KEYS, CUSTODIAL_INSTALLATION_MARKER_KEY,
         CUSTODIAL_ENROLLMENT_OPERATION_KEY, CUSTODIAL_REMOVAL_OPERATION_KEY];
       const read = key => {
@@ -2556,8 +2577,33 @@ export function createCustodialCredentialStore({
             || activePrincipal !== original.principal
             || rawBefore.some(([key, raw]) => read(key) !== raw)) throw changed();
         },
-        assertProtectedRecord(record) {
+        async assertProtectedRecord(record) {
           const principal = protectedPrincipal(record?.principal);
+          if(record&&!original.credential&&original.removal){
+            const resume=secureStorage.readRemovalResumeWitness;
+            const journalRaw=read(CUSTODIAL_REMOVAL_OPERATION_KEY),journal=removalOperationRecord(journalRaw);
+            const generation=status.generation;
+            const requireResume=()=>{
+              if(secureStorage.readRemovalResumeWitness!==resume||typeof resume!=='function'
+                ||status.generation!==generation||activeCredential!==original.credential
+                ||activeDeviceId!==original.deviceId||activeInstallationSeal!==original.installationSeal
+                ||activePrincipal!==original.principal||!principal
+                ||!journal||journal.operation_id!==original.removal.operation_id||journal.device_id!==original.removal.device_id
+                ||record.device_id!==journal.device_id||read(CUSTODIAL_REMOVAL_OPERATION_KEY)!==journalRaw
+                ||rawBefore.some(([key,raw])=>key!==CUSTODIAL_REMOVAL_OPERATION_KEY&&read(key)!==raw)
+                ||read(CUSTODIAL_INSTALLATION_MARKER_KEY)!==record.installation_seal
+                ||!CUSTODIAL_DEVICE_KEYS.every(key=>read(key)===record.device_id))throw changed();
+            };
+            requireResume();
+            const witness=await resume.call(secureStorage,{operationId:journal.operation_id,deviceId:journal.device_id});
+            requireResume();
+            const retained=witness?.installation;
+            if(witness?.operation_id!==journal.operation_id||witness?.device_id!==journal.device_id
+              ||retained?.credential!==record.credential||retained?.device_id!==record.device_id
+              ||retained?.installation_seal!==record.installation_seal
+              ||JSON.stringify(protectedPrincipal(retained?.principal))!==JSON.stringify(principal))throw changed();
+            return;
+          }
           if (Boolean(record) !== Boolean(original.credential)
             || (record && (record.credential !== original.credential || record.device_id !== original.deviceId
               || record.installation_seal !== original.installationSeal

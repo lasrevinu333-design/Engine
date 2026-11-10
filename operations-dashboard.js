@@ -7,8 +7,10 @@
   // Close geographic/display neighbors, without changing any approved point.
   function nearby(pins,id){const seed=pins.find(p=>p.id===id);if(!seed)return[];
     return pins.filter(p=>p.id===id||Math.hypot(p.x-seed.x,p.y-seed.y)<=Math.max(22,p.radius)+Math.max(22,seed.radius)+8).map(p=>p.id);}
-  function create({document=root.document,window=root,now=()=>Date.now()}={}){
+  function create({document=root.document,window=root,now=()=>Date.now(),audience='manager'}={}){
+    const publicRead=audience==='public_readonly';
     if(!DATA||!document?.getElementById('operations-panels'))return null;
+    const cleaningView=publicRead?DATA.publicCleaning:DATA.cleaning;
     const el=id=>document.getElementById(id),panel=el('operations-panels'),dialog=el('operations-board'),content=el('operations-board-content');
     const listeners=[],listen=(target,event,fn,options)=>{target?.addEventListener(event,fn,options);listeners.push([target,event,fn,options]);};
     let active=false,closed=false,epoch=0,abort=null,requestTimer=null,map=null,summary=null,ops=null,board=null,opener=null;
@@ -24,14 +26,15 @@
       return{manager_id:s.manager_id,credential_id:s.credential_id,token:s.token,device_id:s.device_id};
     }catch{return null;}}
     const same=(a,b)=>!!a&&!!b&&['manager_id','credential_id','token','device_id'].every(k=>a[k]===b[k]);
-    function bound(read=currentRead){try{return active&&!closed&&same(owner,session())
-      &&(!read||(read.epoch===epoch&&read===currentRead&&read.isCurrent()&&active&&!closed&&read.epoch===epoch&&same(owner,session())));
+    const sameOwner=()=>publicRead||same(owner,session());
+    function bound(read=currentRead){try{return active&&!closed&&sameOwner()
+      &&(!read||(read.epoch===epoch&&read===currentRead&&read.isCurrent()&&active&&!closed&&read.epoch===epoch&&sameOwner()));
     }catch{return false;}}
     function approved(){return pins().map(p=>({id:p.dataset.locationId}));}
-    function locationBoard(){const v=cleaning||DATA.cleaning(null,approved(),now());
+    function locationBoard(){const v=cleaning||cleaningView(null,approved(),now());
       return{...v,title:nearbyIds?'Nearby locations':v.title,cards:v.cards.filter(p=>!nearbyIds||nearbyIds.includes(p.id))};}
     function view(kind){if(kind==='locations')return locationBoard();
-      if(kind==='tickets')return DATA.tickets(summary,ops?.spiceworks);
+      if(kind==='tickets'){const v=DATA.tickets(summary,ops?.spiceworks);return publicRead?{...v,note:'Read-only ticket details. '+v.note.split('\n').slice(1).join('\n')}:v;}
       if(kind==='events')return ops?DATA.events(ops.events,now()):{title:'Events',cards:[],note:'Structured event feed unavailable.'};
       return DATA.schools(ops?.schools,now());}
     function renderBoard(force=false){if(!board)return;
@@ -63,7 +66,7 @@
     }
     function renderFeeds(){
       for(const kind of KINDS){const v=view(kind);txt(`ops-${kind}-ticker`,v.cards.length?v.cards.filter(c=>kind!=='events'||c.active).map(c=>c.title).join('   •   ')||'No active upcoming events.':v.note);}
-      const counts=new Map();for(const card of (cleaning||DATA.cleaning(null,approved(),now())).cards)
+      const counts=new Map();for(const card of (cleaning||cleaningView(null,approved(),now())).cards)
         counts.set(card.state,(counts.get(card.state)||0)+1);
       el('ops-status-counts').replaceChildren(...[...counts].map(([status,n])=>{const node=make('span',`${n} ${status.replaceAll('_',' ')}`);node.dataset.status=status;return node;}));
       renderBoard();
@@ -76,11 +79,11 @@
       requestTimer=window.setTimeout(()=>{if(generation===epoch)abort?.abort();},10000);
       // Snapshot the safe record presentation at admission, not from mutable
       // caller rows after an unrelated awaited feed. Never infer from pin text.
-      const nextCleaning=DATA.cleaning(next,approved(),now());
+      const nextCleaning=cleaningView(next,approved(),now());
       summary=next;cleaning=nextCleaning;ops=null;renderFeeds();
-      const load=async(url,privateFeed=true)=>{const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(privateFeed?{headers}:{})});
+      const load=async(url,privateFeed=true)=>{const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(publicRead?{credentials:'omit'}:privateFeed?{headers}:{})});
         if(!response.ok)throw new Error('feed_unavailable');return response.json();};
-      const results=await Promise.allSettled([load(`${API}/dashboard-api/operations`),load(`${API}/dashboard-api/current-attendance`),load(WEATHER,false)]);
+      const results=await Promise.allSettled([load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`),load(`${API}/dashboard-api/current-attendance`),load(WEATHER,false)]);
       if(closed||!active||generation!==epoch)return;
       if(!bound()){unavailable();return;}
       if(requestTimer!==null)window.clearTimeout(requestTimer);requestTimer=null;
@@ -113,7 +116,7 @@
     }
     function openBoard(kind,trigger,ids=null){
       if(!active||closed)return;if(!bound()){unavailable();return;}
-      if(kind==='events'){
+      if(kind==='events'&&!publicRead){
         if(!active||closed)return;const session=window.MemphisAuth?.readSession?.();
         if(session?.role!=='ops_manager'||!session.manager_id||!session.credential_id)return;
         const target=new URL('./events.html',window.location.href);target.searchParams.set('hub','manager');
@@ -142,11 +145,13 @@
     async function exitMap(){const target=el('dashboard-map');fsEpoch++;mapExpanded=false;target.classList.remove('is-expanded');
       if(document.fullscreenElement===target)await document.exitFullscreen?.().catch(()=>{});
       el('operations-map-fullscreen').setAttribute('aria-pressed','false');txt('operations-map-fullscreen','⛶ Map full screen');}
-    function unavailable({preserveBoard=false}={}){cancel();currentRead=null;summary=null;cleaning=null;ops=null;
-      if(!preserveBoard||!active||closed||!same(owner,session()))closeBoard({history:false,focus:false});void exitMap();
+    function unavailable({preserveBoard=false,preserveMap=false}={}){cancel();currentRead=null;summary=null;cleaning=null;ops=null;
+      const preserveOwner=active&&!closed&&sameOwner();
+      if(!preserveBoard||!preserveOwner)closeBoard({history:false,focus:false});
+      if(!preserveMap||!preserveOwner)void exitMap();
       txt('ops-attendance','Unavailable');txt('ops-attendance-note','Current gate count unavailable.');txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderFeeds();}
     function suspend(){active=false;unavailable();panel.hidden=true;el('ops-locations-button').hidden=true;}
-    function activate(renderer){if(closed)return;map=renderer;owner=session();active=!!owner;
+    function activate(renderer){if(closed)return;map=renderer;owner=publicRead?null:session();active=publicRead||!!owner;
       panel.hidden=!active;el('ops-locations-button').hidden=!active;if(active)tick();else unavailable();}
     function stop(){if(closed)return;suspend();closed=true;for(const [target,event,fn,options]of listeners)target?.removeEventListener(event,fn,options);listeners.length=0;map=null;}
     for(const trigger of document.querySelectorAll('[data-board]'))listen(trigger,'click',()=>openBoard(trigger.dataset.board,trigger));

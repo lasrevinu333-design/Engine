@@ -1,11 +1,58 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'none'">
-<title>Custodial Operations Center · Read-only Viewer</title><link rel="icon" href="./dashboard_tiger_icon.svg"><link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css"><link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css"><link rel="stylesheet" href="./operations-dashboard.css"><link rel="stylesheet" href="./ops-viewer.css"></head>
-<body class="mapWebPage operationsPage viewerOperations"><main class="mapPage commandPage">
-<header class="hubHero uxCard mapHeader"><div class="hubBrand"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><div><h1>Custodial Operations Center</h1><p>Read-only public dashboard · no enrollment required</p></div></div><nav class="mapNav"><a class="uxButton compact" href="./ops-manager-hub.html">Leadership sign-in</a><button id="refresh-dashboard" type="button">Refresh dashboard</button><button id="viewer-motion" type="button" aria-pressed="false">Pause motion</button></nav></header>
-<p id="dashboard-status" class="mapNotice" role="status" aria-live="polite">Loading public operational totals…</p>
-<div id="operations-panels"><header class="telemetry"><section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="viewer-clock" class="bigClock">—</time><div id="viewer-date" class="calendarDate"></div></section><section class="attendanceCard"><div class="eyebrow">CURRENT ATTENDANCE</div><div class="attendanceValue restrictedValue">Restricted</div><div class="metricNote">Not supplied by this public dashboard.</div></section><section class="weatherCard"><div><div class="eyebrow">MEMPHIS WEATHER</div><strong>Not in public feed</strong><p class="metricNote">This viewer uses only the existing public operational and event sources.</p></div></section></header>
-<section id="metrics" class="viewerMetrics" aria-label="Public operational totals"></section>
-<section class="activityTickers" aria-label="Operations boards"><div class="tickerBand"><span class="tickerLabel">TICKETS</span><span class="tickerWindow"><span class="tickerTrack">Private ticket details require management access.</span></span></div><button class="tickerBand" id="open-events" type="button"><span class="tickerLabel">EVENTS</span><span class="tickerWindow"><span class="tickerTrack" id="events-ticker">Loading published events…</span></span><span class="feedButton">Open board ↗</span></button><div class="tickerBand"><span class="tickerLabel">SCHOOLS</span><span class="tickerWindow"><span class="tickerTrack">No public school feed is supplied.</span></span></div></section></div>
-<section class="mzMapStage uxCard commandMap"><div class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h2>On the grounds</h2></div><div class="statusCounts" id="public-status-counts">Status totals unavailable</div><button id="viewer-map-fullscreen" type="button">⛶ Map full screen</button></div><div class="viewerMapViewport" tabindex="0" role="region" aria-label="Scrollable illustrated zoo map"><img src="./dashboard-map-assets/Memphis-Zoo-Transparent-Framed-Clean-Base-20261003.png" alt="Illustrated Memphis Zoo map. Individual location status and employee positions are not included in the public feed."></div><p class="metricNote">Illustrated map only. No individual cleaning pins or employee locations are inferred from aggregate totals.</p></section>
-<section class="viewerBottom"><article class="uxCard viewerEvents"><div class="viewerSectionHeading"><h2>Published events</h2><button id="refresh-events" type="button">Refresh events</button></div><p id="events-status" role="status">Loading published events…</p><div id="event-list" class="viewerEventList"></div></article><aside class="uxCard viewerRestricted"><h2>Management-only information</h2><p>Individual restroom and exhibit records, staff assignments, employee activity, punches, payroll, PTO, notes, submitted reports and ticket details are not part of this public feed.</p><p>This view sends no mutation requests. Sign in to use authorized management tools.</p></aside></section>
-</main><dialog class="operationsBoard" id="viewer-event-board" aria-labelledby="viewer-board-title"><header class="boardHeader"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><h2 id="viewer-board-title">Published events</h2><button id="viewer-board-close" type="button">Close / Back</button></header><p class="boardNote">Only the existing public scheduled-event projection is shown.</p><div id="viewer-board-content" class="boardContent"></div></dialog><script src="./ops-viewer.js"></script></body></html>
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081422"><meta name="robots" content="noindex,nofollow">
+  <title>Custodial Operations Center · Memphis Zoo</title>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css">
+  <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
+  <link rel="stylesheet" href="./operations-dashboard.css">
+</head><body class="mapWebPage operationsPage" data-memphis-context="viewer">
+  <main class="mapPage commandPage">
+    <header class="hubHero uxCard mapHeader">
+      <a class="uxButton compact" href="./ops-manager-hub.html">Manager sign-in</a>
+      <div class="hubBrand"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><div><h1>Custodial Operations Center</h1></div></div>
+      <nav class="mapNav" aria-label="Operations Hub navigation">
+        <a class="uxButton compact secondary" href="#public-schedule">Schedules</a><button id="refresh-dashboard" type="button">Refresh</button>
+        <button id="operations-motion" type="button" aria-pressed="false">Pause motion</button>
+      </nav>
+    </header>
+    <p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Loading read-only operations…</p>
+    <div id="operations-panels" hidden>
+      <header class="telemetry" aria-label="Date, attendance and weather">
+        <section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="ops-clock" class="bigClock">—</time><div id="ops-date" class="calendarDate"></div></section>
+        <section class="attendanceCard"><div class="eyebrow">CURRENT ATTENDANCE</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div></section>
+        <section class="weatherCard"><div class="weatherNow"><svg class="weatherArt" viewBox="0 0 120 84" aria-hidden="true"><g class="sunRays" stroke="#ffd46b" stroke-width="3"><path d="M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4"/></g><circle cx="45" cy="32" r="19" fill="#ffd46b"/><path class="weatherCloud" d="M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z" fill="#d8efff"/></svg><div><div class="eyebrow">MEMPHIS WEATHER</div><strong id="ops-weather">Unavailable</strong><div id="ops-weather-note" class="metricNote">Forecast source not yet read.</div></div></div><div id="ops-hour" class="hourForecast">Next-hour forecast unavailable.</div></section>
+      </header>
+      <section class="activityTickers" aria-label="Open full-screen operations boards">
+        <button type="button" class="tickerBand" data-board="tickets"><span class="tickerLabel">TICKETS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-tickets-ticker">Waiting for authoritative tickets.</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+        <button type="button" class="tickerBand" data-board="events"><span class="tickerLabel">EVENTS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-events-ticker">Waiting for structured Events.</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+        <button type="button" class="tickerBand" data-board="schools"><span class="tickerLabel">SCHOOLS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-schools-ticker">School feed unavailable.</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+      </section>
+    </div>
+    <section class="mzMapStage uxCard commandMap" id="dashboard-map" aria-label="Custodial operations map" hidden>
+      <div class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h2>On the grounds</h2></div><div id="ops-status-counts" class="statusCounts">Cleaning status unavailable</div><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Map full screen</button></div>
+      <div class="mapScreenReader" data-map-status role="status">Map cleaning status unavailable until a current response</div>
+      <div class="mzMapViewport" data-map-viewport aria-label="Whole approved zoo map"><div class="mzMapSurface" data-map-surface><img class="mzMapArtwork" data-map-artwork alt="Owner-accepted overall illustrated Memphis Zoo map; cleaning icons are separate interactive controls" width="2040" height="890"><div class="mzMapLayer" data-map-layer></div></div></div>
+      <div class="mzMapSelection" id="map-selection" data-map-selection role="status" aria-live="polite">Select a map pin or the locations board.</div>
+      <div class="metricNote" id="ops-location-note">Cleaning pins show location status; they do not represent employee positions.</div>
+      <details class="mapAttention"><summary>All locations needing attention <span data-map-alert-count>0</span></summary><ul class="mzMapAlertList" data-map-alerts></ul></details>
+    </section>
+    <button type="button" id="ops-locations-button" class="tickerBand locationsBand" data-board="locations" hidden><span class="tickerLabel">LOCATIONS · 47</span><span class="tickerWindow"><span id="ops-locations-ticker" class="tickerTrack">Waiting for current cleaning status.</span></span><span class="feedButton" aria-hidden="true">All locations ↗</span></button>
+    <section id="public-schedule" class="uxCard" style="padding:20px;margin-top:20px">
+      <div class="operationsHeading"><h2>Employee schedules</h2><label>Date <input id="schedule-date" type="date"></label><button id="refresh-schedule" type="button">Refresh schedule</button></div>
+      <p id="schedule-status" role="status">Loading current published schedule…</p><div id="schedule-roster" class="boardContent"></div><div id="schedule-assignments" class="boardContent"></div>
+    </section>
+    <p class="metricNote">Anyone with this link can view operations. This dashboard cannot change records.</p>
+  </main>
+  <dialog class="operationsBoard" id="operations-board" aria-labelledby="operations-board-title">
+    <header class="boardHeader"><img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo"><h2 id="operations-board-title">Operations</h2><button type="button" id="operations-board-pause" aria-pressed="false">Pause scrolling</button><label>Scroll speed <select id="operations-board-speed"><option value="18">Slow</option><option value="32" selected>Normal</option><option value="48">Faster</option></select></label><button type="button" id="operations-board-fullscreen">⛶ Full screen</button><button type="button" id="operations-board-close">Close / Back</button></header>
+    <p id="operations-board-note" class="boardNote" role="status"></p><div id="operations-board-content" class="boardContent" tabindex="0" aria-label="Scrollable operations rows"></div>
+  </dialog>
+  <script src="./dashboard-map-staging.js"></script><script src="./custodial-gps-approved-overall-fit.js"></script><script src="./dashboard-map-renderer.js"></script>
+  <script src="./operations-dashboard-data.js"></script><script src="./operations-dashboard.js"></script>
+  <script src="./ops-viewer.js"></script>
+</body></html>

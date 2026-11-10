@@ -42,6 +42,18 @@ function fixture({employee=false,reduced=false,noIdentity=false}={}){
 }
 if(process.argv.includes('--events-snapshot-owner-only'))await eventsSnapshotOwnerCases();
 else {
+test('native Manager Events uses manager authentication and preserves return navigation',async()=>{
+ const f=fixture();f.w.Capacitor={isNativePlatform:()=>true,getPlatform:()=> 'android'};
+ f.w.MemphisMobileBuildIdentity={edition:'manager'};f.w.MemphisMobile={handlesManagerAuthenticationRetry:true};
+ await f.app.init();assert.equal(f.calls.length,1);assert.equal(f.calls[0].options.headers.Authorization,'Bearer SYNTHETIC_TOKEN');
+ assert.equal(f.els['shared-events-page'].dataset.denied,'false');
+ assert.equal(new URL(V.returnTarget(f.w,V.principal(f.w,Date.parse('2026-10-06T12:00:00Z')))).pathname,'/operations-dashboard.html');f.finish();
+});
+test('employee native authority cannot fall back through Manager edition metadata',async()=>{
+ const f=fixture({employee:true,noIdentity:true});f.w.MemphisMobileBuildIdentity={edition:'manager'};
+ f.w.MemphisAuth={readSession:()=>({role:'ops_manager',manager_id:M,credential_id:C,token:'SYNTHETIC',expires_at:'2030-01-01T00:00:00Z'})};
+ await f.app.init();assert.equal(f.calls.length,0);assert.equal(V.principal(f.w),null);f.finish();
+});
 for(const employee of [false,true])test((employee?'employee':'manager')+' uses one safe page and correct feed',async()=>{const f=fixture({employee});await f.app.init();assert.equal(f.calls.length,1);assert.ok(f.calls[0].url.endsWith(employee?'/employee-events-api':'/dashboard-api/events-feed'));assert.match(f.text(f.els['events-content']),/Two trash boxes/);assert.match(f.text(f.els['events-content']),/Attendees: 0/);assert.equal(f.els['events-content'].children[0].dataset.revision,'1');f.els['events-back'].emit('click');const u=new URL(f.nav[0]);assert.equal(u.pathname,employee?'/index.html':'/operations-dashboard.html');assert.equal(u.searchParams.has('token'),false);assert.equal(u.origin,'https://example.invalid');f.finish();});
 test('query parameter does not grant employee authority',async()=>{const f=fixture({noIdentity:true});f.w.location.href='https://example.invalid/events.html?hub=employee';await f.app.init();assert.equal(f.calls.length,0);assert.equal(f.els['events-content'].children.length,0);f.finish();});
 test('employee denied before identity readiness',async()=>{const f=fixture({employee:true,noIdentity:true});await f.app.init();assert.equal(f.calls.length,0);f.finish();});

@@ -26,7 +26,7 @@ async function fixture({mobile=false,denyStorage=false,owner=true}={}){
   }
   if(!server)throw new Error('Synthetic request not found');return server;
  }
- const context={document:{getElementById:id=>elements[id]},window:{MemphisAuth:{opsManagerAuthHeaders:async()=>({Authorization:'Bearer synthetic','X-Device-Id':'synthetic-browser'}),hasPermission:action=>owner&&action==='write',requireOpsManagerSession:async()=>({token:'synthetic',device_id:'synthetic-browser'})}},
+ const context={document:{getElementById:id=>elements[id]},window:{MemphisAuth:{readSession:()=>({permissions:{schema:'custodial.manager-permissions.v1',read:true,owner},trusted_device:true,access_level:'full_access',read_only:false}),opsManagerAuthHeaders:async()=>({Authorization:'Bearer synthetic','X-Device-Id':'synthetic-browser'}),hasPermission:action=>owner&&action==='write',requireOpsManagerSession:async()=>({token:'synthetic',device_id:'synthetic-browser'})}},
   localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>{if(denyStorage)throw new Error('Storage unavailable');storage.set(k,v);}},
   crypto:{randomUUID},fetch:async(url,options)=>({ok:true,json:async()=>({ok:true,data:await api(url.replace('https://memphis-zoo-mcp.onrender.com',''),options)})}),
   setTimeout,clearTimeout,confirm:()=>false,console};

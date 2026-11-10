@@ -46,8 +46,24 @@
       close(){closed=true;generation++;onState('unknown',null);}
     });
   }
-  function create({section,auth,fetchImpl:fetch=root.fetch.bind(root),document=root.document,window=root}){
-    if(!MAP||!FIT?.transformAnchors||!section||!auth?.readSession)throw new Error('Map staging requires the exact manager source bridge and accepted overall fit');
+  // Public reads have page/request ownership, never a fabricated manager identity.
+  function createPublicRefreshGate({onState}){
+    let generation=0,closed=false,suspended=false;
+    const current=ticket=>!closed&&!suspended&&!!ticket&&ticket.generation===generation;
+    return Object.freeze({
+      begin(){if(closed||suspended)return null;onState('loading',null);return{generation:++generation};},
+      commit(ticket,summary){if(!current(ticket))return false;onState('current',summary);return true;},
+      isCurrent:current,checkSession:()=>!closed&&!suspended,
+      fail(ticket){if(!current(ticket))return false;onState('unknown',null);return true;},
+      invalidate(){generation++;onState('unknown',null);},
+      suspend(){if(closed||suspended)return false;suspended=true;generation++;onState('unknown',null);return true;},
+      resume(){if(closed||!suspended)return false;suspended=false;generation++;onState('unknown',null);return true;},
+      close(){closed=true;generation++;onState('unknown',null);}
+    });
+  }
+  function create({section,auth,audience='manager',fetchImpl:fetch=root.fetch.bind(root),document=root.document,window=root}){
+    const publicRead=audience==='public_readonly';
+    if(!MAP||!FIT?.transformAnchors||!section||(!publicRead&&!auth?.readSession))throw new Error('Map staging requires the exact source bridge and accepted overall fit');
     const viewport=section.querySelector('[data-map-viewport]');
     const surface=section.querySelector('[data-map-surface]');
     const artwork=section.querySelector('[data-map-artwork]');
@@ -66,13 +82,13 @@
     const options=new Map();
     const gpsUnavailable='Advisory GPS unavailable: measured active-work history is required. Owner-accepted visual fit; absolute map accuracy and walking domain are unverified.';
     function clearGps(message=gpsUnavailable){gpsLayer?.replaceChildren();if(gpsStatus)gpsStatus.textContent=message;}
-    const gate=createRefreshGate({readSession:()=>auth.readSession(),onState:(kind,summary)=>{
+    const gate=(publicRead?createPublicRefreshGate:createRefreshGate)({readSession:()=>auth.readSession(),onState:(kind,summary)=>{
       if(!anchors||closed)return;
       if(kind!=='current')clearGps();
       if(kind==='principal_changed')interaction=MAP.initialInteraction();
-      markers=MAP.project({anchors,summary,transport:kind==='current'?'CURRENT_AUTHENTICATED_RESPONSE':kind.toUpperCase()});
+      markers=MAP.project({anchors,summary,transport:kind==='current'?(publicRead?'CURRENT_PUBLIC_READONLY_RESPONSE':'CURRENT_AUTHENTICATED_RESPONSE'):kind.toUpperCase()});
       interaction=MAP.reconcileUrgency(interaction,markers);
-      status.textContent=kind==='current'?'Current authenticated dashboard response':'Map cleaning status unavailable until a current authenticated response';
+      status.textContent=kind==='current'?(publicRead?'Current read-only dashboard response':'Current authenticated dashboard response'):'Map cleaning status unavailable until a current response';
       render();
     }});
     function render(){
@@ -250,6 +266,6 @@
     return Object.freeze({init,selectLocation,beginRefresh:gate.begin,accept:gate.commit,acceptGps,unavailableGps,clearGps,fail:gate.fail,
       invalidate:gate.invalidate,checkSession:gate.checkSession,suspend,resume,stop});
   }
-  root.MemphisDashboardMapRenderer=Object.freeze({create,createRefreshGate});
+  root.MemphisDashboardMapRenderer=Object.freeze({create,createRefreshGate,createPublicRefreshGate});
   if(typeof module!=='undefined'&&module.exports)module.exports=root.MemphisDashboardMapRenderer;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -220,6 +220,13 @@
       :`${value.state==='snapshot'?`Imported snapshot · ${stamp(value.generated_at)}. Mailbox completeness/current freshness NOT verified. `:''}Daily planned source counts: ${unknown?'incomplete':`${totals.students} students · ${totals.adults} adults · ${number(totals.students+totals.adults)} identified people · ${totals.unclassified} unclassified ticket units · ${totals.total} reported quantity`}. Departure times are not provided by this attachment; no general cutoff is established. Only today's visit dates are shown; date rollover does not confirm departure.`};
   }
 
-  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,attendance,weather,tickets,events,schools,cleaning});
+  function publicCleaning(summary,approved,now=Date.now()){
+    const view=cleaning(summary,approved,now);
+    const prefixes=['Saved pending','Work in progress','Current worker:','Prior closed cleaning record ·',
+      'Closed cleaning record ·','Recorded worker:','Reported services:','Current cleaning record unavailable.','Closed cleaning record unavailable.'];
+    return {...view,cards:view.cards.map(card=>({...card,lines:card.lines.filter(line=>prefixes.some(prefix=>line.startsWith(prefix)))})),
+      note:summary?.meta?.audience==='public_readonly'?`Read-only cleaning status · ${stamp(summary.meta.generated_at)}. Pending work is shown separately from closed cleaning history.`:'Current cleaning status unavailable.'};
+  }
+  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,attendance,weather,tickets,events,schools,cleaning,publicCleaning});
   root.MemphisOperationsData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

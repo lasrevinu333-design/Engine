@@ -1078,6 +1078,9 @@
       || operationId;
   }
   function normalizeRecord(action = {}) {
+    // A quarantined original remains a held view, not a v6 conversion. In
+    // particular, never replace its opaque operation ID or saved diagnostic.
+    if(action.recoverable===false)return {...action,dead_letter:true,state:'legacy-quarantine'};
     const operationId = operationIdFor(action);
     const logicalIdentity = logicalIdentityFor(action, operationId);
     const semanticFingerprint = semanticFingerprintFor(action);
@@ -1239,6 +1242,12 @@
   }
 
   function storageRecord(action = {}) {
+    if(action.recoverable===false){
+      if(action.dead_letter===true&&safeText(action.type).startsWith('forward-replay-fenced:'))return action;
+      return {...action,preserved_original_record:action,dead_letter:true,current_dead_letter:true,
+        state:'legacy-quarantine',forward_replay_contract:CONFIG.REQUIRED_SCAN_CONTRACT_VERSION,
+        forward_action_type:'legacy-quarantine',type:'forward-replay-fenced:legacy-quarantine'};
+    }
     const rawForwardFence = action.forward_replay_contract === CONFIG.REQUIRED_SCAN_CONTRACT_VERSION
       && safeText(action.type).startsWith('forward-replay-fenced:');
     const current = normalizeRecord({
@@ -1261,8 +1270,19 @@
     };
   }
 
+  function openingRecord(row, recordMigrationTime = true) {
+    if(row?.recoverable===false)return row;
+    const declaredVersion=Number(row?.schema_version||0);
+    const legacyVersion=declaredVersion>=1&&declaredVersion<=4?declaredVersion:(declaredVersion===0?4:0);
+    if(legacyVersion)return migrateLegacyRecord(row,legacyVersion,recordMigrationTime);
+    if(declaredVersion===CONFIG.SCHEMA_VERSION&&isUuid(operationIdFor(row)))return normalizeRecord(row);
+    return legacyMigrationFailure(row,declaredVersion,'the record lacks a supported schema and exact operation identity');
+  }
+
   function fencedDowngradeRows(rows = []) {
-    return rows.map((row) => storageRecord(normalizeRecord(row)));
+    // Classify ORIGINAL bytes before the normalization that stamps schema 6.
+    // Deterministic conversion is also used to verify the durable backup.
+    return rows.map((row) => storageRecord(openingRecord(row,false)));
   }
 
   function downgradeTransition(point) {
@@ -1272,23 +1292,28 @@
   }
 
   function legacyMigrationFailure(action, sourceVersion, reason) {
-    const candidate = safeText(action.operation_id || action.client_id) || `legacy-v${sourceVersion}-row-${Number(action.id || 0)}`;
-    const migrated = normalizeRecord({ ...action, operation_id: isUuid(candidate) ? candidate : '' });
     return {
-      ...migrated,
+      ...action,
+      // The complete structured original survives changes to eligibility and
+      // compatibility metadata. This is preservation, never replay authority.
+      preserved_original_record: action,
       source_schema_version: sourceVersion,
       recoverable: false,
       dead_letter: true,
+      current_dead_letter: true,
+      forward_replay_contract: CONFIG.REQUIRED_SCAN_CONTRACT_VERSION,
+      forward_action_type: 'legacy-quarantine',
+      type: 'forward-replay-fenced:legacy-quarantine',
       state: 'legacy-quarantine',
       next_attempt_at: Number.MAX_SAFE_INTEGER,
       lease_owner: null,
       lease_token: null,
       lease_until: 0,
-      last_error: `Legacy queue v${sourceVersion} was preserved locally and not sent: ${reason}`,
+      quarantine_reason: `Legacy queue v${sourceVersion} was preserved locally and not sent: ${reason}`,
     };
   }
 
-  function migrateLegacyRecord(action = {}, sourceVersion) {
+  function migrateLegacyRecord(action = {}, sourceVersion, recordMigrationTime = true) {
     const payload = action.payload && typeof action.payload === 'object' && !Array.isArray(action.payload) ? action.payload : {};
     const type = safeText(action.type);
     const exactOperationId = safeText(action.operation_id || action.client_id
@@ -1334,7 +1359,7 @@
     return {
       ...normalizeRecord({ ...action, operation_id: exactOperationId }),
       source_schema_version: sourceVersion,
-      migrated_at: new Date().toISOString(),
+      ...(recordMigrationTime?{migrated_at: new Date().toISOString()}:{}),
       recoverable: action.recoverable !== false,
     };
   }
@@ -1580,14 +1605,7 @@
         try {
         queueOpeningCheckpoint(context);
         const declaredVersion = Number(current.value?.schema_version || 0);
-        const sourceVersion = declaredVersion >= 1 && declaredVersion <= 4
-          ? declaredVersion
-          : (declaredVersion === 0 ? Math.min(db.version, 4) : 0);
-        const migrated = sourceVersion
-          ? migrateLegacyRecord(current.value, sourceVersion)
-          : (declaredVersion === CONFIG.SCHEMA_VERSION
-            ? normalizeRecord(current.value)
-            : legacyMigrationFailure(current.value, declaredVersion || db.version, 'the record uses an unsupported future schema'));
+        const migrated = openingRecord(current.value);
         // The prior Retry-After parser could persist Infinity in a logically
         // retryable schema-6 row. Repair only its eligibility, once; never
         // revive a hold/quarantine or reinterpret an unknown future schema.
@@ -2801,6 +2819,49 @@
   }
 
   async function processAction(item) {
+    const preserveLocal = originalLocal => {
+      const original=structuredClone(item),localBefore=structuredClone(originalLocal);
+      const db=state.db,worker=state.workerId,transaction=db?.transaction;
+      const security=queueMutationSecurity(),reader=security?.getStatus,writer=security?.mutateProtectedWork;
+      const mobile=window.MemphisMobile,principalReader=mobile?.principalIdentity;
+      const owner=security?.native===true?security.getStatus():null;
+      const principal=canonicalJson(owner?.principal),identity=principalReader?.call(mobile);
+      const requireOriginal=context=>{
+        if(state.db!==db||db?.transaction!==transaction||state.workerId!==worker
+          ||queueMutationSecurity()!==security||security?.getStatus!==reader||security?.mutateProtectedWork!==writer
+          ||window.MemphisMobile!==mobile||mobile?.principalIdentity!==principalReader
+          ||!queueOpeningRowsMatch([item],[original]))throw queueSecurityUnavailable();
+        if(owner){
+          const live=reader.call(security);
+          if(owner.ready!==true||owner.available!==true||owner.quarantined!==false
+            ||!Number.isSafeInteger(original.security_generation)||original.security_generation!==owner.generation
+            ||live.ready!==true||live.available!==true||live.quarantined!==false||live.state!=='enrolled'
+            ||live.generation!==owner.generation||live.deviceId!==owner.deviceId
+            ||localBefore.device_id!==owner.deviceId||!owner.principal||typeof identity!=='string'||!identity
+            ||canonicalJson(live.principal)!==principal||principalReader.call(mobile)!==identity
+            ||context&&(context.generation!==owner.generation||context.deviceId!==owner.deviceId))throw queueSecurityUnavailable();
+        }
+        if(context)queueOpeningCheckpoint(context);
+      };
+      requireOriginal();
+      return patch=>withQueueLock(()=>mutateProtectedQueue(async context=>{
+        requireOriginal(context);
+        const rows=await readRawRows(db);
+        requireOriginal(context);
+        if(!sameClaimedQueueRow(rows.find(row=>row.id===original.id),original))throw queueSecurityUnavailable();
+        const latest=readSession(localBefore.session_uuid);
+        const fixed=['session_uuid','client_session_id','device_id','location_code','started_at','client_completion_id',
+          'offline_authority_employee_id','offline_authority_assignment_epoch','offline_authority_snapshot_id',
+          'offline_occurrence_id','occurrence_id','offline_actor_context_id','context_id','submission_proof',
+          'ended_at','native_finish_scan_entry_id','native_completion_attestation_version','native_completion_attestation'];
+        if(!latest||fixed.some(key=>localBefore[key]!==undefined&&localBefore[key]!==null&&localBefore[key]!==''
+          &&latest[key]!==localBefore[key]))throw processResultFailure('The original saved occurrence changed during reconciliation.');
+        originalCompletionSession(original,latest);
+        const next=patch(latest);
+        requireOriginal(context);saveSession(next);requireOriginal(context);
+        return next;
+      },{requireEnrollment:true,expectedGeneration:original.security_generation??null}));
+    };
     const payload = item?.payload && typeof item.payload === 'object' ? { ...item.payload } : {};
     if (item.type === 'commit_workflow') originalCompletionSession(item);
     let result = await verifiedServerCompletionReceipt(item);
@@ -2813,18 +2874,22 @@
           p_client_session_id: eventPayload.client_session_id,
         });
         if (local) {
-          const evidence = Array.isArray(local.scan_evidence) ? local.scan_evidence : [];
           const clientEventId = safeText(payload.p_client_event_id || item.client_id || item.operation_id);
-          if (!evidence.some((event) => safeText(event?.client_event_id) === clientEventId)) {
-            saveSession({ ...local, scan_evidence: [...evidence, {
+          const originalEvent = {
               client_event_id: clientEventId,
               event_type: safeText(payload.p_event_type || 'scan_error'),
               result: safeText(payload.p_result) || null,
               notes: safeText(payload.p_notes) || null,
               scanned_at: new Date(Number(item.created_at || now())).toISOString(),
               payload_json: eventPayload,
-            }].slice(-200) });
-          }
+          };
+          await preserveLocal(local)(latest=>{
+            const evidence=Array.isArray(latest.scan_evidence)?latest.scan_evidence:[];
+            const retained=evidence.filter(event=>safeText(event?.client_event_id)===clientEventId);
+            if(retained.length>1||(retained.length===1&&canonicalJson(retained[0])!==canonicalJson(originalEvent)))
+              throw storageFailure('historical scan evidence',new Error('The same event identity has different retained evidence.'));
+            return retained.length?latest:{...latest,scan_evidence:[...evidence,originalEvent].slice(-200)};
+          });
         }
         if (!local) {
           throw Object.assign(new Error('Historical standalone scan evidence has no exact occurrence and requires manager reconciliation.'), { httpStatus: 422 });
@@ -2930,6 +2995,7 @@
           if (typeof createAttestation !== 'function') {
             throw Object.assign(new Error('The protected native completion attestation is unavailable.'), { httpStatus: 503 });
           }
+          const saveOriginal=preserveLocal(local);
           const nativeCompletion = await createAttestation({
             deviceId: safeText(payload.p_device_id),
             locationCode: safeText(payload.p_location_code),
@@ -2942,14 +3008,20 @@
           if (safeText(local?.ended_at) && safeText(nativeCompletion?.p_client_ended_at) !== safeText(local.ended_at)) {
             throw Object.assign(new Error('The native completion time changed after it was frozen.'), { httpStatus: 422 });
           }
+          if(safeText(nativeCompletion?.p_native_finish_scan_entry_id)!==safeText(local.native_finish_scan_entry_id||payload.p_native_finish_scan_entry_id)
+            ||!isUuid(nativeCompletion?.p_native_finish_scan_entry_id)
+            ||nativeCompletion?.p_native_completion_attestation_version!=='custodial-native-completion.v2'
+            ||!/^[a-f0-9]{64}$/.test(safeText(nativeCompletion?.p_native_completion_attestation))
+            ||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(safeText(nativeCompletion?.p_client_ended_at)))
+            throw processResultFailure('The original native completion proof was not returned.');
           Object.assign(payload, nativeCompletion);
-          if (local) saveSession({
-            ...local,
+          await saveOriginal(latest=>({
+            ...latest,
             ended_at: safeText(nativeCompletion.p_client_ended_at),
             native_finish_scan_entry_id: safeText(nativeCompletion.p_native_finish_scan_entry_id),
             native_completion_attestation_version: safeText(nativeCompletion.p_native_completion_attestation_version),
             native_completion_attestation: safeText(nativeCompletion.p_native_completion_attestation),
-          });
+          }));
         }
         const hasNativeCompletion = isUuid(payload.p_native_finish_scan_entry_id)
           && safeText(payload.p_native_completion_attestation_version) === 'custodial-native-completion.v2'

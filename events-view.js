@@ -6,9 +6,10 @@ const nativeRequired=new WeakSet();
 function isNative(w){
  if(nativeRequired.has(w))return true;
  let required=false;
- try{required=w.MemphisCustodialSecurity?.native===true||w.MemphisMobile?.edition==='custodial'
-  ||w.MemphisMobileBuildIdentity?.edition==='custodial'||w.Capacitor?.isNativePlatform?.()===true
-  ||['android','ios'].includes(w.Capacitor?.getPlatform?.());}catch{required=true;}
+ try{const edition=w.MemphisMobileBuildIdentity?.edition;
+  required=w.MemphisCustodialSecurity?.native===true||w.MemphisMobile?.edition==='custodial'||edition==='custodial'
+   ||(edition!=='manager'&&(w.Capacitor?.isNativePlatform?.()===true
+    ||['android','ios'].includes(w.Capacitor?.getPlatform?.())));}catch{required=true;}
  if(required)nativeRequired.add(w);return required;
 }
 const same=(a,b)=>!!a&&!!b&&JSON.stringify(a)===JSON.stringify(b);

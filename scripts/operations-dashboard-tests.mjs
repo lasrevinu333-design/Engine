@@ -214,7 +214,7 @@ export async function managerHomeFixture({attendance,weather,alerts={type:'Featu
   hasRole:(r,s)=>Boolean(s?.roles?.includes(r))};
  const window={location,MemphisAuth:auth,addEventListener:(type,callback)=>events.set(type,callback)};
  const f={nodes,node,intervals,requests,attendance,weather,alerts,navigations,auth,window,session:()=>session,setSession:value=>{session=value;},
-  setDevice:value=>{device=value;},emit:type=>events.get(type)?.(),emitDocument:type=>documentEvents.get(type)?.(),
+  setDevice:value=>{device=value;},emit:(type,event)=>events.get(type)?.(event),emitDocument:type=>documentEvents.get(type)?.(),
   fetchOverride:null,turn:()=>new Promise(resolve=>setImmediate(resolve))};
  const fetch=async url=>{requests.push(url);if(f.fetchOverride)return f.fetchOverride(url);
   let data=url.includes('open-meteo')?f.weather:url.includes('api.weather.gov')?f.alerts:url.includes('current-attendance')?{ok:true,data:f.attendance}:{ok:true,data:{enabled:false}};return {ok:true,json:async()=>data};};
@@ -222,7 +222,10 @@ export async function managerHomeFixture({attendance,weather,alerts={type:'Featu
  const original=readFileSync(new URL('../ops-hub.js',import.meta.url),'utf8');
  const importLine="import { installManagerWeather } from './mobile/src/manager/home-weather.js';\n";
  assert.equal(original.split(importLine).length,2,'Execute the actual static dependency through its real controller');
- const interval=(fn,delay)=>{intervals.set(delay,fn);return delay;},clear=id=>intervals.delete(id);
+ const liveTimers=new Map();let timerId=0;f.liveTimers=liveTimers;
+ const interval=(fn,delay)=>{const id=++timerId;liveTimers.set(id,delay);intervals.set(delay,fn);return id;},clear=id=>{
+  const delay=liveTimers.get(id);liveTimers.delete(id);if(![...liveTimers.values()].includes(delay))intervals.delete(delay);
+ };
  const install=options=>(f.weatherController=installManagerWeather({...options,now:()=>now,setIntervalFn:interval,clearIntervalFn:clear,
   requestJson:async(url,opts)=>{const r=await fetch(url,opts);if(!r.ok)throw Error('Weather unavailable');return r.json();}}));
  vm.runInNewContext(original.replace(importLine,''),{window,document:{getElementById:node,addEventListener:(type,callback)=>documentEvents.set(type,callback)},localStorage:{getItem:()=>null},URL,URLSearchParams,Date:Clock,Intl,console,setInterval:interval,clearInterval:clear,installManagerWeather:install,fetch});
@@ -414,7 +417,7 @@ test('missing school arrival stays review; valid late arrival stays expected wit
 
 // Contract-only DOM fixture: executes the exact controller, not a browser or
 // pixel/layout verification. No network, credentials, storage or live records.
-function fixture({reduced=false,legacyDialog=false}={}){
+export function fixture({reduced=false,legacyDialog=false,audience='manager'}={}){
  let now=noon,id=0;const frames=new Map(),timeouts=new Map(),all=[];
  class Node{
   constructor(tag='div'){this.tag=tag;this.dataset={};this.attrs={};this.children=[];this.listeners=new Map();this.hidden=false;this.disabled=false;this.open=false;this.inert=false;this.value='32';this.scrollTop=0;this.scrollHeight=1200;this.clientHeight=300;this.textContent='';
@@ -453,7 +456,7 @@ function fixture({reduced=false,legacyDialog=false}={}){
  let backCount=0;window.history={state:{prior:true},pushState(state){this.state=state;},replaceState(state){this.state=state;},back(){backCount++;this.state={prior:true};window.emit('popstate');}};
  doc.exitFullscreen=async()=>{doc.fullscreenElement=null;doc.emit('fullscreenchange');};
  const context={MemphisOperationsData:D,AbortController,Intl,Date,URL,console,module:{exports:{}}};vm.runInNewContext(ui,context);
- const controller=context.module.exports.create({document:doc,window,now:()=>now});let selected=null;
+ const controller=context.module.exports.create({document:doc,window,now:()=>now,audience});let selected=null;
  controller.activate({selectLocation:value=>{selected=value;}});
  const text=node=>[node.textContent,...node.children.map(text)].join(' ');
  return{controller,window,doc,elements,main,triggers,dialog,content,viewport,motion,frames,timeouts,text,all,navigations,
@@ -496,6 +499,18 @@ test('map fullscreen fallback exits and never alters pins',async()=>{
  f.elements['operations-map-fullscreen'].emit('click');await Promise.resolve();assert.equal(f.elements['dashboard-map'].classList.contains('is-expanded'),true);
  f.doc.emit('keydown',{key:'Escape'});assert.equal(f.elements['dashboard-map'].classList.contains('is-expanded'),false);
  assert.deepEqual(f.viewport.children.map(x=>x.x),positions);f.clean();
+});
+for(const nativeFullscreen of [false,true])test(`map refresh retains ${nativeFullscreen?'browser':'CSS'} fullscreen for the same owner`,async()=>{
+ const f=fixture(),target=f.elements['dashboard-map'];
+ if(nativeFullscreen){f.doc.fullscreenEnabled=true;target.requestFullscreen=async()=>{f.doc.fullscreenElement=target;};}
+ f.elements['operations-map-fullscreen'].emit('click');await new Promise(resolve=>setImmediate(resolve));
+ for(let i=0;i<3;i++){f.controller.unavailable({preserveBoard:true,preserveMap:true});
+  assert.equal(f.elements['operations-map-fullscreen'].attrs['aria-pressed'],'true');
+  if(nativeFullscreen)assert.equal(f.doc.fullscreenElement,target);else assert.equal(target.classList.contains('is-expanded'),true);
+ }
+ f.window.MemphisAuth.readSession=()=>null;f.controller.unavailable({preserveBoard:true,preserveMap:true});await Promise.resolve();
+ if(nativeFullscreen)assert.equal(f.doc.fullscreenElement,null);else assert.equal(target.classList.contains('is-expanded'),false);
+ f.clean();
 });
 test('nearby chooser preserves coordinates and selects canonical stable ID',()=>{
  const f=fixture();f.viewport.children[1].x=10;const pin=f.viewport.children[0];f.viewport.emit('click',{target:pin});
