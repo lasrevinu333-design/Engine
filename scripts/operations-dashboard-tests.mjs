@@ -1141,3 +1141,19 @@ test('operational details retain work status while keeping internal proof diagno
  assert.doesNotMatch(JSON.stringify(out),/Authenticated|private-id|secret-id|Native clock/);
  assert.equal(source.cards[0].lines.length,7);
 });
+
+test('real-size City ticker uses approved reading speed and unchanged refresh does not reset motion',async()=>{
+ const f=fixture({audience:'public_readonly'}),track=f.elements['ops-city-ticker'],styles=new Map();let writes=0;
+ track.parentElement={clientWidth:204};track.getBoundingClientRect=()=>({width:154889});
+ track.style={setProperty(key,value){styles.set(key,value);writes++;}};
+ try{
+  const source={...payload,data:{...payload.data,city:{state:'current',coverage:'city_active_zoo',generated_at:new Date(noon).toISOString(),rows:Array.from({length:106},(_,i)=>({id:String(i+1),work_order_id:String(1000+i),facility:'15Z05 Birdhouse',status:'Approved',description:'Repair fixture light'}))}}};
+  await loaded(f,{operations:source});
+  assert.equal(track.children.length,106);assert.equal(styles.get('--ticker-distance'),'154685px');
+  assert.ok(Math.abs(parseFloat(styles.get('--ticker-duration'))-154685/42)<0.001);
+  const first=track.children[0],priorWrites=writes;
+  await loaded(f,{operations:source});f.controller.tick();
+  assert.equal(track.children[0],first);assert.equal(writes,priorWrites);
+  track.parentElement.clientWidth=160000;f.window.emit('resize');assert.equal(styles.get('--ticker-distance'),'0px');
+ }finally{f.clean();}
+});

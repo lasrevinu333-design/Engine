@@ -22,6 +22,27 @@
     const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const txt=(id,value)=>{const node=el(id);if(node&&node.textContent!==String(value))node.textContent=value;};
     const make=(tag,value,klass)=>{const node=document.createElement(tag);if(value!=null)node.textContent=value;if(klass)node.className=klass;return node;};
+    function measureTickers(){
+      for(const kind of ['activity','events','schools','spiceworks','city','locations']){
+        const track=el('ops-'+kind+'-ticker'),width=track?.parentElement?.clientWidth;
+        if(!width||!track.style)continue;
+        const distance=Math.max(0,track.getBoundingClientRect().width-width);
+        // Restore the approved mockup's reading speeds, independent of feed size.
+        const duration=Math.max(20,distance/(kind==='locations'?34:42));
+        const signature=distance+'|'+duration;
+        if(track.dataset.motionSize===signature)continue;
+        track.dataset.motionSize=signature;
+        track.style.setProperty('--ticker-distance',distance+'px');
+        track.style.setProperty('--ticker-duration',duration+'s');
+      }
+    }
+    function recordTicker(id,rows,empty){
+      const track=el(id);if(!track)return;
+      const signature=JSON.stringify(rows.length?rows:[empty]);
+      if(track.dataset.recordsFingerprint===signature)return;
+      track.dataset.recordsFingerprint=signature;
+      track.replaceChildren(...(rows.length?rows:[empty]).map((text,index)=>make('span',(index?'   •   ':'')+text,'tickerRecord')));
+    }
     function pins(){return Array.from(el('dashboard-map').querySelectorAll('.mzMapPin'));}
     function session(){try{const s=window.MemphisAuth?.readSession?.();
       if(s?.role!=='ops_manager'||!['manager_id','credential_id','token','device_id'].every(k=>typeof s[k]==='string'&&s[k]))return null;
@@ -82,7 +103,8 @@
       if(el('ops-schools-ticker')?.textContent!==schoolText)txt('ops-schools-ticker',schoolText);
       const spice=view('spiceworks'),city=view('city');
       txt('ops-spiceworks-ticker',spice.cards.length?spice.cards.map(card=>`${card.title} · ${card.lines[0]}`).join('   •   '):spice.note);
-      txt('ops-city-ticker',city.cards.length?city.cards.map(card=>`${card.title} · ${card.status} · ${card.lines[1]}`).join('   •   '):city.note);
+      recordTicker('ops-city-ticker',city.cards.map(card=>`${card.title} · ${card.status} · ${card.lines[1]}`),city.note);
+      measureTickers();
     }
     function renderFeeds(){
       renderActivity();const locations=view('locations');
@@ -99,6 +121,7 @@
           }):[make('span',locations.note)]));
         }
       }
+      measureTickers();
       const counts=new Map();for(const card of (cleaning||cleaningView(null,approved(),now())).cards)
         counts.set(card.state,(counts.get(card.state)||0)+1);
       el('ops-status-counts').replaceChildren(...[...counts].map(([status,n])=>{const node=make('span',`${n} ${status.replaceAll('_',' ')}`);node.dataset.status=status;return node;}));
@@ -238,6 +261,7 @@
     listen(document,'fullscreenchange',()=>{if(mapExpanded&&document.fullscreenElement!==el('dashboard-map')&&!el('dashboard-map').classList.contains('is-expanded'))void exitMap();});
     listen(document,'keydown',event=>{if(event.key==='Escape'&&!board&&mapExpanded){event.preventDefault();void exitMap();}});
     listen(window,'popstate',()=>{if(board)closeBoard({history:false});});
+    listen(window,'resize',measureTickers);
     listen(motion,'change',()=>{if(motion.matches){paused=true;syncPause();}});
     const viewport=el('dashboard-map').querySelector('[data-map-viewport]');
     listen(viewport,'click',event=>{const pin=event.target.closest?.('.mzMapPin');if(!pin||!active)return;
