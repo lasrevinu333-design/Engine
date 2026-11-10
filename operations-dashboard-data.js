@@ -171,7 +171,7 @@
   function attendance(payload){const d=payload?.data;
     if(payload?.ok!==true||count(d?.attendance)===null)return{value:'Unavailable',note:'Gate count source unavailable.',stale:true};
     const time=d.source_timestamp||d.fetched_at||d.updated_at,unknown=instant(time)===null||typeof d.stale!=='boolean';
-    return{value:d.attendance.toLocaleString('en-US'),note:`${unknown?'Gate count; freshness unknown':d.stale?'Stale gate count':'Current gate count'} · ${stamp(time)}`,
+    return{value:d.attendance.toLocaleString('en-US'),note:`${stamp(time)}${unknown?' · Freshness unknown':d.stale?' · Stale source':''}`,
       stale:unknown||d.stale};
   }
   function weather(payload,now=Date.now()){

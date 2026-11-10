@@ -49,3 +49,43 @@
 .tickerRecord{display:inline-block;white-space:pre}
 
 .tickerBand[data-stale=true] .tickerLabel{color:#f6d36c}.tickerBand[data-stale=true] .tickerLabel:after{content:" · delayed";font-size:10px;margin-left:5px}
+
+/* The approved 1282x550 PNG's opaque artwork is y=55..431. Retain
+   its original canvas, width, shared pin transform and scale; only the empty
+   transparent top/bottom are outside this frame. No image is resampled. */
+.operationsPage .mapArtworkFrame{position:relative;overflow:hidden;aspect-ratio:1282 / 376;min-width:0;border-radius:9px}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame .mzMapViewport{position:absolute;inset-inline:0;top:calc(-55 / 376 * 100%);width:100%;height:auto;aspect-ratio:1282 / 550;min-height:0;border:0;border-radius:0}
+.operationsPage .operationsHeading>.mapNotice,.operationsPage .mz-nav-actions>.mapNotice{font-size:12px;flex:1;min-width:180px}
+
+/* Compact surrounding information in full-page mode; the map width and
+   approved artwork scale are unchanged. Short screens retain reachable scroll. */
+:is(:root:fullscreen,:root.dashboard-expanded) .operationsPage .commandPage{padding:6px 10px;gap:4px}
+:is(:root:fullscreen,:root.dashboard-expanded) #operations-panels{grid-template-columns:minmax(0,1fr);gap:4px}
+:is(:root:fullscreen,:root.dashboard-expanded) .telemetry{grid-column:1/-1}
+:is(:root:fullscreen,:root.dashboard-expanded) .telemetry>section{padding:5px 12px}
+:is(:root:fullscreen,:root.dashboard-expanded) .bigClock{font-size:30px}
+:is(:root:fullscreen,:root.dashboard-expanded) .attendanceValue{font-size:30px}
+:is(:root:fullscreen,:root.dashboard-expanded) .weatherArt{height:42px;width:50px}
+:is(:root:fullscreen,:root.dashboard-expanded) .operationsPage .tickerBand{min-height:36px;padding:0}
+:is(:root:fullscreen,:root.dashboard-expanded) .tickerLabel{padding:6px 8px}
+:is(:root:fullscreen,:root.dashboard-expanded) .feedButton{display:none}
+:is(:root:fullscreen,:root.dashboard-expanded) .tickerTrack{font-size:14px;padding:5px 0}
+:is(:root:fullscreen,:root.dashboard-expanded) .commandPage .commandMap.mzMapStage{min-height:0;padding:4px 6px;gap:3px}
+:is(:root:fullscreen,:root.dashboard-expanded) .commandPage>p{margin-block:2px}
+@media(min-width:1000px){
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandPage .commandMap.mzMapStage{grid-template-columns:1fr 1.3fr 1fr;grid-template-rows:auto auto auto}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap>.operationsHeading,
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap>.mapArtworkFrame{grid-column:1/-1}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap>.mapAttention[open]{grid-column:1/-1}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap .mz-back-link{min-height:28px;padding:4px 8px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap .operationsHeading h2{margin-block:0;font-size:18px}
+}
+@media(max-width:699px){
+  :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels{grid-template-columns:minmax(0,1fr)}
+  :is(:root:fullscreen,:root.dashboard-expanded) .operationsPage .commandPage{padding:4px;gap:3px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .operationsHeading{gap:4px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .operationsHeading h1{font-size:16px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .telemetry>section{padding:4px 8px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .bigClock,:is(:root:fullscreen,:root.dashboard-expanded) .attendanceValue{font-size:24px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .telemetry .weatherCard{padding-block:3px}
+}
