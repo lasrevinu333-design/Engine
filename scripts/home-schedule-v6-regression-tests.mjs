@@ -54,7 +54,7 @@ for(const positive of [false,true])await test('H04 Schedule throwing status duri
  f.context.window.MemphisCustodialSecurity.getStatus=()=>{if(broken)throw Error('synthetic status failure');return get();};
  assert.doesNotThrow(()=>f.events.get('memphis:custodial-security-state')({detail:{ready:positive,available:positive,quarantined:!positive}}));
  assert.equal(f.node('content').hidden,true);broken=false;f.events.get('storage')({key});await f.load();assert.equal(f.node('content').hidden,true);
- f.events.get('memphis:custodial-security-state')({detail:{ready:true,available:true,quarantined:false}});await pause();assert.equal(f.node('content').hidden,false);
+ f.events.get('memphis:custodial-security-state')({detail:{ready:true,available:true,quarantined:false}});await f.settle();assert.equal(f.node('content').hidden,false);
 });
 await test('H05 Schedule unavailable survives a new page and offline load',async()=>{
  const f=fixture();await f.load();const original=f.stored.get(key);f.next={...payload(20),schedule_delivery_mode:'UNAVAILABLE'};await f.load();

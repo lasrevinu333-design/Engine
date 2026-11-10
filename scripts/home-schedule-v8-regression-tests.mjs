@@ -30,7 +30,7 @@ for(const fault of faults)await test('V7-01 Schedule '+fault,async()=>{
  security.getStatus=transition(fault,healthy);f.events.get('storage')({key});
  assert.equal(f.node('content').hidden,true,'failed transition immediately hides prior content');
  security.getStatus=healthy;await f.load();assert.equal(f.node('content').hidden,true,'getter recovery alone cannot reauthorize');
- f.events.get('memphis:custodial-security-state')({detail:healthy()});await pause();assert.equal(f.node('content').hidden,false);
+ f.events.get('memphis:custodial-security-state')({detail:healthy()});await f.settle();assert.equal(f.node('content').hidden,false);
 });
 for(const fault of faults)await test('V7-01 Home '+fault,async()=>{
  const names=['window','document','localStorage','fetch','setInterval','clearInterval'],saved=names.map(k=>[k,globalThis[k]]);let app;

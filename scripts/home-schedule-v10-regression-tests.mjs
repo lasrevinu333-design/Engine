@@ -41,7 +41,7 @@ for(const consumer of ['Home','Schedule'])for(const oldThrows of [false,true])aw
   const healthy=f.security.getStatus;let armed=true;
   f.security.getStatus=()=>{const result=healthy();if(!armed)return result;armed=false;
    return Object.defineProperty(result,'ready',{get(){f.events.get('memphis:custodial-security-state')({detail:healthy()});if(oldThrows)throw Error('superseded read');return true;}});};
-  f.events.get('memphis:custodial-security-state')({detail:healthy()});await pause();
+  f.events.get('memphis:custodial-security-state')({detail:healthy()});if(consumer==='Schedule')await f.settle();else await pause();
   assert.equal(f.hidden(),false,'two positive events must recover without a third');
   assert.notEqual(f.state(),'Phone identity must be verified.','older handler cannot overwrite newer success');
  };

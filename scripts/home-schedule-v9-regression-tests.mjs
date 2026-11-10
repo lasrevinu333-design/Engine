@@ -40,7 +40,7 @@ for(const kind of ['native second read','principal bridge','profile matcher','de
  try{f.events.get('storage')({key});}catch(e){escaped=e;}restore();
  assert.equal(escaped,undefined,'identity failures cannot escape callback');assert.equal(f.node('content').hidden,true,'clear immediately');
  await pause();await f.load();assert.equal(f.node('content').hidden,true,'healthy calls alone cannot recover');
- f.events.get('memphis:custodial-security-state')({detail:security.getStatus()});await pause();assert.equal(f.node('content').hidden,false,'separate healthy positive event recovers');
+ f.events.get('memphis:custodial-security-state')({detail:security.getStatus()});await f.settle();assert.equal(f.node('content').hidden,false,'separate healthy positive event recovers');
 });
 for(const kind of ['native second read','principal bridge','profile matcher','profile reader','device reader'])await test('V8-01 Home complete envelope '+kind,()=>withHome(async f=>{
  const restore=inject(f.security,f.mobile,kind,f.access);let escaped;try{f.events.get('storage')({key:f.key});}catch(e){escaped=e;}restore();

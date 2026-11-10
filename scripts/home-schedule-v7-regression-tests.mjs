@@ -24,7 +24,25 @@ for(const [name,getter]of statusCases)await test('V6-03 Schedule exact storage r
  const security=f.context.window.MemphisCustodialSecurity,original=security.getStatus;security.getStatus=getter;
  assert.doesNotThrow(()=>f.events.get('storage')({key}));assert.equal(f.node('content').hidden,true);
  security.getStatus=original;await f.load();assert.equal(f.node('content').hidden,true,'healthy getter alone cannot recover');
- f.events.get('memphis:custodial-security-state')({detail:{ready:true,available:true,quarantined:false}});await pause();assert.equal(f.node('content').hidden,false);
+ f.events.get('memphis:custodial-security-state')({detail:{ready:true,available:true,quarantined:false}});await f.settle();assert.equal(f.node('content').hidden,false);
+});
+for(const terminal of [false,true])await test('V6-03 delayed event recovery settles before asserting '+(terminal?'terminal refusal':'current visibility'),async()=>{
+ const f=fixture();await f.load();const security=f.context.window.MemphisCustodialSecurity,original=security.getStatus;
+ security.getStatus=()=>null;f.events.get('storage')({key});assert.equal(f.node('content').hidden,true);
+ security.getStatus=original;await f.load();assert.equal(f.node('content').hidden,true,'getter recovery alone stays refused');
+ const api=f.context.window.MemphisRecurringScheduleTarget,prepare=api.prepare;
+ let entered,release;const atPrepare=new Promise(r=>{entered=r;}),held=new Promise(r=>{release=r;});
+ f.context.window.MemphisRecurringScheduleTarget={...api,prepare:async args=>{entered();await held;return prepare(args);}};
+ f.next=payload(30,terminal);
+ try{
+  f.events.get('memphis:custodial-security-state')({detail:original()});await atPrepare;
+  let settled=false;const done=f.settle().then(()=>{settled=true;});
+  await pause();assert.equal(settled,false,'the old40ms assumption must not finish a held owner');
+  assert.equal(f.context.testPage.isIdle(),false);assert.equal(f.node('content').hidden,true);
+  release();await done;assert.equal(f.context.testPage.isIdle(),true);
+  assert.equal(f.node('content').hidden,terminal,'completion is not a desired-visibility predicate');
+  assert.equal(f.cache().recurring_target.target.authorityRevision,30);
+ }finally{release();await f.settle();f.events.get('pagehide')();}
 });
 for(const [name,getter]of statusCases)await test('V6-03 Home exact storage redraw '+name,async()=>{
  const names=['window','document','localStorage','fetch','setInterval','clearInterval'],old=names.map(k=>[k,globalThis[k]]);let app;
