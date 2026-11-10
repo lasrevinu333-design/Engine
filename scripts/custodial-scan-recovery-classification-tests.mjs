@@ -253,16 +253,30 @@ async function archivedRetirementOwnerCases(){
   resolution:{method:'preserved_native_journal_manager_recovery',queued_action_count:0,completion_draft_count:0,
    server_suggested_action:'start_session'}};
  const key='session:'+sessionId,indexKey='mz_phone_scan_resume:'+device,archiveKey='mz_custodial_prestart_recovery:'+sessionId;
+ const preReadCases=new Map();
+ for(const probe of ['tool_get_system_settings','tool_get_location_scan_state']){
+  for(const [label,error,connection] of [
+   ['network',{code:'custodial_native_network_unavailable'},true],
+   ...[408,429,500,502,503,504,599].map(status=>['http'+status,{status},true]),
+   ...[0,400,401,403,409,422].map(status=>['http'+status,{status},false]),
+   ['storage',{code:'custodial_secure_storage_unavailable',status:503},false],
+   ['contradictory-auth',{code:'custodial_native_network_unavailable',status:403},false],
+   ['arbitrary',{},false],
+   ['retired-owner',{code:'custodial_native_network_unavailable'},false],
+  ])preReadCases.set(`unarchived-probe-${probe}-${label}`,{probe,error,connection,retireOwner:label==='retired-owner'});
+ }
  const cases=['changed-session-after-queue','changed-index-after-queue','changed-archive-after-queue',
   'changed-generation-after-queue','changed-principal-after-queue','changed-writer-after-queue',
   'changed-generation-at-FIFO','missing-context-checkpoint','same-original-confirmed',
   'post-effect-owner-loss','post-effect-lost-result','reentrant-foreign-index','unarchived-changed-session-after-queue',
-  'unarchived-same-original-confirmed','unarchived-owner-loss-after-queue','unarchived-reentrant-foreign-index'];
+  'unarchived-same-original-confirmed','unarchived-owner-loss-after-queue','unarchived-reentrant-foreign-index',
+  'unarchived-post-effect-network','unarchived-post-effect-http503',...preReadCases.keys()];
  const selected=process.argv.find(a=>a.startsWith('--archived-retirement-case='))?.split('=').slice(1).join('=');
  const skip=process.argv.find(a=>a.startsWith('--archived-retirement-skip='))?.split('=').slice(1).join('=');
  if(selected)assert.ok(cases.includes(selected),'unknown selected case');
  for(const name of cases.filter(x=>(!selected||x===selected)&&x!==skip)){
   const rows=new Map([[key,archive.preserved_session_raw],[indexKey,JSON.stringify({schema_version:2,sessions:[{session_uuid:sessionId}]})],[archiveKey,JSON.stringify(archive)]]);
+  const originalIndex=rows.get(indexKey),readCase=preReadCases.get(name);
   const unarchived=name.startsWith('unarchived-');if(unarchived)rows.delete(archiveKey);
   const changes=[],writerOptions=[];let generation=7,livePrincipal=principal;
   const status=()=>({native:true,state:'enrolled',ready:true,available:true,quarantined:false,deviceId:device,generation,principal:livePrincipal});
@@ -287,6 +301,8 @@ async function archivedRetirementOwnerCases(){
   const replacement=JSON.stringify({...session,updated_at:'2026-10-14T12:02:00.000Z',original:'foreign replacement retained'});
   const retire=async(_id,preserve)=>{
    await preserve([],{canonical_actions:'[]'});
+   if(name==='unarchived-post-effect-network')throw Object.assign(Error('unknown queue settlement'),{code:'custodial_native_network_unavailable'});
+   if(name==='unarchived-post-effect-http503')throw Object.assign(Error('unknown queue settlement'),{status:503});
    if(name==='changed-session-after-queue'||name==='unarchived-changed-session-after-queue')rows.set(key,replacement);
    if(name==='changed-index-after-queue')rows.set(indexKey,foreignIndex);
    if(name==='changed-archive-after-queue')rows.set(archiveKey,'foreign archive retained');
@@ -301,10 +317,22 @@ async function archivedRetirementOwnerCases(){
    window:{MemphisCustodialSecurity:security,MemphisScanSync:{ready:Promise.resolve(true),retirePreservedInterruptedStart:retire,completionDraftExists:async()=>false},
     MemphisUI:{resolveOpenScanSession:()=>({state:'open',session:JSON.parse(archive.preserved_session_raw)})}},
    getNativeCustodialVaultState:async()=>({scan_journal_disposition:disposition}),reportProtectedRecoveryDiagnostic:async()=>{},
-   requestEnvelope:async()=>({data:{location_code:'FIXTURE',device_approved:true,suggested_action:'start_session'}}),
+   requestEnvelope:async(_path,options)=>{
+    if(readCase?.probe===options.body.fn){if(readCase.retireOwner)generation++;throw Object.assign(Error('synthetic recovery read failure'),readCase.error);}
+    return {data:{location_code:'FIXTURE',device_approved:true,suggested_action:'start_session'}};
+   },
    deviceId:()=>device,securityError:code=>Object.assign(Error(code),{code})};
   vm.runInNewContext(bridge.slice(start,unarchived?recoveryEnd:end)+'\nthis.finish=finishArchivedPreStartRetirement;'+(unarchived?'\nthis.recover=reconcileRecoveredPreStart;':''),scope);
   const result=unarchived?await scope.recover():await scope.finish(device,disposition);
+  if(readCase){
+   assert.equal(result.state,readCase.connection?'connection_required':'manager_required',name);
+   assert.equal(rows.get(key),archive.preserved_session_raw,'original session bytes retained');
+   assert.equal(rows.get(indexKey),originalIndex,'original index bytes retained');
+   assert.equal(rows.has(archiveKey),false,'failed read cannot create a retirement archive');
+   assert.equal(changes.length,0,'failed read cannot mutate retained work');
+   assert.equal(writerOptions.length,0,'failed read cannot enter retirement writer');
+   console.log('PRE_EFFECT_RECOVERY_READ '+name+': PASS (actual bridge, synthetic transport; no phone)');continue;
+  }
   if(unarchived){
    assert.equal(result.state,name==='unarchived-same-original-confirmed'?'retired_preserved':'manager_required');
    assert.ok(rows.has(archiveKey),'actual archive retained');

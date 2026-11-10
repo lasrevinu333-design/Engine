@@ -34,6 +34,7 @@ let restoreAgain = false;
 let previousAssignmentState = null;
 let phoneLockClockTimer = null;
 let restoreRetryTimer = null;
+let savedWorkConnectionOwner = null;
 const readinessObservation = createReadinessObservation();
 let readinessManagerRequired = false;
 let readinessReadSequence = 0;
@@ -149,12 +150,15 @@ function showBoot(title = 'Please wait', message = 'Opening your work phone…')
   showOnly(els.boot); els.bootTitle.textContent = title; els.bootStatus.textContent = message;
 }
 function showSetupRepairRequired() {
+  savedWorkConnectionOwner = null;
   readinessManagerRequired = true; invalidateReadiness();
   clearRestoreRetry();
   showBoot('Phone setup needs repair', 'Custodial could not finish verifying this phone. Your saved work is retained.');
 }
 function showSavedWorkConnectionRequired() {
   clearRestoreRetry();
+  const current = security.getStatus();
+  savedWorkConnectionOwner = { deviceId: deviceId(), generation: current.generation, principal: readinessPrincipal() };
   showBoot('Connection unavailable', 'Custodial could not reach its server to verify saved work. Nothing has been cleared. Your original cleaning remains held for verification.');
 }
 function showNoConnection() {
@@ -238,6 +242,7 @@ function showCachedPhoneIdentity() {
 function showHome(value = profile) {
   const name = employeeName(value);
   if (!name || !currentProfile(value)) return false;
+  savedWorkConnectionOwner = null;
   clearRestoreRetry();
   profile = value;
   setEmployeeIdentity(value);
@@ -273,6 +278,7 @@ function reportUnresolvedProtectedRecovery(status) {
     .catch(() => false);
 }
 function showAssignmentNeeded(_message = '', status = null) {
+  savedWorkConnectionOwner = null;
   readinessManagerRequired = true; invalidateReadiness();
   clearRestoreRetry();
   reportUnresolvedProtectedRecovery(status);
@@ -294,6 +300,7 @@ async function ensurePhoneNotifications() {
   if (register) await register({ requestPermission: true }).catch(() => null);
 }
 async function restoreNow({ quiet = false } = {}) {
+  savedWorkConnectionOwner = null;
   readinessManagerRequired = false; invalidateReadiness();
   if (!quiet) showBoot();
   let status;
@@ -414,6 +421,7 @@ security.subscribe((status) => {
   const changed = assignmentState !== previousAssignmentState;
   previousAssignmentState = assignmentState;
   if (changed) {
+    savedWorkConnectionOwner = null;
     invalidateReadiness({refresh:false});
     profile = null;
     els.name.textContent = ''; els.role.textContent = ''; els.phoneLockName.textContent = '';
@@ -448,9 +456,18 @@ void App.addListener('resume', () => {
   void restore({ quiet: !els.home.hidden });
 });
 window.addEventListener?.('memphis-scan-sync', event => {
+  if (event.detail?.status === 'startup-recovery-complete' && savedWorkConnectionOwner && !readinessManagerRequired) {
+    const owner = savedWorkConnectionOwner, current = security.getStatus();
+    // Only the held original owner may request re-entry. restore() coalesces
+    // the request and repeats every identity and saved-work admission check.
+    savedWorkConnectionOwner = null;
+    if (owner.deviceId === deviceId() && owner.generation === current.generation
+      && owner.principal === readinessPrincipal() && current.state === 'enrolled'
+      && current.ready === true && current.available === true && current.quarantined === false) void restore();
+  }
   if (['quarantined', 'recovery-paused', 'compatibility-paused', 'dead-letter'].includes(event.detail?.status)) {
     readinessManagerRequired = true; invalidateReadiness();
-  } else if (['worker-error', 'retrying', 'queued', 'peer-update'].includes(event.detail?.status)) {
+  } else if (['connection-paused', 'worker-error', 'retrying', 'queued', 'peer-update'].includes(event.detail?.status)) {
     invalidateReadiness();
   } else {
     // Remove the last positive label immediately while the authoritative queue

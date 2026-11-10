@@ -745,6 +745,7 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
 
     requireBrowser();
     let retirement;
+    let preEffectReadFailure = null;
     try {
       retirement = await retireQueuedStart.call(queueOwner, interruptedStart.sessionId, async (queueActions, preservationEvidence) => {
         requireBrowser();
@@ -796,7 +797,7 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
             fn: 'tool_get_system_settings',
             args: {},
           },
-        });
+        }).catch(error => { preEffectReadFailure = error; throw error; });
         requireBrowser();
         if (!transportProof?.data || typeof transportProof.data !== 'object') {
           throw securityError('release_canary_transport_probe_invalid');
@@ -811,7 +812,7 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
               p_device_id: enrolledDevice,
             },
           },
-        });
+        }).catch(error => { preEffectReadFailure = error; throw error; });
         requireBrowser();
         const serverState = server?.data || {};
         if (String(serverState.location_code || '').trim().toUpperCase() !== localLocationCode
@@ -884,6 +885,16 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
         return { preserved: true, canonical_actions: preservationEvidence.canonical_actions };
       });
     } catch (error) {
+      const code = String(error?.code || ''), status = Number(error?.status || 0);
+      const connectionUnavailable = ![401, 403].includes(status)
+        && (code === 'custodial_native_network_unavailable'
+          || !code && ([408, 429].includes(status) || Number.isInteger(status) && status >= 500 && status <= 599));
+      if (error === preEffectReadFailure && connectionUnavailable) {
+        // Only a failed readonly probe before preservation/retirement effects
+        // has this classification. A withdrawn owner or uncertain effect stays held.
+        requireBrowser();
+        return { state: 'connection_required' };
+      }
       return interruptedStartManagerRequired(interruptedStartFailureDetail(error));
     }
     if (retirement?.contract_version !== 'custodial-interrupted-start-retirement.v1') {

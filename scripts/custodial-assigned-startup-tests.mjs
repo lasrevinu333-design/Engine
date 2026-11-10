@@ -4,14 +4,16 @@ import vm from 'node:vm';
 import {assertOwnerContextClosed} from './scan-owner-vm-context.mjs';
 import { installHourlyForecastKeyboard } from '../mobile/src/custodial/hourly-forecast-keyboard.js';
 const source=readFileSync(new URL('../mobile/src/custodial/app.js',import.meta.url),'utf8');
+const scanSource=readFileSync(new URL('../memphis-scan-sync.js',import.meta.url),'utf8');
 const { classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode } = await import(`data:text/javascript;base64,${Buffer.from(readFileSync(new URL('../mobile/src/custodial/readiness.js',import.meta.url),'utf8')).toString('base64')}`);
 const html=readFileSync(new URL('../mobile/src/custodial/index.html',import.meta.url),'utf8');
 const results=[];
 async function check(name,fn){try{await fn();results.push({name,passed:true});}catch(error){results.push({name,passed:false,error:error.message});}}
-function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPrincipal=false,capturePrincipal=true,mismatchedProfile=false,offline=false,recoveryBlocked=false,recoveryConnectionRequired=false,completionError=null}={}){
+function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPrincipal=false,capturePrincipal=true,mismatchedProfile=false,offline=false,recoveryBlocked=false,recoveryConnectionRequired=false,completionError=null,actualRecovery=false,actualRecoveryReturn=false}={}){
   let releaseResponse;const responseReady=delay?new Promise(resolve=>{releaseResponse=resolve;}):Promise.resolve();
   let status={native:true,initialized:true,ready:true,available:true,quarantined:false,generation:1,state:enrolled?'enrolled':'unenrolled',deviceId:enrolled?'KIOSK_08':''};
-  let subscriber;const elements=new Map(),calls=[],memory=new Map();
+  let subscriber;const elements=new Map(),calls=[],memory=new Map(),listeners=new Map(),events=[];
+  const emit=detail=>{events.push(detail);for(const fn of listeners.get('memphis-scan-sync')||[])fn({detail});};
   let principal=missingPrincipal?'':'original',name='Fixture Assigned Custodian',failNetwork=offline;
   const element=id=>{if(!elements.has(id))elements.set(id,{hidden:id!=='boot',textContent:'',value:'',className:'',disabled:false,addEventListener(){},insertAdjacentHTML(){}});return elements.get(id);};
   const security={native:true,ready:Promise.resolve(),getStatus:()=>({...status}),ensureSecurityState:async()=>({...status}),getPendingEnrollmentOperation:()=>null,subscribe:fn=>{subscriber=fn;}};
@@ -21,7 +23,20 @@ function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPri
       principalIdentity:()=>status.state==='enrolled'?principal:'',
       profileMatchesPrincipal:value=>Boolean(principal)&&status.state==='enrolled'&&value?.authenticated===true&&value?.canonical_device_id==='KIOSK_08'&&value?.fixture_principal===principal,
       requestJson:async(path,options)=>{calls.push(path);const original=status;const value={authenticated:true,canonical_device_id:'KIOSK_08',employee_name:name,employee_role:'CUSTODIAL_EMPLOYEE',fixture_principal:principal||'original'};await responseReady;if(reject)throw Object.assign(new Error('Not authorized'),{status:403});if(failNetwork)throw Error('offline');if(options?.expectedGeneration!=null&&original!==status)throw Error('retired request');if(!principal&&capturePrincipal){principal='original';status={...status,generation:status.generation+1};subscriber?.({...status});}if(mismatchedProfile)value.fixture_principal='foreign';return value;}},
+    addEventListener:(type,fn)=>{if(!listeners.has(type))listeners.set(type,[]);listeners.get(type).push(fn);},
     setInterval:()=>1,clearInterval(){},setTimeout:()=>2,clearTimeout(){}};
+  let recoveryFailure=Object.assign(Error('synthetic native transport unavailable'),{code:'custodial_native_network_unavailable'}),scan=null;
+  if(actualRecovery){
+    const slice=(a,b)=>{const x=scanSource.indexOf(a),y=scanSource.indexOf(b,x);assert.ok(x>=0&&y>x);return scanSource.slice(x,y);};
+    const implementation=slice('  function releaseStartupRecoveryGate(','  function safeText(')
+      +slice('  async function reconcileStartupRecovery()','  async function sync()');
+    window.MemphisMobile.reconcileRecoveredPreStart=async()=>{if(recoveryFailure){if(actualRecoveryReturn)return {state:'connection_required'};throw recoveryFailure;}return {state:'not_applicable'};};
+    scan={state:{startupRecoveryPending:true,deviceId:'KIOSK_08'},window,ensureWorkerReady:async()=>{},
+      securityPause:async()=>null,dispatchSecurityPause:()=>{throw Error('unexpected security pause');},
+      recoverLocalCompletionIntents:async()=>{},safeText:String,dispatchStatus:emit,scheduleSync:()=>calls.push('schedule-existing-sync')};
+    assertOwnerContextClosed(implementation,scan,'actual startup gate and event owner');vm.runInNewContext(implementation,scan);
+    window.MemphisScanSync.reconcileStartupRecovery=()=>{calls.push('protected-recovery');return scan.reconcileStartupRecovery();};
+  }
   const context={window,document:{getElementById:element},navigator:{onLine:false},console,queueMicrotask,classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode,installHourlyForecastKeyboard,
     __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__:false,
     sessionStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)},
@@ -31,7 +46,7 @@ function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPri
   const closed=executable+'\nglobalThis.__restore=restore;';
   assertOwnerContextClosed(closed,context,'complete Custodial Home owner');
   vm.runInContext(closed,context);
-  return {context,elements,calls,ready:()=>context.__startup,releaseResponse:()=>releaseResponse?.(),setUnassigned:()=>{status={...status,state:'unenrolled',deviceId:''};subscriber({...status});},setAssigned:()=>{status={...status,state:'enrolled',deviceId:'KIOSK_08'};subscriber({...status});},
+  return {context,elements,calls,events,emit,scan,ready:()=>context.__startup,completeRecovery:()=>{recoveryFailure=null;return scan.reconcileStartupRecovery();},releaseResponse:()=>releaseResponse?.(),setUnassigned:()=>{status={...status,state:'unenrolled',deviceId:''};subscriber({...status});},setAssigned:()=>{status={...status,state:'enrolled',deviceId:'KIOSK_08'};subscriber({...status});},
     replacePrincipal:({offline=false}={})=>{principal='replacement';name='Replacement Custodian';failNetwork=offline;subscriber({...status});}};
 }
 await check('owner closure names missing and newly introduced free dependencies before execution',()=>{
@@ -98,6 +113,29 @@ for(const options of [{completionError:'custodial_native_network_unavailable'},{
 await check('saved-work integrity failure still requires repair',async()=>{
   const f=fixture({enrolled:true,completionError:'custodial_secure_storage_unavailable'});await f.ready();
   assert.equal(f.elements.get('home').hidden,true);assert.equal(f.elements.get('boot-title').textContent,'Phone setup needs repair');
+});
+for(const actualRecoveryReturn of [false,true])await check(`actual startup recovery event does not misdiagnose a connection failure as phone repair (returned=${actualRecoveryReturn})`,async()=>{
+  const f=fixture({enrolled:true,actualRecovery:true,actualRecoveryReturn});await f.ready();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.scan.state.startupRecoveryPending,true);assert.equal(f.elements.get('home').hidden,true);
+  assert.equal(f.elements.get('boot-title').textContent,'Connection unavailable');
+  assert.doesNotMatch(f.elements.get('boot-readiness').textContent,/repair|manager/i);
+  assert.ok(!f.calls.some(path=>path.startsWith('/device-auth/status')));
+});
+for(const actualRecoveryReturn of [false,true])await check(`verified recovery reopens Home once without network or foreground changes or idle polling (returned=${actualRecoveryReturn})`,async()=>{
+  const f=fixture({enrolled:true,actualRecovery:true,actualRecoveryReturn});await f.ready();await f.completeRecovery();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.scan.state.startupRecoveryPending,false);assert.equal(f.elements.get('home').hidden,false);
+  assert.equal(f.calls.filter(path=>path.startsWith('/device-auth/status')).length,1);
+  for(let i=0;i<5;i++){f.emit({status:'idle'});f.emit({status:'startup-recovery-complete'});}
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.calls.filter(path=>path.startsWith('/device-auth/status')).length,1);
+});
+for(const transition of ['unassigned','quarantined'])await check(`recovery completion cannot reopen a ${transition} owner`,async()=>{
+  const f=fixture({enrolled:true,actualRecovery:true});await f.ready();
+  if(transition==='unassigned')f.setUnassigned();else f.emit({status:'quarantined'});
+  await f.completeRecovery();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.elements.get('home').hidden,true);
+  assert.ok(!f.calls.some(path=>path.startsWith('/device-auth/status')));
 });
 await check('first-principal capture does not bypass protected recovery refusal',async()=>{
   const f=fixture({enrolled:true,missingPrincipal:true,recoveryBlocked:true});await f.ready();

@@ -3540,15 +3540,21 @@
       if(typeof reconcile!=='function') return {state:'manager_required'};
       await recoverLocalCompletionIntents();
       const recovery=await reconcile();
+      if(recovery?.state==='connection_required'){
+        dispatchStatus({status:'connection-paused'});
+        return recovery;
+      }
       if(releaseStartupRecoveryGate(recovery)!==true) return {state:'manager_required'};
       state.startupRecoveryResult=recovery;
+      dispatchStatus({status:'startup-recovery-complete'});
       return recovery;
     })().catch(error=>{
       state.lastError=safeText(error?.message||'Protected startup requires recovery');
-      dispatchStatus({status:'recovery-paused'});
+      const connectionRequired=error?.code==='custodial_native_network_unavailable';
+      dispatchStatus({status:connectionRequired?'connection-paused':'recovery-paused'});
       // A bounded transport failure does not establish damaged saved work.
       // Keep the original startup gate closed until reconciliation succeeds.
-      return {state:error?.code==='custodial_native_network_unavailable'?'connection_required':'manager_required'};
+      return {state:connectionRequired?'connection_required':'manager_required'};
     }).finally(()=>{state.startupRecoveryFlight=null;});
     return state.startupRecoveryFlight;
   }

@@ -111,18 +111,31 @@ const recoveryStart=source.indexOf('  async function reconcileStartupRecovery()'
 assert.ok(recoveryStart>=0&&recoveryEnd>recoveryStart);
 for(const code of ['custodial_native_network_unavailable','custodial_secure_storage_unavailable']){
  for(const phase of ['completion_intents','prestart_reconcile']){
-  let releaseCalls=0,workerCalls=0;const failure=Object.assign(Error('synthetic bounded failure'),{code});
+  let releaseCalls=0,workerCalls=0;const events=[],failure=Object.assign(Error('synthetic bounded failure'),{code});
   const ctx={state:{startupRecoveryPending:true,db:{},deviceId:'KIOSK_08'},ensureWorkerReady:async()=>{},securityPause:async()=>null,
    recoverLocalCompletionIntents:async()=>{if(phase==='completion_intents')throw failure;},
    window:{MemphisMobile:{ready:Promise.resolve(),reconcileRecoveredPreStart:async()=>{throw failure;}}},
-   releaseStartupRecoveryGate(){releaseCalls++;return true;},dispatchStatus(){},dispatchSecurityPause(){},safeText:String,
+   releaseStartupRecoveryGate(){releaseCalls++;return true;},dispatchStatus:detail=>events.push(detail),dispatchSecurityPause(){},safeText:String,
    securityErrorIsPause:()=>false,navigator:{onLine:true,locks:{request:true}},runWorker:async()=>{workerCalls++;return true;},withQueueLock:async fn=>fn()};
   const extracted=source.slice(recoveryStart,recoveryEnd);assertOwnerContextClosed(extracted,ctx,'startup recovery and sync');vm.runInNewContext(extracted,ctx);
   const result=await ctx.reconcileStartupRecovery();
   check(result.state,code==='custodial_native_network_unavailable'?'connection_required':'manager_required','typed recovery diagnosis '+phase);
+  check(events[0].status,code==='custodial_native_network_unavailable'?'connection-paused':'recovery-paused','event preserves the actual failure classification');
   check(await ctx.sync(),false,'pending startup still blocks sync');check(ctx.state.startupRecoveryPending,true,'startup hold retained');
   check(releaseCalls,0,'no false recovery release');check(workerCalls,0,'no queued work replay');
  }
+}
+{
+ let released=0;const events=[];
+ const ctx={state:{startupRecoveryPending:true},window:{MemphisMobile:{reconcileRecoveredPreStart:async()=>({state:'connection_required'})}},
+  ensureWorkerReady:async()=>{},securityPause:async()=>null,recoverLocalCompletionIntents:async()=>{},
+  releaseStartupRecoveryGate:()=>{released++;return false;},dispatchStatus:event=>events.push(event),dispatchSecurityPause(){},safeText:String};
+ const code=source.slice(recoveryStart,source.indexOf('  async function sync()',recoveryStart));
+ assertOwnerContextClosed(code,ctx,'startup returned connection hold');vm.runInNewContext(code,ctx);
+ check((await ctx.reconcileStartupRecovery()).state,'connection_required','bridge connection result crosses scan boundary');
+ check(events[0].status,'connection-paused','returned bridge outage sends connection event');
+ check(released,0,'connection result never attempts to release startup fence');
+ check(ctx.state.startupRecoveryPending,true,'original startup fence remains closed');
 }
 console.log(JSON.stringify({status:'PASS_SCAN_OUTAGE_RETRY_SETTLEMENT',checks,
   limits:'actual settlement/classifier; synthetic transaction, not browser/native/Wi-Fi/dashboard or independent acceptance'}));
