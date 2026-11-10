@@ -610,6 +610,28 @@ async function scanIndexConfirmationCallers(){
     assert.deepEqual(JSON.parse(f.rows.get(f.index)).sessions,[]);assert.equal(f.admissions(),4);
     assert.equal(f.rows.has(f.key),true);assert.equal(f.active(),false);
   });
+  for(const native of [true])for(const kind of ['accepted-start','successor','evidence-conflict'])await run(`completion-intent-current-${native?'native':'web'}-${kind}`,async()=>{
+    const f=fixture({native});
+    const stale={...f.session,server_acknowledged:false,scan_evidence:[{client_event_id:'event-1',notes:'Original'}],
+      offline_authority_employee_id:'00000000-0000-4000-8000-000000000001'};
+    f.rows.set(f.key,JSON.stringify(stale));
+    await f.acknowledge(()=>{
+      f.context.applyProcessResult({type:'start_session',payload:{p_client_session_id:stale.session_uuid,p_client_started_at:stale.started_at}},
+        {client_session_id:stale.session_uuid,context_id:'accepted-context',submission_proof:'accepted-proof'});
+      const row=JSON.parse(f.rows.get(f.key));
+      if(kind==='successor')row.offline_authority_employee_id='00000000-0000-4000-8000-000000000099';
+      if(kind==='evidence-conflict')row.scan_evidence=[{client_event_id:'event-1',notes:'Concurrent original'}];
+      f.rows.set(f.key,JSON.stringify(row));
+    });
+    const before=f.rows.get(f.key);
+    if(kind!=='accepted-start'){
+      await assert.rejects(()=>f.context.persistLocalCompletionUnlocked(stale,f.action));
+      assert.equal(f.rows.get(f.key),before);assert.equal(f.queue.length,0);return;
+    }
+    const saved=await f.context.persistLocalCompletionUnlocked(stale,f.action);
+    assert.equal(saved.context_id,'accepted-context');assert.equal(saved.submission_proof,'accepted-proof');
+    assert.equal(saved.server_acknowledged,true);assert.equal(f.queue.length,1);
+  });
   await run('completion-owner-change-before-enqueue-retains-original-intent',async()=>{
     const f=fixture();f.rows.set(f.key,JSON.stringify(f.session));let original;
     f.after(n=>{if(n===1){original=f.rows.get(f.key);f.status.generation++;f.status.principal.employee_id='44444444-4444-4444-8444-444444444444';}});

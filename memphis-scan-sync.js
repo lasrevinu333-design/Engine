@@ -3512,7 +3512,33 @@
     requireOriginal();let originalIntentRaw;
     // The intent is durable before queue insertion. A restart can finish this exact save.
     await mutateProtectedQueue(context => {
-      requireOriginal(context);saveSession({ ...session, completion_outbox: action });
+      requireOriginal(context);
+      // Finish captured its draft before waiting for this queue/protected writer.
+      // Retain a Start acknowledgement or evidence saved during that wait.
+      const current = readSession(session.session_uuid);
+      if (!current) throw storageFailure('completed cleaning', new Error('Original saved cleaning disappeared.'));
+      const present = value => value !== undefined && value !== null && value !== '';
+      const fixed = ['session_uuid','client_session_id','device_id','location_code','started_at',
+        'offline_authority_employee_id','offline_authority_assignment_epoch','offline_authority_snapshot_id',
+        'offline_occurrence_id','occurrence_id','offline_actor_context_id','client_completion_id',
+        'context_id','submission_proof','ended_at','native_finish_scan_entry_id',
+        'native_completion_attestation_version','native_completion_attestation'];
+      if (fixed.some(key => present(current[key]) && present(session[key]) && current[key] !== session[key]))
+        throw storageFailure('completed cleaning', new Error('Original saved cleaning identity or proof changed.'));
+      const merged = {...current,...session,completion_outbox:action};
+      for (const key of fixed) if (present(current[key])) merged[key] = current[key];
+      if (current.server_acknowledged === true) merged.server_acknowledged = true;
+      const events = new Map();
+      for (const event of [...(current.scan_evidence || []),...(session.scan_evidence || [])]) {
+        const key = event.client_event_id;
+        if (events.has(key) && canonicalJson(events.get(key)) !== canonicalJson(event))
+          throw storageFailure('completed cleaning', new Error('Original scan evidence changed.'));
+        events.set(key,event);
+      }
+      if (events.size) merged.scan_evidence = [...events.values()];
+      if (current.completion_outbox && canonicalJson(current.completion_outbox) !== originalAction)
+        throw storageFailure('completed cleaning', new Error('Original completion intent changed.'));
+      saveSession(merged);
       originalIntentRaw = localStorage.getItem(sessionKey(session.session_uuid));requireOriginal(context);
     }, originalOptions);
     requireOriginal();
