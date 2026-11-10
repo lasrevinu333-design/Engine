@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {managerHomeFixture} from './operations-dashboard-tests.mjs';
+test('Manager Home keeps an unavailable session on this page instead of requesting another name and PIN',async()=>{
+ const f=await managerHomeFixture({configure:f=>{f.setSession(null);f.auth.requireOpsManagerSession=async()=>{throw Object.assign(new Error('Manager access is temporarily unavailable. Reload to check your saved sign-in.'),{status:503,code:'MANAGER_SESSION_UNAVAILABLE'});};}});
+ assert.equal(f.navigations.length,0);assert.match(f.node('hub-status').textContent,/temporarily unavailable/);
+ assert.equal(f.node('manager-name').textContent,'');assert.equal(f.node('dashboard-link').href,undefined);assert.equal(f.liveTimers.size,0);
+});
 for(const mode of ['same','renewed','revoked','successor','failure'])test('Manager Home BFCache '+mode,async()=>{
  const f=await managerHomeFixture({attendance:{attendance:0}}),initialTimers=f.liveTimers.size;
  const original=f.session();let renewals=0;

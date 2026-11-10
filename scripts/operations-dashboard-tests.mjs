@@ -439,7 +439,7 @@ export function fixture({reduced=false,legacyDialog=false,audience='manager'}={}
   querySelector(selector){if(selector==='[data-map-viewport]')return viewport;return null;}
  }
  const doc=new Node('document'),elements={};doc.createElement=tag=>new Node(tag);doc.getElementById=x=>elements[x];doc.hidden=false;doc.fullscreenEnabled=false;
- const html=readFileSync(new URL('../operations-dashboard.html',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../'+(audience==='public_readonly'?'ops-viewer.html':'operations-dashboard.html'),import.meta.url),'utf8');
  for(const match of html.matchAll(/<(\w+)\b[^>]*\bid="([^"]+)"[^>]*>/g)){const node=new Node(match[1]);elements[match[2]]=node;node.id=match[2];}
  const main=new Node('main'),viewport=new Node(),map=elements['dashboard-map'],dialog=elements['operations-board'],content=elements['operations-board-content'];
  doc.body=new Node('body');doc.append(main,dialog);main.append(elements['operations-panels'],map);doc.querySelector=selector=>selector==='main'?main:null;

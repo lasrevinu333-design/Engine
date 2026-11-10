@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./operations-dashboard.css">
 </head><body class="mapWebPage operationsPage" data-memphis-context="viewer">
   <main class="mapPage commandPage">
+    <header class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt=""><h1>Custodial operations</h1></div><nav class="publicViewNav" aria-label="Read-only views"><a id="public-dashboard-link" href="#dashboard" aria-current="page">Dashboard</a><a id="public-map-link" href="#map">Map</a></nav><a class="uxButton compact" href="./start_page1.html">Manager sign-in</a><button id="refresh-dashboard" type="button">Refresh</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button></header>
     <p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Loading read-only operations…</p>
     <div id="operations-panels" hidden>
       <header class="telemetry" aria-label="Date, attendance and weather">
@@ -19,10 +20,15 @@
         <section class="attendanceCard"><div class="eyebrow">CURRENT ATTENDANCE</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div></section>
         <section class="weatherCard"><div class="weatherNow"><svg class="weatherArt" viewBox="0 0 120 84" aria-hidden="true"><g class="sunRays" stroke="#ffd46b" stroke-width="3"><path d="M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4"/></g><circle cx="45" cy="32" r="19" fill="#ffd46b"/><path class="weatherCloud" d="M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z" fill="#d8efff"/></svg><div><div class="eyebrow">MEMPHIS WEATHER</div><strong id="ops-weather">Unavailable</strong><div id="ops-weather-note" class="metricNote">Forecast source not yet read.</div></div></div><div id="ops-hour" class="hourForecast">Next-hour forecast unavailable.</div></section>
       </header>
-      <button type="button" class="tickerBand activityBand" data-board="activity" aria-label="Open tickets, events and schools activity board"><span class="tickerLabel">ACTIVITY</span><span class="tickerWindow"><span class="tickerTrack" id="ops-activity-ticker">Current activity unavailable.</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
     </div>
+    <section id="public-dashboard" aria-label="Read-only cleaning dashboard" hidden>
+      <div id="public-status-counts" class="publicMetrics" aria-label="Cleaning and ticket counts"></div>
+      <section class="publicReport"><h2>Restroom status report</h2><div id="public-restrooms" class="publicTableWrap"></div></section>
+      <section class="publicReport"><h2>Exhibit status report</h2><div id="public-exhibits" class="publicTableWrap"></div></section>
+      <section class="publicReport"><h2>Open tickets</h2><div id="public-tickets" class="publicTableWrap"></div></section>
+    </section>
     <section class="mzMapStage uxCard commandMap" id="dashboard-map" data-map-presentation="original-horizontal" aria-label="Custodial operations map" hidden>
-      <div class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h2>Custodial operations</h2></div><div id="ops-status-counts" class="statusCounts">Cleaning status unavailable</div><a class="uxButton compact" href="./ops-manager-hub.html">Manager sign-in</a><button id="refresh-dashboard" type="button">Refresh</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Map full screen</button></div>
+      <div class="operationsHeading"><h2>Cleaning map</h2><div id="ops-status-counts" class="statusCounts">Cleaning status unavailable</div><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Map full screen</button></div>
       <div class="mapScreenReader" data-map-status role="status">Map cleaning status unavailable until a current response</div>
       <div class="mzMapViewport" data-map-viewport aria-label="Whole approved zoo map"><div class="mzMapSurface" data-map-surface><img class="mzMapArtwork" data-map-artwork alt="Original approved horizontal illustrated Memphis Zoo map; cleaning icons are separate interactive controls" width="1282" height="550"><div class="mzMapLayer" data-map-layer></div></div></div>
       <div class="mzMapSelection" id="map-selection" data-map-selection role="status" aria-live="polite">Select a map pin or the locations board.</div>

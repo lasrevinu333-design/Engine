@@ -188,10 +188,15 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
     if(!state.currentDeviceId||!['getDeviceId','readSession','isOpsManager','requireOpsManagerSession','hasRole','canMutateOpsManagerSurface']
       .every(method=>typeof state.auth?.[method]==='function')){showAccessRequired();return;}
     const priorSession=state.auth.readSession(),priorBinding=priorSession?sessionBinding(priorSession):'';
-    let session=null;
+    let session=null,accessError=null;
     try{session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:!resuming,forceRefresh:resuming,redirect:false,throwOnFailure:true});}
-    catch(error){console.warn('Ops Manager access failed',error);}
+    catch(error){accessError=error;}
     if(state.retired||state.suspended||generation!==state.generation)return;
+    if(accessError&&accessError.code!=='MANAGER_SIGN_IN_REQUIRED'){
+      els.accessMode.textContent='Manager access could not be checked';
+      setStatus(accessError.code==='MANAGER_ACCESS_DENIED'?'Manager access was denied. Your saved sign-in has not been replaced.':'Manager access is temporarily unavailable. Reload to check your saved sign-in.','error');
+      return;
+    }
     if(resuming?(!expectedBinding||resumeBinding(session)!==expectedBinding):priorSession&&(session!==priorSession||sessionBinding(session)!==priorBinding)){retire();return;}
     if(!session||!window.MemphisAuth.isOpsManager(session)){showAccessRequired();return;}
     if(!priorSession&&window.MemphisAuth.isCustodialManagementAdmin?.(session))state.currentDeviceId=resolveDeviceId();

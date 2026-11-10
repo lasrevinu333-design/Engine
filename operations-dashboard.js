@@ -10,6 +10,7 @@
     return pins.filter(p=>p.id===id||Math.hypot(p.x-seed.x,p.y-seed.y)<=Math.max(22,p.radius)+Math.max(22,seed.radius)+8).map(p=>p.id);}
   function create({document=root.document,window=root,now=()=>Date.now(),audience='manager'}={}){
     const publicRead=audience==='public_readonly';
+    const activityKinds=publicRead?['tickets']:ACTIVITY_KINDS;
     if(!DATA||!document?.getElementById('operations-panels'))return null;
     const cleaningView=publicRead?DATA.publicCleaning:DATA.cleaning;
     const el=id=>document.getElementById(id),panel=el('operations-panels'),dialog=el('operations-board'),content=el('operations-board-content');
@@ -19,7 +20,7 @@
     let boardToken=null,priorHistory=null,boardFingerprint='',lastMinute=null,nearbyIds=null,fallbackInert=null;
     let owner=null,currentRead=null,cleaning=null;
     const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    const txt=(id,value)=>{el(id).textContent=value;};
+    const txt=(id,value)=>{if(el(id))el(id).textContent=value;};
     const make=(tag,value,klass)=>{const node=document.createElement(tag);if(value!=null)node.textContent=value;if(klass)node.className=klass;return node;};
     function pins(){return Array.from(el('dashboard-map').querySelectorAll('.mzMapPin'));}
     function session(){try{const s=window.MemphisAuth?.readSession?.();
@@ -35,7 +36,7 @@
     function locationBoard(){const v=cleaning||cleaningView(null,approved(),now());
       return{...v,title:nearbyIds?'Nearby locations':v.title,cards:v.cards.filter(p=>!nearbyIds||nearbyIds.includes(p.id))};}
     function view(kind){if(kind==='locations')return locationBoard();
-      if(kind==='activity'){const feeds=ACTIVITY_KINDS.map(kind=>view(kind));return{title:'Activity',cards:feeds.flatMap((feed,index)=>feed.cards.filter(card=>index!==1||card.active)),note:feeds.map(feed=>feed.note).join('\n')};}
+      if(kind==='activity'){const feeds=activityKinds.map(kind=>view(kind));return{title:publicRead?'Open tickets':'Activity',cards:feeds.flatMap((feed,index)=>feed.cards.filter(card=>index!==1||card.active)),note:feeds.map(feed=>feed.note).join('\n')};}
       if(kind==='tickets'){const v=DATA.tickets(summary,ops?.spiceworks);return publicRead?{...v,note:'Read-only ticket details. '+v.note.split('\n').slice(1).join('\n')}:v;}
       if(kind==='events')return ops?DATA.events(ops.events,now()):{title:'Events',cards:[],note:'Structured event feed unavailable.'};
       return DATA.schools(ops?.schools,now());}
@@ -67,9 +68,9 @@
     }
     function renderActivity(){
       const labels={tickets:'TICKETS',events:'EVENTS',schools:'SCHOOLS'};
-      const text=ACTIVITY_KINDS.map(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
+      const text=activityKinds.map(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
         return labels[kind]+': '+(cards.length?cards.map(card=>card.title).join(' • '):feed.note);}).join('   •   ');
-      if(el('ops-activity-ticker').textContent!==text)txt('ops-activity-ticker',text);
+      if(el('ops-activity-ticker')?.textContent!==text)txt('ops-activity-ticker',text);
     }
     function renderFeeds(){
       renderActivity();const locations=view('locations');txt('ops-locations-ticker',locations.cards.length?locations.cards.map(card=>card.title).join('   •   '):locations.note);
@@ -79,6 +80,10 @@
       renderBoard();
     }
     function cancel(){epoch++;abort?.abort();abort=null;if(requestTimer!==null)window.clearTimeout(requestTimer);requestTimer=null;}
+    function updateSummary({summary:next,isCurrent}){
+      if(typeof isCurrent!=='function'||!isCurrent()||!bound())return false;
+      summary=next;cleaning=cleaningView(next,approved(),now());renderFeeds();return true;
+    }
     async function refresh({headers,fetchImpl,isCurrent,summary:next}){
       if(!active||closed)return;cancel();const generation=epoch;abort=new AbortController();const signal=abort.signal;
       currentRead={epoch:generation,isCurrent};
@@ -90,15 +95,29 @@
       summary=next;cleaning=nextCleaning;ops=null;renderFeeds();
       const load=async(url,privateFeed=true)=>{const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(publicRead?{credentials:'omit'}:privateFeed?{headers}:{})});
         if(!response.ok)throw new Error('feed_unavailable');return response.json();};
-      const results=await Promise.allSettled([load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`),load(`${API}/dashboard-api/current-attendance`),load(WEATHER,false)]);
-      if(closed||!active||generation!==epoch)return;
-      if(!bound()){unavailable();return;}
-      if(requestTimer!==null)window.clearTimeout(requestTimer);requestTimer=null;
-      try{ops=results[0].status==='fulfilled'?DATA.operations(results[0].value):null;}catch{ops=null;}
-      const attendance=DATA.attendance(results[1].status==='fulfilled'?results[1].value:null),weather=DATA.weather(results[2].status==='fulfilled'?results[2].value:null,now());
-      txt('ops-attendance',attendance.value);txt('ops-attendance-note',attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);
-      txt('ops-weather',weather.value);txt('ops-weather-note',weather.note);el('ops-weather-note').dataset.stale=String(weather.stale);txt('ops-hour',weather.hour);
-      renderFeeds();
+      const publish=()=>{
+        if(closed||!active||generation!==epoch)return false;
+        if(!bound()){unavailable();return false;}return true;
+      };
+      // Each independent source publishes when it settles. A database failure
+      // must not suppress an available forecast or turn unknown facts into zero.
+      const tasks=[
+        load(`${API}/dashboard-api/current-attendance`).catch(()=>null).then(value=>{
+          if(!publish())return;const attendance=DATA.attendance(value);
+          txt('ops-attendance',attendance.value);txt('ops-attendance-note',attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);
+        }),
+        load(WEATHER,false).catch(()=>null).then(value=>{
+          if(!publish())return;const weather=DATA.weather(value,now());
+          txt('ops-weather',weather.value);txt('ops-weather-note',weather.note);el('ops-weather-note').dataset.stale=String(weather.stale);txt('ops-hour',weather.hour);
+        })
+      ];
+      // The public dashboard needs only cleaning and tickets from its summary.
+      // Do not request events, school visits or schedules for these two views.
+      if(!publicRead)tasks.push(load(`${API}/dashboard-api/operations`).catch(()=>null).then(value=>{
+        if(!publish())return;try{ops=DATA.operations(value);}catch{ops=null;}renderFeeds();
+      }));
+      await Promise.allSettled(tasks);
+      if(generation===epoch&&requestTimer!==null){window.clearTimeout(requestTimer);requestTimer=null;}
     }
     function animate(time){frame=null;if(!board||!active||closed)return;
       const dt=lastFrame==null?0:Math.min(100,time-lastFrame);lastFrame=time;
@@ -123,6 +142,7 @@
     }
     function openBoard(kind,trigger,ids=null){
       if(!active||closed)return;if(!bound()){unavailable();return;}
+      if(publicRead&&!['activity','tickets','locations'].includes(kind))return;
       if(kind==='events'&&!publicRead){
         if(!active||closed)return;const session=window.MemphisAuth?.readSession?.();
         if(session?.role!=='ops_manager'||!session.manager_id||!session.credential_id)return;
@@ -188,7 +208,7 @@
     listen(viewport,'click',event=>{const pin=event.target.closest?.('.mzMapPin');if(!pin||!active)return;
       const candidates=nearby(pins().map(p=>{const r=p.getBoundingClientRect();return{id:p.dataset.locationId,x:r.left+r.width/2,y:r.top+r.height/2,radius:Math.max(r.width,r.height)/2};}),pin.dataset.locationId);
       if(candidates.length>1){event.preventDefault();event.stopPropagation();openBoard('locations',pin,candidates);}},true);
-    return Object.freeze({activate,refresh,tick,unavailable,suspend,stop,openBoard,closeBoard});
+    return Object.freeze({activate,refresh,updateSummary,tick,unavailable,suspend,stop,openBoard,closeBoard});
   }
   root.MemphisOperationsDashboard=Object.freeze({create,nearby,WEATHER});
   if(typeof module!=='undefined'&&module.exports)module.exports=root.MemphisOperationsDashboard;

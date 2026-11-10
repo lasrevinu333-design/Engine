@@ -16,33 +16,34 @@ test('public map refresh owns its generation and cannot accept old or suspended 
  const next=gate.begin();gate.close();assert.equal(gate.commit(next,summary),false);
  assert.throws(()=>createRefreshGate({readSession:()=>null,onState(){}}),/active named manager/);
 });
-test('public operational boards never read manager credentials or send authorization, and Events opens read-only in place',async()=>{
+test('public operational boards use anonymous reads and omit events, schools and schedule requests',async()=>{
  const f=fixture({audience:'public_readonly'}),calls=[];
  f.window.MemphisAuth={readSession(){assert.fail('public board must not read manager identity');}};
  try{
   await f.controller.refresh({headers:{Authorization:'DO_NOT_SEND'},isCurrent:()=>true,summary,fetchImpl:async(url,options)=>{
    calls.push({url,options});return{ok:true,json:async()=>url.endsWith('/operations')?{ok:true,data:{schema:'custodial.operations-board.v1',generated_at:summary.meta.generated_at,timezone:D.ZONE,events:[]}}:null};}});
-  assert.equal(calls[0].url,'https://memphis-zoo-mcp.onrender.com/viewer-api/operations');
+  assert.equal(calls.length,2);assert.ok(calls.some(call=>call.url.includes('/current-attendance')));assert.ok(calls.some(call=>call.url.includes('open-meteo.com')));
   for(const call of calls){assert.equal(call.options.method,'GET');assert.equal(call.options.credentials,'omit');assert.equal(call.options.headers,undefined);}
-  f.triggers[1].emit('click');assert.equal(f.dialog.open,true);assert.equal(f.navigations.length,0);
+  f.triggers[1].emit('click');assert.equal(f.dialog.open,false);assert.equal(f.navigations.length,0);
  }finally{f.clean();}
 });
 function pageFixture(){
  const nodes=new Map(),listeners=new Map(),timers=new Set(),timeouts=new Set(),calls=[],accepted=[],pending=[];let id=0;
- const node=key=>{if(!nodes.has(key))nodes.set(key,{hidden:true,value:'',textContent:'',children:[],listeners:new Map(),
+ const node=key=>{if(!nodes.has(key))nodes.set(key,{hidden:true,value:'',textContent:'',children:[],listeners:new Map(),dataset:{},attrs:{},
+  setAttribute(k,v){this.attrs[k]=v;},removeAttribute(k){delete this.attrs[k];},querySelectorAll(){return [];},
   append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},addEventListener(t,fn){this.listeners.set(t,fn);},removeEventListener(t){this.listeners.delete(t);}});return nodes.get(key);};
  const document={hidden:false,getElementById:node,createElement:tag=>node('new-'+tag+(++id))};
- const window={document,addEventListener:(t,fn)=>listeners.set(t,fn),removeEventListener:t=>listeners.delete(t),
+ const window={document,location:{hash:'#dashboard'},addEventListener:(t,fn)=>listeners.set(t,fn),removeEventListener:t=>listeners.delete(t),
   setInterval(fn){timers.add(fn);return fn;},clearInterval:fn=>timers.delete(fn),setTimeout(fn){timeouts.add(fn);return fn;},clearTimeout:fn=>timeouts.delete(fn)};
  Object.defineProperty(window,'MemphisAuth',{get(){assert.fail('public page cannot inspect auth');}});
  const gate=createPublicRefreshGate({onState:(kind,data)=>{if(kind==='current')accepted.push(data);}});
  const map={...gate,beginRefresh:gate.begin,accept:gate.commit,stop:gate.close,async init(){return true;},async resume(){return gate.resume();}};
- const board={activate(){},refresh:async()=>{},unavailable(){},suspend(){},stop(){},tick(){}};
+ const boardCalls=[],board={activate(){},refresh:async args=>{boardCalls.push(args);},updateSummary(){},unavailable(){},suspend(){},stop(){},tick(){},closeBoard(){}};
  const response=data=>({ok:true,json:async()=>({ok:true,data})});
  const fetchImpl=async(url,options)=>{calls.push({url,options});if(url.endsWith('/summary'))return pending.length?pending.shift()():response(summary);
   throw Error('Public dashboard must not request schedule or private data');};
- const page=V.create({window,document,fetchImpl,renderer:{create(options){assert.equal(options.auth,undefined);assert.equal(options.audience,'public_readonly');return map;}},boards:{create:()=>board}});
- return{page,nodes,window,listeners,timers,timeouts,calls,accepted,pending,node,clean(){page.stop();assert.equal(timers.size,0);assert.equal(timeouts.size,0);assert.equal(listeners.size,0);}};
+ const page=V.create({window,document,fetchImpl,data:D,renderer:{create(options){assert.equal(options.auth,undefined);assert.equal(options.audience,'public_readonly');return map;}},boards:{create:()=>board}});
+ return{page,nodes,window,listeners,timers,timeouts,calls,boardCalls,accepted,pending,node,clean(){page.stop();assert.equal(timers.size,0);assert.equal(timeouts.size,0);assert.equal(listeners.size,0);}};
 }
 test('public viewer uses only anonymous summary GETs, omits scheduler reads, and resumes Back without duplicate timers',async()=>{
  const f=pageFixture();try{
@@ -52,11 +53,13 @@ test('public viewer uses only anonymous summary GETs, omits scheduler reads, and
   for(const call of f.calls){assert.equal(call.options.method,'GET');assert.equal(call.options.credentials,'omit');assert.equal(call.options.headers,undefined);assert.match(call.url,/\/viewer-api\/summary$/);}
  }finally{f.clean();}
 });
-test('an old anonymous read cannot overwrite a newer result or publish after page close',async()=>{
+test('concurrent refreshes share one anonymous read and a suspended read cannot publish after resume or close',async()=>{
  const f=pageFixture();try{
   await f.page.init();await flush();let release;
   f.pending.push(()=>new Promise(resolve=>{release=resolve;}));const first=f.page.refresh();await flush();
-  await f.page.refresh();const count=f.accepted.length;release({ok:true,json:async()=>({ok:true,data:summary})});await first;assert.equal(f.accepted.length,count);
+  const second=f.page.refresh();assert.equal(first,second);const calls=f.calls.length;
+  f.page.suspend();await f.page.resume();await flush();const count=f.accepted.length;assert.equal(f.calls.length,calls+1);
+  release({ok:true,json:async()=>({ok:true,data:summary})});await first;assert.equal(f.accepted.length,count);
   f.pending.push(()=>new Promise(resolve=>{release=resolve;}));const last=f.page.refresh();await flush();f.page.stop();release({ok:true,json:async()=>({ok:true,data:summary})});await last;assert.equal(f.accepted.length,count);
  }finally{f.clean();}
 });
@@ -97,20 +100,68 @@ test('operations skin excludes pins and normal public map owns usable height sep
  assert.match(css,/\.commandMap:fullscreen,\.commandMap\.is-expanded\{[^}]*height:100dvh/);
 });
 
-test('both dashboard documents restore one Activity band and horizontal map without embedded scheduler',()=>{
+test('manager retains Activity; public offers Dashboard and Map without schedules or event boards',()=>{
  for(const name of ['ops-viewer.html','operations-dashboard.html']){
   const html=readFileSync(new URL('../'+name,import.meta.url),'utf8');
-  assert.equal((html.match(/data-board="activity"/g)||[]).length,1);
-  assert.match(html,/ACTIVITY/);assert.doesNotMatch(html,/data-board="(?:tickets|events|schools)"/);
+  assert.equal((html.match(/data-board="activity"/g)||[]).length,name==='ops-viewer.html'?0:1);
+  assert.doesNotMatch(html,/data-board="(?:tickets|events|schools)"/);
+  if(name==='ops-viewer.html'){assert.match(html,/href="#dashboard"/);assert.match(html,/href="#map"/);assert.match(html,/Restroom status report/);assert.match(html,/Exhibit status report/);assert.doesNotMatch(html,/close-ticket|<form/);}
   assert.match(html,/data-map-presentation="original-horizontal"/);
   assert.doesNotMatch(html,/public-schedule|schedule-date|schedule-roster|schedule-assignments/);
  }
 });
-test('one public Activity board combines real sources and reports unavailable feeds without invented rows',async()=>{
+test('public ticket board has no event or school feed and does not fabricate unavailable rows',async()=>{
  const f=fixture({audience:'public_readonly'});try{
-  f.triggers[4].emit('click');assert.equal(f.dialog.open,true);assert.equal(f.elements['operations-board-title'].textContent,'Activity');
-  assert.match(f.elements['ops-activity-ticker'].textContent,/TICKETS:.*EVENTS:.*SCHOOLS:/);
+  f.triggers[4].emit('click');assert.equal(f.dialog.open,true);assert.equal(f.elements['operations-board-title'].textContent,'Open tickets');
+  assert.equal(f.content.children.length,1);assert.doesNotMatch(f.text(f.content),/EVENTS:|SCHOOLS:/);
   assert.match(f.elements['operations-board-note'].textContent,/unavailable/);
   assert.equal(f.navigations.length,0);
+ }finally{f.clean();}
+});
+test('summary failure still starts independent attendance and forecast reads without presenting zero counts',async()=>{
+ const f=pageFixture();try{
+  f.pending.push(async()=>{throw Error('Synthetic database outage');});await f.page.init();await flush();
+  assert.equal(f.boardCalls.length,1);assert.equal(f.boardCalls[0].summary,null);assert.equal(f.boardCalls[0].isCurrent(),true);
+  assert.match(f.node('map-page-status').textContent,/cleaning status unavailable/);
+  assert.ok(f.node('public-status-counts').children.every(tile=>tile.children[1].textContent==='—'));
+  const reads=f.calls.length;assert.equal(f.node('public-dashboard').hidden,false);assert.equal(f.node('dashboard-map').hidden,true);
+  f.window.location.hash='#map';f.listeners.get('hashchange')();assert.equal(f.node('dashboard-map').hidden,false);assert.equal(f.node('public-dashboard').hidden,true);
+  f.window.location.hash='#dashboard';f.listeners.get('hashchange')();assert.equal(f.node('public-dashboard').hidden,false);assert.equal(f.calls.length,reads);
+ }finally{f.clean();}
+});
+test('weather publishes while the attendance source is still pending; suspension withdraws late responses',async()=>{
+ const f=fixture({audience:'public_readonly'});let release;
+ try{
+  f.setNow(Date.parse(summary.meta.generated_at));
+  const forecast={current:{time:Date.parse(summary.meta.generated_at)/1000,temperature_2m:62},current_units:{temperature_2m:'°F'}};
+  const pending=f.controller.refresh({summary:null,isCurrent:()=>true,fetchImpl:async url=>{
+   if(url.includes('attendance'))return new Promise(resolve=>{release=resolve;});
+   return{ok:true,json:async()=>forecast};
+  }});
+  await flush();assert.equal(f.elements['ops-weather'].textContent,'62°F');
+  f.controller.suspend();release({ok:true,json:async()=>({ok:true,data:{attendance:99}})});await pending;
+  assert.equal(f.elements['ops-weather'].textContent,'Unavailable');assert.equal(f.elements['ops-attendance'].textContent,'Unavailable');
+ }finally{f.clean();}
+});
+test('public dashboard shows actual current and recorded workers and keeps pending work out of clean totals',async()=>{
+ const f=pageFixture(),id=n=>'98000000-0000-4000-8000-'+String(n).padStart(12,'0');
+ const now='2026-11-09T18:00:00Z';
+ const rows=[
+  {location_id:id(1),location_name:'Restroom A',status_code:'cleaning_in_progress',open_session_status:'active',open_session_uuid:'original-active',open_session_employee_name:'Fixture active worker'},
+  {location_id:id(2),location_name:'Restroom B',status_code:'okay',open_session_status:'pending_submit',open_session_uuid:'original-pending',open_session_employee_name:'Fixture pending worker'},
+  {location_id:id(3),location_name:'Exhibit C',status_code:'okay',open_session_status:null,open_session_uuid:null,latest_completed_session_id:id(4),latest_completed_session_uuid:'original-closed',latest_completed_at:now,latest_employee_name:'Fixture recorded worker',services_performed:['Original recorded service']}
+ ];
+ const value={...summary,restrooms:rows.slice(0,2),exhibits:rows.slice(2),open_tickets:[{ticket_id:'fixture-ticket',location_name:'Restroom A',maintenance_issue:'<img src=x onerror=unsafe()>',date_submitted_display:'Fixture reported time'}]};
+ f.node('dashboard-map').querySelectorAll=()=>rows.map(row=>({dataset:{locationId:row.location_id,approvedLocationName:row.location_name}}));
+ const text=node=>[node.textContent,...node.children.map(text)].join(' ');
+ try{
+  f.pending.push(async()=>({ok:true,json:async()=>({ok:true,data:value})}));await f.page.init();await flush();
+  const metrics=Object.fromEntries(f.node('public-status-counts').children.map(tile=>tile.children.map(n=>n.textContent)));
+  assert.equal(metrics['Clean / okay'],'1');assert.equal(metrics.Cleaning,'1');assert.equal(metrics['Saved pending'],'1');assert.equal(metrics['Open tickets'],'1');
+  assert.match(text(f.node('public-restrooms')),/Fixture active worker/);assert.match(text(f.node('public-restrooms')),/Fixture pending worker/);assert.match(text(f.node('public-restrooms')),/not accepted as completed/);
+  assert.match(text(f.node('public-exhibits')),/Fixture recorded worker/);assert.match(text(f.node('public-exhibits')),/Original recorded service/);
+  assert.match(text(f.node('public-tickets')),/<img src=x onerror=unsafe\(\)>/);
+  assert.doesNotMatch(text(f.node('public-restrooms')),/original-active|original-pending/);
+  f.page.suspend();assert.doesNotMatch(text(f.node('public-restrooms')),/Fixture active worker|Fixture pending worker/);
  }finally{f.clean();}
 });

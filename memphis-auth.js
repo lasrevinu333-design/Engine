@@ -242,7 +242,10 @@
     const v=body?.session,session=v?.managerSession,uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value),p=session?.permissions;
     if(!response.ok||body?.ok!==true||body.enrolled!==true){
       opsSession=null;leadershipBinding=null;leadershipCsrf='';
-      const error=new Error(response.status===503?(body?.error==='leadership_disabled'?'Custodial leadership enrollment is not enabled.':'Leadership access is temporarily unavailable. Reconnect and try again.'):'Leadership browser enrollment is required.');error.status=response.ok?401:response.status;throw error;
+      const missing=response.status===401||(response.ok&&body?.ok===true&&body.enrolled===false);
+      const error=new Error(missing?'Sign in once to remember this browser.':response.status===403?'Manager access was denied. Your saved sign-in has not been replaced.':body?.error==='leadership_disabled'?'Manager sign-in is not enabled.':'Manager access is temporarily unavailable. Reload to check your saved sign-in.');
+      error.status=missing?401:response.ok?503:response.status;
+      error.code=missing?'MANAGER_SIGN_IN_REQUIRED':response.status===403?'MANAGER_ACCESS_DENIED':'MANAGER_SESSION_UNAVAILABLE';throw error;
     }
     if(typeof body.csrfToken!=='string'||!body.csrfToken||body.csrfToken.length>4096||v.identityAssurance!=='SELF_ASSERTED_NAME'
       ||!uuid(v.registrationId)||!uuid(v.claimedAccount?.accountId)||!uuid(v.cohort?.principalId)||v.claimedAccount.accountId===v.cohort.principalId
@@ -368,9 +371,9 @@
 
   async function verifyStoredOpsSession(accessLevel='full_access'){
     try{return await requestTrustedOpsSession(accessLevel);}catch(error){
-      if(error?.code==='STALE_MANAGER_SESSION_REQUEST')return null;
+      if(error?.code==='STALE_MANAGER_SESSION_REQUEST')throw error;
       clearSessionRecord();
-      if(Number(error?.status)===401)return null;
+      if(error?.code==='MANAGER_SIGN_IN_REQUIRED')return null;
       throw error;
     }
   }
@@ -403,10 +406,11 @@
       const session=await opsSessionRequest;
       if(session)return session;
       if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
-      if(options.throwOnFailure===true)throw new Error('Enroll this browser on the Custodial leadership entry page.');
+      if(options.throwOnFailure===true)throw Object.assign(new Error('Sign in once to remember this browser.'),{code:'MANAGER_SIGN_IN_REQUIRED',status:401});
       return null;
     }catch(error){
-      if(redirect&&!/\/(?:start_page1|ops-manager-hub)\.html$/i.test(window.location.pathname||''))redirectToManagerHub(requested);
+      // An unavailable or rejected status check is not proof of missing
+      // registration. Never send it through name/PIN enrollment again.
       if(options.throwOnFailure===true)throw error;
       return null;
     }

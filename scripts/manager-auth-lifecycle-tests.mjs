@@ -9,11 +9,32 @@ const session=token=>({role:'ops_manager',token,device_id:'manager-test',manager
 const response=token=>({ok:true,status:200,json:async()=>({ok:true,enrolled:true,csrfToken:'synthetic-csrf',session:{registrationId:id(2),identityAssurance:'SELF_ASSERTED_NAME',claimedAccount:{accountId:id(3)},cohort:{principalId:id(1),policyVersion:1,permissions:['custodialManagementAdmin']},managerSession:session(token)}})});
 const revoked=()=>({ok:true,status:200,json:async()=>({ok:true,revoked:true,enrolled:false})});
 function fixture(fetch){
- const window={location:new URL('https://lasrevinu333-design.github.io/Engine/dashboard.html')};
+ const navigations=[],location=new URL('https://lasrevinu333-design.github.io/Engine/dashboard.html');location.replace=url=>navigations.push(url);
+ const window={location};
  const localStorage={getItem:()=>null,setItem(){},removeItem(){}};
  vm.runInNewContext(source,{window,localStorage,navigator:{platform:'fixture'},URL,Date,AbortSignal,fetch});
- return window.MemphisAuth;
+ return Object.assign(window.MemphisAuth,{fixtureNavigations:navigations});
 }
+for(const failure of ['unavailable','timeout','malformed','denied'])test(`session ${failure} is not a request to sign in again`,async()=>{
+ const auth=fixture(async()=>{
+  if(failure==='timeout')throw new TypeError('Synthetic network failure');
+  return failure==='malformed'?{ok:true,status:200,json:async()=>({ok:true})}:
+   {ok:false,status:failure==='denied'?403:503,json:async()=>({ok:false,error:'leadership_unavailable'})};
+ });
+ await assert.rejects(auth.requireOpsManagerSession({redirect:true,throwOnFailure:true}),error=>error.code!=='MANAGER_SIGN_IN_REQUIRED');
+ assert.equal(auth.fixtureNavigations.length,0);assert.equal(auth.readSession(),null);
+});
+test('only confirmed missing registration routes to the shared sign-in page',async()=>{
+ const auth=fixture(async()=>({ok:true,status:200,json:async()=>({ok:true,enrolled:false,csrfToken:'synthetic'})}));
+ await assert.rejects(auth.requireOpsManagerSession({redirect:true,throwOnFailure:true}),error=>error.code==='MANAGER_SIGN_IN_REQUIRED'&&error.status===401);
+ assert.equal(auth.fixtureNavigations.length,1);assert.match(auth.fixtureNavigations[0],/ops-manager-hub\.html/);
+});
+test('simultaneous page components share one remembered-session read without PIN submission',async()=>{
+ const pending=deferred(),calls=[];const auth=fixture((url,options)=>{calls.push({url,options});return pending.promise;});
+ const a=auth.requireOpsManagerSession({redirect:true}),b=auth.requireOpsManagerSession({redirect:true});
+ pending.resolve(response('remembered'));assert.equal(await a,await b);assert.equal(calls.length,1);
+ assert.equal(calls[0].options.method,'GET');assert.equal(calls[0].options.credentials,'include');assert.equal(auth.fixtureNavigations.length,0);
+});
 test('late trusted-session response after logout cannot revive the manager',async()=>{
  const pending=deferred();let reads=0;const auth=fixture(async url=>String(url).endsWith('/revoke')?revoked():++reads===1?pending.promise:response('logout-reader'));
  const read=auth.requireOpsManagerSession({interactive:false});
