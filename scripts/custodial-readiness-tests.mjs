@@ -29,9 +29,20 @@ await check('support code is a read-only bounded observation, never arbitrary da
   const retained = { ...positive, managerRequired:false,enrollmentPending:false,syncStatus:'private_fixture_status',
     queue:[{state:'dead-letter',type:'private_fixture_type',last_error:'private_fixture_secret'}]};
   const bytes=JSON.stringify(retained);
-  assert.match(readinessSupportCode(retained), /M0 E0 D1 T:unknown Y:unknown$/);
+  assert.match(readinessSupportCode(retained), /M0 E0 D1 T:unknown Y:unknown H:1 \[unknown\/dead-letter\/Vunknown\/O:none\/C\?\/X:other\]$/);
   assert.doesNotMatch(readinessSupportCode(retained), /private_fixture/);
   assert.equal(JSON.stringify(retained),bytes);
+});
+await check('held diagnostics distinguish retained legacy work without disclosing its original payload', () => {
+  const input = {queue:[{type:'forward-replay-fenced:legacy-quarantine',state:'legacy-quarantine',
+    recoverable:false,source_schema_version:4,last_error:'private_fixture_secret',
+    preserved_original_record:{type:'record_scan_event',payload:{secret:'private_fixture_payload'}}},
+    {type:'commit_workflow',state:'quarantined',schema_version:6,dead_letter:true,
+      last_error:'semantic_completion_mismatch_requires_explicit_resolution'}]};
+  const before=JSON.stringify(input),code=readinessSupportCode(input);
+  assert.match(code,/H:2 \[forward-replay-fenced:legacy-quarantine\/legacy-quarantine\/V4\/O:record_scan_event\/C0\/X:other;commit_workflow\/quarantined\/V6\/O:none\/C\?\/X:semantic-conflict\]/);
+  assert.doesNotMatch(code,/private_fixture/);assert.equal(JSON.stringify(input),before);
+  assert.equal(classifyReadiness(input).state,'needs_manager');
 });
 await check('four exact labels with deterministic integrity/manager/pending priority', () => {
   assert.equal(classifyReadiness(positive).label, 'Ready for work');

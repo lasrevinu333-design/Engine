@@ -76,10 +76,33 @@ export function readinessSupportCode(input = {}) {
   const queue = Array.isArray(input.queue) ? input.queue : null;
   const blocked = queue?.find(row => row && (row.dead_letter === true || row.recoverable === false
     || ['quarantined', 'dead-letter', 'legacy-quarantine'].includes(row.state)));
-  const type = blocked ? pick(blocked.type, ['start_session', 'finish_session', 'complete_session', 'commit_workflow', 'offline_start', 'offline_finish']) : 'none';
+  const actionTypes = ['start_session', 'finish_session', 'complete_session', 'commit_workflow',
+    'record_scan_event', 'ping_device', 'evaluate_location_proximity_v2', 'offline_start', 'offline_finish',
+    'legacy-quarantine', 'forward-replay-fenced:legacy-quarantine'];
+  const type = blocked ? pick(blocked.type, actionTypes) : 'none';
   const sync = pick(input.syncStatus, ['none', 'quarantined', 'recovery-paused', 'compatibility-paused', 'dead-letter',
     'connection-paused', 'security-paused', 'worker-error', 'retrying', 'queued', 'peer-update', 'idle', 'synced', 'startup-recovery-complete', 'receipt-retention-pending']);
-  return `S1 ${state}/${reason || 'none'} I${flag(security.initialized)} R${flag(security.ready)} A${flag(security.available)} Q${flag(security.quarantined)} P${flag(input.principalPresent)} J:${session} N:${native} M${flag(input.managerRequired)} E${flag(input.enrollmentPending)} D${queue ? flag(Boolean(blocked)) : '?'} T:${type} Y:${sync}`;
+  // Only fixed classifications leave the retained rows. In particular, neither
+  // last_error nor the preserved original payload is rendered. Include every
+  // held category (bounded), so a harmless first row cannot conceal a separate
+  // completion hold. This observation does not retry or modify saved work.
+  const held = queue?.filter(row => row && (row.dead_letter === true || row.recoverable === false
+    || ['quarantined', 'dead-letter', 'legacy-quarantine'].includes(row.state))) || [];
+  const schema = value => Number.isInteger(value) && value >= 0 && value <= 6 ? String(value) : 'unknown';
+  const details = held.slice(0, 4).map(row => {
+    const original = row.preserved_original_record;
+    const originalType = original && typeof original === 'object' ? pick(original.type, actionTypes) : 'none';
+    const error = [
+      ['semantic_completion_mismatch_requires_explicit_resolution', 'semantic-conflict'],
+      ['Historical standalone scan evidence has no exact occurrence and requires manager reconciliation.', 'scan-session-missing'],
+      ['Queued start lacks exact v6 offline authority and requires manager reconciliation.', 'start-proof-missing'],
+      ['Queued completion lacks exact native timestamp proof and requires manager reconciliation.', 'completion-proof-missing'],
+    ].find(([message]) => row.last_error === message)?.[1] || (row.last_error ? 'other' : 'none');
+    return `${pick(row.type, actionTypes)}/${pick(row.state, ['quarantined','dead-letter','legacy-quarantine'])}`
+      + `/V${schema(row.source_schema_version ?? row.schema_version)}/O:${originalType}/C${flag(row.recoverable)}/X:${error}`;
+  }).join(';');
+  return `S1 ${state}/${reason || 'none'} I${flag(security.initialized)} R${flag(security.ready)} A${flag(security.available)} Q${flag(security.quarantined)} P${flag(input.principalPresent)} J:${session} N:${native} M${flag(input.managerRequired)} E${flag(input.enrollmentPending)} D${queue ? flag(Boolean(blocked)) : '?'} T:${type} Y:${sync}`
+    + (held.length ? ` H:${Math.min(held.length, 99)} [${details}]` : '');
 }
 
 // Generation-bound observations prevent a late prior-principal/network response
