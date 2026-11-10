@@ -153,14 +153,60 @@ for(const stage of ['backup-verified','primary-deleted','fenced-v4-written']){
  const current=fixtureContext(model);
  current.exactSessionForPayload=()=>({session_uuid:session,context_id:'AVAILABLE-CONTEXT',submission_proof:'AVAILABLE-PROOF',offline_authority_employee_id:'ORIGINAL-EMPLOYEE'});
  const backup=await current.readDowngradeBackup(ctx),restored=current.fencedDowngradeRows(backup.rows,backup.capturedRows);
- assert.equal(restored[0].replay_binding.context_id,'AVAILABLE-CONTEXT');
- assert.equal(restored[0].replay_binding.employee_id,'ORIGINAL-EMPLOYEE');
+ assert.equal(restored[0].recoverable,false);
+ assert.deepEqual(clone(restored[0].preserved_original_record),original);
  await current.openDb(ctx);
  const rows=[...model.records.get('mz_scan_queue').stores.get('actions').rows.values()];
- assert.equal(current.nextClaimableAction(rows).operation_id,operation);
+ assert.equal(current.nextClaimableAction(rows),null);
  assert.equal(rows[0].payload.saved_answer,'HELD-UNTIL-PROOF');
  assert(!model.records.has('mz_scan_queue_v6_to_v4_backup'));
- console.log('PASS held capture does not erase newly verified raw-row binding',stage);
+ console.log('PASS held capture remains quarantined when ambient proof appears',stage);
+}
+
+for(const writerKind of ['v63','current'])for(const version of [5,6])for(const firstStage of ['backup-verified','primary-deleted','fenced-v4-written'])for(const secondStage of ['fenced-v4-written','fenced-v4-verified']){
+ const original={id:1,schema_version:4,type:'commit_workflow',operation_id:operation,created_at:1700000000000,
+  payload:{p_device_id:'KIOSK_08',p_session_uuid:session,p_client_completion_id:operation,saved_answer:'RETAIN-THROUGH-TWO-RESTARTS'}};
+ const healthy={id:2,schema_version:6,type:'finish_session',operation_id:'33333333-3333-4333-8333-333333333333',created_at:1700000000001,
+  payload:{p_device_id:'KIOSK_08',p_session_uuid:session,saved_answer:'HEALTHY-NEIGHBOR'}};
+ const model=memoryIndexedDb(version,original),ctx={assertCurrent(){}},valid={session_uuid:session,context_id:'ORIGINAL-CONTEXT',submission_proof:'ORIGINAL-PROOF'};
+ model.records.get('mz_scan_queue').stores.get('actions').rows.set(2,clone(healthy));
+ const writer=fixtureContext(model,[],null,writerKind==='v63'?previousSource:source),first=Error('first interruption');
+ writer.exactSessionForPayload=()=>valid;
+ writer.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point===firstStage)throw first;};
+ await assert.rejects(writer.openDb(ctx),e=>e===first);
+ const recovery=fixtureContext(model),second=Error('recovery interruption');
+ recovery.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point===secondStage)throw second;};
+ await assert.rejects(recovery.openDb(ctx),e=>e===second);
+ const savedHeld=clone(model.records.get('mz_scan_queue').stores.get('actions').rows.get(1));
+ assert.equal(savedHeld.recoverable,false);assert.deepEqual(savedHeld.preserved_original_record,original);
+ const reopened=fixtureContext(model);reopened.exactSessionForPayload=()=>valid;
+ await reopened.openDb(ctx);await reopened.openDb(ctx);
+ const rows=[...model.records.get('mz_scan_queue').stores.get('actions').rows.values()];
+ assert.deepEqual(rows.find(row=>row.id===1),savedHeld);
+ assert.equal(reopened.nextClaimableAction(rows).operation_id,healthy.operation_id);
+ assert(!model.records.has('mz_scan_queue_v6_to_v4_backup'));
+ console.log('PASS recovery interruption retains exact quarantine and healthy neighbor',writerKind,version,firstStage,secondStage);
+}
+
+for(const corrupt of ['held-original','held-reason','held-binding']){
+ const original={id:1,schema_version:4,type:'commit_workflow',operation_id:operation,created_at:1700000000000,
+  payload:{p_device_id:'KIOSK_08',p_session_uuid:session,p_client_completion_id:operation,saved_answer:'KEEP'}};
+ const model=memoryIndexedDb(5,original),ctx={assertCurrent(){}},writer=fixtureContext(model),first=Error('first');
+ writer.exactSessionForPayload=()=>({session_uuid:session,context_id:'CONTEXT',submission_proof:'PROOF'});
+ writer.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point==='backup-verified')throw first;};
+ await assert.rejects(writer.openDb(ctx),e=>e===first);
+ const recovery=fixtureContext(model),second=Error('second');
+ recovery.window.__MZ_SCAN_SYNC_DOWNGRADE_TEST_HOOK__=point=>{if(point==='fenced-v4-written')throw second;};
+ await assert.rejects(recovery.openDb(ctx),e=>e===second);
+ const primary=model.records.get('mz_scan_queue').stores.get('actions').rows.get(1);
+ if(corrupt==='held-original')primary.preserved_original_record.payload.saved_answer='CHANGED';
+ if(corrupt==='held-reason')primary.quarantine_reason='CHANGED';
+ if(corrupt==='held-binding')primary.replay_binding={employee_id:'CHANGED'};
+ const before=clone(primary);
+ await assert.rejects(fixtureContext(model).openDb(ctx));
+ assert(model.records.has('mz_scan_queue_v6_to_v4_backup'));
+ assert.deepEqual(model.records.get('mz_scan_queue').stores.get('actions').rows.get(1),before);
+ console.log('PASS changed held primary remains untouched with backup',corrupt);
 }
 
 for(const corrupt of ['captured-payload','captured-clock','captured-binding','duplicate-id','raw-original','primary-changed']){

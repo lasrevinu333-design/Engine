@@ -1347,9 +1347,19 @@
     const captured = new Map(capturedRows.map(row=>[row.id,row]));
     return rows.map((row) => {
       const opened=openingRecord(row,false), stored=storageRecord(opened), prior=captured.get(row.id);
+      // A verified held capture is already a durable quarantine decision.
+      // Match ordinary openingRecord: later ambient proof never revives it.
+      if(prior?.recoverable===false)return prior;
       if(!prior||opened.recoverable===false||!prior.replay_binding)return stored;
       return {...stored,created_at:Number(row.created_at||prior.created_at),replay_binding:prior.replay_binding};
     });
+  }
+
+  function heldDowngradeRecord(raw) {
+    const declared=Number(raw.schema_version||0),legacy=declared>=1&&declared<=4?declared:(declared===0?4:0);
+    return raw.recoverable===false?storageRecord(raw):storageRecord(legacy
+      ?legacyMigrationFailure(raw,legacy,'the record lacks exact v6 identity or authority fields')
+      :legacyMigrationFailure(raw,declared,'the record lacks a supported schema and exact operation identity'));
   }
 
   function confirmedBackupCapture(rows, encoded) {
@@ -1366,9 +1376,7 @@
       const snapshot=byId.get(raw.id);if(!snapshot)return null;
       // Held originals are exact structured preservation, not normalized rows.
       const declared=Number(raw.schema_version||0),legacy=declared>=1&&declared<=4?declared:(declared===0?4:0);
-      const held=raw.recoverable===false?storageRecord(raw):storageRecord(legacy
-        ?legacyMigrationFailure(raw,legacy,'the record lacks exact v6 identity or authority fields')
-        :legacyMigrationFailure(raw,declared,'the record lacks a supported schema and exact operation identity'));
+      const held=heldDowngradeRecord(raw);
       if(canonicalRows([snapshot])===canonicalRows([held]))continue;
       const binding=snapshot.replay_binding,supplied=raw.replay_binding||{};
       if(!binding||typeof binding!=='object'||Array.isArray(binding)||Object.keys(binding).length!==bindingKeys.length
@@ -1654,8 +1662,8 @@
     const retained = await readDowngradeBackup(context);
     if (!retained || retained.source_version !== backup.source_version || retained.canonical_rows !== backup.canonical_rows
       || retained.canonical_fenced_rows !== backup.canonical_fenced_rows || !queueOpeningRowsMatch(retained.rows, backup.rows)) throw storageFailure('queue downgrade restore', new Error('Original backup changed; retained without restore.'));
-    const fencedRows = fencedDowngradeRows(backup.rows,backup.capturedRows);
-    const expectedFenced = canonicalRows(fencedRows);
+    let fencedRows = fencedDowngradeRows(backup.rows,backup.capturedRows);
+    let expectedFenced = canonicalRows(fencedRows);
     const historicalRows = new Map(backup.capturedRows.map(row=>[row.id,row]));
     const existing = await openExistingDatabase(CONFIG.DB_NAME);
     let restored = null;
@@ -1666,6 +1674,15 @@
           throw storageFailure('queue downgrade restore', new Error('Unknown primary originals are retained.'));
         const rows = await readRawRows(existing); queueOpeningCheckpoint(context);
         if (existing.version === CONFIG.DB_VERSION) {
+          // Recovery may itself have stopped after saving a quarantine but
+          // before retiring the backup. Retain only that exact raw-derived
+          // held form; proof returning later must neither revive it nor make
+          // healthy neighboring work depend on reclassifying it again.
+          const primary=new Map(rows.map(row=>[row.id,row]));
+          const held=new Map(backup.rows.map(row=>[row.id,heldDowngradeRecord(row)]));
+          fencedRows=fencedRows.map(row=>primary.has(row.id)
+            &&queueOpeningRowsMatch([primary.get(row.id)],[held.get(row.id)])?held.get(row.id):row);
+          expectedFenced=canonicalRows(fencedRows);
           const expected = new Map(fencedRows.map(row => [row.id, row]));
           if (!rows.every(row => expected.has(row.id) && (queueOpeningRowsMatch([row], [expected.get(row.id)])
             || historicalRows.has(row.id) && queueOpeningRowsMatch([row], [historicalRows.get(row.id)]))))
