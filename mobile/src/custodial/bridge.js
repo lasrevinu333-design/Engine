@@ -264,6 +264,8 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
         authenticated: response.ok && payload?.ok === true && data.authenticated === true,
         deviceId: data.canonical_device_id,
         credentialId: data.credential_id,
+        employeeId: data.employee_id,
+        assignmentEpoch: data.assignment_epoch,
       };
     });
     await reportProtectedRecoveryDiagnostic({

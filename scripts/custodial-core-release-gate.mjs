@@ -84,6 +84,7 @@ export const CORE_SUITES = Object.freeze([
   'manager-home-bfcache-tests',
   'public-dashboard-view-tests',
   'manager-name-first-login-tests',
+  'server-revalidation-principal-enrichment-tests',
 ].map(name => `scripts/${name}.mjs`));
 export const CORE_SUITE_TIMEOUT_MS = 45_000;
 export const CORE_TOTAL_TIMEOUT_MS = 600_000;

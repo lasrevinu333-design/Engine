@@ -1805,14 +1805,31 @@ export function createCustodialCredentialStore({
         if (!record) return { reconciled: false, reason: 'protected_enrollment_missing' };
         // This existing record, not a verifier's scalar response, owns the
         // resolution. Raw source bytes must still name the same private bind.
-        const requireOriginalRecord = async () => {
+        const requireOriginalRecord = async (proof = null) => {
           let raw;
           try { raw = await secureStorage.get(CUSTODIAL_INSTALLATION_RECORD_KEY); }
           catch (error) { throw new CustodialSecureStorageError('server revalidation original binding read', error); }
           changes.assertCurrent();
-          if (typeof raw !== 'string' || raw !== protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY]) {
-            throw new CustodialStateInspectionError('server revalidation original binding changed', null);
-          }
+          if (typeof raw === 'string' && raw === protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY]) return record;
+          // A first authenticated native status read records its assignment in
+          // the native principal journal. The native adapter then projects that
+          // principal into the same installation. Permit only this enrichment;
+          // the exact serialized original core and all private binding fields
+          // remain pinned. Existing assignment changes still require reopening.
+          const enriched = installationRecord(raw);
+          const principal = protectedPrincipal(enriched?.principal);
+          const originalRaw = protectedBefore[CUSTODIAL_INSTALLATION_RECORD_KEY];
+          const original = jsonObject(originalRaw);
+          if (secureStorage.nativeVault === true && proof?.authenticated === true
+            && original?.principal === null && principal?.schema_version === 'custodial-protected-principal.v1'
+            && JSON.stringify(original) === originalRaw
+            && JSON.stringify({ ...jsonObject(raw), principal: null }) === originalRaw
+            && principal.device_id === record.device_id && principal.device_id === proof.deviceId
+            && principal.credential_id === proof.credentialId && principal.employee_id === proof.employeeId
+            && principal.assignment_epoch === proof.assignmentEpoch
+            && principal.installation_seal === record.installation_seal && principal.enrolled_at === record.enrolled_at
+            && principal.credential_operation_id === record.credential_operation_id) return enriched;
+          throw new CustodialStateInspectionError('server revalidation original binding changed', null);
         };
         await requireOriginalRecord();
 
@@ -1831,7 +1848,7 @@ export function createCustodialCredentialStore({
           || proofDeviceId !== record.device_id
           || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(proofCredentialId)
         ) return { reconciled: false, reason: 'server_revalidation_refused' };
-        await requireOriginalRecord();
+        const verifiedRecord = await requireOriginalRecord(proof);
 
         const resolved = {
           ...latestRecovery,
@@ -1868,7 +1885,7 @@ export function createCustodialCredentialStore({
 
         activeQuarantine = null;
         latestRecovery = resolved;
-        activateEnrollmentRecord(record);
+        activateEnrollmentRecord(verifiedRecord);
         publish({
           state: 'enrolled',
           initialized: true,

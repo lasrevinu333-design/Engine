@@ -1061,8 +1061,8 @@
     },
     {
       "path": "mobile/src/custodial/bridge.js",
-      "bytes": 164107,
-      "sha256": "9c4873bd917c922dd858f97f100d4f518e9304991f488976b62f2992e61ea153"
+      "bytes": 164193,
+      "sha256": "d493daa8332262f85a4b33cc89ca6c6215e26258e4d358a2016f89d34d165ac2"
     },
     {
       "path": "scripts/provider-event-decision-current219-contract-tests.mjs",
@@ -1517,9 +1517,9 @@
     {
       "name": "bridge.js",
       "current_path": "mobile/src/custodial/bridge.js",
-      "current_sha256": "9c4873bd917c922dd858f97f100d4f518e9304991f488976b62f2992e61ea153",
+      "current_sha256": "d493daa8332262f85a4b33cc89ca6c6215e26258e4d358a2016f89d34d165ac2",
       "comparison_input_sha256": [
-        "9c4873bd917c922dd858f97f100d4f518e9304991f488976b62f2992e61ea153"
+        "d493daa8332262f85a4b33cc89ca6c6215e26258e4d358a2016f89d34d165ac2"
       ],
       "comparison_path": "scripts/fixtures/historical-provider-comparison/bridge.js",
       "comparison_sha256": "9fd4404231a2b45464cd6b21ae0cd9bda05e0b2a07c0853b3eac9e19920fb393",

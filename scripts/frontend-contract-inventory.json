@@ -235,6 +235,11 @@
       ]
     },
     {
+      "path": "scripts/core-native-fixture.mjs",
+      "role": "imported-support",
+      "reason": "Imported source-bound fixture or comparison helper; no standalone execution"
+    },
+    {
       "path": "scripts/coverall-shared-back-integration-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
@@ -264,6 +269,24 @@
           "requires": [
             "scripts/fixtures/current-approved-preservation-source-deltas.json"
           ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-boundary.mjs",
+      "role": "imported-support",
+      "reason": "Imported source-bound fixture or comparison helper; no standalone execution"
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/current-provider-comparison-source-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
         }
       ]
     },
@@ -577,6 +600,19 @@
       ]
     },
     {
+      "path": "scripts/custodial-scan-startup-race-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/custodial-scan-startup-race-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/custodian-five-area-release-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
@@ -858,6 +894,19 @@
       "invocations": [
         {
           "entry": "scripts/feedback-backup-reconciliation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/feedback-credential-restart-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/feedback-credential-restart-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -1369,6 +1418,19 @@
       ]
     },
     {
+      "path": "scripts/manager-home-bfcache-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/manager-home-bfcache-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/manager-home-owner-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
@@ -1414,6 +1476,19 @@
       "invocations": [
         {
           "entry": "scripts/manager-map-session-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/manager-name-first-login-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/manager-name-first-login-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -2584,6 +2659,11 @@
       ]
     },
     {
+      "path": "scripts/prepare-core-native-fixture.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "Explicit fixture preparation or externally supplied audit-packet probe; not an argument-free contract"
+    },
+    {
       "path": "scripts/protected-browser-admission-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
@@ -2999,6 +3079,19 @@
       "reason": "module imported by its owning contracts, not a standalone test"
     },
     {
+      "path": "scripts/public-dashboard-view-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/public-dashboard-view-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/public-event-privacy-contract-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
@@ -3054,6 +3147,19 @@
       "invocations": [
         {
           "entry": "scripts/release-canary-manager-controls-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/removal-resume-witness-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/removal-resume-witness-tests.mjs",
           "args": [],
           "cwd": ".",
           "requires": []
@@ -3236,6 +3342,19 @@
       ]
     },
     {
+      "path": "scripts/scan-deferred-protected-write-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/scan-deferred-protected-write-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/scan-device-employee-default-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
@@ -3325,6 +3444,19 @@
       ]
     },
     {
+      "path": "scripts/scan-unsupported-original-preservation-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Current actual-owner regression with repository-local imports and no argument prerequisites",
+      "invocations": [
+        {
+          "entry": "scripts/scan-unsupported-original-preservation-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/schedule-advanced-live-schedule-tests.mjs",
       "role": "superseded-contract",
       "reason": "Retired mutable schedule.html generator; the fixed alias must preserve safe date/device hints and cannot regenerate normal schedules.",
@@ -3332,6 +3464,11 @@
         "scripts/retired-scheduler-entry-tests.mjs",
         "scripts/schedule-weekly-contract-tests.mjs"
       ]
+    },
+    {
+      "path": "scripts/schedule-cache-warning-tests.mjs",
+      "role": "explicit-tool-or-fixture",
+      "reason": "Explicit fixture preparation or externally supplied audit-packet probe; not an argument-free contract"
     },
     {
       "path": "scripts/schedule-day-change-retry-tests.mjs",
@@ -3567,6 +3704,19 @@
             "memphis-ui.js",
             "memphis-scan-sync.js"
           ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/server-revalidation-principal-enrichment-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Actual native protected storage and credential recovery owner preserve first authenticated principal and original binding refusals",
+      "invocations": [
+        {
+          "entry": "scripts/server-revalidation-principal-enrichment-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
         }
       ]
     },
