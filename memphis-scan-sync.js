@@ -944,6 +944,10 @@
   async function verifyWorkerBackendCompatibility() {
     try {
       const response = await fetch(CONFIG.VERSION_URL, { cache: 'no-store', credentials: 'omit' });
+      if ([408, 429].includes(response.status) || response.status >= 500 && response.status <= 599) {
+        dispatchStatus({ status: 'connection-paused' });
+        return false;
+      }
       const payload = await response.json().catch(() => null);
       const version = safeText(payload?.version);
       const contract = safeText(payload?.contracts?.scan);
@@ -964,6 +968,15 @@
       }
       return true;
     } catch (error) {
+      if (error?.code === 'custodial_native_network_unavailable'
+        || error?.name === 'TypeError' && /^(Failed to fetch|NetworkError when attempting to fetch resource\.?|Load failed)$/.test(error.message)) {
+        dispatchStatus({ status: 'connection-paused' });
+        return false;
+      }
+      if (securityErrorIsPause(error)) {
+        dispatchSecurityPause({ reason: safeText(error?.reason || error?.code) });
+        return false;
+      }
       dispatchStatus({ status: 'compatibility-paused', error: safeText(error?.message || error).slice(0, 1000) });
       return false;
     }

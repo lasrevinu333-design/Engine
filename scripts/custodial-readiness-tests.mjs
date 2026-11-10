@@ -19,13 +19,19 @@ await check('support code is a read-only bounded observation, never arbitrary da
     deviceId: 'private_fixture_device', credential: 'private_fixture_secret' }, sessionState: 'corrupted' };
   const before = JSON.stringify(input);
   const code = readinessSupportCode(input);
-  assert.match(code, /^S1 unenrolled\/unknown I1 R1 A1 Q0 P1 J:corrupted N:CONFIRMED$/);
+  assert.match(code, /^S1 unenrolled\/unknown I1 R1 A1 Q0 P1 J:corrupted N:CONFIRMED M\? E\? D0 T:none Y:unknown$/);
   assert.doesNotMatch(code, /private_fixture/);
   assert.equal(JSON.stringify(input), before);
   assert.equal(classifyReadiness(input).state, 'do_not_use');
   assert.equal(readinessSupportCode({ security: { state: '<script>secret</script>', ready: 'secret' },
     sessionState: 'secret', nativeState: { observation: 'secret' } }),
-    'S1 unknown/unknown I? R? A? Q? P? J:unknown N:unknown');
+    'S1 unknown/unknown I? R? A? Q? P? J:unknown N:unknown M? E? D? T:none Y:unknown');
+  const retained = { ...positive, managerRequired:false,enrollmentPending:false,syncStatus:'private_fixture_status',
+    queue:[{state:'dead-letter',type:'private_fixture_type',last_error:'private_fixture_secret'}]};
+  const bytes=JSON.stringify(retained);
+  assert.match(readinessSupportCode(retained), /M0 E0 D1 T:unknown Y:unknown$/);
+  assert.doesNotMatch(readinessSupportCode(retained), /private_fixture/);
+  assert.equal(JSON.stringify(retained),bytes);
 });
 await check('four exact labels with deterministic integrity/manager/pending priority', () => {
   assert.equal(classifyReadiness(positive).label, 'Ready for work');
@@ -216,7 +222,7 @@ await check('owner-test actionable Home and Unlock reveal only the existing fini
   const f=fixture({ownerTestSupport:true,pending:[null]});const original=f.queueBytes();await f.flush();
   for(const id of ['home-support','lock-support']){
     assert.equal(f.elements.get(id).hidden,false);
-    assert.equal(f.elements.get(id).textContent,'Support code: S1 enrolled/unknown I1 R1 A1 Q0 P1 J:none N:CONFIRMED');
+    assert.equal(f.elements.get(id).textContent,'Support code: S1 enrolled/unknown I1 R1 A1 Q0 P1 J:none N:CONFIRMED M0 E0 D0 T:none Y:none');
     assert.doesNotMatch(f.elements.get(id).textContent,/principal-a|KIOSK_08|Fixture Custodian/);
   }
   assert.match(f.elements.get('home-readiness').textContent,/^Do not use/);assert.equal(f.queueBytes(),original);
@@ -237,9 +243,9 @@ await check('owner-test healthy and ordinary pending states do not expose a supp
 });
 await check('owner-test support retains the actual corrupt-session and native observation distinction',async()=>{
   const f=fixture({ownerTestSupport:true,session:'corrupted'});await f.flush();
-  for(const id of ['home-support','lock-support'])assert.match(f.elements.get(id).textContent,/J:corrupted N:CONFIRMED$/);
+  for(const id of ['home-support','lock-support'])assert.match(f.elements.get(id).textContent,/J:corrupted N:CONFIRMED M1 E0 D0 T:none Y:none$/);
   const native=fixture({ownerTestSupport:true,nativeObservation:'DO_NOT_USE'});await native.flush();
-  for(const id of ['home-support','lock-support'])assert.match(native.elements.get(id).textContent,/J:none N:DO_NOT_USE$/);
+  for(const id of ['home-support','lock-support'])assert.match(native.elements.get(id).textContent,/J:none N:DO_NOT_USE M0 E0 D0 T:none Y:none$/);
 });
 await check('support flag is selected only by owner-test builder and is false in default native builds',()=>{
   assert.match(read('mobile/scripts/build-custodial-first-test.mjs'),/MZ_CUSTODIAL_OWNER_TEST_SUPPORT:'1'/);

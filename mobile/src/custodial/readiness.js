@@ -73,7 +73,13 @@ export function readinessSupportCode(input = {}) {
     'preserved_state_without_protected_enrollment', 'server_credential_rejected']);
   const session = pick(input.sessionState, ['none', 'open', 'corrupted', 'ambiguous']);
   const native = pick(input.nativeState?.observation, ['CONFIRMED', 'NEEDS_INTERNET', 'NEEDS_MANAGER', 'DO_NOT_USE', 'UNKNOWN']);
-  return `S1 ${state}/${reason || 'none'} I${flag(security.initialized)} R${flag(security.ready)} A${flag(security.available)} Q${flag(security.quarantined)} P${flag(input.principalPresent)} J:${session} N:${native}`;
+  const queue = Array.isArray(input.queue) ? input.queue : null;
+  const blocked = queue?.find(row => row && (row.dead_letter === true || row.recoverable === false
+    || ['quarantined', 'dead-letter', 'legacy-quarantine'].includes(row.state)));
+  const type = blocked ? pick(blocked.type, ['start_session', 'finish_session', 'complete_session', 'commit_workflow', 'offline_start', 'offline_finish']) : 'none';
+  const sync = pick(input.syncStatus, ['none', 'quarantined', 'recovery-paused', 'compatibility-paused', 'dead-letter',
+    'connection-paused', 'security-paused', 'worker-error', 'retrying', 'queued', 'peer-update', 'idle', 'synced', 'startup-recovery-complete', 'receipt-retention-pending']);
+  return `S1 ${state}/${reason || 'none'} I${flag(security.initialized)} R${flag(security.ready)} A${flag(security.available)} Q${flag(security.quarantined)} P${flag(input.principalPresent)} J:${session} N:${native} M${flag(input.managerRequired)} E${flag(input.enrollmentPending)} D${queue ? flag(Boolean(blocked)) : '?'} T:${type} Y:${sync}`;
 }
 
 // Generation-bound observations prevent a late prior-principal/network response

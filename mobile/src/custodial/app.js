@@ -37,6 +37,7 @@ let restoreRetryTimer = null;
 let savedWorkConnectionOwner = null;
 const readinessObservation = createReadinessObservation();
 let readinessManagerRequired = false;
+let readinessSyncStatus = 'none';
 let readinessReadSequence = 0;
 let readinessConnected = navigator.onLine === true;
 const ownerTestReadinessSupport = typeof __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__ !== 'undefined'
@@ -92,7 +93,7 @@ async function refreshReadiness() {
   paintReadiness({ ...(readinessObservation.read(token, principal) || {}), security: currentSecurity,
     principalPresent: Boolean(principal), connected: readinessConnected,
     profileMatches: currentProfile(profile), enrollmentPending: Boolean(pendingEnrollmentOperation()),
-    managerRequired: readinessManagerRequired, queue, nativeState, localReadinessUnavailable,
+    managerRequired: readinessManagerRequired, syncStatus: readinessSyncStatus, queue, nativeState, localReadinessUnavailable,
     sessionState });
 }
 function invalidateReadiness({refresh=true}={}) {
@@ -460,6 +461,7 @@ void App.addListener('resume', () => {
   void restore({ quiet: !els.home.hidden });
 });
 window.addEventListener?.('memphis-scan-sync', event => {
+  readinessSyncStatus = event.detail?.status;
   if (event.detail?.status === 'startup-recovery-complete' && savedWorkConnectionOwner && !readinessManagerRequired) {
     const owner = savedWorkConnectionOwner, current = security.getStatus();
     // Only the held original owner may request re-entry. restore() coalesces
