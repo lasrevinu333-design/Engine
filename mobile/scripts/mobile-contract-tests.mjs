@@ -422,8 +422,8 @@ assert.match(custodialJs, /function employeeRole\(value\)/);
 assert.match(custodialHtml, /id="phone-lock-name"/);
 assert.match(custodialHtml, /id="phone-unlock"/);
 assert.match(custodialJs, /els\.phoneLockName\.textContent = name/);
-assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*try \{ await window\.MemphisScanSync\?\.recoverLocalCompletionIntents\?\.\(\); \} catch \{ return showSetupRepairRequired\(\); \}\s*const preStart = await reconcileProtectedStartup\(\);[\s\S]{0,180}try \{\s*profile = await request/,
-  'the protected cached employee identity must reach the wake screen before fail-closed local completion recovery, startup reconciliation, and the network profile returns');
+assert.match(custodialJs, /const cached = showCachedPhoneIdentity\(\);\s*try \{ await window\.MemphisScanSync\?\.recoverLocalCompletionIntents\?\.\(\); \} catch \(error\) \{\s*return error\?\.code === 'custodial_native_network_unavailable'\s*\? showSavedWorkConnectionRequired\(\) : showSetupRepairRequired\(\);\s*\}\s*const preStart = await reconcileProtectedStartup\(\);\s*if \(preStart\?\.state === 'connection_required'\) return showSavedWorkConnectionRequired\(\);\s*if \(preStart\?\.state === 'manager_required'\) return showSetupRepairRequired\(\);\s*const requestedDevice = deviceId\(\);\s*if \(!requestedDevice\) return showAssignmentNeeded\(\);\s*try \{\s*profile = await request/,
+  'cached identity reaches the wake screen first; local recovery and reconciliation block profile loading on both typed connection failures and integrity failures');
 assert.match(custodialBridge, /fn: 'tool_get_system_settings',[\s\S]{0,500}fn: 'tool_get_location_scan_state'/,
   'interrupted-start recovery must prove the exact native transport before reading server cleaning authority');
 assert.match(custodialJs, /App\.addListener\('pause', \(\) => \{ relockPhone\(\); \}\)/);
