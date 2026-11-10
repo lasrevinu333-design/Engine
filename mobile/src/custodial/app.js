@@ -149,7 +149,11 @@ function clearRestoreRetry() {
 function showBoot(title = 'Please wait', message = 'Opening your work phone…') {
   showOnly(els.boot); els.bootTitle.textContent = title; els.bootStatus.textContent = message;
 }
-function showSetupRepairRequired() {
+function showSetupRepairRequired(reason = 'startup_verification', detail = 'no_additional_detail') {
+  const report = window.MemphisMobile?.reportProtectedRecoveryDiagnostic;
+  if (typeof report === 'function') {
+    void Promise.resolve().then(() => report({ reason, outcome: 'preserved', detail })).catch(() => false);
+  }
   savedWorkConnectionOwner = null;
   readinessManagerRequired = true; invalidateReadiness();
   clearRestoreRetry();
@@ -344,11 +348,11 @@ async function restoreNow({ quiet = false } = {}) {
   const cached = showCachedPhoneIdentity();
   try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch (error) {
     return error?.code === 'custodial_native_network_unavailable'
-      ? showSavedWorkConnectionRequired() : showSetupRepairRequired();
+      ? showSavedWorkConnectionRequired() : showSetupRepairRequired('completed_work_recovery', error?.code);
   }
   const preStart = await reconcileProtectedStartup();
   if (preStart?.state === 'connection_required') return showSavedWorkConnectionRequired();
-  if (preStart?.state === 'manager_required') return showSetupRepairRequired();
+  if (preStart?.state === 'manager_required') return showSetupRepairRequired('startup_reconciliation');
   const requestedDevice = deviceId();
   if (!requestedDevice) return showAssignmentNeeded();
   try {

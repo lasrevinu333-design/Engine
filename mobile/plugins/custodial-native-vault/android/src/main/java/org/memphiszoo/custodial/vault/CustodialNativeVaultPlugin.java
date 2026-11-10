@@ -42,6 +42,9 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private static final int AUTHORIZED_REQUEST_QUEUE = 24;
     private static final String UNCLASSIFIED_RECOVERY_DIAGNOSTIC = "unclassified_recovery_state";
     private static final Set<String> RECOVERY_DIAGNOSTIC_REASONS = VaultCollections.setOf(
+        "startup_verification",
+        "completed_work_recovery",
+        "startup_reconciliation",
         "credential_required",
         "device_auth_failed",
         "device_credential_required",
@@ -92,6 +95,10 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         "server_revalidation_unavailable"
     );
     private static final Set<String> RECOVERY_DIAGNOSTIC_DETAILS = VaultCollections.setOf(
+        "custodial_storage_unavailable",
+        "custodial_security_generation_changed",
+        "custodial_security_state_unavailable",
+        "custodial_native_server_receipt_required",
         "active_reason_missing",
         "browser_completion_draft_present",
         "durable_completion_draft_present",
@@ -1684,7 +1691,25 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         // The WebView receives intentionally simple employee language. Keep the
         // exact, non-sensitive refusal code in logcat so a protected start can
         // be diagnosed without exposing credentials, payloads, or employee data.
-        Log.w(LOG_TAG, "operation_refused code=" + code);
+        // Classify fixed routes only. Query strings, payloads and exception
+        // messages can contain private data and must never enter this log.
+        String rawPath = call.getString("path", "");
+        String path = rawPath.split("\\?", 2)[0];
+        String route = switch (path) {
+            case "/device-auth/status" -> "device_status";
+            case "/scan-api/original-completion" -> "original_completion";
+            case "/scan-api/rpc" -> "scan_rpc";
+            case "/schedule-api/my-day-summary" -> "day_summary";
+            case "/messaging-api/device-location-status-reminders" -> "accepted_location_sessions";
+            case "/message-api/device-location-status-reminders" -> "unmounted_location_sessions";
+            default -> "other";
+        };
+        Throwable cause = failure == null ? null : failure.getCause();
+        String transport = cause instanceof java.net.SocketTimeoutException ? "timeout"
+            : cause instanceof java.net.UnknownHostException ? "dns"
+            : cause instanceof javax.net.ssl.SSLException ? "tls"
+            : cause instanceof java.net.ConnectException ? "connection" : "unclassified";
+        Log.w(LOG_TAG, "operation_refused code=" + code + " route=" + route + " transport=" + transport);
         if (failure != null && failure.httpStatus != 0) {
             JSObject safe = new JSObject();
             safe.put("status", failure.httpStatus);

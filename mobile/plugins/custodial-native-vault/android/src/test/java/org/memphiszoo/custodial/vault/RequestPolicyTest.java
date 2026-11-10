@@ -56,6 +56,16 @@ public final class RequestPolicyTest {
     }
 
     @Test
+    public void acceptedCleaningReadUsesMountedMessagingRoute() throws Exception {
+        String query = "?device_id=KIOSK_02&limit=5&accepted_sessions=1";
+        String path = "/messaging-api/device-location-status-reminders" + query;
+        assertEquals(path, RequestPolicy.validate(request(path, "GET", Map.of(), new byte[0]), DEVICE).path);
+        expectCode("custodial_native_path_refused", () -> RequestPolicy.validate(request(
+            "/message-api/device-location-status-reminders" + query, "GET", Map.of(), new byte[0]
+        ), DEVICE));
+    }
+
+    @Test
     public void rejectsEncodedTraversalSeparatorsAndNonCanonicalPaths() throws Exception {
         for (String path : new String[] {
             "https://evil.example/messaging-api/x",

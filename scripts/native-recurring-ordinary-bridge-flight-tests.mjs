@@ -92,7 +92,7 @@ async function fixture({loading=false,closeBeforeImport=false,foreignPage=false,
    let data;
    if(request.path.startsWith('/device-auth/status?'))data={employee_id:id(2),credential_id:id(3),assignment_epoch:7,canonical_device_id:'KIOSK_08'};
    else if(request.path.startsWith('/schedule-api/my-day-summary?')){summaryReads++;if(holdResponse)await holdResponse;data=next;}
-   else if(request.path.startsWith('/message-api/device-location-status-reminders?')){
+   else if(request.path.startsWith('/messaging-api/device-location-status-reminders?')){
     bridgeReads++;if(bridgeGate){bridgeWaiting++;try{await bridgeGate;}finally{bridgeWaiting--;}}
     return realmData({status:200,headers:{'content-type':'application/json'},body_base64:Buffer.from(JSON.stringify({ok:true,data:[],meta:{accepted_location_sessions:[]}})).toString('base64')});
    }

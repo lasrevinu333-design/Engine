@@ -2287,7 +2287,7 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
     const task=(async()=>{
       try{
         if(!current())return false;
-        const payload=await requestEnvelope(`/message-api/device-location-status-reminders?device_id=${encodeURIComponent(p.device_id)}&limit=5&accepted_sessions=1`,
+        const payload=await requestEnvelope(`/messaging-api/device-location-status-reminders?device_id=${encodeURIComponent(p.device_id)}&limit=5&accepted_sessions=1`,
           {expectedGeneration:generation,signal:AbortSignal.timeout(8000)});
         if(!current())return false;
         const rows=payload?.meta?.accepted_location_sessions;
