@@ -1,6 +1,10 @@
 // Name-first manager sign-in. The server still verifies the challenge and account.
 // No PIN, account directory, credentials or roles are persisted by this module.
 export const LEADERSHIP_DISPLAY_NAMES=Object.freeze(['Eric McKenney','Haley','Brandy Gull','Jennifer','Annie','Eric Operle']);
+// Visible names verified against the existing approved manager records and Zoo
+// directory. The legacy server labels remain the exact challenge selectors.
+const FULL_MANAGER_NAMES=Object.freeze({Haley:'Haley Lejman',Jennifer:'Jennifer Sheffield',Annie:'Annie Feist'});
+const managerLabel=name=>Object.hasOwn(FULL_MANAGER_NAMES,name)?FULL_MANAGER_NAMES[name]:name;
 export async function mountLeadershipEnrollment({document:d=document,fetchImpl=fetch,serviceOrigin='',onSession=()=>{}}={}){
  const id=name=>d.getElementById(name),pin=id('leadership-pin'),names=id('approved-name'),status=id('status'),pinForm=id('pin-form'),nameForm=id('name-form'),enrolled=id('enrolled'),check=id('check-session');
  if(!serviceOrigin){status.textContent='Preview is not connected. Leadership enrollment is not activated.';return{stop(){},configured:false};}
@@ -10,14 +14,14 @@ export async function mountLeadershipEnrollment({document:d=document,fetchImpl=f
  const listen=(target,type,fn)=>{target.addEventListener(type,fn);listeners.push([target,type,fn]);};
  const text=(value,max=200)=>typeof value==='string'&&value.length>0&&value.length<=max;
  const controls=()=>{for(const e of [pin,names,id('verify-pin'),id('enroll-browser'),id('revoke-browser')])e.disabled=busy||mutationHeld;check.disabled=busy;};
- function clearChallenge(){selectedName=null;names.replaceChildren(new Option('Choose your name',''));for(const name of LEADERSHIP_DISPLAY_NAMES)names.add(new Option(name,name));nameForm.hidden=true;}
+ function clearChallenge(){selectedName=null;names.replaceChildren(new Option('Choose your name',''));for(const name of LEADERSHIP_DISPLAY_NAMES)names.add(new Option(managerLabel(name),name));nameForm.hidden=true;}
  async function acceptSession(body,{signedIn=false}={}){
   if(body?.ok!==true||typeof body.enrolled!=='boolean'||!text(body.csrfToken,4096))throw Error('Browser enrollment response is unverified.');
   const v=body.session;
   if(body.enrolled&&(v?.identityAssurance!=='SELF_ASSERTED_NAME'||!text(v.claimedAccount?.accountId)||!text(v.claimedAccount?.displayName)
     ||!text(v.cohort?.principalId)||!Number.isSafeInteger(v.cohort?.policyVersion)||v.cohort.policyVersion<1||!Array.isArray(v.cohort.permissions)||!v.managerSession))throw Error('Leadership enrollment identity/permission response is unverified.');
   csrf=body.csrfToken;mutationHeld=false;clearChallenge();pin.value='';pinForm.hidden=true;nameForm.hidden=body.enrolled;enrolled.hidden=!body.enrolled;check.hidden=false;
-  id('claimed-name').textContent=body.enrolled?v.claimedAccount.displayName:'';
+  id('claimed-name').textContent=body.enrolled?managerLabel(v.claimedAccount.displayName):'';
   // Contact is deliberately not displayed here: Main verifies its provenance.
   status.textContent=body.enrolled?'This browser is ready for manager access.':'Choose your name to sign in.';
   await onSession(body,{signedIn});return body;
@@ -41,7 +45,7 @@ export async function mountLeadershipEnrollment({document:d=document,fetchImpl=f
   if(busy||mutationHeld||!csrf||closed)return;
   if(!LEADERSHIP_DISPLAY_NAMES.includes(names.value)){status.textContent='Choose your name.';return;}
   selectedName=names.value;nameForm.hidden=true;pinForm.hidden=false;pin.value='';
-  status.textContent='Enter the manager PIN for '+selectedName+'.';pin.focus?.();
+  status.textContent='Enter the manager PIN for '+managerLabel(selectedName)+'.';pin.focus?.();
  });
  listen(pinForm,'submit',event=>{event.preventDefault();const value=pin.value;pin.value='';const chosen=selectedName;
   if(busy||mutationHeld||!csrf||closed)return;if(!LEADERSHIP_DISPLAY_NAMES.includes(chosen)){status.textContent='Choose your name first.';return;}

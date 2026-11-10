@@ -3,7 +3,7 @@ import {mountLeadershipEnrollment} from '../custodial-leadership-enrollment.mjs'
 import {readFileSync} from 'node:fs';import vm from 'node:vm';
 const ids=['leadership-pin','approved-name','status','pin-form','name-form','enrolled','check-session','verify-pin','enroll-browser','revoke-browser','claimed-name'];
 const session={identityAssurance:'SELF_ASSERTED_NAME',claimedAccount:{accountId:'account-eric',displayName:'Eric Operle'},cohort:{principalId:'cohort',policyVersion:1,permissions:['custodialManagementAdmin']},managerSession:{token:'synthetic-not-persisted'}};
-async function fixture({remembered=false,challenge='valid',uncertainEnroll=false,pause=async()=>{}}={}){
+async function fixture({remembered=false,rememberedName='Eric Operle',challenge='valid',uncertainEnroll=false,pause=async()=>{}}={}){
  const oldOption=globalThis.Option;globalThis.Option=class{constructor(text,value){this.text=text;this.value=value;}};
  const elements=new Map(ids.map(id=>[id,{value:'',textContent:'',hidden:false,disabled:false,listeners:new Map(),options:[],
   addEventListener(t,f){this.listeners.set(t,f);},removeEventListener(t){this.listeners.delete(t);},replaceChildren(...o){this.options=o;this.value='';},add(o){this.options.push(o);},focus(){}}]));
@@ -11,7 +11,7 @@ async function fixture({remembered=false,challenge='valid',uncertainEnroll=false
  const fetchImpl=async(url,options)=>{
   const path=new URL(url).pathname,body=options.body&&JSON.parse(options.body);calls.push({path,body,options});
   let value={ok:true},status=200;
-  if(path.endsWith('/session'))value={ok:true,enrolled,csrfToken:'synthetic-csrf',session:enrolled?session:null};
+  if(path.endsWith('/session'))value={ok:true,enrolled,csrfToken:'synthetic-csrf',session:enrolled?{...session,claimedAccount:{...session.claimedAccount,displayName:rememberedName}}:null};
   else if(path.endsWith('/challenge')){
    if(challenge==='denied'){status=403;value={ok:false};}
    else value={ok:true,approvedNames:challenge==='missing'?[{accountId:'other',displayName:'Other'}]:[{accountId:'account-eric',displayName:'Eric Operle'}]};
@@ -31,6 +31,19 @@ test('name first, transient PIN second, exact verified account enrolls once',asy
  assert.equal(f.e('enrolled').hidden,false);assert.equal(f.accepted.at(-1).session.identityAssurance,'SELF_ASSERTED_NAME');
  assert.ok(f.calls.every(c=>c.options.credentials==='include'&&c.options.cache==='no-store'));assert.equal(f.calls[2].options.headers['X-CSRF-Token'],'synthetic-csrf');
 }finally{f.close();}});
+test('approved full names are visible without changing challenge selectors or remembered registrations',async()=>{
+ const labels=[['Eric McKenney','Eric McKenney'],['Haley Lejman','Haley'],['Brandy Gull','Brandy Gull'],['Jennifer Sheffield','Jennifer'],['Annie Feist','Annie'],['Eric Operle','Eric Operle']];
+ const f=await fixture();try{
+  assert.deepEqual(f.e('approved-name').options.slice(1).map(o=>[o.text,o.value]),labels);
+  f.e('approved-name').value='Haley';await f.submit('name-form');assert.equal(f.e('status').textContent,'Enter the manager PIN for Haley Lejman.');assert.equal(f.calls.length,1);
+ }finally{f.close();}
+ for(const [fullName,serverName] of labels.filter(([full,server])=>full!==server)){
+  const remembered=await fixture({remembered:true,rememberedName:serverName});try{
+   assert.equal(remembered.e('claimed-name').textContent,fullName);assert.equal(remembered.accepted[0].session.claimedAccount.displayName,serverName);
+   assert.deepEqual(remembered.calls.map(c=>c.path),['/custodial-leadership-api/session']);
+  }finally{remembered.close();}
+ }
+});
 test('PIN and browser-save progress remain visible while each request is pending',async()=>{
  let release;const f=await fixture({pause:path=>path.endsWith('/session')?Promise.resolve():new Promise(resolve=>{release=resolve;})});
  try{const pending=f.signIn();await new Promise(r=>setImmediate(r));
