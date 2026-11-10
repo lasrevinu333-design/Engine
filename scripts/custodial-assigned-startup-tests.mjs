@@ -23,6 +23,7 @@ function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPri
       requestJson:async(path,options)=>{calls.push(path);const original=status;const value={authenticated:true,canonical_device_id:'KIOSK_08',employee_name:name,employee_role:'CUSTODIAL_EMPLOYEE',fixture_principal:principal||'original'};await responseReady;if(reject)throw Object.assign(new Error('Not authorized'),{status:403});if(failNetwork)throw Error('offline');if(options?.expectedGeneration!=null&&original!==status)throw Error('retired request');if(!principal&&capturePrincipal){principal='original';status={...status,generation:status.generation+1};subscriber?.({...status});}if(mismatchedProfile)value.fixture_principal='foreign';return value;}},
     setInterval:()=>1,clearInterval(){},setTimeout:()=>2,clearTimeout(){}};
   const context={window,document:{getElementById:element},navigator:{onLine:false},console,queueMicrotask,classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode,installHourlyForecastKeyboard,
+    __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__:false,
     sessionStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)},
     installHomeFacts:()=>({stop(){},update(){},authenticatedProfileRestored(){return true;},async restoreProfileFacts(){return true;}}),App:{addListener:async()=>{}},Network:{addListener:async()=>{}},StatusBar:{hide:async()=>{}},Promise,Date,Error};
   vm.createContext(context);

@@ -38,6 +38,8 @@ const readinessObservation = createReadinessObservation();
 let readinessManagerRequired = false;
 let readinessReadSequence = 0;
 let readinessConnected = navigator.onLine === true;
+const ownerTestReadinessSupport = typeof __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__ !== 'undefined'
+  && __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__ === true;
 function readinessPrincipal() { return window.MemphisMobile?.principalIdentity?.() || ''; }
 function paintReadiness(input) {
   const result = readinessPresentation(classifyReadiness(input), input);
@@ -53,6 +55,13 @@ function paintReadiness(input) {
     if (!element) continue;
     element.hidden = result.hidden;
     element.textContent = result.hidden ? '' : `Support code: ${readinessSupportCode(input)}`;
+  }
+  for (const id of ['home-support', 'lock-support']) {
+    const element = document.getElementById(id);
+    if (!element) continue;
+    const visible = ownerTestReadinessSupport && result.hidden === false;
+    element.hidden = !visible;
+    element.textContent = visible ? `Support code: ${readinessSupportCode(input)}` : '';
   }
 }
 async function refreshReadiness() {

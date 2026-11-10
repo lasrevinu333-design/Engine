@@ -35,6 +35,11 @@ if (browserTestFlag !== undefined && browserTestFlag !== '1') {
   throw new Error('MZ_CUSTODIAL_BROWSER_TEST, when set, must be exactly 1');
 }
 const custodialBrowserTestBuild = browserTestFlag === '1';
+const ownerTestSupportFlag = process.env.MZ_CUSTODIAL_OWNER_TEST_SUPPORT;
+if (ownerTestSupportFlag !== undefined && (ownerTestSupportFlag !== '1' || edition !== 'custodial' || custodialBrowserTestBuild)) {
+  throw new Error('Owner-test readiness support requires the explicit native Custodial owner-test build');
+}
+const ownerTestReadinessSupport = ownerTestSupportFlag === '1';
 const admissionDistPattern = /^build\/custodial-codemagic-admission\/\.pending-[a-f0-9]{24}-[A-Za-z0-9]{6}\/mobile-dist$/;
 
 async function assertPrivateAdmissionDist(relativePath) {
@@ -555,7 +560,8 @@ if (edition === 'manager') {
   await injectNativeScripts('memphis-custodial-bridge.js');
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
   await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
-  await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-custodial.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-custodial.js'), target: ['es2022'],
+    define: { __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__: JSON.stringify(ownerTestReadinessSupport) } });
   for (const name of ['index.html', 'start_page1.html']) {
     const path = join(dist, name); let html = await readFile(path, 'utf8');
     html = custodialInitialReleaseHome(html,{cleaningFirst:isCleaningScope(newProducerScope)});

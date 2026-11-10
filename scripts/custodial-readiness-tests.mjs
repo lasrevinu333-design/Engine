@@ -86,7 +86,7 @@ await check('generation and principal binding reject ambiguous late positive res
   const next = o.token('a'); assert.equal(o.accept(next, 'a', positive), true);
   o.invalidate(); assert.equal(o.read(next, 'a'), null);
 });
-function fixture({ connected = true, anchored = true, pending = [], nativePending = false, session = 'none', authReject = false, cacheOnly = false, startup = 'none', delaySnapshot = false, nativeObservation = 'CONFIRMED', delayReadiness = false, localReadinessFailure = false } = {}) {
+function fixture({ connected = true, anchored = true, pending = [], nativePending = false, session = 'none', authReject = false, cacheOnly = false, startup = 'none', delaySnapshot = false, nativeObservation = 'CONFIRMED', delayReadiness = false, localReadinessFailure = false, ownerTestSupport = false } = {}) {
   const elements = new Map(), listeners = new Map(), calls = [], storage = new Map();
   let principal = 'principal-a', subscriber, releaseSnapshot, releaseReadiness;
   let status = { ...security, deviceId: 'KIOSK_08' };
@@ -118,6 +118,7 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
       } },
   };
   const context = { window, document: { getElementById: element }, navigator: { onLine: connected }, console,queueMicrotask,
+    __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__: ownerTestSupport,
     sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode, installHourlyForecastKeyboard, installHomeFacts: () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; }, async restoreProfileFacts() { return true; } }),
     Network: { addListener: async (name, fn) => listeners.set(name, fn) }, App: { addListener: async (name, fn) => listeners.set(name, fn) }, StatusBar: { hide: async () => {} } };
@@ -194,6 +195,43 @@ await check('actual controller shows malformed retained queue as integrity-visib
   assert.equal(f.elements.get('home-readiness').hidden, false);
   assert.match(f.elements.get('home-readiness').textContent, /^Do not use/);
   assert.equal(f.queueBytes(), bytes);
+});
+await check('owner-test actionable Home and Unlock reveal only the existing finite support code', async () => {
+  const f=fixture({ownerTestSupport:true,pending:[null]});const original=f.queueBytes();await f.flush();
+  for(const id of ['home-support','lock-support']){
+    assert.equal(f.elements.get(id).hidden,false);
+    assert.equal(f.elements.get(id).textContent,'Support code: S1 enrolled/unknown I1 R1 A1 Q0 P1 J:none N:CONFIRMED');
+    assert.doesNotMatch(f.elements.get(id).textContent,/principal-a|KIOSK_08|Fixture Custodian/);
+  }
+  assert.match(f.elements.get('home-readiness').textContent,/^Do not use/);assert.equal(f.queueBytes(),original);
+  f.queueEvent([],'idle');await f.flush();
+  for(const id of ['home-support','lock-support']){assert.equal(f.elements.get(id).hidden,true);assert.equal(f.elements.get(id).textContent,'');}
+});
+await check('normal native build keeps Home and Unlock support hidden without hiding its warning',async()=>{
+  const f=fixture({pending:[null]});await f.flush();
+  assert.match(f.elements.get('home-readiness').textContent,/^Do not use/);
+  for(const id of ['home-support','lock-support']){assert.equal(f.elements.get(id).hidden,true);assert.equal(f.elements.get(id).textContent,'');}
+});
+await check('owner-test healthy and ordinary pending states do not expose a support breadcrumb',async()=>{
+  for(const pending of [[],[{type:'complete_session',payload:{private:'retained'}}]]){
+    const f=fixture({ownerTestSupport:true,pending});const original=f.queueBytes();await f.flush();
+    for(const id of ['home-support','lock-support']){assert.equal(f.elements.get(id).hidden,true);assert.equal(f.elements.get(id).textContent,'');}
+    assert.equal(f.queueBytes(),original);
+  }
+});
+await check('owner-test support retains the actual corrupt-session and native observation distinction',async()=>{
+  const f=fixture({ownerTestSupport:true,session:'corrupted'});await f.flush();
+  for(const id of ['home-support','lock-support'])assert.match(f.elements.get(id).textContent,/J:corrupted N:CONFIRMED$/);
+  const native=fixture({ownerTestSupport:true,nativeObservation:'DO_NOT_USE'});await native.flush();
+  for(const id of ['home-support','lock-support'])assert.match(native.elements.get(id).textContent,/J:none N:DO_NOT_USE$/);
+});
+await check('support flag is selected only by owner-test builder and is false in default native builds',()=>{
+  assert.match(read('mobile/scripts/build-custodial-first-test.mjs'),/MZ_CUSTODIAL_OWNER_TEST_SUPPORT:'1'/);
+  const builder=read('mobile/scripts/build.mjs');
+  assert.match(builder,/const ownerTestReadinessSupport = ownerTestSupportFlag === '1'/);
+  assert.match(builder,/ownerTestSupportFlag !== '1' \|\| edition !== 'custodial' \|\| custodialBrowserTestBuild/);
+  assert.match(builder,/__MZ_CUSTODIAL_OWNER_TEST_SUPPORT__: JSON.stringify\(ownerTestReadinessSupport\)/);
+  assert.match(app,/typeof __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__ !== 'undefined'/);
 });
 await check('native current observation unknown, expired or recovery-required never promotes', async () => {
   for (const [nativeObservation, label] of [['UNKNOWN', ''], ['NEEDS_INTERNET', 'Work verification needed'], ['NEEDS_MANAGER', 'Phone repair needed'], ['DO_NOT_USE', 'Do not use']]) {

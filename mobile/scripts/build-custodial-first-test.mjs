@@ -10,7 +10,7 @@ import {verifyAndroidApkBackupSecurity} from './verify-android-apk-backup.mjs';
 import {assertCustodialReleaseManifest,resolveCustodialAndroidTools} from './verify-custodial-android-release.mjs';
 import {readCustodialBuildScope} from './custodial-new-producer-scope-policy.mjs';
 const mobile=resolve(fileURLToPath(new URL('..',import.meta.url))),root=resolve(mobile,'..');
-const env={...process.env,MZ_APP_EDITION:'custodial',MZ_SHELL_START:'1'};
+const env={...process.env,MZ_APP_EDITION:'custodial',MZ_SHELL_START:'1',MZ_CUSTODIAL_OWNER_TEST_SUPPORT:'1'};
 assert.match(env.MZ_BUILD_NUMBER||'',/^[1-9]\d*$/,'Set the explicitly allocated MZ_BUILD_NUMBER');
 assert.equal(env.MZ_RELEASE_VERSION,'1.0.0','Use the maintained Custodial versionName');
 assert.ok(!env.PROJECT_BUILD_NUMBER&&!env.BUILD_NUMBER,'Use only MZ_BUILD_NUMBER for this test artifact');
