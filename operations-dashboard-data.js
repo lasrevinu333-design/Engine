@@ -134,12 +134,38 @@
   }
   function feed(value){return hasFeed(value)&&Array.isArray(value.rows)&&value.rows.length<=10000
     &&instant(value.generated_at)!==null&&(value.state!=='snapshot'||(value.coverage==='imported_only'&&value.mailbox_completeness_verified===false))
-    ?{state:value.state,rows:value.rows,generated_at:value.generated_at}
+    ?{state:value.state,rows:value.rows,generated_at:value.generated_at,coverage:value.coverage}
     :{state:'unavailable',rows:[]};}
   function operations(payload){const d=payload?.data;
     if(payload?.ok!==true||d?.schema!=='custodial.operations-board.v1'||d.timezone!==ZONE
       ||instant(d.generated_at)===null||!Array.isArray(d.events)||d.events.length>500)throw new Error('operations_contract_unavailable');
-    return {generated_at:d.generated_at,events:d.events,schools:feed(d.schools),spiceworks:feed(d.spiceworks)};
+    return {generated_at:d.generated_at,events:d.events,schools:feed(d.schools),spiceworks:feed(d.spiceworks),spiceworks_activity:feed(d.spiceworks_activity),city:feed(d.city)};
+  }
+  function spiceworksActivity(value,now=Date.now()){
+    const unavailable={title:'Spiceworks · last 24 hours',cards:[],note:'Recent ticket activity unavailable.'};
+    if(!hasFeed(value)||!Array.isArray(value.rows))return unavailable;
+    const cards=[],seen=new Set();
+    for(const row of value.rows){
+      const at=instant(row?.at);
+      if(!/^[1-9]\d{0,9}$/.test(row?.ticket_id||'')||!['opened','closed','reopened'].includes(row.kind)||at===null)return unavailable;
+      if(at<now-86400000||at>now)continue;
+      const key=`${row.ticket_id}:${row.kind}:${row.at}`;if(seen.has(key))continue;seen.add(key);
+      cards.push({id:key,source:'Spiceworks',title:`#${row.ticket_id} · ${text(row.title,'Ticket title unavailable')}`,
+        state:row.kind==='closed'?'CLOSED':'OPEN',activity:row.kind,at,
+        lines:[`${row.kind[0].toUpperCase()+row.kind.slice(1)} · ${stamp(row.at)}`]});
+    }
+    cards.sort((a,b)=>b.at-a.at);
+    return{title:'Spiceworks · last 24 hours',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported openings or closures in this period. '}Other ticket activity may not yet be received.`};
+  }
+  function cityWorkOrders(value){
+    const unavailable={title:'Open City work orders',cards:[],note:'Current City work orders unavailable.'};
+    if(value?.state!=='current'||value.coverage!=='city_active_zoo'||!Array.isArray(value.rows))return unavailable;
+    const states=['Approved','Awaiting Materials','In Progress','Ready For Review','Requested'];
+    if(value.rows.some(row=>!row?.id||!states.includes(row.status)||!row.facility?.startsWith('15Z')))return unavailable;
+    return{title:'Open City work orders',cards:value.rows.map(row=>({id:row.id,source:'City of Memphis',
+      title:`${row.work_order_id?'#'+row.work_order_id:'Request '+row.id} · ${text(row.facility)}`,state:'OPEN',
+      status:row.status,lines:[row.status,text(row.description,'Description unavailable.'),`Requested: ${stamp(row.requested_at)}`]})),
+      note:`City active list · ${value.rows.length} Zoo work orders · updated ${stamp(value.generated_at)}.`};
   }
   function attendance(payload){const d=payload?.data;
     if(payload?.ok!==true||count(d?.attendance)===null)return{value:'Unavailable',note:'Gate count source unavailable.',stale:true};
@@ -227,6 +253,6 @@
     return {...view,cards:view.cards.map(card=>({...card,lines:card.lines.filter(line=>prefixes.some(prefix=>line.startsWith(prefix)))})),
       note:summary?.meta?.audience==='public_readonly'?`Read-only cleaning status · ${stamp(summary.meta.generated_at)}. Pending work is shown separately from closed cleaning history.`:'Current cleaning status unavailable.'};
   }
-  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,attendance,weather,tickets,events,schools,cleaning,publicCleaning});
+  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,cleaning,publicCleaning});
   root.MemphisOperationsData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -39,8 +39,8 @@
       if(kind==='activity'){const feeds=activityKinds.map(kind=>view(kind));return{title:publicRead?'Open tickets':'Activity',cards:feeds.flatMap((feed,index)=>feed.cards.filter(card=>index!==1||card.active)),note:feeds.map(feed=>feed.note).join('\n')};}
       if(kind==='tickets'){const v=DATA.tickets(summary,ops?.spiceworks);return publicRead?{...v,note:'Read-only ticket details. '+v.note.split('\n').slice(1).join('\n')}:v;}
       if(kind==='events')return ops?DATA.events(ops.events,now()):{title:'Events',cards:[],note:'Structured event feed unavailable.'};
-      if(kind==='spiceworks')return {title:'Spiceworks · last 24 hours',cards:[],note:'Recent opened and closed ticket activity is unavailable.'};
-      if(kind==='city')return {title:'Open City work orders',cards:[],note:'Current City work orders are unavailable.'};
+      if(kind==='spiceworks')return DATA.spiceworksActivity(ops?.spiceworks_activity,now());
+      if(kind==='city')return DATA.cityWorkOrders(ops?.city);
       return DATA.schools(ops?.schools,now());}
     function renderBoard(force=false){if(!board)return;
       const v=view(board),fingerprint=JSON.stringify(v);if(!force&&fingerprint===boardFingerprint)return;
@@ -80,8 +80,9 @@
       const count=value=>DATA.count(value)===null?'Unknown':String(value);
       const schoolText=schoolRows.length?schoolRows.map(row=>`${DATA.text(row.name)} · ${row.date} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`).join('   •   '):ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable';
       if(el('ops-schools-ticker')?.textContent!==schoolText)txt('ops-schools-ticker',schoolText);
-      txt('ops-spiceworks-ticker','Recent opened and closed ticket activity unavailable');
-      txt('ops-city-ticker','Current City work orders unavailable');
+      const spice=view('spiceworks'),city=view('city');
+      txt('ops-spiceworks-ticker',spice.cards.length?spice.cards.map(card=>`${card.title} · ${card.lines[0]}`).join('   •   '):spice.note);
+      txt('ops-city-ticker',city.cards.length?city.cards.map(card=>`${card.title} · ${card.status} · ${card.lines[1]}`).join('   •   '):city.note);
     }
     function renderFeeds(){
       renderActivity();const locations=view('locations');
