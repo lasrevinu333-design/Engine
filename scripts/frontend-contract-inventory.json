@@ -821,6 +821,19 @@
       ]
     },
     {
+      "path": "scripts/employee-schedule-calendar-date-tests.mjs",
+      "role": "standalone-contract",
+      "reason": "Actual Home and both employee Schedule consumers request their accepted calendar date across midnight and preserve off-day and stale-response fences",
+      "invocations": [
+        {
+          "entry": "scripts/employee-schedule-calendar-date-tests.mjs",
+          "args": [],
+          "cwd": ".",
+          "requires": []
+        }
+      ]
+    },
+    {
       "path": "scripts/employee-schedule-convergence-race-tests.mjs",
       "role": "standalone-contract",
       "reason": "Declared current repository invocation; prerequisites are checked before any test child starts",
