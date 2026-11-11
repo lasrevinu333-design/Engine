@@ -105,6 +105,7 @@ window.MemphisMessengerRoute = {
 };
 
 function safe(value) { return value instanceof Error ? value.message : String(value || 'Unknown error'); }
+function displayName(value) { return String(value || '').replace(/\s*\(shared PIN(?:; self-asserted)?\)\s*$/i, '').trim(); }
 function roleTitle(user = {}) {
   const explicit = String(user.role_title || user.job_title || '').trim();
   if (explicit) return explicit;
@@ -125,7 +126,7 @@ function normalizedThread(row = {}) {
   return {
     ...row,
     id: String(row.id || row.thread_id || ''),
-    title: memphis ? 'Memphis AI' : String(row.thread_title || row.title || 'Conversation'),
+    title: memphis ? 'Memphis AI' : displayName(row.thread_title || row.title || 'Conversation'),
     type: String(row.thread_type || 'direct').toLowerCase(),
     participantNames: String(row.participant_names || ''),
     canSend: row.viewer_can_send !== false,
@@ -1136,7 +1137,7 @@ function NewConversation({ currentUserId, currentDeviceId, getCurrentIdentity, o
     <section className="mz-chat-new-card">
       <header className="mz-chat-new-head">
         <h2>{EMPLOYEE_CONTEXT ? 'New Message' : 'Start Conversation'}</h2>
-        <p>{EMPLOYEE_CONTEXT ? 'Tap the person you want to message.' : 'Choose one person for a direct message or several people for a Memphis Zoo group.'}</p>
+        <p>{EMPLOYEE_CONTEXT ? 'Tap the person you want to message. Then type in the message box at the bottom.' : 'Choose a person, then tap Open conversation to type your message. Select several people for a group.'}</p>
         {!EMPLOYEE_CONTEXT && selected.size > 1 && <input className="mz-chat-input" disabled={busy || hasPendingGroup} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="Group name (optional)" />}
       </header>
       <div className="mz-chat-new-list">
@@ -1156,7 +1157,7 @@ function NewConversation({ currentUserId, currentDeviceId, getCurrentIdentity, o
       <footer className="mz-chat-new-actions">
         <button className="mz-button" type="button" onClick={onClose} disabled={busy}>{EMPLOYEE_CONTEXT ? 'Back' : 'Cancel'}</button>
         {status === 'People could not load.' && <button className="mz-button primary" type="button" onClick={() => setLoadAttempt((value) => value + 1)}>Try Again</button>}
-        {!EMPLOYEE_CONTEXT && <button className="mz-button primary" type="button" onClick={() => void create()} disabled={busy || pendingGroup.held || (pendingGroup.legacyRaw !== null && pendingGroup.raw === null) || !selected.size}>Create</button>}
+        {!EMPLOYEE_CONTEXT && <button className="mz-button primary" type="button" onClick={() => void create()} disabled={busy || pendingGroup.held || (pendingGroup.legacyRaw !== null && pendingGroup.raw === null) || !selected.size}>{selected.size>1?'Open group':'Open conversation'}</button>}
       </footer>
     </section>
   </div>;
@@ -1207,6 +1208,8 @@ function MessengerApp() {
   const emojiPanel = useRef(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [accessBlocked, setAccessBlocked] = useState(false);
+  const [assistantOpening, setAssistantOpening] = useState(false);
+  const assistantClick = useRef(false);
   const accessEpoch = useRef(0);
   const messageLoadSequence = useRef(0);
   const draftKey = `${identity?.msg_user_id || ''}:${selectedId}`;
@@ -1239,7 +1242,7 @@ function MessengerApp() {
 
   const [deviceIdentity, setDeviceIdentity] = useState(() => {
     const nativeAuthority = isNativeCustodialAuthority();
-    return { ready: !nativeAuthority, deviceId: nativeAuthority ? '' : deviceId(), generation:null };
+    return { ready: EMPLOYEE_CONTEXT && !nativeAuthority, deviceId: EMPLOYEE_CONTEXT && !nativeAuthority ? deviceId() : '', generation:null };
   });
   const currentDeviceId = deviceIdentity.deviceId;
   const selectedThread = useMemo(() => threads.find((thread) => thread.id === selectedId) || null, [threads, selectedId]);
@@ -1278,6 +1281,21 @@ function MessengerApp() {
 
   useEffect(() => {
     let active = true;
+    if (!EMPLOYEE_CONTEXT) {
+      // Resolve the existing trusted browser session before capturing its device
+      // identity. A restored cohort session may have a different canonical ID
+      // from the unbound browser ID; no message/profile operation exists yet.
+      const auth=window.MemphisAuth,read=auth?.readSession,requireSession=auth?.requireOpsManagerSession,getDevice=auth?.getDeviceId;
+      (async()=>{
+        if(typeof read!=='function'||typeof requireSession!=='function'||typeof getDevice!=='function')throw custodialWorkUnavailable();
+        const session=read.call(auth)||await requireSession.call(auth,{accessLevel:'full_access',interactive:true,redirect:false,throwOnFailure:true});
+        if(!active)return;
+        if(window.MemphisAuth!==auth||auth.readSession!==read||auth.requireOpsManagerSession!==requireSession||auth.getDeviceId!==getDevice
+          ||read.call(auth)!==session||!session||session.device_id!==getDevice.call(auth))throw custodialWorkUnavailable();
+        setDeviceIdentity({ready:true,deviceId:session.device_id,generation:null});
+      })().catch(error=>{if(active)setNotice(safe(error),'error');});
+      return()=>{active=false;};
+    }
     const update = () => {
       if (!active) return;
       const security = window.MemphisCustodialSecurity?.getStatus?.();
@@ -1667,6 +1685,7 @@ function MessengerApp() {
     const epoch = accessEpoch.current;
     const selection = selectedRef.current;
     const generation = deviceIdentity.generation;
+    const assertManager = !EMPLOYEE_CONTEXT ? originalManagerOutboxOwner(identityRef.current,currentDeviceId,identityRef,accessEpoch,mounted) : () => {};
     return homeAssistantEntry.current.run({
       resolveIdentity: async () => identityRef.current || await loadIdentity(),
       deviceId: currentDeviceId,
@@ -1675,11 +1694,21 @@ function MessengerApp() {
         && selectedRef.current === selection && deviceId() === currentDeviceId
         && (!isNativeCustodialAuthority() || window.MemphisCustodialSecurity?.getStatus?.()?.generation === generation),
       hasPendingDeletion: (mapped) => pendingDeletedThreadIds(mapped.msg_user_id, currentDeviceId).size > 0,
-      request: api,
-      readThreads: () => loadThreads({ preferId: selectedRef.current }),
+      request: (path,options) => { assertManager(); return api(path,{...options,assertCurrent:assertManager}); },
+      readThreads: () => { assertManager(); return loadThreads({ preferId: selectedRef.current,assertCurrent:assertManager }); },
       select: selectThread,
     });
   }, [currentDeviceId, deviceIdentity.generation, loadIdentity, loadThreads, selectThread]);
+
+  const openAssistant = async () => {
+    if(assistantClick.current||!identityRef.current?.msg_user_id||identityRef.current.read_only||accessBlocked)return;
+    const existing=threadsRef.current.find(thread=>isMemphis(thread)&&thread.is_active!==false);
+    if(existing){selectThread(existing.id);return;}
+    if(!homeAssistantEntry.current.request())return;
+    assistantClick.current=true;setAssistantOpening(true);
+    try{await resolveHomeAssistant();}catch(error){setNotice(safe(error),'error');}
+    finally{assistantClick.current=false;if(mounted.current)setAssistantOpening(false);}
+  };
 
   const flushMessageOutbox = useCallback(async () => {
     const mapped = identityRef.current;
@@ -2578,8 +2607,9 @@ function MessengerApp() {
   return <div className={appClass}>
     <header className={`mz-chat-toolbar${mobileThread ? ' thread-toolbar' : ''}`}>
       <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) { mobileThreadRef.current = false; setMobileThread(false); } else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
-      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? identity.display_name : `${identity.display_name} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
+      <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? displayName(identity.display_name) : `${displayName(identity.display_name)} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
       {!mobileThread && <button className="mz-button primary" type="button" disabled={!identity?.msg_user_id || identity.read_only || accessBlocked} onClick={() => setNewConversation(true)}>New</button>}
+      <button className="mz-ask-memphis" type="button" aria-label="Ask Memphis" title="Ask Memphis" disabled={!identity?.msg_user_id||identity.read_only||accessBlocked||assistantOpening} onClick={()=>void openAssistant()}><img src={MEMPHIS_AVATAR} alt=""/><span>Ask Memphis</span></button>
     </header>
     <section className="mz-chat-stage">
       <MainContainer>

@@ -21,7 +21,7 @@ assert.equal((app.match(/setInterval\([\s\S]{0,250}resolveHomeAssistant/g)||[]).
 let checks=8;
 const id='10000000-0000-4000-8000-000000000001';
 function fixture(){const actor={msg_user_id:'synthetic-user',read_only:false};const calls=[],selected=[];
- const ctx={accessEpoch:{current:1},selectedRef:{current:''},deviceIdentity:{generation:7},mounted:{current:true},
+ const ctx={EMPLOYEE_CONTEXT:true,accessEpoch:{current:1},selectedRef:{current:''},deviceIdentity:{generation:7},mounted:{current:true},
   identityRef:{current:actor},currentDeviceId:'synthetic-device',homeAssistantEntry:{current:createHomeAssistantEntry(true)},
   actualDevice:'synthetic-device',actualGeneration:7,pending:new Set(),window:{MemphisCustodialSecurity:{getStatus:()=>({generation:ctx.actualGeneration})}},
   deviceId:()=>ctx.actualDevice,isNativeCustodialAuthority:()=>true,loadIdentity:async()=>actor,

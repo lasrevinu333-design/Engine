@@ -43,5 +43,6 @@ export function createHomeAssistantEntry(enabled) {
     inFlight = tracked;
     return tracked;
   }
-  return { run, cancel };
+  const request = () => { if (inFlight) return false; pending=true; generation+=1; return true; };
+  return { run, cancel, request };
 }
