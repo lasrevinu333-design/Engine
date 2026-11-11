@@ -257,10 +257,14 @@ pass('phone pin offsets remain bounded and every original ID is retained even in
  const isolated=[{id:'alone',x:90,y:90}];assert.deepEqual(renderer.separatePins(isolated,{width:200,bottom:200}).get('alone'),{x:90,y:90});
 });
 pass('all 47 icons reserve enlarged status size at every supported map width',()=>{
- for(const width of [900,1000,1100,1282,1440,1877]){
+ for(const width of [899.71875,900,1000,1100,1282,1440,1877]){
   const scale=width/1282,points=raw.locations.map(p=>({id:p.locationId,x:p.approvedOverlayCanvasPoint.x*scale,y:p.approvedOverlayCanvasPoint.y*scale}));
   const placed=renderer.separatePins(points,{width,top:55*scale,bottom:431*scale}),values=[...placed.values()];
   assert.equal(values.length,47);
+  for(const point of points){const actual=placed.get(point.id);
+   assert.ok(Math.hypot(actual.x-point.x,actual.y-point.y)<=150.000001,'original anchor displacement remains bounded');
+  }
+  assert.deepEqual([...placed],[...renderer.separatePins([...points].reverse(),{width,top:55*scale,bottom:431*scale})]);
   for(let i=0;i<values.length;i++){
    assert.ok(values[i].x>=21&&values[i].x<=width-21);
    assert.ok(values[i].y>=55*scale+21&&values[i].y<=431*scale-21);

@@ -26,8 +26,8 @@
   function separatePins(points,{width,top=0,bottom}){
     const placed=[],result=new Map(),gap=42,maxOffset=150;
     const inside=p=>p.x>=21&&p.x<=width-21&&p.y>=top+21&&p.y<=bottom-21;
-    const collision=p=>placed.reduce((sum,q)=>sum+Math.max(0,gap-Math.hypot(p.x-q.x,p.y-q.y))**2,0);
-    for(const point of [...points].sort((a,b)=>a.id.localeCompare(b.id))){
+    function position(point,neighbors){
+      const collision=p=>neighbors.reduce((sum,q)=>sum+Math.max(0,gap-Math.hypot(p.x-q.x,p.y-q.y))**2,0);
       let best={x:point.x,y:point.y},score=Infinity,found=false;
       for(let radius=0;radius<=maxOffset&&!found;radius+=4){
         const count=radius?Math.ceil(2*Math.PI*radius/4):1;
@@ -37,6 +37,26 @@
           const overlap=collision(p),cost=overlap*100+radius;
           if(cost<score){best=p;score=cost;}
           if(overlap===0){best=p;found=true;break;}
+        }
+      }
+      return {best,found};
+    }
+    const ordered=[...points].sort((a,b)=>a.id.localeCompare(b.id));
+    for(const point of ordered){
+      let {best,found}=position(point,placed);
+      // A greedy earlier choice can consume the final available slot in a
+      // dense group. Retry that one neighbor, retaining all other placements,
+      // the same spacing, bounds and 150px limit. Skip infeasibly small maps.
+      if(!found&&width*(bottom-top)>=points.length*gap*gap){
+        const neighbors=placed.map((p,index)=>({index,distance:Math.hypot(p.x-best.x,p.y-best.y)}))
+          .filter(p=>p.distance<gap*2).sort((a,b)=>a.distance-b.distance||a.index-b.index);
+        for(const {index} of neighbors){
+          const remaining=placed.filter((_,i)=>i!==index),candidate=position(point,remaining);
+          if(!candidate.found)continue;
+          const replacement=position(ordered[index],[...remaining,candidate.best]);
+          if(!replacement.found)continue;
+          placed[index]=replacement.best;result.set(ordered[index].id,replacement.best);
+          best=candidate.best;found=true;break;
         }
       }
       placed.push(best);result.set(point.id,best);
