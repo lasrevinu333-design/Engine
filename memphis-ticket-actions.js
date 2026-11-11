@@ -1,6 +1,14 @@
 (function(root){'use strict';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-function principal(auth){const s=auth?.readSession?.(),p=s?.permissions;if(s?.role!=='ops_manager'||!s.token||!UUID.test(s.manager_id||'')||!UUID.test(s.credential_id||'')||!(Date.parse(s.expires_at)>Date.now())||p?.schema!=='custodial.manager-permissions.v1'||p.read!==true||p.close_scan_tickets!==true)return null;return[s.manager_id,s.credential_id,s.device_id||''].join('|');}
+function principal(auth){
+ const s=auth?.readSession?.(),p=s?.permissions;
+ // The existing PIN adapter binds this cohort permission to the live server
+ // session. A copied flag or chosen display name is not manager authority.
+ const canClose=s?.auth_mode==='custodial_leadership_pin'
+  ?auth?.isCustodialManagementAdmin?.(s)===true:p?.close_scan_tickets===true;
+ if(s?.role!=='ops_manager'||!s.token||!UUID.test(s.manager_id||'')||!UUID.test(s.credential_id||'')||!(Date.parse(s.expires_at)>Date.now())||p?.schema!=='custodial.manager-permissions.v1'||p.read!==true||!canClose)return null;
+ return[s.manager_id,s.credential_id,s.device_id||''].join('|');
+}
 function create({auth=root.MemphisAuth,fetchImpl=(...args)=>root.fetch(...args),origin='https://memphis-zoo-mcp.onrender.com'}={}){
  let current=null,records=new Map(),generation=0;const pending=new Set();
  function clear(){current=null;records=new Map();generation++;}

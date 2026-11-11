@@ -53,7 +53,7 @@ await check('held diagnostics distinguish retained legacy work without disclosin
 });
 await check('four exact labels with deterministic integrity/manager/pending priority', () => {
   assert.equal(classifyReadiness(positive).label, 'Ready for work');
-  assert.equal(classifyReadiness({ ...positive, queue: [{}] }).label, 'Needs internet');
+  assert.equal(classifyReadiness({ ...positive, queue: [{}] }).label, 'Saved work awaiting confirmation');
   assert.equal(classifyReadiness({ ...positive, authRejected: true }).label, 'Phone repair needed');
   assert.equal(classifyReadiness({ ...positive, security: { ...security, quarantined: true }, authRejected: true }).label, 'Do not use');
 });
@@ -110,13 +110,13 @@ await check('generation and principal binding reject ambiguous late positive res
   const next = o.token('a'); assert.equal(o.accept(next, 'a', positive), true);
   o.invalidate(); assert.equal(o.read(next, 'a'), null);
 });
-function fixture({ connected = true, anchored = true, pending = [], nativePending = false, session = 'none', authReject = false, cacheOnly = false, startup = 'none', delaySnapshot = false, nativeObservation = 'CONFIRMED', delayReadiness = false, localReadinessFailure = false, ownerTestSupport = false, actualSessionRows = null } = {}) {
+function fixture({ connected = true, anchored = true, pending = [], nativePending = false, session = 'none', authReject = false, cacheOnly = false, startup = 'none', delaySnapshot = false, nativeObservation = 'CONFIRMED', nativeReason = null, delayReadiness = false, localReadinessFailure = false, ownerTestSupport = false, actualSessionRows = null } = {}) {
   const elements = new Map(), listeners = new Map(), calls = [], storage = new Map();
   let principal = 'principal-a', subscriber, releaseSnapshot, releaseReadiness;
   let status = { ...security, deviceId: 'KIOSK_08', principal: { device_id: 'KIOSK_08' } };
   const protectedValues = new Map(Object.entries(actualSessionRows || {})), protectedReads = [], protectedWrites = [];
   let queue = structuredClone(pending);
-  let nativeState = { ...positive.nativeState, observation: nativeObservation, pending_occurrences: nativePending };
+  let nativeState = { ...positive.nativeState, observation: nativeObservation, reason: nativeReason, pending_occurrences: nativePending, protected_work_admission: nativePending ? 'PENDING' : 'CLEAR', unfinished_occurrence: nativePending && session === 'open' };
   const readinessGate = delayReadiness ? new Promise(resolve => { releaseReadiness = resolve; }) : Promise.resolve();
   const snapshotGate = delaySnapshot ? new Promise(resolve => { releaseSnapshot = resolve; }) : Promise.resolve();
   const element = id => {
@@ -281,6 +281,37 @@ await check('native current observation unknown, expired or recovery-required ne
   for (const field of ['pending_occurrences', 'unfinished_occurrence', 'rollback_fence_active'])
     assert.equal(classifyReadiness({ ...positive, nativeState: { ...positive.nativeState, [field]: null } }).state, 'needs_internet');
 });
+
+await check('ordinary active native work retains its Finish card without a false permission warning', async () => {
+  const f=fixture({nativeObservation:'NEEDS_INTERNET',nativeReason:'original_finish_pending',nativePending:true,session:'open'});
+  const before=f.queueBytes();await f.flush();
+  assert.equal(f.elements.get('home-readiness').hidden,true);
+  assert.equal(f.elements.get('active-cleaning').hidden,false);
+  assert.equal(f.queueBytes(),before);
+});
+await check('pending receipt remains visible without claiming Wi-Fi or permission failure', async () => {
+  for(const connected of [true,false]){
+    const input={...positive,connected,nativeState:{...positive.nativeState,observation:'NEEDS_INTERNET',reason:'original_receipt_pending',protected_work_admission:'PENDING',pending_occurrences:true}};
+    const before=JSON.stringify(input),result=classifyReadiness(input),shown=readinessPresentation(result,input);
+    assert.equal(result.state,'needs_internet');assert.equal(shown.hidden,false);
+    assert.equal(shown.label,'Saved work awaiting confirmation');assert.match(shown.detail,/Saved on this phone/);
+    assert.doesNotMatch(shown.detail,/must verify|before new cleaning/);assert.equal(JSON.stringify(input),before);
+  }
+  const f=fixture({nativeObservation:'NEEDS_INTERNET',nativeReason:'original_receipt_pending',nativePending:true});await f.flush();
+  assert.equal(f.elements.get('home-readiness').hidden,false);assert.match(f.elements.get('home-readiness').textContent,/^Saved work awaiting confirmation/);
+});
+await check('pending flags cannot hide expired permission, recovery, unknown state or an unmatched original Finish', () => {
+  const normal={...positive,nativeState:{...positive.nativeState,observation:'NEEDS_INTERNET',reason:'original_receipt_pending',protected_work_admission:'PENDING',pending_occurrences:true}};
+  for(const patch of [{reason:'anchor_expired'},{native_clock_continuity:'EXPIRED'},{read_only:false},{protected_work_admission:'UNKNOWN'},{pending_occurrences:false},{reason:'original_finish_pending',unfinished_occurrence:true}]){
+    const input={...normal,nativeState:{...normal.nativeState,...patch}};
+    const shown=readinessPresentation(classifyReadiness(input),input);assert.equal(shown.hidden,false);assert.equal(shown.label,'Work verification needed');
+  }
+  for(const patch of [{authRejected:true},{integrityFailure:true},{localReadinessUnavailable:true}]){
+    const input={...normal,...patch};const shown=readinessPresentation(classifyReadiness(input),input);
+    assert.equal(shown.hidden,false);assert.notEqual(shown.label,'Saved work awaiting confirmation');
+  }
+});
+
 await check('security generation change invalidates an outstanding same-principal native observation', async () => {
   const f = fixture({ delayReadiness: true }); await f.flush(); f.changeGeneration();
   assert.doesNotMatch(f.elements.get('home-readiness').textContent, /^Ready for work/);

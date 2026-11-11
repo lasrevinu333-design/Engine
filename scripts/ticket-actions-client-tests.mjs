@@ -21,3 +21,25 @@ test('double-click cannot dispatch two simultaneous closures',async()=>{const f=
 test('expired manager cannot acquire closure permission',async()=>{const f=fixture();f.patch({expires_at:'2020-01-01'});assert.equal(await f.actions.refresh(rows),false);assert.equal(f.calls.length,0);});
 
 test('closure cannot silently invent a fixed outcome or work order',async()=>{const f=fixture();await f.actions.refresh(rows);for(const choice of [{},{outcome:'work_order_sent'},{outcome:'mark_fixed',reference:'not-applicable'}])await assert.rejects(f.actions.close(TID,choice));assert.equal(f.calls.length,1);});
+
+const cohortPermissions={schema:'custodial.manager-permissions.v1',read:true,owner:false,custodialManagementAdmin:true,policyVersion:1};
+test('bound PIN manager uses existing server ticket eligibility without legacy permission flag',async()=>{
+ const f=fixture();f.patch({auth_mode:'custodial_leadership_pin',read_only:false,permissions:cohortPermissions});
+ f.auth.isCustodialManagementAdmin=s=>s===f.auth.readSession();
+ assert.equal(await f.actions.refresh(rows),true);assert.equal(f.actions.status(TID).can_close,true);
+ assert.equal(f.actions.status(OTHER).can_close,false);await assert.rejects(f.actions.close(OTHER,{outcome:'mark_fixed'}));
+ const r=await f.actions.close(TID,{outcome:'mark_fixed'});assert.equal(r.ticket_id,TID);
+});
+test('copied cohort flags and an unbound legacy flag cannot grant PIN-manager access',async()=>{
+ for(const binding of [undefined,()=>false]){
+  const f=fixture();f.patch({auth_mode:'custodial_leadership_pin',permissions:{...cohortPermissions,close_scan_tickets:true}});
+  f.auth.isCustodialManagementAdmin=binding;assert.equal(await f.actions.refresh(rows),false);assert.equal(f.calls.length,0);
+ }
+ const f=fixture();f.patch({role:'public_viewer',permissions:cohortPermissions});f.auth.isCustodialManagementAdmin=()=>true;
+ assert.equal(await f.actions.refresh(rows),false);assert.equal(f.calls.length,0);
+});
+test('revoked cohort binding invalidates previously read ticket eligibility',async()=>{
+ const f=fixture();let current=true;f.patch({auth_mode:'custodial_leadership_pin',permissions:cohortPermissions});
+ f.auth.isCustodialManagementAdmin=()=>current;await f.actions.refresh(rows);current=false;
+ assert.equal(f.actions.status(TID),null);await assert.rejects(f.actions.close(TID,{outcome:'mark_fixed'}));assert.equal(f.calls.length,1);
+});

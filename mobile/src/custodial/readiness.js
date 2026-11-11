@@ -21,7 +21,7 @@ export function classifyReadiness(input = {}) {
     return result('needs_manager', 'Phone repair needed', 'Phone verification or saved-work recovery could not finish. Nothing has been erased.');
   }
   if ((Array.isArray(queue) && queue.length > 0) || nativeState?.pending_occurrences === true || nativeState?.unfinished_occurrence === true) {
-    return result('needs_internet', 'Needs internet', 'Saved work is pending confirmation. Reconnect and let automatic sync finish; an open cleaning still uses the same tag to finish.');
+    return result('needs_internet', 'Saved work awaiting confirmation', 'Saved work is pending confirmation. Automatic sync retains it until acknowledged; an open cleaning still uses the same tag to finish.');
   }
   if (input.connected === true && security.ready === true && security.available === true && security.state === 'enrolled'
     && input.principalPresent === true && input.profileMatches === true && input.serverConfirmed === true
@@ -48,8 +48,27 @@ export function readinessPresentation(result, input = {}) {
     return Object.freeze({ ...result, hidden: false, label: 'Saved work verification needed',
       detail: 'The phone could not check protected saved work. Repair is required; do not reset the phone.' });
   }
-  // This is an authoritative native work-verification constraint, not a
-  // navigator/network-status observation. Retain a notice without blaming Wi-Fi.
+  // The native observation also uses NEEDS_INTERNET for ordinary work awaiting
+  // a finish or receipt. Its exact reason distinguishes that from an expired
+  // permission. This presentation never changes native work admission.
+  const native = input.nativeState;
+  const ordinaryPending = !actionable && native?.observation === 'NEEDS_INTERNET'
+    && native.read_only === true && native.native_clock_continuity === 'CONFIRMED'
+    && native.protected_work_admission === 'PENDING' && native.pending_occurrences === true
+    && native.rollback_fence_active === false;
+  if (ordinaryPending && native.reason === 'original_finish_pending'
+    && native.unfinished_occurrence === true && input.sessionState === 'open') {
+    // The active-cleaning card already identifies the original same-tag Finish.
+    return Object.freeze({ ...result, hidden: true, label: '', detail: '' });
+  }
+  if (ordinaryPending && native.reason === 'original_receipt_pending' && native.unfinished_occurrence === false) {
+    return Object.freeze({ ...result, hidden: false, label: 'Saved work awaiting confirmation',
+      detail: input.connected === false
+        ? 'Saved on this phone. Automatic sync will continue when a connection is available.'
+        : 'Saved on this phone. Automatic sync is waiting for confirmation.' });
+  }
+  // Missing/expired authority, changed identity or clock continuity still needs
+  // verification. Merely having Wi-Fi does not resolve those native reasons.
   if (!actionable && input.nativeState?.observation === 'NEEDS_INTERNET') {
     return Object.freeze({ ...result, hidden: false, label: 'Work verification needed',
       detail: 'The phone must verify current permission before new cleaning. Saved work is retained.' });

@@ -1213,3 +1213,19 @@ test('upcoming school board preserves tomorrow and historical dates without pret
  assert.match(board.note,/Today.*50 students.*58 reported quantity/);assert.doesNotMatch(board.note,/150 students/);
  assert.match(board.history[0].lines.join(' '),/Past scheduled date.*not independently confirmed/);
 });
+
+test('internal Custodial ticket ticker and board exclude external Spiceworks inventory for both audiences',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});await loaded(f,{operations:{ok:true,data:{...payload.data,spiceworks:{state:'current',rows:[{ticket_id:'external-only',title:'External fixture',custodial:true,active:true,status:'Open'}]}}}});
+  const ticker=f.text(f.elements['ops-tickets-ticker']);assert.match(ticker,/Fixture.*Fixture issue/);assert.doesNotMatch(ticker,/External fixture/);
+  f.controller.openBoard('tickets');const board=f.text(f.content);assert.match(board,/Fixture issue/);assert.doesNotMatch(board,/External fixture|Mark fixed|Work order sent/);
+  f.controller.summaryUnavailable();assert.match(f.text(f.elements['ops-tickets-ticker']),/unavailable/);f.clean();
+ }
+});
+test('internal Custodial ticker sits directly below map before Spiceworks and City without map closure controls',()=>{
+ for(const name of ['operations-dashboard.html','ops-viewer.html']){
+  const html=readFileSync(new URL('../'+name,import.meta.url),'utf8');
+  const mapEnd=html.indexOf('data-map-alerts'),tickets=html.indexOf('data-board="tickets"'),spice=html.indexOf('data-board="spiceworks"'),city=html.indexOf('data-board="city"');
+  assert.ok(mapEnd>=0&&mapEnd<tickets&&tickets<spice&&spice<city);assert.equal((html.match(/id="ops-tickets-ticker"/g)||[]).length,1);
+ }
+});

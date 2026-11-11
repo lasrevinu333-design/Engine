@@ -26,7 +26,7 @@
     const txt=(id,value)=>{const node=el(id);if(node&&node.textContent!==String(value))node.textContent=value;};
     const make=(tag,value,klass)=>{const node=document.createElement(tag);if(value!=null)node.textContent=value;if(klass)node.className=klass;return node;};
     function measureTickers(){
-      for(const kind of ['activity','events','schools','spiceworks','city','locations']){
+      for(const kind of ['activity','tickets','events','schools','spiceworks','city','locations']){
         const track=el('ops-'+kind+'-ticker'),width=track?.parentElement?.clientWidth;
         if(!width||!track.style)continue;
         const distance=Math.max(0,track.getBoundingClientRect().width-width);
@@ -78,7 +78,7 @@
       return{...v,title:nearbyIds?'Nearby locations':v.title,cards:v.cards.filter(p=>!nearbyIds||nearbyIds.includes(p.id))};}
     function view(kind){if(kind==='locations')return locationBoard();
       if(kind==='activity'){const feeds=activityKinds.map(kind=>view(kind));return{title:publicRead?'Open tickets':'Activity',cards:feeds.flatMap((feed,index)=>feed.cards.filter(card=>index!==1||card.active)),note:feeds.map(feed=>feed.note).join('\n')};}
-      if(kind==='tickets'){const v=DATA.tickets(summary,ops?.spiceworks);return publicRead?{...v,note:'Read-only ticket details. '+v.note.split('\n').slice(1).join('\n')}:v;}
+      if(kind==='tickets')return {...DATA.tickets(summary,null),note:!summary?'Internal Custodial tickets unavailable.':publicRead?'Read-only internal Custodial tickets.':'Open the Dashboard to resolve eligible internal Custodial tickets.'};
       if(kind==='events')return ops?DATA.events(ops.events,now()):{title:'Events',cards:[],note:'Structured event feed unavailable.'};
       if(kind==='spiceworks')return DATA.spiceworksActivity(ops?.spiceworks_activity,now());
       if(kind==='city')return DATA.cityWorkOrders(ops?.city);
@@ -123,6 +123,8 @@
       const count=value=>DATA.count(value)===null?'Unknown':String(value);
       const schoolText=schoolRows.length?schoolRows.map(row=>`${DATA.text(row.name)} · ${row.date} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`).join('   •   '):ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable';
       if(el('ops-schools-ticker')?.textContent!==schoolText)txt('ops-schools-ticker',schoolText);
+      const internal=view('tickets');
+      recordTicker('ops-tickets-ticker',internal.cards.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]}`),summary?'No open Custodial tickets':'Custodial tickets unavailable');
       const spice=view('spiceworks'),city=view('city');
       txt('ops-spiceworks-ticker',spice.cards.length?spice.cards.map(card=>`${card.title} · ${card.lines[0]}`).join('   •   '):spice.note);
       recordTicker('ops-city-ticker',city.cards.map(card=>`${card.title} · ${card.status} · ${card.lines[1]}`),city.note);
@@ -203,13 +205,13 @@
         if(!publish())return;let replacement=null;try{replacement=DATA.operations(value);}catch{}
         delayedFeeds.clear();
         if(replacement){
-          for(const [field,kind] of [['schools','schools'],['spiceworks','tickets'],['spiceworks_activity','spiceworks'],['city','city']]){
+          for(const [field,kind] of [['schools','schools'],['spiceworks_activity','spiceworks'],['city','city']]){
             if(replacement[field]?.state==='unavailable'&&ops?.[field]?.state!=='unavailable'&&ops?.[field]){
               replacement[field]=ops[field];delayedFeeds.add(kind);
             }
           }
           ops=replacement;
-        }else if(ops)for(const kind of ['events','schools','spiceworks','city','tickets'])delayedFeeds.add(kind);
+        }else if(ops)for(const kind of ['events','schools','spiceworks','city'])delayedFeeds.add(kind);
         renderFeeds();
       }));
       await Promise.allSettled(tasks);
