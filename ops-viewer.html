@@ -9,7 +9,7 @@
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css">
   <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
-  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.11.operations-layout">
+  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.11.map-cleanup">
   <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
 </head><body class="mapWebPage operationsPage" data-memphis-context="viewer">
   <main class="mapPage commandPage">
@@ -34,9 +34,8 @@
     <section class="mzMapStage uxCard commandMap" id="dashboard-map" data-map-presentation="original-horizontal" aria-label="Custodial operations map" hidden>
       <div class="mapScreenReader" data-map-status role="status">Map cleaning status unavailable until a current response</div>
       <div class="mapArtworkFrame" aria-label="Approved zoo map"><div class="mzMapViewport" data-map-viewport aria-label="Whole approved zoo map"><div class="mzMapSurface" data-map-surface><img class="mzMapArtwork" data-map-artwork alt="Original approved horizontal illustrated Memphis Zoo map; cleaning icons are separate interactive controls" width="1282" height="550"><div class="mzMapLayer" data-map-layer></div></div></div></div>
-      <div class="mzMapSelection" id="map-selection" data-map-selection role="status" aria-live="polite">Select a map pin or the locations board.</div>
-      <div class="metricNote" id="ops-location-note">Cleaning pins show location status; they do not represent employee positions.</div>
-      <details class="mapAttention"><summary>All locations needing attention <span data-map-alert-count>0</span></summary><ul class="mzMapAlertList" data-map-alerts></ul></details>
+      <div data-map-selection hidden></div>
+      <ul data-map-alerts hidden></ul>
     </section>
 
       <button type="button" class="tickerBand" data-board="spiceworks" aria-label="Spiceworks tickets opened and closed in the last 24 hours"><span class="tickerLabel">SPICEWORKS · 24H</span><span class="tickerWindow"><span class="tickerTrack" id="ops-spiceworks-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
