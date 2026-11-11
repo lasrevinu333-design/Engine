@@ -13,7 +13,8 @@ check(home,original,'all Home source bytes, artwork and facts preserved');
 check((home.match(/class="homeButton deferredFeature" disabled aria-disabled="true"/g)||[]).length,0,'no manufactured disabled buttons');
 check((home.match(/<a class="homeButton"/g)||[]).length,5,'four operational entries and one local Supplies placeholder');
 assert.match(home,/<a class="homeButton" href="\.\/employee-schedule.html\?hub=employee">/);checks++;
-check((home.match(/class="memphisHome"/g)||[]).length,1,'direct in-app Memphis preserved');
+check((home.match(/class="memphisHome"/g)||[]).length,0,'duplicate Ask Memphis block removed from employee Hub');
+check((home.match(/<a class="homeButton" href="\.\/messages\.html\?hub=employee">/g)||[]).length,1,'one direct Memphis Messenger entry retained');
 check(home.includes('deferredFeature'),false,'no deferred styling injected');
 for(const feature of ['cleaning','schedule','messenger','events','feedback'])check(CUSTODIAL_RELEASE_CAPABILITIES[feature],true,'included '+feature);
 for(const id of ['home-guest-count','home-shift','home-lunch','home-schedule-freshness','employee-name','phone-lock','home-current-weather','home-clock']){
