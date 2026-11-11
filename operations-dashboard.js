@@ -20,12 +20,19 @@
     let frame=null,lastFrame=null,hold=false,paused=false,motionPaused=false,mapExpanded=false,fsEpoch=0;
     let boardToken=null,priorHistory=null,boardFingerprint='',lastMinute=null,nearbyIds=null,fallbackInert=null;
     let owner=null,currentRead=null,cleaning=null,lastAttendance=null,lastWeather=null;
-    let tickerFrame=null,tickerTime=null,returnedTicker=null;const tickerMotion=new Map();
+    let tickerFrame=null,tickerTime=null,returnedTicker=null,mapScrollSize='';const tickerMotion=new Map();
     const delayedFeeds=new Set();
     const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const txt=(id,value)=>{const node=el(id);if(node&&node.textContent!==String(value))node.textContent=value;};
     const make=(tag,value,klass)=>{const node=document.createElement(tag);if(value!=null)node.textContent=value;if(klass)node.className=klass;return node;};
     function measureTickers(){
+      const stage=el('dashboard-map');
+      if(stage?.clientWidth>0&&stage.scrollWidth>0){
+        const size=stage.clientWidth+'|'+stage.scrollWidth;
+        // Start a narrow viewport at the center of the unchanged readable map.
+        // Recenter only when its dimensions change; refreshes retain user pan.
+        if(size!==mapScrollSize){stage.scrollLeft=Math.max(0,(stage.scrollWidth-stage.clientWidth)/2);mapScrollSize=size;}
+      }
       for(const kind of ['activity','tickets','events','schools','spiceworks','city','locations']){
         const track=el('ops-'+kind+'-ticker'),width=track?.parentElement?.clientWidth;
         if(!width||!track.style)continue;

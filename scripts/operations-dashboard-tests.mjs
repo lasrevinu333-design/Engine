@@ -494,6 +494,19 @@ const loaded=async(f,{operations=payload,scan=[{ticket_id:'1',location_name:'Fix
  const calls=[];await f.controller.refresh({headers:{Authorization:'Bearer SYNTHETIC','X-Device-Id':'SYNTHETIC'},isCurrent:()=>true,summary,fetchImpl:async(url,options)=>{
   calls.push({url,options});return{ok:true,json:async()=>url.endsWith('/operations')?operations:url.includes('attendance')?{ok:true,data:{attendance:12,stale:false,source_timestamp:'2026-10-05T17:00:00Z'}}:null};}});return calls;
 };
+test('narrow map starts centered, preserves user pan on refresh, and recenters after resize',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience}),stage=f.elements['dashboard-map'];
+  stage.clientWidth=379;stage.scrollWidth=920;
+  try{
+   await loaded(f);assert.equal(stage.scrollLeft,270.5);
+   stage.scrollLeft=37;f.controller.tick();await loaded(f);assert.equal(stage.scrollLeft,37);
+   stage.clientWidth=600;f.window.emit('resize');assert.equal(stage.scrollLeft,160);
+   stage.clientWidth=0;stage.scrollWidth=0;f.controller.tick();assert.equal(stage.scrollLeft,160);
+   stage.clientWidth=920;stage.scrollWidth=920;f.window.emit('resize');assert.equal(stage.scrollLeft,0);
+  }finally{f.clean();}
+ }
+});
 test('dashboard tickers open readable boards without navigating to event intake',async()=>{
  const f=fixture();const calls=await loaded(f);assert.equal(calls.length,3);assert.equal(f.timeouts.size,0);
  for(const [i,kind]of [[0,'tickets'],[1,'events'],[2,'schools'],[3,'locations']]){

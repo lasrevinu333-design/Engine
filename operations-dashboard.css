@@ -116,3 +116,21 @@
 /* Keep all 47 pins readable on narrow screens without changing map coordinates. */
 .operationsPage .commandMap[data-map-presentation="original-horizontal"]{min-width:0;overflow-x:auto;overscroll-behavior-x:contain}
 .operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame{min-width:900px}
+
+/* Frame the opaque artwork (x=55..1141, y=55..431) rather than the
+   asymmetric transparent canvas. Keep the existing viewport dimensions and
+   shared artwork/pin/GPS surface: translating that surface cannot change its
+   scale or the positions of its contents relative to one another. The wide
+   unpainted holders remain available for pins and narrow-screen panning. */
+.operationsPage .commandPage .commandMap[data-map-presentation="original-horizontal"]{background:transparent;border-color:transparent;box-shadow:none}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame .mzMapViewport{background:transparent}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mzMapSurface{
+  --map-art-left:calc(55 / 1282 * 100%);--map-art-right:calc(141 / 1282 * 100%);
+  --map-art-top:10%;--map-art-bottom:calc(119 / 550 * 100%);
+  --map-art-center-shift:calc(43 / 1282 * 100%);
+  isolation:isolate;transform:translateX(var(--map-art-center-shift));
+}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mzMapSurface::before{
+  content:"";position:absolute;inset:var(--map-art-top) var(--map-art-right) var(--map-art-bottom) var(--map-art-left);
+  z-index:-1;border-radius:9px;background:#0d1f2f;box-shadow:0 0 0 1px var(--ux-line);pointer-events:none;
+}
