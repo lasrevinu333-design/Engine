@@ -175,7 +175,7 @@ test('public dashboard shows actual current and recorded workers and keeps pendi
  try{
   f.pending.push(async()=>({ok:true,json:async()=>({ok:true,data:value})}));await f.page.init();await flush();
   const metrics=Object.fromEntries(f.node('public-status-counts').children.map(tile=>tile.children.map(n=>n.textContent)));
-  assert.equal(metrics['Clean / okay'],'1');assert.equal(metrics.Cleaning,'1');assert.equal(metrics['Saved pending'],'1');assert.equal(metrics['Open tickets'],'1');
+  assert.equal(metrics['Clean / okay'],'1');assert.equal(metrics['In progress'],'1');assert.equal(metrics['Saved pending'],'1');assert.equal(metrics['Open tickets'],'1');
   assert.match(text(f.node('public-restrooms')),/Fixture active worker/);assert.match(text(f.node('public-restrooms')),/Fixture pending worker/);assert.match(text(f.node('public-restrooms')),/not accepted as completed/);
   assert.match(text(f.node('public-exhibits')),/Fixture recorded worker/);assert.match(text(f.node('public-exhibits')),/Original recorded service/);
   assert.match(text(f.node('public-tickets')),/<img src=x onerror=unsafe\(\)>/);

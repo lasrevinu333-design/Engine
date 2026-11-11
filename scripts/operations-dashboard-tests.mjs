@@ -410,7 +410,7 @@ test('unknown-end schools stay planned after local 13:00; date rollover is not d
  const later=D.schools(feed,Date.parse('2026-10-05T18:00:00Z'));assert.equal(later.cards.length,1);assert.equal(later.history.length,0);assert.match(later.note,/50 students.*7 adults.*57 identified people.*1 unclassified ticket units.*58 reported quantity/);
  assert.match(later.cards[0].lines.join('\n'),/Departure not provided/);assert.match(later.cards[0].lines.join('\n'),/presence and departure not independently confirmed/);
  assert.equal(D.schools(feed,Date.parse('2026-10-06T04:59:00Z')).cards.length,1);
- const tomorrow=D.schools(feed,Date.parse('2026-10-06T05:00:00Z'));assert.equal(tomorrow.cards.length,0);assert.equal(tomorrow.history.length,0);assert.match(tomorrow.note,/rollover does not confirm departure/);
+ const tomorrow=D.schools(feed,Date.parse('2026-10-06T05:00:00Z'));assert.equal(tomorrow.cards.length,0);assert.equal(tomorrow.history.length,1);assert.match(tomorrow.note,/rollover does not confirm departure/);
  const winter={...visit,date:'2026-11-02',arrival_at:'2026-11-02T15:30:00Z'};
  assert.equal(D.schools({state:'current',rows:[winter]},Date.parse('2026-11-02T18:59:59Z')).cards.length,1);
  assert.equal(D.schools({state:'current',rows:[winter]},Date.parse('2026-11-02T19:00:00Z')).cards.length,1);
@@ -479,16 +479,13 @@ const loaded=async(f,{operations=payload,scan=[{ticket_id:'1',location_name:'Fix
  const calls=[];await f.controller.refresh({headers:{Authorization:'Bearer SYNTHETIC','X-Device-Id':'SYNTHETIC'},isCurrent:()=>true,summary,fetchImpl:async(url,options)=>{
   calls.push({url,options});return{ok:true,json:async()=>url.endsWith('/operations')?operations:url.includes('attendance')?{ok:true,data:{attendance:12,stale:false,source_timestamp:'2026-10-05T17:00:00Z'}}:null};}});return calls;
 };
-test('non-event tickers retain their modal boards; Events uses one shared page',async()=>{
+test('dashboard tickers open readable boards without navigating to event intake',async()=>{
  const f=fixture();const calls=await loaded(f);assert.equal(calls.length,3);assert.equal(f.timeouts.size,0);
- for(const [i,kind]of [[0,'tickets'],[2,'schools'],[3,'locations']]){
+ for(const [i,kind]of [[0,'tickets'],[1,'events'],[2,'schools'],[3,'locations']]){
   f.triggers[i].emit('click');assert.equal(f.dialog.open,true);assert.equal(f.frames.size,1);assert.equal(f.doc.activeElement,f.elements['operations-board-close']);
-  assert.match(f.elements['operations-board-title'].textContent,new RegExp(kind==='tickets'?'tickets':kind==='locations'?'47':kind,'i'));
+  assert.match(f.elements['operations-board-title'].textContent,new RegExp(kind==='locations'?'47':kind==='schools'?'school':kind,'i'));
   f.elements['operations-board-close'].emit('click');assert.equal(f.dialog.open,false);assert.equal(f.frames.size,0);assert.equal(f.doc.activeElement,f.triggers[i]);
- }assert.equal(f.backCount,3);
- f.triggers[1].emit('click');assert.equal(f.dialog.open,false);assert.equal(f.frames.size,0);assert.equal(f.navigations.length,1);
- const target=new URL(f.navigations[0]);assert.equal(target.pathname,'/events.html');assert.equal(target.searchParams.get('hub'),'manager');assert.equal(target.searchParams.get('device'),'KIOSK_01');assert.equal(target.searchParams.has('token'),false);
- assert.equal(calls.length,3);f.clean();
+ }assert.equal(f.backCount,4);assert.equal(f.navigations.length,0);assert.equal(calls.length,3);f.clean();
 });
 test('auth headers go only to existing backend; forecast receives none',async()=>{
  const f=fixture(),calls=await loaded(f);for(const call of calls.filter(x=>x.url.includes('onrender.com')))assert.equal(call.options.headers.Authorization,'Bearer SYNTHETIC');
@@ -548,7 +545,7 @@ test('unknown school departure stays planned on shared clock tick; next date rem
  const f=fixture();await loaded(f,{operations:{ok:true,data:{...payload.data,schools:{state:'current',generated_at:'2026-10-05T17:00:00Z',rows:[visit]}}}});f.triggers[2].emit('click');
  assert.match(f.text(f.content),/Departure not provided/);f.setNow(Date.parse('2026-10-05T18:00:00Z'));f.controller.tick();
  assert.match(f.text(f.content),/Synthetic school/);assert.doesNotMatch(f.text(f.content),/Daily visit history/);assert.match(f.elements['operations-board-note'].textContent,/57 identified people.*1 unclassified ticket units.*58 reported quantity/);
- f.setNow(Date.parse('2026-10-06T05:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(f.content),/Synthetic school/);assert.match(f.elements['operations-board-note'].textContent,/arrival and departure unconfirmed/);f.clean();
+ f.setNow(Date.parse('2026-10-06T05:00:00Z'));f.controller.tick();assert.match(f.text(f.content),/Daily visit history/);assert.match(f.text(f.content),/Synthetic school/);assert.match(f.elements['operations-board-note'].textContent,/arrival and departure unconfirmed/);f.clean();
 });
 test('request timeout uses one cancellable deadline and clears unavailable feeds',async()=>{
  const f=fixture();const requests=[];
@@ -560,7 +557,7 @@ test('principal change during response cannot populate any operations data',asyn
  assert.notEqual(f.elements['ops-attendance'].textContent,'12');f.clean();
 });
 
-test('event navigation requires a current named session and never opens a duplicate board',()=>{const f=fixture();f.window.MemphisAuth.readSession=()=>null;f.triggers[1].emit('click');assert.equal(f.navigations.length,0);assert.equal(f.dialog.open,false);f.clean();});
+test('event board refuses a changed manager session',()=>{const f=fixture();f.window.MemphisAuth.readSession=()=>null;f.triggers[1].emit('click');assert.equal(f.navigations.length,0);assert.equal(f.dialog.open,false);f.clean();});
 
 const recordId=n=>`98000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const recordRow=()=>({location_id:recordId(1),location_code:'FIXTURE_RR',location_name:'Fixture restroom',
@@ -626,7 +623,7 @@ test('PRODUCT record read generation cannot retain false map cleanliness or a re
  const f=recordFixture();try{
   await loaded(f,{summary:recordSummary({...recordRow(),latest_completed_session_uuid:null,latest_completed_at:null,latest_employee_name:null})});
   f.triggers[3].emit('click');assert.match(f.text(f.content),/not accepted/i);
-  assert.doesNotMatch(f.elements['ops-status-counts'].children.map(n=>n.textContent).join(' '),/\bclean\b/);
+  assert.doesNotMatch(f.text(f.elements['ops-locations-ticker']),/— Cleaned/);
   f.setSession(null);f.controller.tick();assert.equal(f.dialog.open,false);assert.equal(f.timeouts.size,0);
  }finally{f.clean();}
 });
@@ -1205,4 +1202,14 @@ test('long ticker keeps its records and scroll position through pending, failed 
   assert.equal(track.children[0],original);assert.equal(track.parentElement.scrollLeft,16.8);
   f.controller.suspend();assert.equal(f.frames.size,0);
  }finally{f.clean();}
+});
+
+test('upcoming school board preserves tomorrow and historical dates without pretending departure',()=>{
+ const future={...visit,id:'tomorrow',name:'Tomorrow School',date:'2026-10-06',arrival_at:'2026-10-06T14:30:00Z'};
+ const past={...visit,id:'yesterday',name:'Yesterday School',date:'2026-10-04',arrival_at:'2026-10-04T14:30:00Z'};
+ const board=D.schools({state:'snapshot',generated_at:'2026-10-05T17:00:00Z',rows:[future,past,visit]},noon);
+ assert.deepEqual(board.cards.map(r=>r.id),[visit.id,future.id]);assert.equal(board.history[0].id,past.id);
+ assert.match(board.cards[1].lines[0],/2026-10-06/);assert.equal(board.cards[1].state,'SCHEDULED');
+ assert.match(board.note,/Today.*50 students.*58 reported quantity/);assert.doesNotMatch(board.note,/150 students/);
+ assert.match(board.history[0].lines.join(' '),/Past scheduled date.*not independently confirmed/);
 });

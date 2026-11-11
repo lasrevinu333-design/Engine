@@ -89,3 +89,6 @@
   :is(:root:fullscreen,:root.dashboard-expanded) .bigClock,:is(:root:fullscreen,:root.dashboard-expanded) .attendanceValue{font-size:24px}
   :is(:root:fullscreen,:root.dashboard-expanded) .telemetry .weatherCard{padding-block:3px}
 }
+
+/* Page identity and fullscreen sit above the feeds, outside the map artwork. */
+.dashboardPageHeader{display:flex;align-items:center;gap:12px;min-width:0}.dashboardPageHeader h1{margin:0;font-size:20px}.dashboardPageHeader #operations-map-fullscreen{margin-left:auto;flex:none}.dashboardTools{font-size:13px}.dashboardTools summary{cursor:pointer;padding:8px}.dashboardTools nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px}.dashboardTools a{min-height:44px}.commandPage .commandMap.mzMapStage{grid-template-rows:minmax(0,1fr) auto auto auto}.operationsPage .mapNotice:empty{display:none}@media(max-width:699px){.dashboardPageHeader{gap:6px}.dashboardPageHeader h1{font-size:16px}.dashboardPageHeader .mapTitle img{width:24px;height:24px}}

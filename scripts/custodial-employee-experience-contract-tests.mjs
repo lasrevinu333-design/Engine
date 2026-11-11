@@ -179,7 +179,7 @@ assert.match(custodialBridge, /const queuedActionCount = queueActions\.length/);
 assert.match(custodialBridge, /queued_action_count: queuedActionCount/);
 assert.match(scanSync, /startupRecoveryPending: typeof window\.MemphisMobile\?\.reconcileRecoveredPreStart === 'function'/);
 assert.match(scanSync, /releaseStartupRecoveryGate/);
-assert.match(homeApp, /const preStart = await reconcileProtectedStartup\(\);\s*if \(preStart\?\.state === 'manager_required'\) return showSetupRepairRequired\(\);\s*const requestedDevice = deviceId\(\);\s*if \(!requestedDevice\) return showAssignmentNeeded\(\);\s*try \{\s*profile = await request/);
+assert.match(homeApp, /const preStart = await reconcileProtectedStartup\(\);\s*if \(preStart\?\.state === 'connection_required'\) return showSavedWorkConnectionRequired\(\);\s*if \(preStart\?\.state === 'manager_required'\) return showSetupRepairRequired\('startup_reconciliation'\);\s*const requestedDevice = deviceId\(\);\s*if \(!requestedDevice\) return showAssignmentNeeded\(\);\s*try \{\s*profile = await request/);
 assert.match(nativeRuntimeTests, /malformedScanJournalIsPreservedAndNeverReplacedWithEmptyState/);
 assert.match(nativeRuntimeTests, /laterExactManagerRecoveryPreservesCorruptJournalAndStartsNewJournalExactlyOnce/);
 assert.match(nativeRuntimeTests, /corruptionAfterManagerRecoveryRequiresAnotherManagerRecovery/);

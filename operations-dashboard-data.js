@@ -226,9 +226,9 @@
     return{title:'Events',cards,history,note:'Structured Events data only. Cancelled, superseded and scheduled-ended records move to history; source mail is not displayed. Scheduled end is not a physical departure observation.'};
   }
   function schools(value,now){
-    const today=localDate(now),rows=hasFeed(value)?value.rows.filter(r=>r?.date===today):[];
+    const today=localDate(now),rows=hasFeed(value)?value.rows.filter(r=>/^\d{4}-\d{2}-\d{2}$/.test(r?.date||'')).slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.arrival_at||'').localeCompare(String(b.arrival_at||''))):[];
     const totals={students:0,adults:0,total:0,unclassified:0};let unknown=false;
-    for(const row of rows){if(row.status==='CANCELLED'||row.status==='SUPERSEDED')continue;
+    for(const row of rows){if(row.date!==today)continue;if(row.status==='CANCELLED'||row.status==='SUPERSEDED')continue;
       for(const key of Object.keys(totals)){if(count(row[key])===null)unknown=true;else totals[key]+=row[key];}}
     const cards=[],history=[];
     for(const row of rows){
@@ -236,20 +236,20 @@
       // The supported attachment has no departure field. Do not revive the
       // historical policy as a fact or silently adopt an unsupported end.
       const unsupportedDeparture=row.departure_at!=null||row.departure_source!=null;
-      const contradiction=unsupportedDeparture||start===null||localDate(start)!==today||row.status==='REVIEW_REQUIRED';
+      const contradiction=unsupportedDeparture||start===null||localDate(start)!==row.date||row.status==='REVIEW_REQUIRED';
       const inactive=row.status==='CANCELLED'||row.status==='SUPERSEDED';
       const identified=count(row.students)!==null&&count(row.adults)!==null?count(row.students+row.adults):null;
       const card={id:row.id,source:'School visit',title:text(row.name),state:inactive?row.status:contradiction?'REVIEW_REQUIRED':'SCHEDULED',
-        lines:[`${today} · Arrival ${clock(row.arrival_at)} · Departure not provided`,
+        lines:[`${row.date} · Arrival ${clock(row.arrival_at)} · Departure not provided`,
           `Students: ${number(row.students)} · Chaperones: ${number(row.chaperones)} · Teachers: ${number(row.teachers)}`,
           `Adults: ${number(row.adults)} · Identified people: ${number(identified)} · Unclassified ticket units: ${number(row.unclassified)} · Reported quantity: ${number(row.total)} · Buses: ${number(row.buses)}`,
-          text(row.notes,'Operational notes not provided'),inactive?row.status:contradiction?'GAP: source arrival/departure needs review; no departure or overnight visit inferred.':start>now?'Expected later today — arrival not independently confirmed; departure time not provided.':'Expected arrival time has passed — arrival, presence and departure not independently confirmed.']};
-      // Same-day planned load is not observed occupancy. Only explicit source
-      // cancellation/supersession moves a record to history within this view.
-      (inactive?history:cards).push(card);
+          text(row.notes,'Operational notes not provided'),inactive?row.status:contradiction?'GAP: source arrival/departure needs review; no departure or overnight visit inferred.':row.date<today?'Past scheduled date — arrival, presence and departure not independently confirmed.':row.date>today?'Upcoming scheduled visit — arrival and departure not independently confirmed.':start>now?'Expected later today — arrival not independently confirmed; departure time not provided.':'Expected arrival time has passed — arrival, presence and departure not independently confirmed.']};
+      // Planned load is not observed occupancy. Past dates and explicit source
+      // cancellation/supersession belong in history without implying departure.
+      (inactive||row.date<today?history:cards).push(card);
     }
-    return{title:"Today's schools",cards,history,note:!hasFeed(value)?'School feed unavailable: no verified Outlook attachment projection is bound. Daily counts unknown.'
-      :`${value.state==='snapshot'?`Imported snapshot · ${stamp(value.generated_at)}. Mailbox completeness/current freshness NOT verified. `:''}Daily planned source counts: ${unknown?'incomplete':`${totals.students} students · ${totals.adults} adults · ${number(totals.students+totals.adults)} identified people · ${totals.unclassified} unclassified ticket units · ${totals.total} reported quantity`}. Departure times are not provided by this attachment; no general cutoff is established. Only today's visit dates are shown; date rollover does not confirm departure.`};
+    return{title:'Upcoming school groups',cards,history,note:!hasFeed(value)?'School feed unavailable: no verified Outlook attachment projection is bound. Daily counts unknown.'
+      :`${value.state==='snapshot'?`Imported snapshot · ${stamp(value.generated_at)}. Mailbox completeness/current freshness NOT verified. `:''}Today's planned source counts: ${unknown?'incomplete':`${totals.students} students · ${totals.adults} adults · ${number(totals.students+totals.adults)} identified people · ${totals.unclassified} unclassified ticket units · ${totals.total} reported quantity`}. Departure times are not provided by this attachment; no general cutoff is established. Today and upcoming visit dates are shown, with past dates in history; date rollover does not confirm departure.`};
   }
 
   function publicCleaning(summary,approved,now=Date.now()){
@@ -274,7 +274,7 @@
       .replace('End time/instant not provided — not automatically expired','End time unavailable');
     const allowed=/^(Cleaning now,|Saved pending|Work in progress|Current worker:|Prior closed cleaning record|Closed cleaning record|Recorded worker:|Reported services:|Recorded work:|Original employee:|Started:|Completed:|Accepted:|Current cleaning record unavailable)/;
     const present=card=>({...card,lines:card.lines.filter(value=>kind!=='locations'||allowed.test(value)).map(line)});
-    const note=kind==='schools'?`${/Daily planned source counts: ([^.]+)\./.exec(view.note)?.[0].replace('source ','')||'School counts unavailable.'} Planned visits; arrival and departure unconfirmed.`
+    const note=kind==='schools'?`${/Today's planned source counts: ([^.]+)\./.exec(view.note)?.[0].replace('source ','')||'School counts unavailable.'} Planned visits; arrival and departure unconfirmed.`
       :['activity','tickets'].includes(kind)&&!view.cards.length&&/unavailable/i.test(view.note)?'Ticket details unavailable.':notes[kind]||view.note;
     return{...view,note,cards:view.cards.map(present),...(view.history?{history:view.history.map(present)}:{})};
   }

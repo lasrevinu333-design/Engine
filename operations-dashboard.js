@@ -152,7 +152,7 @@
       measureTickers();
       const counts=new Map();for(const card of (cleaning||cleaningView(null,approved(),now())).cards)
         counts.set(card.state,(counts.get(card.state)||0)+1);
-      el('ops-status-counts').replaceChildren(...[...counts].map(([status,n])=>{const node=make('span',`${n} ${status.replaceAll('_',' ')}`);node.dataset.status=status;return node;}));
+      el('ops-status-counts')?.replaceChildren(...[...counts].map(([status,n])=>{const node=make('span',`${n} ${status.replaceAll('_',' ')}`);node.dataset.status=status;return node;}));
       renderBoard();
     }
     function cancel(){epoch++;abort?.abort();abort=null;if(requestTimer!==null)window.clearTimeout(requestTimer);requestTimer=null;}
@@ -239,13 +239,6 @@
     function openBoard(kind,trigger,ids=null){
       if(!active||closed)return;if(!bound()){unavailable();return;}
       if(publicRead&&!['activity','tickets','events','schools','spiceworks','city','locations'].includes(kind))return;
-      if(kind==='events'&&!publicRead){
-        if(!active||closed)return;const session=window.MemphisAuth?.readSession?.();
-        if(session?.role!=='ops_manager'||!session.manager_id||!session.credential_id)return;
-        const target=new URL('./events.html',window.location.href);target.searchParams.set('hub','manager');
-        if(session.device_id)target.searchParams.set('device',session.device_id);
-        window.location.assign(target.toString());return;
-      }
       if(!active||closed||!KINDS.includes(kind))return;
       if(board)closeBoard({history:false,focus:false});
       board=kind;opener=trigger||document.activeElement;nearbyIds=ids;paused=motion?.matches===true;hold=false;syncPause();

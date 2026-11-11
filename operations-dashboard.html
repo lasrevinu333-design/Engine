@@ -9,11 +9,12 @@
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css">
   <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
-  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.10.five-row-map">
+  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.11.operations-layout">
   <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
 </head><body class="mapWebPage operationsPage" data-memphis-context="manager">
   <main class="mapPage commandPage">
-    <nav class="mz-nav-actions" aria-label="Application navigation"><a id="map-hub-link" class="mz-back-link" href="./start_page1.html" aria-label="Back to Operations Hub">Back</a><p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Checking manager access…</p></nav>
+    <header class="dashboardPageHeader"><a id="map-hub-link" class="mz-back-link" href="./start_page1.html" aria-label="Back to Operations Hub">Back</a><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h1>Custodial Operations</h1></div><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Full screen</button></header>
+    <p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Checking manager access…</p>
 
     <div id="operations-panels" hidden>
       <header class="telemetry" aria-label="Date, attendance and weather">
@@ -21,11 +22,10 @@
         <section class="attendanceCard"><div class="eyebrow">CURRENT GATE COUNT</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div></section>
         <section class="weatherCard"><div class="weatherNow"><svg class="weatherArt" viewBox="0 0 120 84" aria-hidden="true"><g class="sunRays" stroke="#ffd46b" stroke-width="3"><path d="M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4"/></g><circle cx="45" cy="32" r="19" fill="#ffd46b"/><path class="weatherCloud" d="M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z" fill="#d8efff"/></svg><div><div class="eyebrow">MEMPHIS WEATHER</div><strong id="ops-weather">Unavailable</strong><div id="ops-weather-note" class="metricNote">Forecast source not yet read.</div></div></div><div id="ops-hour" class="hourForecast">Next-hour forecast unavailable.</div></section>
       </header>
-    <button type="button" id="ops-locations-button" class="tickerBand locationsBand" data-board="locations" hidden><span class="tickerLabel">CLEAN LOCATIONS · 47</span><span class="tickerWindow"><span id="ops-locations-ticker" class="tickerTrack">Waiting for current cleaning status.</span></span><span class="feedButton" aria-hidden="true">All locations ↗</span></button>
-      <button type="button" class="tickerBand" data-board="events" aria-label="Upcoming events"><span class="tickerLabel">EVENTS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-events-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
-      <button type="button" class="tickerBand" data-board="schools" aria-label="Today and upcoming school visits"><span class="tickerLabel">SCHOOLS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-schools-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+    <button type="button" id="ops-locations-button" class="tickerBand locationsBand" data-board="locations" hidden><span class="tickerLabel">Location Status</span><span class="tickerWindow"><span id="ops-locations-ticker" class="tickerTrack">Waiting for current cleaning status.</span></span><span class="feedButton" aria-hidden="true">All locations ↗</span></button>
+      <button type="button" class="tickerBand" data-board="events" aria-label="Upcoming events"><span class="tickerLabel">Upcoming Events</span><span class="tickerWindow"><span class="tickerTrack" id="ops-events-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+      <button type="button" class="tickerBand" data-board="schools" aria-label="Today and upcoming school visits"><span class="tickerLabel">Upcoming School Groups</span><span class="tickerWindow"><span class="tickerTrack" id="ops-schools-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
     <section class="mzMapStage uxCard commandMap" id="dashboard-map" data-map-presentation="original-horizontal" aria-label="Custodial operations map" hidden>
-      <div class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt="Memphis the tiger"><h2>Custodial operations</h2></div><div id="ops-status-counts" class="statusCounts">Cleaning status unavailable</div><a id="map-dashboard-link" class="uxButton compact secondary" href="./dashboard.html">Dashboard</a><button type="button" data-board="activity" aria-label="Open cleaning tickets">Tickets</button><button type="button" data-board="events">Events</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Full screen</button></div>
       <div class="mapScreenReader" data-map-status role="status">Map cleaning status unavailable until a current authenticated response</div>
       <div class="mapArtworkFrame" aria-label="Approved zoo map"><div class="mzMapViewport" data-map-viewport aria-label="Whole approved zoo map"><div class="mzMapSurface" data-map-surface><img class="mzMapArtwork" data-map-artwork alt="Original approved horizontal illustrated Memphis Zoo map; cleaning icons are separate interactive controls" width="1282" height="550"><div class="mzMapLayer" data-map-layer></div></div></div></div>
       <div class="mzMapSelection" id="map-selection" data-map-selection role="status" aria-live="polite">Select a map pin or the locations board.</div>
@@ -34,6 +34,7 @@
     </section>
       <button type="button" class="tickerBand" data-board="spiceworks" aria-label="Spiceworks tickets opened and closed in the last 24 hours"><span class="tickerLabel">SPICEWORKS · 24H</span><span class="tickerWindow"><span class="tickerTrack" id="ops-spiceworks-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
       <button type="button" class="tickerBand" data-board="city" aria-label="Open City work orders"><span class="tickerLabel">CITY WORK ORDERS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-city-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+      <details class="dashboardTools"><summary>Dashboard tools</summary><nav aria-label="Dashboard tools"><a id="map-dashboard-link" class="uxButton compact secondary" href="./dashboard.html">Dashboard</a><button type="button" data-board="activity" aria-label="Open cleaning tickets">Tickets</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button></nav></details>
     </div>
   </main>
   <dialog class="operationsBoard" id="operations-board" aria-labelledby="operations-board-title">
@@ -41,7 +42,7 @@
     <p id="operations-board-note" class="boardNote" role="status"></p><div id="operations-board-content" class="boardContent" tabindex="0" aria-label="Scrollable operations rows"></div>
   </dialog>
   <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
-  <script src="./dashboard-map-staging.js?v=2026.11.11.current-cleaning"></script><script src="./custodial-gps-approved-overall-fit.js"></script><script src="./dashboard-map-renderer.js"></script>
-  <script src="./operations-dashboard-data.js?v=2026.11.11.current-cleaning"></script><script src="./operations-dashboard.js?v=2026.11.11.current-cleaning"></script>
+  <script src="./dashboard-map-staging.js?v=2026.11.11.operations-layout"></script><script src="./custodial-gps-approved-overall-fit.js"></script><script src="./dashboard-map-renderer.js"></script>
+  <script src="./operations-dashboard-data.js?v=2026.11.11.operations-layout"></script><script src="./operations-dashboard.js?v=2026.11.11.operations-layout"></script>
   <script src="./dashboard-map-page.js?v=2026.11.10.clean-status"></script>
 </body></html>
