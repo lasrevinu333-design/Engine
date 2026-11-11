@@ -17,7 +17,7 @@ function node(script,timeout=120000){
  assert.equal(result.status,0,script+' failed: '+(result.error?.message||result.signal||result.status));
  assertCurrentGpsInventory();
 }
-for(const script of ['scripts/current-gps-source-qualification-tests.mjs','scripts/current-gps-native-lifecycle-tests.mjs',
+for(const script of ['scripts/current-gps-source-qualification-tests.mjs','scripts/current-provider-comparison-source-tests.mjs','scripts/current-gps-native-lifecycle-tests.mjs',
  'scripts/custodial-dex-semantic-verifier-tests.mjs','scripts/custodial-android-manifest-security-contract-tests.mjs',
  'scripts/native-mobile-build-contract-tests.mjs',
  'scripts/assigned-phone-location-dashboard-tests.mjs','scripts/gps-native-history-renderer-tests.mjs',

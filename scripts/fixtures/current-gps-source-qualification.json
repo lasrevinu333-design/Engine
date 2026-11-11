@@ -2548,8 +2548,8 @@
     },
     {
       "path": "scripts/current-gps-qualification-gate.mjs",
-      "bytes": 2523,
-      "sha256": "820311b15a23c90a43590660c8dad38f635f8f1e692842849d98d8be07a8d904"
+      "bytes": 2578,
+      "sha256": "4e2aee6d12ab88601f17e9ee55fb0b26331c12f653d04a1ebee35897c1036ba7"
     },
     {
       "path": "scripts/current-gps-source-qualification-tests.mjs",
@@ -2563,8 +2563,8 @@
     },
     {
       "path": "scripts/current-provider-comparison-source-tests.mjs",
-      "bytes": 3123,
-      "sha256": "1c2949a319121ea81686b78288a077202c22a34d224aa11f8b30360891f05eaa"
+      "bytes": 4365,
+      "sha256": "8203cc7a2f08572c62dc3d7d32fe6dad72e503ae6c12e4fb4fdc7441b3b00d3c"
     },
     {
       "path": "scripts/custodial-android-manifest-security-contract-tests.mjs",
@@ -3858,6 +3858,11 @@
       "sha256": "6d1840893da663f5a6961594d4d9f649ec8293e60db2eff5de5c1837ea2cdaa0"
     },
     {
+      "path": "scripts/fixtures/current-gps-predecessors/current-provider-comparison-source-tests.mjs",
+      "bytes": 3123,
+      "sha256": "1c2949a319121ea81686b78288a077202c22a34d224aa11f8b30360891f05eaa"
+    },
+    {
       "path": "scripts/fixtures/current-gps-predecessors/location-cue-wording-source-boundary.mjs",
       "bytes": 1423,
       "sha256": "b35ec2650196672472f431a9f44069ae90658158a9b69d99e2835935002a3769"
@@ -4018,6 +4023,11 @@
       "path": "scripts/location-cue-wording-source-boundary.mjs",
       "archive_path": "scripts/fixtures/current-gps-predecessors/location-cue-wording-source-boundary.mjs",
       "sha256": "b35ec2650196672472f431a9f44069ae90658158a9b69d99e2835935002a3769"
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "archive_path": "scripts/fixtures/current-gps-predecessors/current-provider-comparison-source-tests.mjs",
+      "sha256": "1c2949a319121ea81686b78288a077202c22a34d224aa11f8b30360891f05eaa"
     }
   ],
   "core_sources": [
