@@ -6,7 +6,7 @@ export function installEmployeeSchedule(options) {
   const sourceWriter=(diagnosticSite,operation,asyncResult=false)=>nativeApplicationSource
     ?nativeApplicationSource.wrapNativeWriter(operation,asyncResult,diagnosticSite):operation;
     const API='https://memphis-zoo-mcp.onrender.com/schedule-api',PREFIX='mz_employee_schedule_snapshot:',REFRESH_MS=60000;
-    const els={employee:document.getElementById('employee'),date:document.getElementById('date'),notice:document.getElementById('notice'),content:document.getElementById('content'),areas:document.getElementById('areas'),lunch:document.getElementById('lunch-content'),lunchAreas:document.getElementById('lunch-areas'),upcoming:document.getElementById('upcoming-content'),upcomingAreas:document.getElementById('upcoming-areas'),state:document.getElementById('state'),text:document.getElementById('state-text'),retry:document.getElementById('retry')};
+    const els={employee:document.getElementById('employee'),date:document.getElementById('date'),notice:document.getElementById('notice'),content:document.getElementById('content'),areas:document.getElementById('areas'),lunch:document.getElementById('lunch-content'),lunchAreas:document.getElementById('lunch-areas'),state:document.getElementById('state'),text:document.getElementById('state-text'),retry:document.getElementById('retry')};
     let loading=false,timer=0,boundary=0,lastView=null,loadVersion=0,shownPrincipal='',queued=false,paused=false,activeRequest=null;
     const volatile=new Map(),unavailableDays=new Map(),presentationFences=new WeakMap();let securityBlocked=false,securityGeneration=0,activeRender=null,nativeTypedRender=null;
     const esc=(value)=>String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -227,7 +227,7 @@ export function installEmployeeSchedule(options) {
         Promise.resolve(retry()).catch(()=>{});
       }catch{/* Missing/unavailable reconciliation cannot invent authority. */}
     }
-    function clearPresentation(){activeRender=null;nativeTypedRender=null;clearTimeout(boundary);lastView=null;els.employee.textContent='Employee';els.date.textContent='';els.areas.innerHTML='';els.content.hidden=true;els.lunch.hidden=true;els.lunchAreas.innerHTML='';if(els.upcoming)els.upcoming.hidden=true;if(els.upcomingAreas)els.upcomingAreas.innerHTML='';els.notice.textContent='';els.notice.hidden=true;reconcileAlerts();}
+    function clearPresentation(){activeRender=null;nativeTypedRender=null;clearTimeout(boundary);lastView=null;els.employee.textContent='Employee';els.date.textContent='';els.areas.innerHTML='';els.content.hidden=true;els.lunch.hidden=true;els.lunchAreas.innerHTML='';els.notice.textContent='';els.notice.hidden=true;reconcileAlerts();}
     function isRestroom(item){return item?.is_public_restroom===true||/restroom|bathroom|toilet|comfort station|family room/i.test(name(item));}
     // Display only published responsibility windows; never reset service/check clocks.
     function zooNow(){const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date());const get=key=>parts.find(part=>part.type===key).value;return {date:`${get('year')}-${get('month')}-${get('day')}`,seconds:Number(get('hour'))*3600+Number(get('minute'))*60+Number(get('second'))};}
@@ -245,13 +245,6 @@ export function installEmployeeSchedule(options) {
     }
     function zooWideNow(data){const window=zooWideWindow(data),now=zooNow();return Boolean(window&&data.service_date===now.date&&window.start<=now.seconds&&now.seconds<window.end);}
     function currentItems(data){const clock=zooNow();if(data?.service_date!==clock.date||(data.projection_status&&data.projection_status!=='current'))return [];return publishedItems(data).map((item,index)=>({item,index})).filter(({item})=>{const start=timeSeconds(item.coverage_start),end=timeSeconds(item.coverage_end);if(isLunch(item)&&(!/^[a-f0-9]{64}$/.test(item.loan_id||'')||!data.employee_id||item.coverer_person_id!==data.employee_id||item.service_date!==data.service_date||!data.projection_id||item.projection_id!==data.projection_id))return false;return start!==null&&end!==null&&start<end&&start<=clock.seconds&&clock.seconds<end;}).sort((left,right)=>Number(isRestroom(right.item))-Number(isRestroom(left.item))||name(left.item).localeCompare(name(right.item),'en',{sensitivity:'base',numeric:true})||left.index-right.index).map(entry=>entry.item);}
-    function upcomingItems(data){
-      const clock=zooNow();if(data?.service_date!==clock.date||(data.projection_status&&data.projection_status!=='current'))return [];
-      return publishedItems(data).filter(item=>{const start=timeSeconds(item.coverage_start),end=timeSeconds(item.coverage_end);
-        if(isLunch(item)&&(!/^[a-f0-9]{64}$/.test(item.loan_id||'')||!data.employee_id||item.coverer_person_id!==data.employee_id||item.service_date!==data.service_date||!data.projection_id||item.projection_id!==data.projection_id))return false;
-        return start!==null&&end!==null&&clock.seconds<start&&start<end;
-      }).sort((a,b)=>timeSeconds(a.coverage_start)-timeSeconds(b.coverage_start)||name(a).localeCompare(name(b),'en',{sensitivity:'base',numeric:true}));
-    }
     function name(item){return String(item?.name||item?.location_name||item?.group_name||item?.group_code||'Assigned area').trim();}
     // Presentation only: original loan/occurrence rows remain in source and receipts.
     function displayRows(list){const seen=new Set();return list.filter(item=>{if(!isLunch(item))return true;const key=JSON.stringify([item.projection_id,item.location_group_id||item.group_code||'',name(item),timeSeconds(item.coverage_start),timeSeconds(item.coverage_end),details(item),Array.isArray(item.included_location_ids)?[...item.included_location_ids].sort():null]);if(seen.has(key))return false;seen.add(key);return true;});}
@@ -352,8 +345,6 @@ export function installEmployeeSchedule(options) {
       els.notice.textContent=!offline&&sameDay?String(data?.notice||''):'';els.notice.hidden=!els.notice.textContent;els.content.hidden=false;
       els.areas.innerHTML=regular.length&&zooWideNow(data)?'<li class="area"><div class="areaName">Zoo Wide Coverage</div></li>':regular.length?rows(regular):`<li class="area"><div class="areaName">${!sameDay?'Today’s schedule is unavailable.':offline&&!items.length?'No current areas can be confirmed from the saved schedule.':data?.schedule_status==='off'?'You are not scheduled today.':'No regular areas are active right now.'}</div></li>`;
       els.lunch.hidden=!lunch.length;els.lunchAreas.innerHTML=rows(lunch);
-      if(els.upcoming&&els.upcomingAreas){const upcoming=upcomingItems(data);els.upcoming.hidden=!upcoming.length;
-        els.upcomingAreas.innerHTML=displayRows(upcoming).map(item=>`<li class="area"><div class="areaName">${esc(name(item))}</div><div class="areaDetail">${esc(`Starts ${friendlyTime(item.coverage_start)} · ${details(item)}`)}</div></li>`).join('');}
       state(cacheWarning?'This phone could not save a schedule copy. Phone storage needs repair.':offline?'Showing a saved schedule. Could not check for changes.':data?.stale===true?'Showing the latest saved schedule.':'',offline||cacheWarning);scheduleBoundary(data);
       try{const committed=commitDisplayedBinding(selected,source,{owns:owned,offline,cacheWarning});if(committed===DISPLAY_SUPERSEDED)return null;reconcileAlerts(owned);return owned()?committed:null;
       }catch{if(!owned())return;clearPresentation();state('Schedule changed during display. Updating…',true);return;}
