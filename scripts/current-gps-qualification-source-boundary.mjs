@@ -6,7 +6,7 @@ import {readFileSync,readdirSync,lstatSync} from 'node:fs';
 import {resolve,relative,dirname,basename,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const PROFILE_SHA='f965f9ce5126ccd022e3dd8341e214528aaa76d27c31cc1fc37fd0fd62bfd48f';
+const PROFILE_SHA='48861448dffe391730e1f3a4eb574de74462da923ea541eb86e7820ad61251eb';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
