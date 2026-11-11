@@ -220,8 +220,9 @@ export async function managerHomeFixture({attendance,weather,alerts={type:'Featu
   let data=url.includes('open-meteo')?f.weather:url.includes('api.weather.gov')?f.alerts:url.includes('current-attendance')?{ok:true,data:f.attendance}:{ok:true,data:{enabled:false}};return {ok:true,json:async()=>data};};
  configure?.(f);
  const original=readFileSync(new URL('../ops-hub.js',import.meta.url),'utf8');
- const importLine="import { installManagerWeather } from './mobile/src/manager/home-weather.js';\n";
- assert.equal(original.split(importLine).length,2,'Execute the actual static dependency through its real controller');
+ const importLines=original.match(/^import \{ installManagerWeather \} from '\.\/mobile\/src\/manager\/home-weather\.js(?:\?v=[\w.-]+)?';\n/gm)||[];
+ assert.equal(importLines.length,1,'Execute the actual static dependency through its real controller');
+ const importLine=importLines[0];
  const liveTimers=new Map();let timerId=0;f.liveTimers=liveTimers;
  const interval=(fn,delay)=>{const id=++timerId;liveTimers.set(id,delay);intervals.set(delay,fn);return id;},clear=id=>{
   const delay=liveTimers.get(id);liveTimers.delete(id);if(![...liveTimers.values()].includes(delay))intervals.delete(delay);

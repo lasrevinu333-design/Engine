@@ -33,7 +33,8 @@ export function installManagerWeather({document=globalThis.document,requestJson=
     element('manager-weather-current').textContent=[current.temperature,current.condition].filter(Boolean).join(' · ');
     element('manager-weather-summary').textContent=current.summary||'';
     write('manager-weather-hours','innerHTML',weatherHoursHtml(hourly));
-    element('manager-weather-freshness').textContent=[current.detail,hourly.detail].filter(Boolean).join(' · ');
+    element('manager-weather-freshness').textContent=[current.label||'Weather source time unavailable.',
+      current.stale||hourly.stale?'Weather update delayed':'',!hourly.hours.length?'Hourly forecast unavailable':''].filter(Boolean).join(' · ');
     element('manager-weather-freshness').dataset.stale=String(current.stale||hourly.stale);
     write('manager-weather-alerts','innerHTML',weatherAlertsHtml(alerts));
     write('manager-alerts-freshness','textContent',alerts.detail);
