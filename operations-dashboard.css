@@ -102,3 +102,14 @@
 .operationsPage .tickerBand[data-board="spiceworks"]{--feed-bg:#573416;--feed-fg:#ffdfb3}
 .operationsPage .tickerBand[data-board="city"]{--feed-bg:#494015;--feed-fg:#fff2aa}
 @media(max-width:699px){.operationsPage .tickerBand .tickerLabel{width:9rem;font-size:12px;padding:8px}.operationsPage .tickerTrack{font-size:14px}}
+
+/* Compact forecast and the current manager, in the existing telemetry family. */
+.telemetry.hasMod{grid-template-columns:minmax(210px,1.15fr) minmax(140px,.7fr) minmax(200px,1fr) minmax(160px,.8fr)}
+.telemetry .weatherCard{display:block}.telemetry .weatherNow{gap:8px}.telemetry .weatherArt{width:44px;height:42px}
+.telemetry .hourForecast{max-width:none;font-size:12px;line-height:1.4;margin-top:4px}
+.modCard{display:flex;flex-direction:column;justify-content:center;gap:8px}.modCard strong{font-size:22px;line-height:1.2;overflow-wrap:anywhere}
+@media(max-width:950px){.telemetry.hasMod{grid-template-columns:1fr 1fr}.telemetry.hasMod .weatherCard{grid-column:auto;border-left:0;border-top:1px solid #3d5363}.telemetry.hasMod .modCard{border-top:1px solid #3d5363}.modCard strong{font-size:20px}}
+
+/* Keep all 47 pins readable on narrow screens without changing map coordinates. */
+.operationsPage .commandMap[data-map-presentation="original-horizontal"]{min-width:0;overflow-x:auto;overscroll-behavior-x:contain}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame{min-width:900px}

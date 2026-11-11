@@ -228,16 +228,45 @@ const horizontalElements=Object.fromEntries(selectors.map(key=>[key,new Element(
 const horizontalSection={dataset:{mapPresentation:'original-horizontal'},querySelector:selector=>horizontalElements[selector.match(/^\[data-map-(.*)\]$/)?.[1]]};
 const horizontal=renderer.create({section:horizontalSection,audience:'public_readonly',document,window,fetchImpl});
 await horizontal.init();
-pass('original horizontal presentation preserves every original approved pin and exact source artwork',()=>{
+pass('horizontal presentation keeps approved anchors, identity and artwork with bounded visual spacing',()=>{
  assert.equal(horizontalElements.artwork.src,'./dashboard-map-assets/Memphis-Zoo-Transparent-Framed-Clean-Base-20261003.png');
  const fit=map.fitViewport({width:600,height:400,canvasWidth:1282,canvasHeight:550});
  for(const [i,pin] of horizontalElements.layer.children.entries()){
   const point=raw.locations[i].approvedOverlayCanvasPoint;
-  assert.ok(Math.abs(parseFloat(pin.style.left)-point.x*fit.fitScale)<1e-9);
-  assert.ok(Math.abs(parseFloat(pin.style.top)-point.y*fit.fitScale)<1e-9);
+  assert.ok(Math.abs(Number(pin.dataset.anchorX)-point.x*fit.fitScale)<1e-9);
+  assert.ok(Math.abs(Number(pin.dataset.anchorY)-point.y*fit.fitScale)<1e-9);
+  assert.ok(Math.hypot(parseFloat(pin.style.left)-Number(pin.dataset.anchorX),parseFloat(pin.style.top)-Number(pin.dataset.anchorY))<=150.000001);
   assert.equal(pin.dataset.locationId,raw.locations[i].locationId);assert.equal(pin.dataset.status,'unknown');
  }
  assert.equal(horizontalElements.artwork.attributes.width,'1282');assert.equal(horizontalElements.artwork.attributes.height,'550');
+});
+pass('all 47 normal desktop pins have visible separation without changing source coordinates',()=>{
+ const before=JSON.stringify(raw),scale=1877/1282;
+ const points=raw.locations.map(p=>({id:p.locationId,x:p.approvedOverlayCanvasPoint.x*scale,y:p.approvedOverlayCanvasPoint.y*scale}));
+ const placed=renderer.separatePins(points,{width:1877,top:55*scale,bottom:431*scale});
+ assert.equal(placed.size,47);assert.equal(JSON.stringify(raw),before);
+ const values=[...placed.values()];
+ for(let i=0;i<values.length;i++)for(let j=i+1;j<values.length;j++)assert.ok(Math.hypot(values[i].x-values[j].x,values[i].y-values[j].y)>=41.999999);
+ assert.deepEqual([...placed],[...renderer.separatePins([...points].reverse(),{width:1877,top:55*scale,bottom:431*scale})]);
+});
+pass('phone pin offsets remain bounded and every original ID is retained even in dense groups',()=>{
+ const scale=365/1282,points=raw.locations.map(p=>({id:p.locationId,x:p.approvedOverlayCanvasPoint.x*scale,y:p.approvedOverlayCanvasPoint.y*scale}));
+ const placed=renderer.separatePins(points,{width:365,top:55*scale,bottom:431*scale});
+ assert.equal(placed.size,47);
+ for(const p of points){const q=placed.get(p.id);assert.ok(Number.isFinite(q.x)&&Number.isFinite(q.y));assert.ok(Math.hypot(q.x-p.x,q.y-p.y)<=150.000001);}
+ const isolated=[{id:'alone',x:90,y:90}];assert.deepEqual(renderer.separatePins(isolated,{width:200,bottom:200}).get('alone'),{x:90,y:90});
+});
+pass('all 47 icons reserve enlarged status size at every supported map width',()=>{
+ for(const width of [900,1000,1100,1282,1440,1877]){
+  const scale=width/1282,points=raw.locations.map(p=>({id:p.locationId,x:p.approvedOverlayCanvasPoint.x*scale,y:p.approvedOverlayCanvasPoint.y*scale}));
+  const placed=renderer.separatePins(points,{width,top:55*scale,bottom:431*scale}),values=[...placed.values()];
+  assert.equal(values.length,47);
+  for(let i=0;i<values.length;i++){
+   assert.ok(values[i].x>=21&&values[i].x<=width-21);
+   assert.ok(values[i].y>=55*scale+21&&values[i].y<=431*scale-21);
+   for(let j=i+1;j<values.length;j++)assert.ok(Math.hypot(values[i].x-values[j].x,values[i].y-values[j].y)>=41.999999,`overlap at ${width}`);
+  }
+ }
 });
 horizontal.stop();
 console.log('PASS standalone map renderer nonbrowser contract',checks,'NO_BROWSER_NO_BACKEND_NO_GPS_WRITE');

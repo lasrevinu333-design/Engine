@@ -19,6 +19,30 @@
     ?{managerId:session.manager_id,credentialId:session.credential_id,token:session.token,deviceId:session.device_id}:null;
   const same=(a,b)=>!!a&&!!b&&a.managerId===b.managerId&&a.credentialId===b.credentialId
     &&a.token===b.token&&a.deviceId===b.deviceId;
+  // Presentation only: keep each approved anchor and search a small screen-pixel
+  // neighborhood for an exposed icon. A leader ends at the unchanged anchor.
+  // Reserve the largest 42px interactive size, so hover and status refreshes
+  // do not move other icons. Narrow screens pan the same readable map.
+  function separatePins(points,{width,top=0,bottom}){
+    const placed=[],result=new Map(),gap=42,maxOffset=150;
+    const inside=p=>p.x>=21&&p.x<=width-21&&p.y>=top+21&&p.y<=bottom-21;
+    const collision=p=>placed.reduce((sum,q)=>sum+Math.max(0,gap-Math.hypot(p.x-q.x,p.y-q.y))**2,0);
+    for(const point of [...points].sort((a,b)=>a.id.localeCompare(b.id))){
+      let best={x:point.x,y:point.y},score=Infinity,found=false;
+      for(let radius=0;radius<=maxOffset&&!found;radius+=4){
+        const count=radius?Math.ceil(2*Math.PI*radius/4):1;
+        for(let i=0;i<count;i++){
+          const angle=2*Math.PI*i/count,p={x:point.x+radius*Math.cos(angle),y:point.y+radius*Math.sin(angle)};
+          if(!inside(p))continue;
+          const overlap=collision(p),cost=overlap*100+radius;
+          if(cost<score){best=p;score=cost;}
+          if(overlap===0){best=p;found=true;break;}
+        }
+      }
+      placed.push(best);result.set(point.id,best);
+    }
+    return result;
+  }
   function createRefreshGate({readSession,onState}){
     const owner=principal(readSession());
     if(!owner)throw new Error('Map staging requires an active named manager session');
@@ -108,17 +132,24 @@
       artwork.setAttribute?.('width',String(displayWidth));artwork.setAttribute?.('height',String(displayHeight));
       gpsLayer?.setAttribute('viewBox',`0 0 ${displayWidth} ${displayHeight}`);
       const urgent=[];
+      const screenPoints=markers.map(marker=>({id:marker.locationId,...MAP.screenPoint(displayPoint(marker.canvasPoint),{fitScale:fit.fitScale,zoom:1})}));
+      const spaced=horizontal?separatePins(screenPoints,{width:fit.width,top:55*fit.fitScale,bottom:431*fit.fitScale}):null;
       for(const marker of markers){
         const button=buttons.get(marker.locationId),view=MAP.presentation(marker,{interaction,
           reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true});
         if(!button)continue;
-        const point=MAP.screenPoint(displayPoint(marker.canvasPoint),{fitScale:fit.fitScale,zoom:1});
+        const anchor=MAP.screenPoint(displayPoint(marker.canvasPoint),{fitScale:fit.fitScale,zoom:1});
+        const point=spaced?.get(marker.locationId)||anchor;
         button.style.left=`${point.x}px`;button.style.top=`${point.y}px`;
+        button.dataset.anchorX=String(anchor.x);button.dataset.anchorY=String(anchor.y);
+        const dx=anchor.x-point.x,dy=anchor.y-point.y;
+        button.style.setProperty('--map-leader-length',`${Math.hypot(dx,dy)}px`);
+        button.style.setProperty('--map-leader-angle',`${Math.atan2(dy,dx)}rad`);
+        button.dataset.offset=String(Math.hypot(dx,dy)>.5);
         button.style.width=`${view.sizePx}px`;button.style.height=`${view.sizePx}px`;
         button.dataset.status=marker.status;button.dataset.pulse=view.pulse;
         button.dataset.details=String(view.detailsVisible);
-        // Only the text bubble flips at an edge. Pin centers and artwork
-        // always share the exact approved transform; no collision offsets.
+        // Labels follow the visual icon; the leader retains geographic meaning.
         const viewportX=(viewport.clientWidth-fit.width)/2+point.x;
         const leftSpace=viewportX-view.sizePx/2-5,rightSpace=viewport.clientWidth-viewportX-view.sizePx/2-5;
         const labelRight=rightSpace>=240||rightSpace>=leftSpace;
@@ -133,9 +164,8 @@
         if(options.has(marker.locationId))options.get(marker.locationId).textContent=`${marker.name} — ${view.statusLabel}`;
         if(view.automatic)urgent.push(marker);
       }
-      // All automatic alerts also appear in a normal-flow list. Dense pins
-      // may overlap, but their names/statuses are never silently hidden or
-      // "decluttered" by moving approved coordinates.
+      // Automatic alerts and the location chooser retain every name/status,
+      // with unchanged approved anchors and location identities.
       alerts.replaceChildren(...urgent.map(marker=>{
         const item=document.createElement('li'),strong=document.createElement('strong');
         strong.textContent=marker.name;item.append(strong,document.createTextNode(
@@ -209,7 +239,8 @@
       const image=document.createElement('img');image.src=ASSETS.icons[anchor.iconKind];image.alt='';
       image.setAttribute('aria-hidden','true');
       const callout=document.createElement('span');callout.className='mzMapCallout';callout.dataset.mapCallout='';
-      button.append(image,callout);layer.append(button);buttons.set(anchor.locationId,button);
+      const leader=document.createElement('span');leader.className='mzMapLeader';leader.setAttribute('aria-hidden','true');
+      button.append(leader,image,callout);layer.append(button);buttons.set(anchor.locationId,button);
       for(const [event,type] of [['mouseenter','hover'],['mouseleave','leave'],['focus','focus'],['blur','blur'],['click','tap']])
         button.addEventListener(event,()=>{if(closed||suspended)return;
           interaction=MAP.interact(interaction,{type,locationId:anchor.locationId},new Set(buttons.keys()));render();});
@@ -278,6 +309,6 @@
     return Object.freeze({init,selectLocation,beginRefresh:gate.begin,accept:gate.commit,acceptGps,unavailableGps,clearGps,fail:gate.fail,
       invalidate:gate.invalidate,checkSession:gate.checkSession,suspend,resume,stop});
   }
-  root.MemphisDashboardMapRenderer=Object.freeze({create,createRefreshGate,createPublicRefreshGate});
+  root.MemphisDashboardMapRenderer=Object.freeze({create,createRefreshGate,createPublicRefreshGate,separatePins});
   if(typeof module!=='undefined'&&module.exports)module.exports=root.MemphisDashboardMapRenderer;
 })(typeof globalThis!=='undefined'?globalThis:this);

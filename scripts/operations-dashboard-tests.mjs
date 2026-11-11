@@ -367,6 +367,20 @@ test('operations requires the exact contract and bounded structured feed',()=>{
  assert.equal(D.operations(payload).schools.state,'unavailable');
  for(const change of [{schema:'other'},{timezone:'UTC'},{generated_at:'not-a-time'},{events:null}])assert.throws(()=>D.operations({ok:true,data:{...payload.data,...change}}));
 });
+test('MOD follows the confirmed Chicago date and clears at midnight or invalid authority',()=>{
+ const value={schema:'custodial.manager-on-duty.v1',state:'confirmed',service_date:'2026-11-11',manager_id:'6b0a218b-6a1b-4ba6-a44e-6867e4816bc9',name:'Eric McKenney'};
+ assert.equal(D.managerOnDuty(value,Date.parse('2026-11-11T05:59:59Z')),'Unavailable');
+ assert.equal(D.managerOnDuty(value,Date.parse('2026-11-11T06:00:00Z')),'Eric McKenney');
+ assert.equal(D.managerOnDuty(value,Date.parse('2026-11-12T06:00:00Z')),'Unavailable');
+ for(const patch of [{state:'unavailable'},{manager_id:null},{service_date:null},{name:''},{schema:'other'}])
+  assert.equal(D.managerOnDuty({...value,...patch},Date.parse('2026-11-11T12:00:00Z')),'Unavailable');
+});
+test('map forecast caption retains the actual Central source time and stale state',()=>{
+ const at=Date.parse('2026-11-11T02:00:00Z'),payload={current:{time:at/1000,temperature_2m:62},current_units:{temperature_2m:'°F'}};
+ assert.equal(D.weather(payload,at+60000).note,'8 p.m.');
+ assert.equal(D.weather(payload,at+3600000).note,'8 p.m. · Stale forecast');
+ assert.equal(D.weather(null,at).value,'Unavailable');
+});
 test('unknown counts and freshness never become live zero',()=>{
  assert.equal(D.attendance(null).value,'Unavailable');assert.equal(D.attendance({ok:true,data:{attendance:null}}).value,'Unavailable');
  assert.equal(D.attendance({ok:true,data:{attendance:0}}).value,'0');assert.equal(D.attendance({ok:true,data:{attendance:0}}).stale,true);

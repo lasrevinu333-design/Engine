@@ -144,7 +144,14 @@
   function operations(payload){const d=payload?.data;
     if(payload?.ok!==true||d?.schema!=='custodial.operations-board.v1'||d.timezone!==ZONE
       ||instant(d.generated_at)===null||!Array.isArray(d.events)||d.events.length>500)throw new Error('operations_contract_unavailable');
-    return {generated_at:d.generated_at,events:d.events,schools:feed(d.schools),spiceworks:feed(d.spiceworks),spiceworks_activity:feed(d.spiceworks_activity),city:feed(d.city)};
+    return {generated_at:d.generated_at,events:d.events,manager_on_duty:d.manager_on_duty,schools:feed(d.schools),spiceworks:feed(d.spiceworks),spiceworks_activity:feed(d.spiceworks_activity),city:feed(d.city)};
+  }
+  function managerOnDuty(value,now=Date.now()){
+    return value?.schema==='custodial.manager-on-duty.v1'&&value.state==='confirmed'
+      &&value.service_date===localDate(now)&&typeof value.manager_id==='string'
+      &&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value.manager_id)
+      &&typeof value.name==='string'&&value.name.trim()&&value.name.length<=100
+      ?value.name.trim():'Unavailable';
   }
   function spiceworksActivity(value,now=Date.now()){
     const unavailable={title:'Spiceworks · last 24 hours',cards:[],note:'Recent ticket activity unavailable.'};
@@ -187,7 +194,8 @@
     const h=payload.hourly,idx=Array.isArray(h?.time)?h.time.findIndex(t=>Number.isFinite(t)&&t*1000>now&&t*1000<=now+3600000):-1;
     const valid=idx>=0&&Number.isFinite(h.temperature_2m?.[idx])&&Number.isFinite(h.precipitation_probability?.[idx])
       &&h.precipitation_probability[idx]>=0&&h.precipitation_probability[idx]<=100&&payload.hourly_units?.temperature_2m==='°F';
-    return{value:`${Math.round(c.temperature_2m)}°F`,note:`${stale?'Stale forecast':'Open-Meteo forecast'} · ${clock(new Date(at).toISOString())}`,
+    const forecastTime=new Intl.DateTimeFormat('en-US',{timeZone:ZONE,hour:'numeric',minute:'2-digit'}).format(new Date(at)).replace(':00','').replace('AM','a.m.').replace('PM','p.m.');
+    return{value:`${Math.round(c.temperature_2m)}°F`,note:`${forecastTime}${stale?' · Stale forecast':''}`,
       hour:valid?`${clock(new Date(h.time[idx]*1000).toISOString())}: ${Math.round(h.temperature_2m[idx])}°F · ${h.precipitation_probability[idx]}% rain`:'Next-hour forecast unavailable.',stale};
   }
   function tickets(summary,mail){
@@ -278,6 +286,6 @@
       :['activity','tickets'].includes(kind)&&!view.cards.length&&/unavailable/i.test(view.note)?'Ticket details unavailable.':notes[kind]||view.note;
     return{...view,note,cards:view.cards.map(present),...(view.history?{history:view.history.map(present)}:{})};
   }
-  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,cleaning,publicCleaning,operationalView});
+  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,managerOnDuty,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,cleaning,publicCleaning,operationalView});
   root.MemphisOperationsData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

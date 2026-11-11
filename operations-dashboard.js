@@ -136,6 +136,8 @@
       measureTickers();
     }
     function renderFeeds(){
+      if(el('ops-mod-card'))el('ops-mod-card').hidden=publicRead;
+      txt('ops-mod',publicRead?'':DATA.managerOnDuty(ops?.manager_on_duty,now()));
       renderActivity();const locations=view('locations');
       const labels={okay:'Cleaned',in_progress:'In progress',due_soon:'Due soon',overdue:'Overdue',not_cleaned:'Not cleaned',pending_submit:'Saved pending',unknown:'Unavailable'};
       const ticker=el('ops-locations-ticker');
@@ -211,7 +213,7 @@
             }
           }
           ops=replacement;
-        }else if(ops)for(const kind of ['events','schools','spiceworks','city'])delayedFeeds.add(kind);
+        }else if(ops){ops.manager_on_duty=null;for(const kind of ['events','schools','spiceworks','city'])delayedFeeds.add(kind);}
         renderFeeds();
       }));
       await Promise.allSettled(tasks);

@@ -211,7 +211,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js';
     const selectedName=leadership?session.claimed_manager_display_name:session.manager_display_name;
     const fullNames={Haley:'Haley Lejman',Jennifer:'Jennifer Sheffield',Annie:'Annie Feist'};
     const name=fullNames[selectedName]||selectedName||'Custodial management';const title=session.manager_job_title||'';
-    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=`${leadership?"Manager access":session.permissions?.owner===true?"Owner · full control":"Read-only"} · ${name}`;els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
+    els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=leadership?"Manager access":session.permissions?.owner===true?"Owner · full control":"Read-only";els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
     updateLinks();applyRoleVisibility(session);setStatus('Access current.','ok');
     await Promise.allSettled([weather.start(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
     if(!current(generation))return;
