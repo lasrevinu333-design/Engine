@@ -45,8 +45,11 @@
 .locationTickerItem[data-status=pending_submit]::before{background:#a78bfa}
 .locationTickerItem[data-status=unknown]::before{background:#7b8794;border-style:dashed}
 
-/* Separate records keep long live feeds paintable while they scroll. */
-.tickerRecord{display:inline-block;white-space:pre}
+/* Keep each record together. Real spacing and a double rule distinguish
+   record boundaries from the middle dots inside a record's details. */
+.tickerTrack{--ticker-record-space:32px;--ticker-record-rule:4px}
+.tickerRecord{display:inline-block;white-space:nowrap}
+.tickerRecord+.tickerRecord{margin-inline-start:var(--ticker-record-space);padding-inline-start:var(--ticker-record-space);border-inline-start:var(--ticker-record-rule) double var(--feed-fg,#bdeeff)}
 
 .tickerBand[data-stale=true] .tickerLabel{color:#f6d36c}.tickerBand[data-stale=true] .tickerLabel:after{content:" · delayed";font-size:10px;margin-left:5px}
 

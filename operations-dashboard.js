@@ -63,7 +63,7 @@
       const signature=JSON.stringify(rows.length?rows:[empty]);
       if(track.dataset.recordsFingerprint===signature)return;
       track.dataset.recordsFingerprint=signature;
-      track.replaceChildren(...(rows.length?rows:[empty]).map((text,index)=>make('span',(index?'   •   ':'')+text,'tickerRecord')));
+      track.replaceChildren(...(rows.length?rows:[empty]).map(text=>make('span',text,'tickerRecord')));
     }
     function pins(){return Array.from(el('dashboard-map').querySelectorAll('.mzMapPin'));}
     function session(){try{const s=window.MemphisAuth?.readSession?.();
@@ -115,20 +115,18 @@
     }
     function renderActivity(){
       const labels={tickets:'TICKETS'};
-      const text=activityKinds.map(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
-        return labels[kind]+': '+(cards.length?cards.map(card=>card.title).join(' • '):summary?'No open tickets':'Tickets unavailable');}).join('   •   ');
-      if(el('ops-activity-ticker')?.textContent!==text)txt('ops-activity-ticker',text);
+      const activity=activityKinds.flatMap(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
+        return (cards.length?cards.map(card=>card.title):[summary?'No open tickets':'Tickets unavailable']).map(text=>labels[kind]+': '+text);});
+      recordTicker('ops-activity-ticker',activity,'Tickets unavailable');
       const events=ops?DATA.events(ops.events,now()).cards.filter(card=>card.active):[];
-      const eventText=events.length?events.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]} · ${card.lines[2]}`).join('   •   '):ops?'No upcoming events loaded':'Events unavailable';
-      if(el('ops-events-ticker')?.textContent!==eventText)txt('ops-events-ticker',eventText);
+      recordTicker('ops-events-ticker',events.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]} · ${card.lines[2]}`),ops?'No upcoming events loaded':'Events unavailable');
       const schoolRows=DATA.orderedSchools(ops?.schools).filter(row=>!['CANCELLED','SUPERSEDED'].includes(row.status)&&row.date>=DATA.localDate(now()));
       const count=value=>DATA.count(value)===null?'Unknown':String(value);
-      const schoolText=schoolRows.length?schoolRows.map(row=>`${DATA.text(row.name)} · ${row.date} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`).join('   •   '):ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable';
-      if(el('ops-schools-ticker')?.textContent!==schoolText)txt('ops-schools-ticker',schoolText);
+      recordTicker('ops-schools-ticker',schoolRows.map(row=>`${DATA.text(row.name)} · ${row.date} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`),ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable');
       const internal=view('tickets');
       recordTicker('ops-tickets-ticker',internal.cards.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]}`),summary?'No open Custodial tickets':'Custodial tickets unavailable');
       const spice=view('spiceworks'),city=view('city');
-      txt('ops-spiceworks-ticker',spice.cards.length?spice.cards.map(card=>`${card.title} · ${card.lines[0]}`).join('   •   '):spice.note);
+      recordTicker('ops-spiceworks-ticker',spice.cards.map(card=>`${card.title} · ${card.lines[0]}`),spice.note);
       recordTicker('ops-city-ticker',city.cards.map(card=>`${card.title} · ${card.status} · ${card.lines[1]}`),city.note);
       for(const kind of ['events','schools','spiceworks','city']){
         const track=el('ops-'+kind+'-ticker'),band=track?.parentElement?.parentElement;
