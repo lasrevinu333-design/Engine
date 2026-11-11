@@ -146,7 +146,7 @@ export function createStaffingActions({auth, authority, api, savedRequests=null,
     return Object.freeze({state,message,busy,service_date:serviceDate,manager_name:owner?auth.readSession?.()?.manager_display_name||'Named manager':null,
       read_only:!owner?.canWrite,source_id:sourceId(),source_digest:sourceMetadata()?.source_digest??null,
       current_source_digest:source?.current_source_digest??null,
-      revision:snapshot?.authority_revision??null,rows:snapshot?snapshot.roster.map(s=>({...row(s),capabilities:capabilities(s.slot_id),restore_choices:restoreChoices(s.slot_id)})):[],
+      revision:snapshot?.authority_revision??null,rows:snapshot?(authority.currentRoster?authority.currentRoster(snapshot):snapshot.roster).map(s=>({...row(s),capabilities:capabilities(s.slot_id),restore_choices:restoreChoices(s.slot_id)})):[],
       preview:preview?copy(preview):null,separation:separation?copy(separation):null,
       pending:!!original,can_check_outcome:!!original && !busy && typeof readOriginalOutcome==='function' && state==='OUTCOME_UNKNOWN'});
   }

@@ -1,4 +1,4 @@
-import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=2026.11.11.single-source-time';
+import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=2026.11.11.weather-details';
 (() => {
   'use strict';
 

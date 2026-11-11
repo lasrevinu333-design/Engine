@@ -1,4 +1,4 @@
-import {createStaffingActions,staffingReaders} from './manager-staffing-actions.mjs';
+import {createStaffingActions,staffingReaders} from './manager-staffing-actions.mjs?v=2026.11.11.current-roster';
 
 // Main mounts normal auth, approved service API and saved-request adapters.
 // This page never discovers an arbitrary endpoint or creates an auth/storage fallback.

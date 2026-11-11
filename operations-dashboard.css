@@ -1,6 +1,6 @@
 /* Layout/palette adapted from Eric's approved Operations mockup, without demo data. */
-.operationsPage{color-scheme:dark;background:#081722;color:#edf7ff}
-.commandPage.mapPage{max-width:none;padding:10px 14px;gap:8px;overflow:auto;background:radial-gradient(ellipse at 15% 0,#15323a 0,transparent 50%),#081722}
+.operationsPage{color-scheme:dark;background:linear-gradient(rgba(6,10,14,.34),rgba(6,10,14,.56)),url('./dashboard-bg_optimized.webp?v=release-2026.07.19.custodial-v3.12') center/cover no-repeat fixed;color:#edf7ff}
+.commandPage.mapPage{max-width:none;padding:10px 14px;gap:8px;overflow:auto;background:transparent}
 .operationsPage button:not(.mzMapPin),.operationsPage select{font:inherit;color:inherit;border:1px solid #547185;border-radius:8px;background:#18364b;min-height:44px;padding:7px 12px;cursor:pointer}
 .operationsPage :focus-visible{outline:3px solid #98dfff;outline-offset:3px}
 .operationsPage [hidden]{display:none!important}#operations-panels{flex:none;display:grid;gap:8px}

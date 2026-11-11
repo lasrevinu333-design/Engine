@@ -719,5 +719,21 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
   samePrincipal:()=>same(owner,principal(auth)),principal:copy(owner),
  });
 }
-const api=Object.freeze({validateCoverAllOptions,validateCoverAllDays,requireCoverAllSummary,coverAllWindow,create,permissions,principal,same,accepted,receiptProjection,authorized,staffingOperation,staffingRequest,acceptedStaffing,staffingCommandPath,isStaffingCommand,validateStaffingPreview,staffingWeeks,staffingBindings,readStaffingBindings,staffingSnapshotCovers,validateVacancyPreview,textDigest});root.MemphisSchedulerActions=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+// The snapshot retains historical positions for original-request reconciliation.
+// Current work views use the exact locked publication's position membership.
+function currentRoster(snapshot){
+ const rows=Array.isArray(snapshot?.roster)?snapshot.roster:[],scope=snapshot?.approved_manual_period;
+ if(!scope||!Object.hasOwn(scope,'rosterSlotIds'))return rows;
+ if(scope.schema!=='custodial.approved-manual-period-window.v1'||scope.normalSourceLocked!==true
+  ||scope.publicationId!==snapshot.current_publication?.publication_id
+  ||scope.versionId!==snapshot.current_publication?.version_id
+  ||scope.frameStart!==snapshot.week_start||scope.frameEnd!==snapshot.week_end
+  ||!Array.isArray(scope.rosterSlotIds)||!scope.rosterSlotIds.length
+  ||scope.rosterSlotIds.some(id=>!UUID.test(id))||new Set(scope.rosterSlotIds).size!==scope.rosterSlotIds.length)
+  throw Error('Current roster source membership is unavailable.');
+ const ids=new Set(scope.rosterSlotIds);
+ if(scope.rosterSlotIds.some(id=>rows.filter(row=>row.slot_id===id).length!==1))throw Error('Current roster position identity is unavailable.');
+ return rows.filter(row=>ids.has(row.slot_id));
+}
+const api=Object.freeze({currentRoster,validateCoverAllOptions,validateCoverAllDays,requireCoverAllSummary,coverAllWindow,create,permissions,principal,same,accepted,receiptProjection,authorized,staffingOperation,staffingRequest,acceptedStaffing,staffingCommandPath,isStaffingCommand,validateStaffingPreview,staffingWeeks,staffingBindings,readStaffingBindings,staffingSnapshotCovers,validateVacancyPreview,textDigest});root.MemphisSchedulerActions=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

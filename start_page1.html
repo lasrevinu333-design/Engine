@@ -10,7 +10,7 @@
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12">
-  <link rel="stylesheet" href="./ops-hub.css?v=2026.11.11.hub-polish">
+  <link rel="stylesheet" href="./ops-hub.css?v=2026.11.11.hub-weather-details">
   <link rel="stylesheet" href="./manager-home-weather.css">
 </head>
 <body data-memphis-context="manager">
@@ -39,7 +39,7 @@
       </article>
     </section>
 
-    <section class="uxCard" id="manager-weather" aria-label="Zoo date, time and weather" style="margin-top:14px"><h2>Weather for the next few hours</h2><p id="manager-weather-freshness">Weather source not loaded.</p><ul id="manager-weather-hours" aria-label="Next hours at the Zoo"></ul><ul id="manager-weather-alerts" class="managerWeatherAlerts" aria-label="Source weather warnings" aria-live="polite"></ul><p id="manager-alerts-freshness">Weather warnings not loaded.</p></section>
+    <section class="uxCard" id="manager-weather" aria-label="Zoo date, time and weather" style="margin-top:14px"><h2>Weather for the next few hours</h2><p id="manager-weather-freshness">Weather source not loaded.</p><ul id="manager-weather-hours" aria-label="Next hours at the Zoo"></ul><ul id="manager-weather-alerts" class="managerWeatherAlerts" aria-label="Source weather warnings" aria-live="polite"></ul><details class="weatherSourceDetails"><summary>Weather source details</summary><p id="manager-weather-observed">Current conditions observation time unavailable.</p><p id="manager-alerts-freshness">Weather warnings not loaded.</p></details></section>
 
     <section class="hubSection uxCard">
       <div class="sectionHeading sectionHeadingCentered"><h2>Start Here</h2></div>
@@ -89,6 +89,6 @@
 
   <script src="./memphis-auth.js?v=owner-access-20261006"></script>
   <script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
-  <script type="module" src="./ops-hub.js?v=2026.11.11.hub-polish"></script>
+  <script type="module" src="./ops-hub.js?v=2026.11.11.hub-weather-details"></script>
 </body>
 </html>
