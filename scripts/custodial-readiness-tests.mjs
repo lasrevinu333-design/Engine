@@ -289,16 +289,19 @@ await check('ordinary active native work retains its Finish card without a false
   assert.equal(f.elements.get('active-cleaning').hidden,false);
   assert.equal(f.queueBytes(),before);
 });
-await check('pending receipt remains visible without claiming Wi-Fi or permission failure', async () => {
+await check('ordinary pending receipt stays quiet online and offline without changing pending authority or saved work', async () => {
   for(const connected of [true,false]){
     const input={...positive,connected,nativeState:{...positive.nativeState,observation:'NEEDS_INTERNET',reason:'original_receipt_pending',protected_work_admission:'PENDING',pending_occurrences:true}};
     const before=JSON.stringify(input),result=classifyReadiness(input),shown=readinessPresentation(result,input);
-    assert.equal(result.state,'needs_internet');assert.equal(shown.hidden,false);
-    assert.equal(shown.label,'Saved work awaiting confirmation');assert.match(shown.detail,/Saved on this phone/);
-    assert.doesNotMatch(shown.detail,/must verify|before new cleaning/);assert.equal(JSON.stringify(input),before);
+    assert.equal(result.state,'needs_internet');assert.equal(shown.state,'needs_internet');assert.equal(shown.hidden,true);
+    assert.equal(shown.label,'');assert.equal(shown.detail,'');assert.equal(JSON.stringify(input),before);
   }
-  const f=fixture({nativeObservation:'NEEDS_INTERNET',nativeReason:'original_receipt_pending',nativePending:true});await f.flush();
-  assert.equal(f.elements.get('home-readiness').hidden,false);assert.match(f.elements.get('home-readiness').textContent,/^Saved work awaiting confirmation/);
+  const f=fixture({nativeObservation:'NEEDS_INTERNET',nativeReason:'original_receipt_pending',nativePending:true});
+  const before=f.queueBytes();await f.flush();
+  for(const id of ['home-readiness','lock-readiness','boot-readiness','assignment-readiness']){
+    assert.equal(f.elements.get(id).hidden,true);assert.equal(f.elements.get(id).textContent,'');
+  }
+  assert.equal(f.queueBytes(),before);
 });
 await check('pending flags cannot hide expired permission, recovery, unknown state or an unmatched original Finish', () => {
   const normal={...positive,nativeState:{...positive.nativeState,observation:'NEEDS_INTERNET',reason:'original_receipt_pending',protected_work_admission:'PENDING',pending_occurrences:true}};

@@ -62,10 +62,9 @@ export function readinessPresentation(result, input = {}) {
     return Object.freeze({ ...result, hidden: true, label: '', detail: '' });
   }
   if (ordinaryPending && native.reason === 'original_receipt_pending' && native.unfinished_occurrence === false) {
-    return Object.freeze({ ...result, hidden: false, label: 'Saved work awaiting confirmation',
-      detail: input.connected === false
-        ? 'Saved on this phone. Automatic sync will continue when a connection is available.'
-        : 'Saved on this phone. Automatic sync is waiting for confirmation.' });
+    // Normal receipt delivery is automatic and needs no employee action.
+    // Keep the internal pending state and original queue; only hide its banner.
+    return Object.freeze({ ...result, hidden: true, label: '', detail: '' });
   }
   // Missing/expired authority, changed identity or clock continuity still needs
   // verification. Merely having Wi-Fi does not resolve those native reasons.
