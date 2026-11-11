@@ -10,6 +10,28 @@
   function stamp(value){const at=instant(value);return at===null?'Source time unknown':new Intl.DateTimeFormat('en-US',{timeZone:ZONE,month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(at));}
   function localTime(v){const m=typeof v==='string'&&/^(\d{2}):(\d{2})(?::\d{2})?$/.exec(v);if(!m||+m[1]>23||+m[2]>59)return'Not provided';return `${+m[1]%12||12}:${m[2]} ${+m[1]>=12?'p.m.':'a.m.'} Central`;}
   const hasFeed=value=>value?.state==='current'||value?.state==='snapshot';
+  const stableId=(a,b)=>String(a.id??a.ticket_id??'').localeCompare(String(b.id??b.ticket_id??''),'en',{numeric:true});
+  const orderedTime=(a,b,direction=1)=>a===null?(b===null?0:1):b===null?-1:direction*(a-b);
+  const validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)
+    &&Number.isFinite(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
+  function visitOrder(a,b,timeField){
+    const ad=validDate(a.date)?a.date:null,bd=validDate(b.date)?b.date:null;
+    if(ad!==bd)return ad===null?1:bd===null?-1:ad.localeCompare(bd);
+    const ai=instant(a[timeField]),bi=instant(b[timeField]);
+    if(ai!==null&&bi!==null)return orderedTime(ai,bi)||stableId(a,b);
+    const minutes=row=>{const at=instant(row[timeField]);if(at!==null)return at;
+      if(timeField!=='start_at'||!/^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(row.start_time||''))return null;
+      // Local wall time only; never fabricate a UTC instant for an unknown zone.
+      return Number(row.start_time.slice(0,2))*60+Number(row.start_time.slice(3,5));};
+    // Events use their declared Central wall time when instants are mixed with
+    // local-only records, so the two representations remain comparable.
+    const localMinutes=row=>{const at=instant(row[timeField]);if(at===null)return minutes(row);
+      const parts=new Intl.DateTimeFormat('en-GB',{timeZone:ZONE,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(at));
+      return Number(parts.find(p=>p.type==='hour').value)*60+Number(parts.find(p=>p.type==='minute').value);};
+    return orderedTime(localMinutes(a),localMinutes(b))||stableId(a,b);
+  }
+  function orderedSchools(value){return hasFeed(value)&&Array.isArray(value.rows)
+    ?value.rows.filter(row=>validDate(row?.date)).slice().sort((a,b)=>visitOrder(a,b,'arrival_at')):[];}
   // Display only facts actually supplied by the normal dashboard.v1 reader.
   // A closed-session projection is NOT an original completion receipt.
   function cleaning(summary,approved,now=Date.now()){
@@ -164,21 +186,22 @@
       const key=`${row.ticket_id}:${row.kind}:${row.at}`;if(seen.has(key))continue;seen.add(key);
       cards.push({id:key,source:'Spiceworks',title:`#${row.ticket_id} · ${text(row.title,'Ticket title unavailable')}`,
         state:row.kind==='closed'?'CLOSED':'OPEN',activity:row.kind,at,
-        lines:[`${row.kind[0].toUpperCase()+row.kind.slice(1)} · ${stamp(row.at)}`]});
+        lines:[`${row.kind[0].toUpperCase()+row.kind.slice(1)} · Email activity ${stamp(row.at)}`]});
     }
-    cards.sort((a,b)=>b.at-a.at);
-    return{title:'Spiceworks · last 24 hours',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported openings or closures in this period. '}Other ticket activity may not yet be received.`};
+    cards.sort((a,b)=>b.at-a.at||stableId(a,b));
+    return{title:'Spiceworks · last 24 hours',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported openings or closures in this period. '}Newest email activity first; ticket creation dates are unavailable. Other ticket activity may not yet be received.`};
   }
   function cityWorkOrders(value){
     const unavailable={title:'Open City work orders',cards:[],note:'Current City work orders unavailable.'};
     if(value?.state!=='current'||value.coverage!=='city_active_zoo'||!Array.isArray(value.rows))return unavailable;
     const states=['Approved','Awaiting Materials','In Progress','Ready For Review','Requested'];
     if(value.rows.some(row=>!row?.id||!states.includes(row.status)||!row.facility?.startsWith('15Z')))return unavailable;
-    return{title:'Open City work orders',cards:value.rows.map(row=>({id:row.id,source:'City of Memphis',
+    const rows=value.rows.slice().sort((a,b)=>orderedTime(instant(a.requested_at),instant(b.requested_at),-1)||stableId(a,b));
+    return{title:'Open City work orders',cards:rows.map(row=>({id:row.id,source:'City of Memphis',
       title:`${row.work_order_id?'#'+row.work_order_id:'Request '+row.id} · ${text(row.facility)}`,state:'OPEN',
-      status:row.status,lines:[row.status,text(row.description,'Description unavailable.'),`Requested: ${stamp(row.requested_at)}`,
+      status:row.status,lines:[row.status,text(row.description,'Description unavailable.'),`Requested: ${instant(row.requested_at)===null?'Date unknown':stamp(row.requested_at)}`,
         ...(row.facility_label_conflict===true?['City facility labels differ; verify the location.']:[])]})),
-      note:`City active list · ${value.rows.length} Zoo work orders · updated ${stamp(value.generated_at)}.`};
+      note:`City active list · ${value.rows.length} Zoo work orders · newest requested date first; unknown dates last · updated ${stamp(value.generated_at)}.`};
   }
   function attendance(payload){const d=payload?.data;
     if(payload?.ok!==true||count(d?.attendance)===null)return{value:'Unavailable',note:'Gate count source unavailable.',stale:true};
@@ -215,7 +238,7 @@
     return{title:'Custodial tickets',cards,note:`Open the Dashboard to close eligible scan-session tickets. Other managers cannot close tickets from unrelated sources. No separate delete control.\n${mailNote}`};
   }
   function events(rows,now){const cards=[],history=[];
-    for(const row of Array.isArray(rows)?rows:[]){if(!row?.id)continue;
+    for(const row of Array.isArray(rows)?rows.filter(row=>row?.id).slice().sort((a,b)=>visitOrder(a,b,'start_at')):[]){
       const end=instant(row.end_at),lastDate=row.end_date||row.date;
       const pastDate=end===null&&/^\d{4}-\d{2}-\d{2}$/.test(lastDate||'')&&lastDate<localDate(now);
       const ended=end!==null?end<=now:pastDate;
@@ -234,7 +257,7 @@
     return{title:'Events',cards,history,note:'Structured Events data only. Cancelled, superseded and scheduled-ended records move to history; source mail is not displayed. Scheduled end is not a physical departure observation.'};
   }
   function schools(value,now){
-    const today=localDate(now),rows=hasFeed(value)?value.rows.filter(r=>/^\d{4}-\d{2}-\d{2}$/.test(r?.date||'')).slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.arrival_at||'').localeCompare(String(b.arrival_at||''))):[];
+    const today=localDate(now),rows=orderedSchools(value);
     const totals={students:0,adults:0,total:0,unclassified:0};let unknown=false;
     for(const row of rows){if(row.date!==today)continue;if(row.status==='CANCELLED'||row.status==='SUPERSEDED')continue;
       for(const key of Object.keys(totals)){if(count(row[key])===null)unknown=true;else totals[key]+=row[key];}}
@@ -286,6 +309,6 @@
       :['activity','tickets'].includes(kind)&&!view.cards.length&&/unavailable/i.test(view.note)?'Ticket details unavailable.':notes[kind]||view.note;
     return{...view,note,cards:view.cards.map(present),...(view.history?{history:view.history.map(present)}:{})};
   }
-  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,managerOnDuty,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,cleaning,publicCleaning,operationalView});
+  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,managerOnDuty,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,orderedSchools,cleaning,publicCleaning,operationalView});
   root.MemphisOperationsData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -1252,3 +1252,49 @@ test('DASHBOARD_REFRESH_bound leadership permission reaches actual ticket-contro
  await publishDashboard(f);assert.doesNotMatch(f.node('tickets-wrap').innerHTML,/closeBtn/);assert.match(f.node('refresh-status').textContent,/closure access unavailable/);
  assert.equal(f.capabilityRequests.length,1);
 });
+
+test('returning from a board resumes the focused ticker and preserves explicit pause and reduced motion',async()=>{
+ for(const reduced of [false,true]){
+  const f=fixture({reduced,audience:'public_readonly'}),track=f.elements['ops-tickets-ticker'],band=f.triggers[0];
+  band.closest=selector=>selector==='.tickerBand'?band:null;
+  band.matches=selector=>selector===':focus-within'&&f.doc.activeElement===band;
+  track.parentElement={clientWidth:200,scrollLeft:0,parentElement:band};
+  track.getBoundingClientRect=()=>({width:1200});track.style={setProperty(){}};
+  try{
+   await loaded(f);f.step(0);f.step(100);assert.equal(track.parentElement.scrollLeft,reduced?0:4.2);
+   for(let cycle=0;cycle<3;cycle++){
+    band.emit('click');f.step(200+cycle*400);const at=track.parentElement.scrollLeft;
+    if(cycle===1)f.elements['operations-board-pause'].emit('click');
+    f.elements['operations-board-close'].emit('click');
+    assert.equal(f.doc.activeElement,band);f.step(300+cycle*400);f.step(400+cycle*400);
+    assert.equal(track.parentElement.scrollLeft,reduced?at:at+4.2);
+   }
+   f.elements['operations-motion'].emit('click');const pausedAt=track.parentElement.scrollLeft;
+   band.emit('click');f.elements['operations-board-close'].emit('click');f.step(1600);f.step(1700);
+   assert.equal(track.parentElement.scrollLeft,pausedAt,'intentional map pause survives detail return');
+   f.elements['operations-motion'].emit('click');f.step(1800);
+   assert.equal(track.parentElement.scrollLeft,reduced?pausedAt:pausedAt+4.2,'resume respects reduced motion');
+   f.elements['operations-panels'].emit('pointerdown');f.step(1900);
+   assert.equal(track.parentElement.scrollLeft,reduced?pausedAt:pausedAt+4.2,'new direct focus interaction can hold ticker');
+  }finally{f.clean();}
+ }
+});
+test('City requested dates govern order with stable ties, missing dates last and source rows untouched',()=>{
+ const row=(id,requested_at)=>({id,requested_at,facility:'15Z05 Birdhouse',status:'Approved',updated_at:'2030-01-01T00:00:00Z'});
+ const rows=[row('9',null),row('20','2026-11-09T08:00:00-06:00'),row('10','2026-11-10T08:00:00-06:00'),row('2','2026-11-10T14:00:00Z'),row('8','invalid')];
+ const original=JSON.stringify(rows),feed={state:'current',coverage:'city_active_zoo',rows};
+ assert.deepEqual(D.cityWorkOrders(feed).cards.map(c=>c.id),['2','10','20','8','9']);
+ assert.deepEqual(D.cityWorkOrders({...feed,rows:[...rows].reverse()}).cards.map(c=>c.id),['2','10','20','8','9']);
+ assert.match(D.cityWorkOrders(feed).cards.at(-1).lines[2],/Date unknown/);assert.equal(JSON.stringify(rows),original);
+});
+test('Events and school visits share chronological date/time ordering with unknown times last',()=>{
+ const rows=[{id:'tomorrow',date:'2026-10-06',start_time:'08:00'},
+  {id:'unknown',date:'2026-10-05'},
+  {id:'late',date:'2026-10-05',start_time:'18:00'},
+  {id:'early',date:'2026-10-05',start_at:'2026-10-05T13:00:00Z'}].map(r=>({...r,status:'SCHEDULED',name:r.id}));
+ assert.deepEqual(D.events(rows,noon).cards.map(c=>c.id),['early','late','unknown','tomorrow']);
+ const schools=rows.map(({start_at,start_time,...r})=>({...visit,...r,arrival_at:start_at||null}));
+ const sorted=D.orderedSchools({state:'current',rows:schools});
+ assert.deepEqual(sorted.map(r=>r.id),D.schools({state:'current',rows:schools},noon).cards.map(r=>r.id));
+ assert.equal(sorted[0].id,'early');assert.equal(sorted.at(-1).id,'tomorrow');
+});

@@ -20,7 +20,7 @@
     let frame=null,lastFrame=null,hold=false,paused=false,motionPaused=false,mapExpanded=false,fsEpoch=0;
     let boardToken=null,priorHistory=null,boardFingerprint='',lastMinute=null,nearbyIds=null,fallbackInert=null;
     let owner=null,currentRead=null,cleaning=null,lastAttendance=null,lastWeather=null;
-    let tickerFrame=null,tickerTime=null;const tickerMotion=new Map();
+    let tickerFrame=null,tickerTime=null,returnedTicker=null;const tickerMotion=new Map();
     const delayedFeeds=new Set();
     const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const txt=(id,value)=>{const node=el(id);if(node&&node.textContent!==String(value))node.textContent=value;};
@@ -48,7 +48,9 @@
       const dt=tickerTime===null?0:Math.max(0,Math.min(100,time-tickerTime));tickerTime=time;
       if(!motionPaused&&!motion?.matches&&!document.hidden&&!board)for(const item of tickerMotion.values()){
         const band=item.viewport.parentElement;
-        if(band?.matches?.(':hover,:focus-within'))continue;
+        // Restoring the opener's focus after a modal is navigation, not a new
+        // request to pause. Keep keyboard focus without stranding its ticker.
+        if(band?.matches?.(':hover')||(band!==returnedTicker&&band?.matches?.(':focus-within')))continue;
         item.position=item.distance>0?(item.position>=item.distance?0:Math.min(item.distance,item.position+item.speed*dt/1000)):0;
         // Scroll the viewport instead of translating an enormous GPU layer.
         // Long City feeds remain painted at every position, including refresh.
@@ -119,7 +121,7 @@
       const events=ops?DATA.events(ops.events,now()).cards.filter(card=>card.active):[];
       const eventText=events.length?events.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]} · ${card.lines[2]}`).join('   •   '):ops?'No upcoming events loaded':'Events unavailable';
       if(el('ops-events-ticker')?.textContent!==eventText)txt('ops-events-ticker',eventText);
-      const schoolRows=ops?.schools?.rows?.filter(row=>!['CANCELLED','SUPERSEDED'].includes(row.status)&&/^\d{4}-\d{2}-\d{2}$/.test(row.date||'')&&row.date>=DATA.localDate(now()))||[];
+      const schoolRows=DATA.orderedSchools(ops?.schools).filter(row=>!['CANCELLED','SUPERSEDED'].includes(row.status)&&row.date>=DATA.localDate(now()));
       const count=value=>DATA.count(value)===null?'Unknown':String(value);
       const schoolText=schoolRows.length?schoolRows.map(row=>`${DATA.text(row.name)} · ${row.date} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`).join('   •   '):ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable';
       if(el('ops-schools-ticker')?.textContent!==schoolText)txt('ops-schools-ticker',schoolText);
@@ -238,7 +240,9 @@
       if(history&&boardToken&&window.history?.state?.operationsBoard===boardToken)window.history.back();
       else if(boardToken&&window.history?.state?.operationsBoard===boardToken)window.history.replaceState(priorHistory,'');
       boardToken=null;priorHistory=null;content.replaceChildren();txt('operations-board-note','');
+      returnedTicker=focus&&active?opener?.closest?.('.tickerBand')||null:null;
       if(focus&&active)opener?.focus?.({preventScroll:true});opener=null;
+      tickerTime=null;measureTickers();
     }
     function openBoard(kind,trigger,ids=null){
       if(!active||closed)return;if(!bound()){unavailable();return;}
@@ -289,6 +293,8 @@
     listen(content,'focusin',()=>{paused=true;syncPause();});listen(content,'wheel',()=>{paused=true;syncPause();},{passive:true});
     listen(content,'touchstart',()=>{paused=true;syncPause();},{passive:true});
     listen(el('operations-board-pause'),'click',()=>{paused=!paused;syncPause();});
+    listen(panel,'focusin',event=>{if(event.target!==returnedTicker)returnedTicker=null;});
+    listen(panel,'pointerdown',()=>{returnedTicker=null;});
     listen(el('operations-motion'),'click',()=>{motionPaused=!motionPaused;document.body.classList.toggle('motionPaused',motionPaused);
       el('operations-motion').setAttribute('aria-pressed',String(motionPaused));txt('operations-motion',motionPaused?'Resume motion':'Pause motion');});
     listen(el('operations-board-fullscreen'),'click',()=>void fullscreen(dialog));
