@@ -484,7 +484,8 @@ assert.deepEqual(
   'Home retains the four operational destinations and the approved Supplies placeholder',
 );
 assert.match(custodialHtml,/class="homeButton" href="\.\/supply-coming-soon\.html" aria-label="Supplies — coming soon"/,'Supplies stays a local placeholder');
-assert.match(custodialHtml, /id="home-memphis"[^>]*class="memphisHome"[\s\S]*<strong>Ask Memphis<\/strong>/);
+assert.doesNotMatch(custodialHtml, /id="home-memphis"|class="memphisHome"|>Ask Memphis</);
+assert.match(custodialHtml, /href="\.\/messages\.html\?hub=employee"[\s\S]*?Memphis Messenger/);
 assert.doesNotMatch(custodialHtml, /bottomNav|navLabel|employee-phone|areas-list|home-status/);
 assert.doesNotMatch(custodialHtml, /remove-enrollment|Remove Enrollment From This Phone/);
 assert.doesNotMatch(custodialJs, /function removeEnrollment|els\.remove/);

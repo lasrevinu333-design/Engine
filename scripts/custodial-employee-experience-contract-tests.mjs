@@ -284,3 +284,9 @@ assert.doesNotMatch(routes, /navigation:\s*true/);
 await import('./feedback-delivery-status-tests.mjs');
 await import('./memphis-home-entry-tests.mjs');
 console.log('CUSTODIAL_EMPLOYEE_EXPERIENCE_CONTRACT_PASS');
+
+const orderedHomeSections=['class="hubTitle"','class="employeeCard"','class="attendanceCard"','class="weatherCard"','class="homeMenu"'].map(value=>home.indexOf(value));
+assert.ok(orderedHomeSections.every((position,index)=>position>=0&&(!index||position>orderedHomeSections[index-1])),'Home follows header, actual employee, guests, weather and apps');
+assert.match(home,/class="homeIcon supplyIcon"[^]*?Supplies_Icon_ui\.png/);
+assert.doesNotMatch(home,/>Ask Memphis</);
+assert.match(home,/<details class="weatherSources">[\s\S]*?id="home-weather-freshness"/);

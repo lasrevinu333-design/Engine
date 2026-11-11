@@ -10,7 +10,8 @@ const app=fs.readFileSync(new URL('../mobile/src/chatscope/app.jsx',import.meta.
 const home=fs.readFileSync(new URL('../mobile/src/custodial/index.html',import.meta.url),'utf8');
 const match=app.match(/const resolveHomeAssistant = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[currentDeviceId, deviceIdentity\.generation, loadIdentity, loadThreads, selectThread\]\);/);
 assert.ok(match,'actual bounded source adapter must exist');
-assert.match(home,/id="home-memphis"[^>]+assistant=memphis/);
+assert.doesNotMatch(home,/id="home-memphis"|>Ask Memphis</);
+assert.match(home,/href="\.\/messages\.html\?hub=employee"[\s\S]*?Memphis Messenger/);
 assert.match(app,/EMPLOYEE_CONTEXT && PAGE_URL\.searchParams\.get\('assistant'\) === 'memphis'/);
 assert.match(app,/await resolveHomeAssistant\(\);\s*await retryOutbox\(\);/,'explicit Home assistant must not be blocked behind unrelated outbox failure');
 assert.match(app,/void resolveHomeAssistant\(\)\.catch\(error => setNotice\(safe\(error\), 'error'\)\);\s*void retryOutbox\(\)\.catch/,'online/resume assistant request remains independent from unrelated retry result');

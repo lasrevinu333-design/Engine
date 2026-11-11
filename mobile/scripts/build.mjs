@@ -219,6 +219,7 @@ const custodialCompatibilityFiles = new Set([
   'memphis-ui.css',
   'memphis-ui.js',
   'memphis_avatar_ui.webp',
+  'Supplies_Icon_ui.png',
   'messages-chatscope.html',
   'messages.html',
   'scheduler_icon_ui.webp',

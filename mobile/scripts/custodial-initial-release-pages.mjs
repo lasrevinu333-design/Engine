@@ -182,7 +182,7 @@ export function custodialInitialReleaseHome(html,{cleaningFirst=false}={}){
   if(entries.length!==5||expected.some(path=>entries.filter(entry=>entry===path).length!==1))throw Error('Complete-system Home must contain exactly the four operational entries and local Supplies placeholder.');
   if(entries.some(path=>deferredCustodialFeature(path)))throw Error('Complete-system Home cannot silently defer an included module.');
   const extra=html.match(/<a\b[^>]*class="memphisHome"[\s\S]*?<\/a>/g)||[];
-  if(extra.length!==1)throw Error('Exact direct Memphis Home entry not found.');
+  if(extra.length!==0)throw Error('Custodial Home must use its single Memphis Messenger icon, without a duplicate Ask Memphis block.');
   if(cleaningFirst)return html.replace(/<a class="homeButton" href="\.\/([^"?]+)[^"]*"[^>]*>[\s\S]*?<\/a>/g,(all,path)=>path==='supply-coming-soon.html'?all:'');
   return html; // Preserve artwork, spacing, facts and accessibility byte-for-byte.
 }

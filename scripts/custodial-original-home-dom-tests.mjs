@@ -7,7 +7,7 @@ import {principalIdentity,profileMatchesPrincipal} from '../mobile/src/custodial
 const writerOnly=process.argv.includes('--protected-writer-owner-only');
 const prelockOnly=process.argv.includes('--schedule-prelock-owner-only'),focusedOnly=writerOnly||prelockOnly;
 const html=focusedOnly?'':readFileSync(new URL('../mobile/src/custodial/index.html',import.meta.url),'utf8');
-const ids=['home-guest-count','home-guest-details','home-attendance-freshness','home-weather-current','home-weather-icon','home-weather-summary','home-weather-freshness','home-weather-hours','home-hourly-freshness','home-weather-alerts','home-alerts-freshness','home-shift','home-lunch','home-schedule-freshness'];
+const ids=['home-weather-status','home-guest-count','home-guest-details','home-attendance-freshness','home-weather-current','home-weather-icon','home-weather-summary','home-weather-freshness','home-weather-hours','home-hourly-freshness','home-weather-alerts','home-alerts-freshness','home-shift','home-lunch','home-schedule-freshness'];
 if(!focusedOnly)for(const id of ids)assert.ok(html.includes(`id="${id}"`),`DOM binding ${id} exists in the actual Home`);
 const els=new Map(ids.map(id=>[id,{textContent:'',dataset:{}}])),listeners=[];
 const originals={document:globalThis.document,window:globalThis.window,localStorage:globalThis.localStorage,fetch:globalThis.fetch,setInterval:globalThis.setInterval,clearInterval:globalThis.clearInterval};
@@ -28,11 +28,18 @@ if(!focusedOnly&&!process.argv.includes('--request-owner-only'))try{
   assert.equal(els.get('home-weather-current').textContent,'72°F · clear');
   assert.equal(els.get('home-weather-summary').textContent,'3 mph · Precipitation 0%');
   assert.equal(els.get('home-weather-freshness').dataset.stale,'false');
+  assert.equal(els.get('home-weather-status').hidden,true);
+  assert.equal(els.get('home-weather-status').textContent,'');
   assert.ok(calls.some(url=>url.includes('current=temperature_2m,weather_code,wind_speed_10m')));
   assert.ok(calls.some(url=>url.includes('my-day-summary')));
   assert.equal(els.get('home-shift').textContent,'8:00 AM–5:00 PM');assert.equal(els.get('home-lunch').textContent,'1:00 PM–2:00 PM');
   assert.equal((els.get('home-weather-hours').innerHTML.match(/<li>/g)||[]).length,8);
   assert.match(els.get('home-alerts-freshness').textContent,/No active alerts reported/);
+  globalThis.fetch=async()=>{throw Error('Synthetic provider outage');};
+  await app.update(true);
+  assert.equal(els.get('home-weather-status').hidden,false);
+  assert.match(els.get('home-weather-status').textContent,/Weather update delayed|Weather unavailable/);
+  assert.match(els.get('home-weather-status').textContent,/Weather alerts unavailable/);
   app.stop();app=null;assert.equal(cleared,true);
   console.log('Custodial original Home DOM bindings: PASS (simulated providers, no phone acceptance claim)');
 }finally{

@@ -152,6 +152,17 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     els.weather.textContent=value.currentWeather.detail;els.weather.dataset.stale=String(value.currentWeather.stale);
     els.hours.innerHTML=weatherHoursHtml(value.weather);els.hourlyFreshness.textContent=value.weather.detail;els.hourlyFreshness.dataset.stale=String(value.weather.stale);
     els.alerts.innerHTML=weatherAlertsHtml(value.alerts);els.alertFreshness.textContent=value.alerts.detail;els.alertFreshness.dataset.stale=String(value.alerts.stale);
+    // Routine source/update metadata lives in Weather details. Unavailable or
+    // stale data remains visible beside the actual forecast and alert values.
+    const weatherStatus=byId('home-weather-status');
+    if(weatherStatus){
+      const notices=[];
+      if(value.currentWeather.stale)notices.push(value.currentWeather.temperature==='Unavailable'?'Weather unavailable.':'Weather update delayed.');
+      if(value.weather.stale)notices.push('Hourly forecast update delayed.');
+      if(value.alerts.stale)notices.push('Weather alerts unavailable.');
+      weatherStatus.textContent=notices.join(' ');weatherStatus.hidden=notices.length===0;
+    }
+
     els.shift.textContent=value.schedule.shift;els.lunch.textContent=value.schedule.lunch;els.schedule.textContent=value.schedule.detail;els.schedule.dataset.stale=String(value.schedule.stale);
   }
   async function request(kind,id,signal){
