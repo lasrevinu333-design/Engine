@@ -23,6 +23,7 @@ export const CUSTODIAL_ANDROID_PERMISSIONS = Object.freeze([
   'android.permission.ACCESS_NETWORK_STATE',
   'android.permission.FOREGROUND_SERVICE',
   'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+  'android.permission.FOREGROUND_SERVICE_LOCATION',
   'android.permission.INTERNET',
   'android.permission.NFC',
   'android.permission.POST_NOTIFICATIONS',
@@ -47,6 +48,7 @@ export const CUSTODIAL_ANDROID_COMPONENTS = Object.freeze({
   ]),
   services: Object.freeze([
     `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`,
+    `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialPhoneLocationService`,
     `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderSyncJobService`,
     'com.google.android.datatransport.runtime.backends.TransportBackendDiscovery',
     'com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService',
@@ -308,6 +310,11 @@ export const CUSTODIAL_ANDROID_COMPONENT_POLICY = Object.freeze({
     }),
   }),
   service: Object.freeze({
+    [`${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialPhoneLocationService`]: policyNode('service', {
+      'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialPhoneLocationService`,
+      'android:exported': 'false',
+      'android:foregroundServiceType': '0x00000008',
+    }),
     [`${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`]: policyNode('service', {
       'android:name': `${CUSTODIAL_ANDROID_PACKAGE}.vault.CustodialProviderAudioService`,
       'android:exported': 'false',

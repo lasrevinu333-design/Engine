@@ -17,7 +17,21 @@
       throw new Error('Dashboard Map requires existing manager authentication and renderer');
     let owner=null,map=null,refreshTimer=null,sessionTimer=null,state='new',generation=0;
     let ownerBinding=null;
-    let readEpoch=0;
+    let readEpoch=0,readController=null;
+    const readTimers=new Set();
+    function cancelReads(){readController?.abort();readController=null;
+      for(const timer of readTimers)root.clearTimeout(timer);readTimers.clear();}
+    async function bounded(read,signal){
+      let timer,abort;const controller=new AbortController();
+      const cancelled=new Promise((_,reject)=>{
+        abort=()=>{controller.abort();reject(new Error('Map read cancelled'));};
+        if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true});
+        timer=root.setTimeout(()=>{controller.abort();reject(new Error('Map read timed out'));},10000);readTimers.add(timer);
+      });
+      try{return await Promise.race([cancelled,Promise.resolve().then(()=>{
+        if(signal.aborted)throw new Error('Map read cancelled');return read(controller.signal);
+      })]);}finally{root.clearTimeout(timer);readTimers.delete(timer);signal.removeEventListener('abort',abort);}
+    }
     let activeListeners=false,lifecycleListeners=false;
     function currentSession(){try{return auth.readSession();}catch{return null;}}
     function sessionBinding(session){
@@ -57,19 +71,26 @@
         link.href=target.toString();
       }
     }
-    function invalidate(message){readEpoch++;map?.invalidate();operations?.unavailable();status.textContent=message;}
+    function invalidate(message){readEpoch++;cancelReads();map?.invalidate();operations?.unavailable();status.textContent=message;}
     function checkPrincipal(){
       if(state!=='active')return false;
       if(!sameBinding(ownerBinding,currentSession())||!map?.checkSession()){
-        state='suspended';generation++;detachActive();section.hidden=true;
+        state='suspended';generation++;cancelReads();detachActive();section.hidden=true;
         invalidate('Manager access changed. Reopen the Dashboard Map from your signed-in manager session.');
         map?.suspend?.();operations?.suspend();
         return false;
       }
       return true;
     }
+    function authorityLost(){
+      if(state!=='active')return;
+      state='suspended';generation++;cancelReads();detachActive();section.hidden=true;
+      map?.clearGps?.();map?.suspend?.();operations?.suspend();
+      status.textContent='Manager access unavailable. Reopen the Dashboard Map from your signed-in manager session.';
+    }
     async function refresh(){
       if(!checkPrincipal())return false;
+      cancelReads();readController=new AbortController();const signal=readController.signal;
       const ticket=map.beginRefresh();
       if(!ticket)return false;
       const requestGeneration=generation;
@@ -79,29 +100,42 @@
       // Cancel old reads while retaining the same manager's displayed facts
       // during the replacement request. Source failures still invalidate them.
       operations?.beginRefresh?.({isCurrent:currentRead});
+      let phoneStarted=false;
       try{
-        const headers=await auth.opsManagerAuthHeaders({expectedManagerId:owner.manager_id});
+        const headers=await bounded(()=>auth.opsManagerAuthHeaders({expectedManagerId:owner.manager_id}),signal);
         if(!currentRead())return false;
         void operations?.refresh({headers,fetchImpl,preserveSummary:true,
           isCurrent:currentRead}).catch(()=>{});
-        const response=await fetchImpl(API,{method:'GET',cache:'no-store',headers});
-        const payload=await response.json().catch(()=>null);
+        // Phone location is independent of cleaning summary and optional work history.
+        let gpsOpen=true,gpsVersion=-1;
+        const receiveGps=context=>{const version=context?.historyVersion||0;
+          if(gpsOpen&&version>=gpsVersion&&currentRead()){gpsVersion=version;map?.acceptGps?.(ticket,context);}};
+        const gpsFailure=error=>{gpsOpen=false;if(!currentRead())return;
+          if(error?.authority)authorityLost();else map?.unavailableGps?.(ticket);};
+        phoneStarted=true;
+        if(gpsSource?.read){
+          void bounded(()=>gpsSource.read({headers,fetchImpl,signal,
+            onUpdate:receiveGps,
+            onAuthorityError:gpsFailure}),signal).then(receiveGps).catch(gpsFailure);
+        }else map.unavailableGps?.(ticket);
+        const {response,payload}=await bounded(async summarySignal=>{
+          const response=await fetchImpl(API,{method:'GET',cache:'no-store',headers,signal:summarySignal});
+          if(summarySignal.aborted)throw new Error('Map read cancelled');
+          if(response.status===401||response.status===403){
+            if(currentRead())authorityLost();throw new Error('Manager access unavailable');
+          }
+          return {response,payload:await response.json().catch(()=>null)};
+        },signal);
         if(!currentRead())return false;
         if(!response.ok||payload?.ok!==true||!dashboardData(payload.data))
           throw new Error('The authenticated Dashboard summary is unavailable or changed');
         if(!map.accept(ticket,payload.data))return false;
         status.textContent='';
-        // GPS is advisory. Its separate read can fail or be absent without
-        // changing the authenticated cleaning state or NFC workflow.
-        if(gpsSource?.read){
-          void gpsSource.read({headers,fetchImpl}).then(context=>{
-            if(currentRead())map?.acceptGps?.(ticket,context);
-          }).catch(()=>{if(currentRead())map?.unavailableGps?.(ticket);});
-        }else map.unavailableGps?.(ticket);
         operations?.updateSummary?.({summary:payload.data,isCurrent:currentRead});
         return true;
       }catch{
         if(requestGeneration!==generation||requestEpoch!==readEpoch)return false;
+        if(!phoneStarted)map.unavailableGps?.(ticket);
         map.fail(ticket);operations?.summaryUnavailable?.();
         if(checkPrincipal())status.textContent='Cleaning status unavailable. Please try again.';
         return false;
@@ -129,12 +163,12 @@
     }
     function suspend(){
       if(state==='closed'||state==='suspended')return;
-      state='suspended';generation++;detachActive();section.hidden=true;
+      state='suspended';generation++;cancelReads();detachActive();section.hidden=true;
       map?.suspend?.();operations?.suspend();status.textContent='Map status paused. Rechecking manager access on return.';
     }
     function stop(){
       if(state==='closed')return;
-      state='closed';generation++;detachActive();section.hidden=true;
+      state='closed';generation++;cancelReads();detachActive();section.hidden=true;
       if(lifecycleListeners){lifecycleListeners=false;
         window.removeEventListener?.('pagehide',onPageHide);window.removeEventListener?.('pageshow',onPageShow);}
       map?.stop?.();operations?.stop();map=null;owner=null;ownerBinding=null;

@@ -187,7 +187,7 @@ pass('renderer failure rolls gate and renderer back without deleting accepted pi
 assert.equal(await resumedRenderer.resume(),true);
 pass('renderer retries after transient rejection with one pin set and no duplicate resize listener',()=>{
  assert.equal(anchorCalls,3,'failed restoration retries the exact approved anchor resource');
- assert.equal(retryElements.layer.children.length,47);assert.equal(retryListeners.size,1);
+ assert.equal(retryElements.layer.children.length,47);assert.deepEqual([...retryListeners.keys()].sort(),['resize','scroll']);
  const fresh=resumedRenderer.beginRefresh();assert.ok(fresh);
  assert.equal(resumedRenderer.accept(fresh,summary([row(first,'okay','green')])),true);
 });
@@ -213,7 +213,7 @@ rejectOld(Error('old interrupted restoration'));await assert.rejects(staleRestor
 rejectInitial(Error('old first anchor request rejected'));await assert.rejects(staleInitial,/old first anchor request rejected/);
 pass('obsolete first-request and restoration rejections cannot roll back a newer renderer generation',()=>{
  assert.equal(raceCalls,3);assert.equal(raceElements.layer.children.length,47);
- assert.equal(raceListeners.size,1);const ticket=racing.beginRefresh();assert.ok(ticket);
+ assert.deepEqual([...raceListeners.keys()].sort(),['resize','scroll']);const ticket=racing.beginRefresh();assert.ok(ticket);
  assert.equal(racing.accept(ticket,summary([row(first,'okay','green')])),true);
 });
 racing.stop();assert.equal(raceListeners.size,0);

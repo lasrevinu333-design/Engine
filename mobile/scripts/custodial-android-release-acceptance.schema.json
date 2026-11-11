@@ -547,8 +547,8 @@
             },
             "permissions": {
               "type": "array",
-              "minItems": 12,
-              "maxItems": 12,
+              "minItems": 13,
+              "maxItems": 13,
               "uniqueItems": true,
               "prefixItems": [
                 {
@@ -562,6 +562,9 @@
                 },
                 {
                   "const": "android.permission.FOREGROUND_SERVICE"
+                },
+                {
+                  "const": "android.permission.FOREGROUND_SERVICE_LOCATION"
                 },
                 {
                   "const": "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
@@ -640,8 +643,8 @@
                 },
                 "services": {
                   "type": "array",
-                  "minItems": 6,
-                  "maxItems": 6,
+                  "minItems": 7,
+                  "maxItems": 7,
                   "uniqueItems": true,
                   "prefixItems": [
                     {
@@ -652,6 +655,9 @@
                     },
                     {
                       "const": "com.google.firebase.components.ComponentDiscoveryService"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.CustodialPhoneLocationService"
                     },
                     {
                       "const": "org.memphiszoo.custodial.vault.CustodialProviderAudioService"
@@ -874,8 +880,8 @@
             },
             "permissions": {
               "type": "array",
-              "minItems": 12,
-              "maxItems": 12,
+              "minItems": 13,
+              "maxItems": 13,
               "uniqueItems": true,
               "prefixItems": [
                 {
@@ -889,6 +895,9 @@
                 },
                 {
                   "const": "android.permission.FOREGROUND_SERVICE"
+                },
+                {
+                  "const": "android.permission.FOREGROUND_SERVICE_LOCATION"
                 },
                 {
                   "const": "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
@@ -967,8 +976,8 @@
                 },
                 "services": {
                   "type": "array",
-                  "minItems": 7,
-                  "maxItems": 7,
+                  "minItems": 8,
+                  "maxItems": 8,
                   "uniqueItems": true,
                   "prefixItems": [
                     {
@@ -985,6 +994,9 @@
                     },
                     {
                       "const": "io.capawesome.capacitorjs.plugins.firebase.messaging.MessagingService"
+                    },
+                    {
+                      "const": "org.memphiszoo.custodial.vault.CustodialPhoneLocationService"
                     },
                     {
                       "const": "org.memphiszoo.custodial.vault.CustodialProviderAudioService"
@@ -1233,7 +1245,7 @@
           "const": "8e01e16a5e595cf983519a31dd000bde73e4132990fdca7e63fbe5160b65f92d"
         },
         "dex_semantic_verifier_version": {
-          "const": "1.0.0"
+          "const": "1.1.0"
         },
         "native_class_present": {
           "const": true
@@ -1387,7 +1399,9 @@
             "Lorg/memphiszoo/custodial/vault/NativeReadinessObservation;",
             "Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;",
             "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;",
-            "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;"
+            "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;",
+            "Lorg/memphiszoo/custodial/vault/CustodialPhoneLocationService;",
+            "Lorg/memphiszoo/custodial/vault/RequestPolicy;"
           ],
           "properties": {
             "Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;": {
@@ -1430,6 +1444,12 @@
               "$ref": "#/$defs/dexName"
             },
             "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/CustodialPhoneLocationService;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/RequestPolicy;": {
               "$ref": "#/$defs/dexName"
             }
           }
@@ -1575,7 +1595,7 @@
           "$ref": "#/$defs/sha256"
         },
         "dex_semantic_verifier_version": {
-          "const": "1.0.0"
+          "const": "1.1.0"
         },
         "dex_semantic_verifier_source_sha256": {
           "$ref": "#/$defs/sha256"

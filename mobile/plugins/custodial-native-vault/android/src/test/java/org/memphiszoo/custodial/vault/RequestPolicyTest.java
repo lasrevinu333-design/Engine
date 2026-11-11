@@ -56,6 +56,21 @@ public final class RequestPolicyTest {
     }
 
     @Test
+    public void webViewCannotInventNativePhonePositions() throws Exception {
+        for(String path:new String[]{"/scan-api/phone-position","/scan-api/phone-position?x=1",
+            "/SCAN-API/PHONE-POSITION","/scan-api/phone-position/extra"}) {
+            AuthorizedRequest request=request(path,"POST",jsonHeaders(),"{}".getBytes(StandardCharsets.UTF_8));
+            expectCode("custodial_native_phone_position_path_refused",()->RequestPolicy.webViewRequestUri(request));
+        }
+        for(String path:new String[]{"/scan-api/phone-position/","/scan-api/%70hone-position","/scan-api//phone-position"})
+            expectFailure(()->RequestPolicy.webViewRequestUri(request(path,"POST",jsonHeaders(),new byte[0])));
+        AuthorizedRequest collector=request("/scan-api/phone-position","POST",jsonHeaders(),"{}".getBytes(StandardCharsets.UTF_8));
+        assertEquals(collector.path,RequestPolicy.validate(collector,DEVICE).path);
+        AuthorizedRequest scan=request("/scan-api/rpc","POST",jsonHeaders(),"{}".getBytes(StandardCharsets.UTF_8));
+        assertEquals(scan.path,RequestPolicy.webViewRequestUri(scan).getRawPath());
+    }
+
+    @Test
     public void acceptedCleaningReadUsesMountedMessagingRoute() throws Exception {
         String query = "?device_id=KIOSK_02&limit=5&accepted_sessions=1";
         String path = "/messaging-api/device-location-status-reminders" + query;

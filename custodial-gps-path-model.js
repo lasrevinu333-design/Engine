@@ -64,7 +64,18 @@
       lastObserved: latest?.observed ?? null, chronologyUnknown: false, source: 'SESSION_BOUND_MEASURED_OBSERVATIONS' });
   }
 
-  const api = Object.freeze({ path });
+  function phone({registration,phone,now=Date.now()}){
+    const p=phone?.position,observed=captureTime(p?.observedAt),received=captureTime(p?.receivedAt);
+    if(!registration?.project||!phone?.deviceIdentifier||!phone?.employeeId||!finite(now)
+      ||!Number.isSafeInteger(phone.assignmentEpoch)||phone.assignmentEpoch<1
+      ||!finite(observed)||!finite(received)||observed>now||observed>received||received>now
+      ||![p.latitude,p.longitude,p.accuracyM].every(finite))return {state:'unavailable',position:null};
+    const projected=registration.project(p.latitude,p.longitude,p.accuracyM);
+    if(!projected.ok)return {state:'unavailable',position:null,reason:projected.reason};
+    return {state:now-observed<=120000?'live':'stale',position:{...projected,observed},
+      label:phone.employeeName||phone.deviceIdentifier,deviceIdentifier:phone.deviceIdentifier};
+  }
+  const api = Object.freeze({ path, phone });
   root.MemphisCustodialGpsPathModel = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

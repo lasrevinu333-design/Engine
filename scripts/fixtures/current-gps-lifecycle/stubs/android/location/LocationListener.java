@@ -1,0 +1,1 @@
+package android.location;public interface LocationListener {void onLocationChanged(Location p);void onProviderDisabled(String p);void onProviderEnabled(String p);void onStatusChanged(String p,int s,android.os.Bundle e);}

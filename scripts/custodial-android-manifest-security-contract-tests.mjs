@@ -616,8 +616,8 @@ for (const kind of ['activities', 'services', 'providers', 'receivers', 'uses_li
 assert.equal(manifestSchema.verifier_version.const, CUSTODIAL_ANDROID_MANIFEST_SECURITY_VERIFIER_VERSION);
 assert.equal(manifestSchema.policy.const, qualifiedProof.policy);
 assert.deepEqual(manifestSchema.permissions.prefixItems.map(x=>x.const),qualifiedProof.permissions);
-assert.equal(manifestSchema.permissions.minItems,12);
-assert.equal(manifestSchema.permissions.maxItems,12);
+assert.equal(manifestSchema.permissions.minItems,13);
+assert.equal(manifestSchema.permissions.maxItems,13);
 assert.deepEqual(manifestSchema.components.properties.receivers.prefixItems.map((item) => item.const), proof.components.receivers);
 assert.equal(manifestSchema.components.properties.receivers.minItems, 9);
 assert.equal(manifestSchema.components.properties.receivers.maxItems, 9);

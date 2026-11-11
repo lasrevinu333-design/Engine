@@ -1,0 +1,1 @@
+package org.memphiszoo.custodial.vault;import java.util.Map;class AuthorizedRequest {final String path,method;final Map<String,String> headers;final byte[] body;AuthorizedRequest(String p,String m,Map<String,String> h,byte[] b){path=p;method=m;headers=h;body=b;}}

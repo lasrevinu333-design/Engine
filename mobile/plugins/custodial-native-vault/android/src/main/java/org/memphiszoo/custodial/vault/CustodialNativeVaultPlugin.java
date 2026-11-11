@@ -1038,7 +1038,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 stringHeaders(call.getObject("headers", new JSObject())),
                 body
             );
-            RequestPolicy.genericRequestUri(request);
+            RequestPolicy.webViewRequestUri(request);
             Map<String,Object> before=engine.getState();
             if(NativeCompletionJournal.isCompletionRequest(request))
                 completionJournal().preflight(call.getString("device_id"),request);
@@ -1056,6 +1056,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     engine.observeLegacyStatus(new NativeLegacyLineageJournal((NativeLegacyLineageJournal.Store)offlineAuthorityStore),request,response);
                 }else
                     new NativePrincipalJournal((NativePrincipalJournal.Store)offlineAuthorityStore).capture(after,request,response);
+                queuePhoneLocationStart();
             }
             // Persist server acceptance before exposing it to any mutable WebView state.
             if (NativeCompletionJournal.isCompletionRequest(request)) {
@@ -1077,6 +1078,17 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         });
     }
 
+    private void queuePhoneLocationStart() {
+        final Activity activity=getActivity();
+        final CustodialNativeRuntime runtime=applicationRuntime;
+        final Object epoch=currentProviderAttachmentEpoch(runtime);
+        if(activity==null||epoch==null)return;
+        activity.runOnUiThread(()->{
+            if(providerLifecycleCurrent(runtime,epoch)&&startupRefusal==null)
+                CustodialPhoneLocationService.startFromVisible(activity);
+        });
+    }
+
     @Override
     protected void handleOnResume() {
         if(originalBrowserOwnerRetired||applicationRuntime==null)return;
@@ -1086,6 +1098,17 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         // The actual native lifecycle produces a fresh opaque withdrawal
         // identity. It is never a principal, clock, manager or effect grant.
         providerForegroundEpoch.set(new Object());queueProviderRecovery();
+        var locationView=activity.getWindow().getDecorView();
+        locationView.post(this::queuePhoneLocationStart);
+        if(!locationView.hasWindowFocus()){
+            locationView.getViewTreeObserver().addOnWindowFocusChangeListener(new android.view.ViewTreeObserver.OnWindowFocusChangeListener(){
+                @Override public void onWindowFocusChanged(boolean focused){
+                    if(!focused)return;
+                    if(locationView.getViewTreeObserver().isAlive())locationView.getViewTreeObserver().removeOnWindowFocusChangeListener(this);
+                    queuePhoneLocationStart();
+                }
+            });
+        }
     }
 
     @Override

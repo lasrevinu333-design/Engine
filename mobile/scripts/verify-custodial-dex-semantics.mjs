@@ -34,7 +34,7 @@ const VALUE_ANNOTATION = 0x1d;
 const VALUE_NULL = 0x1e;
 const VALUE_BOOLEAN = 0x1f;
 
-export const CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION = '1.0.0';
+export const CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION = '1.1.0';
 
 export const CUSTODIAL_NATIVE_VAULT_PLUGIN_DESCRIPTOR =
   'Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;';
@@ -59,6 +59,8 @@ export const CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS = Object.freeze([
   'Lorg/memphiszoo/custodial/vault/WebViewInputPolicy;',
   'Lorg/memphiszoo/custodial/vault/CancellationCoordinator;',
   'Lorg/memphiszoo/custodial/vault/RemovalCoordinator;',
+  'Lorg/memphiszoo/custodial/vault/CustodialPhoneLocationService;',
+  'Lorg/memphiszoo/custodial/vault/RequestPolicy;',
 ]);
 
 export const CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS = Object.freeze([

@@ -28,7 +28,9 @@ const fixture=({session=structuredClone(principal),required=session,response={ok
   assert.deepEqual(data,summary);accepted++;return true;},acceptGps(_ticket,data){gpsAccepted.push(data);return true;},unavailableGps(){},fail(){failed++;},invalidate(){invalidated++;}};
  const renderer={create(){creates++;return map;}};
  const fetchImpl=async(url,options)=>{fetches++;assert.equal(url,'https://memphis-zoo-mcp.onrender.com/dashboard-api/summary');
-  assert.deepEqual(options,{method:'GET',cache:'no-store',headers:{Authorization:'Bearer token-1','X-Device-Id':'device-1'}});
+  assert.ok(options.signal instanceof AbortSignal);assert.equal(options.signal.aborted,false);
+  const {signal,...ordinaryOptions}=options;
+  assert.deepEqual(ordinaryOptions,{method:'GET',cache:'no-store',headers:{Authorization:'Bearer token-1','X-Device-Id':'device-1'}});
   if(delayed)return typeof delayed==='function'?delayed():delayed.promise;
   return {ok:response.ok,status:response.status,async json(){return response.json?response.json():{ok:response.ok,data:response.data};}};
  };
@@ -79,7 +81,8 @@ pass('principal change after success hides the route and never fetches as the ne
 const denied=fixture({response:{ok:false,status:403,data:null}});assert.equal(await denied.controller.init(),true);
 await new Promise(resolve=>setImmediate(resolve));
 pass('API role denial cannot be displayed as current cleaning authority',()=>{
- assert.equal(denied.counts().accepted,0);assert.equal(denied.counts().failed,1);
+ assert.equal(denied.counts().accepted,0);assert.equal(denied.counts().failed,0);
+ assert.equal(denied.counts().suspends,1);assert.equal(denied.section.hidden,true);assert.equal(denied.timers.size,0);
  assert.match(denied.status.textContent,/unavailable/);
 });
 const bad=fixture({response:{ok:true,status:200,data:{...summary,meta:{contracts:{dashboard:'old'},generated_at:summary.meta.generated_at}}}});

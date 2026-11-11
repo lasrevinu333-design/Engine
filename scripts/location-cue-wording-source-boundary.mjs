@@ -1,3 +1,4 @@
+import {normalizeCurrentGpsForHistoricalComparison} from './current-gps-qualification-source-boundary.mjs';
 import {normalizeCurrentApprovedPreservation} from './current-approved-preservation-source-boundary.mjs';
 import {normalizeBoundProviderComparison} from './current-provider-comparison-source-boundary.mjs';
 import assert from 'node:assert/strict';
@@ -14,6 +15,7 @@ export const locationCueWordingPins=Object.freeze({
 // successor. Unknown edits/paths remain unchanged and older strict guards
 // continue to reject them. Runtime never imports this module.
 export function normalizeCurrentLocationCueWording(name,source){
+  source=normalizeCurrentGpsForHistoricalComparison(name,source);
   source=normalizeCurrentApprovedPreservation(name,source);
   source=normalizeBoundProviderComparison(name,source);
   const p=locationCueWordingPins;

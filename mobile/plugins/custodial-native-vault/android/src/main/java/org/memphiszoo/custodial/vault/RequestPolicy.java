@@ -121,6 +121,18 @@ final class RequestPolicy {
         return uri;
     }
 
+    /** The phone collector owns measurement generation. A WebView caller may
+     * use ordinary scan routes, but cannot turn invented coordinates into a
+     * native-authenticated phone fix. Native collector calls still traverse
+     * the engine's existing credential, assignment and transport checks. */
+    static URI webViewRequestUri(AuthorizedRequest request) throws VaultFailure {
+        URI uri=genericRequestUri(request);
+        String path=uri.getRawPath().toLowerCase(Locale.ROOT);
+        if(path.equals("/scan-api/phone-position")||path.startsWith("/scan-api/phone-position/"))
+            throw new VaultFailure("custodial_native_phone_position_path_refused");
+        return uri;
+    }
+
     private static URI strictUri(String value) throws VaultFailure {
         String raw = value == null ? "" : value.trim();
         if (

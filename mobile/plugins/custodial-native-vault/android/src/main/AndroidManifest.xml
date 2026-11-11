@@ -3,6 +3,7 @@
          type/exported owner. Runtime still requires qualified release inputs. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <application android:name="org.memphiszoo.custodial.vault.CustodialEnrollmentApplication">
         <!-- Explicit operator-only foreground preparation; no BROWSABLE,
              launcher, startup, employee bridge or newly granted permission. -->
@@ -16,6 +17,8 @@
                 <action android:name="org.memphiszoo.custodial.ORIGINAL_RECOVERY_PREPARATION" />
             </intent-filter>
         </activity>
+        <service android:name="org.memphiszoo.custodial.vault.CustodialPhoneLocationService"
+            android:exported="false" android:foregroundServiceType="location" />
         <service
             android:name="org.memphiszoo.custodial.vault.CustodialProviderAudioService"
             android:exported="false"

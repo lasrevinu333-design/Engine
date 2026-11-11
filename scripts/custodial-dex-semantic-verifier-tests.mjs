@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import {
   CAPACITOR_PLUGIN_ANNOTATION_DESCRIPTOR,
   CAPACITOR_PLUGIN_CALL_DESCRIPTOR,
@@ -8,8 +9,17 @@ import {
   CUSTODIAL_NATIVE_VAULT_PLUGIN_DESCRIPTOR,
   CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,
   CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS,
+  CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION,
   inspectCustodialNativeVaultDexSemantics,
 } from '../mobile/scripts/verify-custodial-dex-semantics.mjs';
+
+// Both independent acceptance-schema branches must name the active verifier.
+// A stale provenance branch must not reject an otherwise current artifact.
+const acceptanceSchema = JSON.parse(readFileSync(new URL('../mobile/scripts/custodial-android-release-acceptance.schema.json', import.meta.url), 'utf8'));
+for (const branch of ['native_security', 'verifier']) {
+  assert.equal(acceptanceSchema.properties[branch].properties.dex_semantic_verifier_version.const,
+    CUSTODIAL_DEX_SEMANTIC_VERIFIER_VERSION, branch + ' must bind the active DEX verifier');
+}
 
 const OBJECT_DESCRIPTOR = 'Ljava/lang/Object;';
 const VOID_DESCRIPTOR = 'V';
@@ -59,10 +69,12 @@ function dexSemanticFixture({
   pluginParameter = CAPACITOR_PLUGIN_CALL_DESCRIPTOR,
   pluginAccessFlags = 0x11,
   extraClasses = [],
+  referencedTypes = [],
 } = {}) {
   const classDescriptors = [...new Set([...requiredClasses, ...extraClasses])];
   const typeDescriptors = [...new Set([
     ...classDescriptors,
+    ...referencedTypes,
     pluginSuperclass,
     OBJECT_DESCRIPTOR,
     CAPACITOR_PLUGIN_ANNOTATION_DESCRIPTOR,
@@ -240,6 +252,18 @@ if (process.argv.includes('--reviewed-removal-admission')) {
   );
   console.log('Reviewed removal admission DEX method cases passed.');
   process.exit(0);
+}
+
+
+// Independently named GPS closure: a descriptor reference is not a definition.
+for (const descriptor of ['Lorg/memphiszoo/custodial/vault/CustodialPhoneLocationService;',
+  'Lorg/memphiszoo/custodial/vault/RequestPolicy;']) {
+  assert.ok(CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS.includes(descriptor));
+  for (const referencedTypes of [[], [descriptor]]) assert.throws(
+    () => inspectCustodialNativeVaultDexSemantics([{name:'classes.dex',bytes:dexSemanticFixture({
+      requiredClasses:CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS.filter(value=>value!==descriptor),
+      referencedTypes,
+    })}]), /missing native vault class closure/);
 }
 
 const oldDescriptor = 'Lcom/aparajita/capacitor/securestorage/SecureStorage;';

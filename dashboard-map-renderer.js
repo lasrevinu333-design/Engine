@@ -128,11 +128,94 @@
     const controls=[];
     const buttons=new Map();
     const options=new Map();
-    const gpsUnavailable='Advisory GPS unavailable: measured active-work history is required. Owner-accepted visual fit; absolute map accuracy and walking domain are unverified.';
-    function clearGps(message=gpsUnavailable){gpsLayer?.replaceChildren();if(gpsStatus)gpsStatus.textContent=message;}
+    let lastGps=null,gpsAgeTimer=null,gpsCaptions=[],captionLayer=null,captionObserver=null,captionFrame=null;
+    const gpsUnavailable='Assigned phone locations unavailable. Map position is an estimate; no cleaning session is required.';
+    function clearGps(message=gpsUnavailable){if(captionFrame!==null){window.cancelAnimationFrame?.(captionFrame);captionFrame=null;}lastGps=null;gpsCaptions=[];captionLayer=null;if(gpsAgeTimer!=null){window.clearInterval(gpsAgeTimer);gpsAgeTimer=null;}gpsLayer?.replaceChildren();if(gpsStatus)gpsStatus.textContent=message;}
+    // Captions are presentation, not geographic observations. Keep them outside
+    // the sealed inverse-fit group, in screen-sized units, with leaders back to
+    // the unchanged measured point. Never drag an offscreen phone into view.
+    function scheduleGpsCaptions(){
+      if(closed||suspended||!captionLayer||captionFrame!==null)return;
+      if(!window.requestAnimationFrame){layoutGpsCaptions();return;}
+      captionFrame=window.requestAnimationFrame(()=>{captionFrame=null;layoutGpsCaptions();});
+    }
+    function layoutGpsCaptions(){
+      if(!captionLayer||closed||suspended)return;
+      captionLayer.replaceChildren();
+      const fit=MAP.fitViewport({width:viewport.clientWidth||1,height:viewport.clientHeight||1,
+        canvasWidth:displayWidth,canvasHeight:displayHeight});
+      const rect=gpsLayer.getBoundingClientRect?.();
+      const matrix=gpsLayer.getScreenCTM?.();
+      const screenMatrix=matrix&&matrix.a>0&&matrix.d>0&&Math.abs(matrix.b)<1e-8&&Math.abs(matrix.c)<1e-8;
+      const sx=screenMatrix?matrix.a:rect?.width>0?rect.width/displayWidth:fit.fitScale;
+      const sy=screenMatrix?matrix.d:rect?.height>0?rect.height/displayHeight:fit.fitScale;
+      const originX=screenMatrix?matrix.e:rect?.left||0,originY=screenMatrix?matrix.f:rect?.top||0;
+      let bounds={left:0,top:0,right:displayWidth*sx,bottom:displayHeight*sy};
+      if(rect?.width>0&&rect?.height>0){
+        const clip=(r,x=true,y=true)=>{if(!r)return;
+          if(x){bounds.left=Math.max(bounds.left,r.left-originX);bounds.right=Math.min(bounds.right,r.right-originX);}
+          if(y){bounds.top=Math.max(bounds.top,r.top-originY);bounds.bottom=Math.min(bounds.bottom,r.bottom-originY);}};
+        for(let node=viewport;node;node=node.parentElement){
+          const style=window.getComputedStyle?.(node);
+          const clips=value=>/hidden|clip|auto|scroll/.test(value||'');
+          clip(node.getBoundingClientRect?.(),node===section||clips(style?.overflowX),node===section||clips(style?.overflowY));
+          if(node===section)break;
+        }
+        if(window.innerWidth&&window.innerHeight)clip({left:0,top:0,right:window.innerWidth,bottom:window.innerHeight});
+      }
+      const pad=4,lineHeight=20,gap=3,maxWidth=Math.min(230,bounds.right-bounds.left-pad*2);
+      if(maxWidth<40||bounds.bottom-bounds.top<lineHeight+pad*2)return;
+      captionLayer.setAttribute('transform',`scale(${1/sx} ${1/sy})`);
+      const svg='http://www.w3.org/2000/svg',placed=[],leaders=[],labels=[];
+      // Cleaning controls own the foreground. Treat their actual visible boxes
+      // as obstacles instead of changing stacking or moving their anchors.
+      for(const button of buttons.values()){
+        const box=button.getBoundingClientRect?.();
+        if(box?.width>0&&box?.height>0)placed.push({left:box.left-originX,top:box.top-originY,
+          right:box.right-originX,bottom:box.bottom-originY});
+      }
+      const clamp=(value,low,high)=>Math.min(high,Math.max(low,value));
+      const entries=[...gpsCaptions].sort((a,b)=>a.device.localeCompare(b.device)||a.full.localeCompare(b.full));
+      const points=entries.map(entry=>({...entry,x:entry.point.x*sx,y:entry.point.y*sy}));
+      for(const entry of points){
+        if(entry.x<bounds.left||entry.x>bounds.right||entry.y<bounds.top||entry.y>bounds.bottom)continue;
+        const text=document.createElementNS(svg,'text');text.setAttribute('fill',entry.color);
+        text.setAttribute('font-size','13');text.setAttribute('stroke','#ffffff');
+        text.setAttribute('stroke-width','3');text.setAttribute('paint-order','stroke');
+        text.setAttribute('data-phone-caption',entry.device);text.setAttribute('aria-label',entry.full);
+        text.textContent=entry.text;captionLayer.append(text);
+        const measure=()=>{const width=text.getComputedTextLength?.();return width>0?width:Array.from(text.textContent).length*8;};
+        const chars=Array.from(entry.text);let width=measure();
+        if(width>maxWidth){let low=0,high=chars.length;
+          while(low<high){const mid=Math.ceil((low+high)/2);text.textContent=chars.slice(0,mid).join('')+'…';
+            if(measure()<=maxWidth)low=mid;else high=mid-1;}
+          text.textContent=chars.slice(0,low).join('')+'…';width=measure();
+        }
+        const candidates=[];
+        for(let row=0;row<=Math.ceil((bounds.bottom-bounds.top)/lineHeight);row++){
+          for(const direction of row?[1,-1]:[1])for(const x of [entry.x+9,entry.x-width-9,bounds.left+pad,bounds.right-pad-width]){
+            const left=clamp(x,bounds.left+pad,bounds.right-pad-width);
+            const top=clamp(entry.y-lineHeight+direction*row*(lineHeight+gap),bounds.top+pad,bounds.bottom-pad-lineHeight);
+            const box={left,top,right:left+width,bottom:top+lineHeight};
+            const overlaps=placed.some(p=>box.left<p.right+gap&&box.right>p.left-gap&&box.top<p.bottom+gap&&box.bottom>p.top-gap);
+            const coversPoint=points.some(p=>p.x>box.left-6&&p.x<box.right+6&&p.y>box.top-6&&p.y<box.bottom+6);
+            if(!overlaps&&!coversPoint)candidates.push({...box,distance:Math.hypot(clamp(entry.x,left,left+width)-entry.x,top+lineHeight/2-entry.y)});
+          }
+        }
+        candidates.sort((a,b)=>a.distance-b.distance||a.top-b.top||a.left-b.left);
+        const box=candidates[0];
+        if(!box)continue; // Full name/status remains in the existing accessible summary.
+        placed.push(box);text.setAttribute('x',String(box.left));text.setAttribute('y',String(box.top+14));
+        const title=document.createElementNS(svg,'title');title.textContent=entry.full;text.append(title);labels.push(text);
+        const leader=document.createElementNS(svg,'line');leader.setAttribute('x1',String(entry.x));leader.setAttribute('y1',String(entry.y));
+        leader.setAttribute('x2',String(clamp(entry.x,box.left,box.right)));leader.setAttribute('y2',String(clamp(entry.y,box.top,box.bottom)));
+        leader.setAttribute('stroke',entry.color);leader.setAttribute('stroke-width','1');leaders.push(leader);
+      }
+      captionLayer.replaceChildren(...leaders,...labels);
+    }
     const gate=(publicRead?createPublicRefreshGate:createRefreshGate)({readSession:()=>auth.readSession(),onState:(kind,summary)=>{
       if(!anchors||closed)return;
-      if(kind!=='current')clearGps();
+      if(kind==='principal_changed')clearGps();
       if(kind==='principal_changed')interaction=MAP.initialInteraction();
       markers=MAP.project({anchors,summary,transport:kind==='current'?(publicRead?'CURRENT_PUBLIC_READONLY_RESPONSE':'CURRENT_AUTHENTICATED_RESPONSE'):kind.toUpperCase()});
       interaction=MAP.reconcileUrgency(interaction,markers);
@@ -144,6 +227,7 @@
       // A hidden, suspended page has no layout. The first visible refresh or
       // resize observation fits it; never manufacture a scroll-sized surface.
       if(viewport.clientWidth<=0||viewport.clientHeight<=0)return;
+      scheduleGpsCaptions();
       const fit=MAP.fitViewport({width:viewport.clientWidth,height:viewport.clientHeight,
         canvasWidth:displayWidth,canvasHeight:displayHeight});
       surface.style.width=`${fit.width}px`;
@@ -195,17 +279,21 @@
       const selected=markers.find(marker=>marker.locationId===interaction.tappedId||marker.locationId===interaction.focusedId);
       selection.textContent=selected?`${selected.name}: ${selected.statusLabel}${selected.activeWork?` · ${selected.activeWork}`:''}`:'Choose a pin or location for details.';
       if(locations)locations.value=selected?.locationId||'';
+      layoutGpsCaptions();
     }
-    function acceptGps(ticket,context){
-      if(!gate.isCurrent(ticket)||!anchors||!gpsLayer||!gpsStatus||!FIT?.admit||!PATH?.path)return false;
+    function acceptGps(ticket,context,{cached=false,transportFailed=false}={}){
+      const permitted=()=>!publicRead&&!closed&&!suspended&&(cached?gate.checkSession():gate.isCurrent(ticket));
+      if(!permitted()||!anchors||!gpsLayer||!gpsStatus||!FIT?.admit||!PATH?.path)return false;
       try{
         const registration=FIT.admit({anchors});
-        if(!Array.isArray(context?.work))throw new Error('session-bound GPS history unavailable');
-        const now=Date.now(),svg='http://www.w3.org/2000/svg',nodes=[];
-        let tracks=0,current=0,discarded=0,unknownChronology=0;
-        for(const work of context.work){
+        if(!context||typeof context!=='object')throw new Error('GPS context unavailable');
+        const now=Date.now(),svg='http://www.w3.org/2000/svg',nodes=[],captions=[];
+        let tracks=0,current=0,stale=0,missing=0,discarded=0,unknownChronology=0;const phoneLabels=[];
+        for(const work of Array.isArray(context.work)?context.work:[]){
           if(work?.truncated || work?.incomplete){discarded++;continue;}
-          const result=PATH.path({registration,observations:work.observations,session:work.session,now});
+          let result;
+          try{result=PATH.path({registration,observations:work?.observations,session:work?.session,now});}
+          catch{discarded++;continue;}
           discarded+=result.rejected.length;
           if(result.chronologyUnknown)unknownChronology++;
           for(const segment of result.segments){
@@ -216,7 +304,7 @@
             line.setAttribute('stroke-width','3');line.setAttribute('stroke-linecap','round');
             line.setAttribute('stroke-linejoin','round');nodes.push(line);tracks++;
           }
-          if(result.current){
+          if(result.current&&!Array.isArray(context.phones)){
             const ring=document.createElementNS(svg,'circle');
             ring.setAttribute('cx',String(result.current.canvas.x));
             ring.setAttribute('cy',String(result.current.canvas.y));
@@ -229,7 +317,29 @@
             dot.setAttribute('r','4');dot.setAttribute('fill','#075e96');nodes.push(dot);current++;
           }
         }
-        if(!gate.isCurrent(ticket))return false;
+        for(const entry of Array.isArray(context.phones)?context.phones:[]){
+          let result;
+          try{result=PATH.phone({registration,phone:entry,now});}catch{result={position:null};}
+          if(result.position&&transportFailed)result={...result,state:'stale'};
+          if(!result.position){missing++;phoneLabels.push(`${entry?.employeeName||entry?.deviceIdentifier||'Assigned phone'}: location unavailable`);continue;}
+          const point=result.position,color=result.state==='live'?'#075e96':'#685d4a';
+          if(result.state==='live')current++;else stale++;
+          const label=`${result.label}: ${result.state==='live'?'live':'last known; no fresh update'} · ${new Date(point.observed).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`;
+          phoneLabels.push(label);
+          const ring=document.createElementNS(svg,'circle');
+          ring.setAttribute('cx',String(point.canvas.x));ring.setAttribute('cy',String(point.canvas.y));
+          ring.setAttribute('r',String(point.uncertaintyCanvasPx));ring.setAttribute('fill','none');
+          ring.setAttribute('stroke',color);ring.setAttribute('stroke-dasharray','4 3');nodes.push(ring);
+          const dot=document.createElementNS(svg,'circle');
+          dot.setAttribute('cx',String(point.canvas.x));dot.setAttribute('cy',String(point.canvas.y));
+          dot.setAttribute('r','5');dot.setAttribute('fill',result.state==='live'?color:'#ffffff');
+          dot.setAttribute('stroke',color);dot.setAttribute('stroke-width','2');
+          dot.setAttribute('data-phone-state',result.state);dot.setAttribute('data-phone-device',result.deviceIdentifier);
+          const title=document.createElementNS(svg,'title');title.textContent=label;dot.append(title);nodes.push(dot);
+          captions.push({point:displayPoint(point.canvas),color,device:String(result.deviceIdentifier),full:label,
+            text:`${result.label} · ${result.state==='live'?'Live':'Last known'}`});
+        }
+        if(!permitted())return false;
         if(horizontal&&nodes.length){
           // The same inverse display transform carries every GPS point, path,
           // and accuracy ring. The sealed geographic registration is unchanged.
@@ -238,12 +348,26 @@
           group.setAttribute('transform',`matrix(${x.x-zero.x} ${x.y-zero.y} ${y.x-zero.x} ${y.y-zero.y} ${zero.x} ${zero.y})`);
           group.append(...nodes);gpsLayer.replaceChildren(group);
         }else gpsLayer.replaceChildren(...nodes);
-        gpsStatus.textContent=`Advisory GPS on owner-accepted overall visual fit: ${current} recent measured position${current===1?'':'s'}, ${tracks} path segment${tracks===1?'':'s'}. Dashed rings show reported device accuracy ONLY; map/absolute error is unknown and the walking domain is unverified. Gaps are not inferred.${discarded?` ${discarded} readings or incomplete paths withheld.`:''}${unknownChronology?` ${unknownChronology} work path${unknownChronology===1?'':'s'} withheld because capture chronology is unknown.`:''}`;
+        gpsCaptions=captions;captionLayer=null;
+        if(captions.length){captionLayer=document.createElementNS(svg,'g');
+          captionLayer.setAttribute('data-phone-captions','');gpsLayer.append(captionLayer);layoutGpsCaptions();}
+        gpsStatus.textContent=Array.isArray(context.phones)
+          ? `Assigned phones: ${current} live, ${stale} last known, ${missing} unavailable. ${phoneLabels.join('; ')}. Dashed rings show reported phone accuracy. Map position is an estimate.`
+          : `Advisory GPS: ${current} recent measured positions, ${tracks} active-work path segments. Map accuracy remains unverified.`;
+        gpsStatus.textContent+=`${context.historyUnavailable||!Array.isArray(context.work)?' Optional work history unavailable; paths withheld.':''}${discarded?` ${discarded} readings or incomplete paths withheld.`:''}${unknownChronology?` ${unknownChronology} work paths withheld because capture chronology is unknown.`:''}${transportFailed?' Phone updates unavailable; displayed positions are last known.':''} Gaps are not inferred; map/absolute error is unknown and the walking domain is unverified.`;
+        lastGps={ticket,context,transportFailed};
+        if(gpsAgeTimer==null&&window.setInterval)gpsAgeTimer=window.setInterval(()=>{
+          if(lastGps)acceptGps(lastGps.ticket,lastGps.context,{cached:true,transportFailed:lastGps.transportFailed});
+        },10000);
         return true;
-      }catch{if(gate.isCurrent(ticket))clearGps('Advisory GPS unavailable: accepted reference or measured active-work history did not pass source checks. Absolute map accuracy remains unverified.');return false;}
+      }catch{if(permitted())clearGps('Assigned phone locations unavailable: the received positions or map reference could not be verified.');return false;}
     }
     function unavailableGps(ticket){if(!gate.isCurrent(ticket))return false;
-      clearGps();return true;}
+      if(lastGps)acceptGps(ticket,lastGps.context,{transportFailed:true});else clearGps();return true;}
+    function invalidate(){
+      gate.invalidate();
+      if(lastGps)acceptGps(lastGps.ticket,lastGps.context,{cached:true,transportFailed:true});
+    }
     function selectLocation(locationId){
       if(closed||suspended)return;
       const id=typeof locationId==='string'?locationId:locations?.value,ids=new Set(buttons.keys());
@@ -283,28 +407,31 @@
         locations.addEventListener('change',selectLocation);controls.push([locations,'change',selectLocation]);
       }
       markers=MAP.project({anchors,summary:null,transport:'LOADING'});render();
-      if(window.ResizeObserver){resizeObserver=new window.ResizeObserver(render);resizeObserver.observe(viewport);}
-      window.addEventListener('resize',render);resizeBound=true;initialized=true;
+      if(window.ResizeObserver){resizeObserver=new window.ResizeObserver(render);resizeObserver.observe(viewport);
+        captionObserver=new window.ResizeObserver(scheduleGpsCaptions);
+        for(const target of [surface,gpsLayer,section])if(target)captionObserver.observe(target);
+      }
+      window.addEventListener('resize',render);window.addEventListener('scroll',layoutGpsCaptions,true);resizeBound=true;initialized=true;
       status.textContent='Map cleaning status unavailable until a current authenticated response';
       return true;
     }
     function suspend(){
       if(closed||suspended)return false;
-      suspended=true;lifecycleGeneration++;gate.suspend();return true;
+      suspended=true;lifecycleGeneration++;clearGps();gate.suspend();return true;
     }
     function rollbackFailedResume(expected){
       // A later pagehide/resume owns the renderer once the generation changes.
       // An obsolete anchor rejection must never suspend that newer attempt.
       if(closed||expected!==lifecycleGeneration)return;
       if(!initialized){
-        if(resizeBound){window.removeEventListener('resize',render);resizeBound=false;}
-        resizeObserver?.disconnect();resizeObserver=null;
+        if(resizeBound){window.removeEventListener('resize',render);window.removeEventListener('scroll',layoutGpsCaptions,true);resizeBound=false;}
+        resizeObserver?.disconnect();resizeObserver=null;captionObserver?.disconnect();captionObserver=null;
         for(const [element,event,fn] of controls)element.removeEventListener?.(event,fn);
         controls.length=0;layer.replaceChildren();buttons.clear();markers=[];anchors=null;
         for(const option of options.values())option.remove();options.clear();
         alerts.replaceChildren();selection.textContent='';
       }
-      suspended=true;lifecycleGeneration++;gate.suspend();
+      suspended=true;lifecycleGeneration++;clearGps();gate.suspend();
     }
     async function resume(){
       if(closed||!suspended||!gate.resume())return false;
@@ -317,17 +444,17 @@
     }
     function stop(){
       if(closed)return;
-      closed=true;lifecycleGeneration++;gate.close();
-      if(resizeBound){window.removeEventListener('resize',render);resizeBound=false;}
-      resizeObserver?.disconnect();resizeObserver=null;
+      closed=true;lifecycleGeneration++;clearGps();gate.close();
+      if(resizeBound){window.removeEventListener('resize',render);window.removeEventListener('scroll',layoutGpsCaptions,true);resizeBound=false;}
+      resizeObserver?.disconnect();resizeObserver=null;captionObserver?.disconnect();captionObserver=null;
       for(const [element,event,fn] of controls)element.removeEventListener?.(event,fn);
       controls.length=0;layer.replaceChildren();buttons.clear();markers=[];anchors=null;
       for(const option of options.values())option.remove();options.clear();
       if(locations)locations.value='';if(alertCount)alertCount.textContent='0';
       alerts.replaceChildren();selection.textContent='';initialized=false;
     }
-    return Object.freeze({init,selectLocation,beginRefresh:gate.begin,accept:gate.commit,acceptGps,unavailableGps,clearGps,fail:gate.fail,
-      invalidate:gate.invalidate,checkSession:gate.checkSession,suspend,resume,stop});
+    return Object.freeze({init,selectLocation,beginRefresh:()=>{const ticket=gate.begin();if(lastGps&&ticket)lastGps={...lastGps,ticket};return ticket;},accept:gate.commit,acceptGps,unavailableGps,clearGps,fail:gate.fail,
+      invalidate,checkSession:gate.checkSession,suspend,resume,stop});
   }
   root.MemphisDashboardMapRenderer=Object.freeze({create,createRefreshGate,createPublicRefreshGate,separatePins});
   if(typeof module!=='undefined'&&module.exports)module.exports=root.MemphisDashboardMapRenderer;
