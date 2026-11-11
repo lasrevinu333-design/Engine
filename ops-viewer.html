@@ -13,7 +13,8 @@
   <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
 </head><body class="mapWebPage operationsPage" data-memphis-context="viewer">
   <main class="mapPage commandPage">
-    <header class="operationsHeading"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt=""><h1>Custodial Operations</h1></div><nav class="publicViewNav" aria-label="Read-only views"><a id="public-dashboard-link" href="#dashboard" aria-current="page">Dashboard</a><a id="public-map-link" href="#map">Map</a></nav><p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Loading read-only operations…</p><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Full screen</button><button id="refresh-dashboard" type="button">Refresh</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button></header>
+    <header class="dashboardPageHeader"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt=""><h1>Custodial Operations</h1></div><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Full screen</button></header>
+    <nav class="publicViewNav" aria-label="Read-only views"><a id="public-dashboard-link" href="#dashboard" aria-current="page">Dashboard</a><a id="public-map-link" href="#map">Map</a></nav><p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Loading read-only operations…</p>
 
     <div id="operations-panels" hidden>
       <header class="telemetry" aria-label="Date, attendance and weather">
@@ -41,6 +42,7 @@
       <button type="button" class="tickerBand" data-board="spiceworks" aria-label="Spiceworks tickets opened and closed in the last 24 hours"><span class="tickerLabel">SPICEWORKS · 24H</span><span class="tickerWindow"><span class="tickerTrack" id="ops-spiceworks-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
       <button type="button" class="tickerBand" data-board="city" aria-label="Open City work orders"><span class="tickerLabel">CITY WORK ORDERS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-city-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
     </div>
+    <details class="dashboardTools"><summary>Dashboard tools</summary><button id="refresh-dashboard" type="button">Refresh</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button></details>
     <p class="metricNote">Anyone with this link can view operations. This dashboard cannot change records.</p>
   </main>
   <dialog class="operationsBoard" id="operations-board" aria-labelledby="operations-board-title">
