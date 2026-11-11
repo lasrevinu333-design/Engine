@@ -343,6 +343,8 @@ const requiredRoutesAndAssets = [
   'Background1_optimized.webp',
   'chatscope-messenger.css',
   'chatscope-messenger.js',
+  // The manager hub now uses this illustration for Guest Issues and Feedback.
+  'Guest_Issues_Icon_ui.webp',
   'chatscope-mobile-overrides.css',
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
@@ -377,7 +379,6 @@ for (const entry of readdirSync(root, { withFileTypes: true })) {
 }
 for (const deadOrDevelopmentFile of [
   'Dashboard_Avatar_ui.webp',
-  'Guest_Issues_Icon_ui.webp',
   'messages-app.js',
   'messenger-runtime-patch.js',
   'messenger-app.css',
