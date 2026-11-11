@@ -79,6 +79,11 @@
         state:'unknown',lines:[],location:true};
       if(!row){card.lines.push('Current cleaning record unavailable. Map colour is not a completion receipt.');return card;}
       const pending=row.open_session_status==='pending_submit',working=row.open_session_status==='active';
+      if(working&&sessionIdentity(row.open_session_uuid)){
+        card.state='in_progress';
+        card.lines.push(`Cleaning now, ${text(row.open_session_employee_name,'Name unavailable')}`);
+        return card;
+      }
       const original=originalRecord(row);
       const status=row.status_code==='cleaning_in_progress'?'in_progress':row.status_code;
       if(['okay','due_soon','overdue','in_progress','not_cleaned'].includes(status))card.state=status;
@@ -249,7 +254,7 @@
 
   function publicCleaning(summary,approved,now=Date.now()){
     const view=cleaning(summary,approved,now);
-    const prefixes=['Saved pending','Work in progress','Current worker:','Prior closed cleaning record ·',
+    const prefixes=['Cleaning now,','Saved pending','Work in progress','Current worker:','Prior closed cleaning record ·',
       'Closed cleaning record ·','Recorded worker:','Reported services:','Current cleaning record unavailable.','Closed cleaning record unavailable.'];
     return {...view,cards:view.cards.map(card=>({...card,lines:card.lines.filter(line=>prefixes.some(prefix=>line.startsWith(prefix)))})),
       note:summary?.meta?.audience==='public_readonly'?`Read-only cleaning status · ${stamp(summary.meta.generated_at)}. Pending work is shown separately from closed cleaning history.`:'Current cleaning status unavailable.'};
@@ -267,7 +272,7 @@
       .replace('Needs source review — not an approved operational event','Needs review')
       .replace('Scheduled to have ended — departure not independently confirmed','Scheduled end has passed')
       .replace('End time/instant not provided — not automatically expired','End time unavailable');
-    const allowed=/^(Saved pending|Work in progress|Current worker:|Prior closed cleaning record|Closed cleaning record|Recorded worker:|Reported services:|Recorded work:|Original employee:|Started:|Completed:|Accepted:|Current cleaning record unavailable)/;
+    const allowed=/^(Cleaning now,|Saved pending|Work in progress|Current worker:|Prior closed cleaning record|Closed cleaning record|Recorded worker:|Reported services:|Recorded work:|Original employee:|Started:|Completed:|Accepted:|Current cleaning record unavailable)/;
     const present=card=>({...card,lines:card.lines.filter(value=>kind!=='locations'||allowed.test(value)).map(line)});
     const note=kind==='schools'?`${/Daily planned source counts: ([^.]+)\./.exec(view.note)?.[0].replace('source ','')||'School counts unavailable.'} Planned visits; arrival and departure unconfirmed.`
       :['activity','tickets'].includes(kind)&&!view.cards.length&&/unavailable/i.test(view.note)?'Ticket details unavailable.':notes[kind]||view.note;

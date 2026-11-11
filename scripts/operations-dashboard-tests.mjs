@@ -570,6 +570,21 @@ const recordRow=()=>({location_id:recordId(1),location_code:'FIXTURE_RR',locatio
 const recordSummary=row=>({meta:{contracts:{dashboard:'dashboard.v1'},generated_at:'2026-10-05T17:00:00Z'},restrooms:[row],exhibits:[],open_tickets:[]});
 function recordFixture(){const f=fixture();f.viewport.children[0].dataset.locationId=recordId(1);
  f.viewport.children[0].attrs['aria-label']='Fixture restroom: Clean';f.viewport.children[0].dataset.status='clean';return f;}
+test('PRODUCT active cleaning shows only the current worker, then the actual newest completion',async()=>{
+ const f=recordFixture();try{
+  const active={...recordRow(),status_code:'overdue',open_session_status:'active'};
+  await loaded(f,{summary:recordSummary(active)});f.triggers[3].emit('click');
+  assert.match(f.text(f.content),/Cleaning now, Current saved worker/);
+  assert.doesNotMatch(f.text(f.content),/Previous closed worker|Closed cleaning record|Prior closed|Trash emptied/);
+  assert.equal(f.elements['ops-locations-ticker'].children[0].dataset.status,'in_progress');
+  const closed={...active,status_code:'okay',open_session_status:null,open_session_uuid:null,
+   latest_completed_session_id:recordId(42),latest_completed_session_uuid:recordId(2),latest_completed_at:'2026-10-05T16:58:00.654321Z',latest_employee_name:'Current saved worker',services_performed:['Full cleaning services']};
+  await loaded(f,{summary:recordSummary(closed)});
+  assert.match(f.text(f.content),/Closed cleaning record/);assert.match(f.text(f.content),/Current saved worker/);
+  assert.doesNotMatch(f.text(f.content),/Cleaning now|Previous closed worker|Trash emptied/);
+  assert.equal(f.elements['ops-locations-ticker'].children[0].dataset.status,'okay');
+ }finally{f.clean();}
+});
 test('PRODUCT record board separates saved pending work from the prior closed cleaning record, then replaces exact server row',async()=>{
  const f=recordFixture();try{
   const calls=await loaded(f,{summary:recordSummary(recordRow())});f.triggers[3].emit('click');
@@ -685,7 +700,7 @@ test('location ticker carries every authoritative status and keeps unknown disti
   for(const [state,label] of [['okay','Cleaned'],['in_progress','In progress'],['due_soon','Due soon'],['overdue','Overdue'],['not_cleaned','Not cleaned']]){
    const row={...recordRow(),status_code:state,open_session_status:state==='in_progress'?'active':null,open_session_uuid:state==='in_progress'?recordId(2):null};
    await loaded(f,{summary:recordSummary(row)});
-   const item=f.elements['ops-locations-ticker'].children[0];assert.equal(item.dataset.status,state);assert.match(item.textContent,new RegExp(label));
+   const item=f.elements['ops-locations-ticker'].children[0];assert.equal(item.dataset.status,state);assert.match(item.textContent,state==='in_progress'?/Cleaning now, Current saved worker/:new RegExp(label));
    const same=item;f.controller.tick();assert.equal(f.elements['ops-locations-ticker'].children[0],same,'unchanged ticker items must not restart');
   }
   f.controller.summaryUnavailable();assert.equal(f.elements['ops-locations-ticker'].children[0].dataset.status,'unknown');

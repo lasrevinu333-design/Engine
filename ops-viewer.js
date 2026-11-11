@@ -22,7 +22,7 @@
     function showSummary(summary){
       const approved=Array.from(section.querySelectorAll('.mzMapPin')).map(pin=>({id:pin.dataset.locationId,name:pin.dataset.approvedLocationName}));
       const cards=data.publicCleaning(summary,approved,now()).cards;
-      const labels={okay:'Clean / okay',not_cleaned:'Not cleaned',in_progress:'Cleaning',due_soon:'Due soon',overdue:'Overdue',pending_submit:'Saved pending',unknown:'Unknown'};
+      const labels={okay:'Clean / okay',not_cleaned:'Not cleaned',in_progress:'In progress',due_soon:'Due soon',overdue:'Overdue',pending_submit:'Saved pending',unknown:'Unknown'};
       const counts=Object.fromEntries(Object.keys(labels).map(key=>[key,cards.filter(card=>card.state===key).length]));
       const tickets=summary?data.tickets(summary,null).cards:[];
       const metrics=Object.entries(labels).map(([key,label])=>[label,summary?counts[key]:'—']);metrics.push(['Open tickets',summary?tickets.length:'—']);
@@ -41,8 +41,8 @@
         const ids=new Set((summary?.[kind]||[]).map(row=>String(row.location_id).toLowerCase()));
         const rows=cards.filter(card=>ids.has(card.id.toLowerCase())).map(card=>{
           const status=make('span',labels[card.state]||'Unknown');status.className='cleaningState';status.dataset.status=card.state;
-          const worker=card.lines.find(line=>line.startsWith('Current worker:'))||card.lines.find(line=>line.startsWith('Recorded worker:'))||'Unavailable';
-          const details=make('div');for(const line of card.lines.filter(line=>!line.startsWith('Current worker:')&&!line.startsWith('Recorded worker:')))details.append(make('p',line));
+          const worker=card.lines.find(line=>line.startsWith('Cleaning now,'))||card.lines.find(line=>line.startsWith('Current worker:'))||card.lines.find(line=>line.startsWith('Recorded worker:'))||'Unavailable';
+          const details=make('div');for(const line of card.lines.filter(line=>!line.startsWith('Cleaning now,')&&!line.startsWith('Current worker:')&&!line.startsWith('Recorded worker:')))details.append(make('p',line));
           return[card.title,status,worker.replace(/^(Current|Recorded) worker: /,''),details];
         });
         table('public-'+kind,['Location','Status','Employee','Cleaning record'],rows,summary?'No current location rows supplied.':'Current cleaning status unavailable.');

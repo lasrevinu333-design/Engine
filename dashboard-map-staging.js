@@ -45,10 +45,9 @@
     const open=String(row.open_session_status||'').toLowerCase();
     if(open&&open!=='active')return 'unconfirmed';
     if(!own(COLORS,code)||COLORS[code]!==color)return 'unknown';
+    if(open==='active'&&row.open_session_uuid)return 'in_progress';
     if(code==='in_progress')return open==='active'&&!!row.open_session_uuid?'in_progress':'unconfirmed';
-    // The current SQL view checks due/overdue thresholds before the later
-    // active-session branch when a completion baseline exists. Preserve that
-    // server status; active work is disclosed separately, never made blue here.
+    // A timer is relevant when no identified cleaning is currently active.
     if(code==='due_soon'||code==='overdue')return code;
     if(open==='active')return 'unconfirmed';
     if(code==='not_cleaned')return 'not_cleaned';
@@ -72,7 +71,7 @@
       const id=anchor.locationId.toLowerCase();const row=duplicates.has(id)?null:byId.get(id);
       const status=valid?statusForRow(row):'unknown';
       const activeWork=valid&&row?.open_session_status==='active'
-        ?row.open_session_uuid?'Dashboard reports active cleaning':'Active work identity incomplete':null;
+        ?row.open_session_uuid?`Cleaning now, ${String(row.open_session_employee_name||'Name unavailable')}`:'Active work identity incomplete':null;
       // The approved saved name/point stay stable; an authenticated response
       // contributes only cleaning state. Tickets and demo colors never enter.
       return Object.freeze({...anchor,status,statusLabel:LABELS[status],

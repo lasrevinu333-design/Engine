@@ -138,12 +138,13 @@
       const labels={okay:'Cleaned',in_progress:'In progress',due_soon:'Due soon',overdue:'Overdue',not_cleaned:'Not cleaned',pending_submit:'Saved pending',unknown:'Unavailable'};
       const ticker=el('ops-locations-ticker');
       if(ticker){
-        const fingerprint=JSON.stringify(locations.cards.map(card=>[card.id,card.title,card.state]));
+        const fingerprint=JSON.stringify(locations.cards.map(card=>[card.id,card.title,card.state,card.lines[0]]));
         if(ticker.dataset.locationsFingerprint!==fingerprint){
           ticker.dataset.locationsFingerprint=fingerprint;
           ticker.replaceChildren(...(locations.cards.length?locations.cards.map(card=>{
             const state=Object.hasOwn(labels,card.state)?card.state:'unknown';
-            const item=make('span',`${card.title} — ${labels[state]}`,'locationTickerItem');
+            const currentWorker=state==='in_progress'?card.lines.find(line=>line.startsWith('Cleaning now,')):null;
+            const item=make('span',`${card.title} — ${currentWorker||labels[state]}`,'locationTickerItem');
             item.dataset.status=state;return item;
           }):[make('span',locations.note)]));
         }

@@ -60,12 +60,12 @@ pass('pending/offline/unverified and mismatched code/color never infer completio
  assert.equal(project([row(first,'overdue','green')])[0].status,'unknown');
  assert.equal(project([row(first,'unexpected','black')])[0].status,'unknown');
 });
-pass('server due/red may coexist with active work; never recolor to blue or hide red',()=>{
+pass('identified active cleaning takes precedence over the prior cleaning timer',()=>{
  for(const [status,color] of [['due_soon','yellow'],['overdue','red']]){
   const marker=project([row(first,status,color,{open_session_status:'active',open_session_uuid:'exact-active'})])[0];
-  assert.equal(marker.status,status);
-  assert.equal(marker.activeWork,'Dashboard reports active cleaning');
-  assert.equal(map.presentation(marker).sizePx,42);
+  assert.equal(marker.status,'in_progress');
+  assert.equal(marker.activeWork,'Cleaning now, Name unavailable');
+  assert.equal(map.presentation(marker).sizePx,24);
   const incomplete=project([row(first,status,color,{open_session_status:'active',open_session_uuid:null})])[0];
   assert.equal(incomplete.status,status);
   assert.equal(incomplete.activeWork,'Active work identity incomplete');
