@@ -1229,3 +1229,12 @@ test('internal Custodial ticker sits directly below map before Spiceworks and Ci
   assert.ok(mapEnd>=0&&mapEnd<tickets&&tickets<spice&&spice<city);assert.equal((html.match(/id="ops-tickets-ticker"/g)||[]).length,1);
  }
 });
+
+test('DASHBOARD_REFRESH_bound leadership permission reaches actual ticket-controller adapter',async()=>{
+ const f=dashboardRefreshFixture();Object.assign(f.session(),{auth_mode:'custodial_leadership_pin',permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:false,custodialManagementAdmin:true,policyVersion:1}});
+ let bound=true;f.auth.isCustodialManagementAdmin=session=>bound&&session===f.session();
+ await publishDashboard(f);assert.match(f.node('tickets-wrap').innerHTML,/closeBtn/);assert.doesNotMatch(f.node('refresh-status').textContent,/closure access unavailable/);
+ assert.equal(f.capabilityRequests.length,1);bound=false;
+ await publishDashboard(f);assert.doesNotMatch(f.node('tickets-wrap').innerHTML,/closeBtn/);assert.match(f.node('refresh-status').textContent,/closure access unavailable/);
+ assert.equal(f.capabilityRequests.length,1);
+});
