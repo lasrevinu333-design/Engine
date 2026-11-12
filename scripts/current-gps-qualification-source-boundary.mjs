@@ -7,10 +7,11 @@ import {resolve,relative,dirname,basename,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const PROFILE_SHA='5b2d3aad3c8b8de8407a34ceec154bcddbfa14a832fd95dee48ab31fda8592c9';
+const DIAGNOSTIC_PROFILE_SHA='1557d8844c6ba1da9d08e77aaee1855259a21221de1cf0eb226a3b05578f0b82';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
- assert.equal(sha(JSON.stringify(value)),PROFILE_SHA,'Exact separately reviewed GPS qualification profile');
+ assert.ok([PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact separately reviewed GPS or additive diagnostic profile');
  assert.equal(value.schema,'custodial.current-gps-source-qualification.v1');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
  for(const rows of [value.main_java,value.test_java,value.auxiliary,value.legacy_proofs,value.core_sources]){
@@ -22,8 +23,12 @@ export function validateCurrentGpsQualification(value){
  assert.equal(value.deltas.filter(row=>row.kind==='added').length,1);
  return value;
 }
-export const currentGpsQualification=freeze(validateCurrentGpsQualification(JSON.parse(readFileSync(new URL('./fixtures/current-gps-source-qualification.json',import.meta.url),'utf8'))));
-const all=[...currentGpsQualification.main_java,...currentGpsQualification.test_java,...currentGpsQualification.auxiliary];
+const originalProfile=JSON.parse(readFileSync(new URL('./fixtures/current-gps-source-qualification.json',import.meta.url),'utf8'));
+assert.equal(sha(JSON.stringify(originalProfile)),PROFILE_SHA,'Original v78 qualification pin preserved');
+const diagnosticProfile=JSON.parse(readFileSync(new URL('./fixtures/current-schedule-diagnostic-source-qualification.json',import.meta.url),'utf8'));
+assert.equal(sha(JSON.stringify(diagnosticProfile)),DIAGNOSTIC_PROFILE_SHA,'Only exact separately reviewed diagnostic candidate is current');
+export const currentGpsQualification=freeze(validateCurrentGpsQualification(diagnosticProfile));
+const all=[...currentGpsQualification.main_java,...currentGpsQualification.test_java,...currentGpsQualification.auxiliary,...currentGpsQualification.core_sources];
 const byPath=new Map(all.map(row=>[row.path,row]));
 const aliases=new Map(Object.entries(currentGpsQualification.basename_aliases));
 function canonical(name){

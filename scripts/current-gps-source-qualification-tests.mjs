@@ -34,7 +34,7 @@ for(const mutate of [v=>v.release_admission=true,v=>v.runtime_admission=true,v=>
 const temporary=mkdtempSync(join(tmpdir(),'custodial-gps-source-negatives-'));
 try{
  const paths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.legacy_proofs,...profile.core_sources].map(row=>row.path));
- paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');
+ paths.add('scripts/fixtures/current-schedule-diagnostic-source-qualification.json');paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');
  for(const path of paths){const target=join(temporary,path);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,readFileSync(join(root,path)));}
  writeFileSync(join(temporary,'package.json'),'{"type":"module"}\n');
  const isolated=await import(pathToFileURL(join(temporary,'scripts/current-gps-qualification-source-boundary.mjs')));

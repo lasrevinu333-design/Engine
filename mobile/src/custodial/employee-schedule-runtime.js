@@ -377,16 +377,20 @@ export function installEmployeeSchedule(options) {
       const ownsLifecycle=()=>!paused&&generation===securityGeneration&&version===loadVersion&&activeRequest===controller;
       const owns=()=>ownsLifecycle()&&!controller.signal.aborted;
       let readPrincipal='',observedAvailability=null,receivedAuthority=false;
+      // Diagnostic labels are fixed local stages only: never errors, identity, URLs or payloads.
+      let diagnosticStage='D01',diagnosticHttp=0;
       try{
-        await readStep(window.MemphisMobile?.ready,controller.signal);requireCaller(owns);const id=deviceId(owns);requireCaller(owns);if(!id)throw new Error('identity');
+        await readStep(window.MemphisMobile?.ready,controller.signal);requireCaller(owns);diagnosticStage='D02';const id=deviceId(owns);requireCaller(owns);if(!id)throw new Error('identity');
         const isNative=native(owns);requireCaller(owns);
-        if(isNative){const mobile=window.MemphisMobile,request=mobile.requestJson;requireCaller(owns);await readStep(request.call(mobile,`/device-auth/status?device_id=${encodeURIComponent(id)}`,{signal:controller.signal}),controller.signal);}
+        if(isNative){diagnosticStage='D03';const mobile=window.MemphisMobile,request=mobile.requestJson;requireCaller(owns);await readStep(request.call(mobile,`/device-auth/status?device_id=${encodeURIComponent(id)}`,{signal:controller.signal}),controller.signal);}
         requireCaller(owns);const principal=identity(owns);if(!principal||!current(principal,version))throw new Error('identity');requireCaller(owns);
-        readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);
-        const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(zooNow().date)}`,{cache:'no-store',signal:controller.signal}),controller.signal);
+        diagnosticStage='D04';readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);
+        diagnosticStage='D05';const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(zooNow().date)}`,{cache:'no-store',signal:controller.signal}),controller.signal);
         // An HTTP response, including503 or malformed JSON, must not restore
         // old availability when its separate unavailable write failed.
-        receivedAuthority=true;
+        receivedAuthority=true;diagnosticStage='D06';
+        try{const status=response.status;diagnosticHttp=Number.isInteger(status)&&status>=100&&status<=599?status:0;}catch{diagnosticHttp=0;}
+        requireCaller(owns);
         const payload=await readStep(response.json().catch(()=>null),controller.signal);
         if(!current(principal,version))return;
         if(!response.ok||!payload?.ok)throw new Error('network');
@@ -398,16 +402,16 @@ export function installEmployeeSchedule(options) {
           const persist=()=>{requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,payload.data.service_date,'UNAVAILABLE',observedAvailability);};
           try{await atomic(principal,persist,owns);}catch(error){requireCaller(owns);if(error?.code!=='schedule_request_invalidated')latchUnavailable(principal,observedAvailability);throw error;}requireCaller(owns);unavailableDays.delete(principal);return;
         }
-        const prepared=await prepareRecurring(payload.data,owns);
+        diagnosticStage='D07';const prepared=await prepareRecurring(payload.data,owns);
         if(!current(principal,version)||!owns())return;
         // Render the hashed view itself, never an unbound duplicated area list.
         const displayData=prepared?{...payload.data,...(prepared.blocked?{projection_status:'blocked_recurring_authority',raw_items:[],current_items:[],full_day:true,shift:null}:prepared.view)}:payload.data;
-        let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}
+        diagnosticStage='D08';let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}
         if(!owns()||!current(principal,version)||!matches(displayData,owns)||!owns())return;
         const winner=snapshot(owns),rendered=winner?.data??displayData;requireCaller(owns);
         unavailableDays.delete(principal);
         cacheWarning=cacheWarning||winner?.cache_unconfirmed===true;
-        const applied=render(rendered,{cacheWarning,owns});
+        diagnosticStage='D09';const applied=render(rendered,{cacheWarning,owns});
         // Typed recurring ACK is deliberately not sent yet: exact native and
         // browser notification cancellation/rerouting must join application.
         // Rendering/cache alone cannot report the complete phone as updated.
@@ -421,7 +425,7 @@ export function installEmployeeSchedule(options) {
         if(!ownsRecovery())return;
         const usable=available(ownsRecovery)&&ownsRecovery()&&!authorityUnavailable(ownsRecovery);if(!ownsRecovery())return;
         if(usable&&cached?.data)render(cached.data,{offline:true,cacheWarning:cached.cache_unconfirmed===true,owns:ownsRecovery});
-        else{clearPresentation();state(error?.message==='identity'?'Phone setup could not be verified. Saved work is retained.':'Schedule could not update.',true);}
+        else{clearPresentation();state(error?.message==='identity'?'Phone setup could not be verified. Saved work is retained.':`Schedule could not update. Check ${diagnosticStage}${diagnosticHttp?' HTTP '+diagnosticHttp:''}${controller.signal.aborted?' timed out':''}.`,true);}
       }finally{clearTimeout(timeout);if(activeRequest===controller)activeRequest=null;loading=false;if(queued){queued=false;void load('queued');}}
     }
     // The native document owns these SAME normal functions. Every original

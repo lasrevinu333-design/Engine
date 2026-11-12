@@ -60,7 +60,7 @@ next=payload(19);events.get('online')();
 // A successfully received but rejected authority response does not restore the
 // pre-request cache's availability. The durable read-ahead fence remains closed
 // until a current valid response wins; the terminal high-water is still retained.
-await waitFor(()=>fetchCount===3&&element('state-text').textContent==='Schedule could not update.','delayed response handled fail-closed');
+await waitFor(()=>fetchCount===3&&(process.argv.includes('--native-runtime')?element('state-text').textContent.startsWith('Schedule could not update. Check D'):element('state-text').textContent==='Schedule could not update.'),'delayed response handled fail-closed');
 check(element('content').hidden,true,'rejected stale authority leaves schedule unavailable');
 check(context.window.MemphisRecurringScheduleTarget.availability(context.localStorage,identity,day).state,'READING','rejected response cannot clear durable uncertainty');
 check(cache().recurring_target.target.authorityRevision,20,'delayed schedule cannot overwrite blocked revision');
