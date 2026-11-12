@@ -14,6 +14,23 @@
   const orderedTime=(a,b,direction=1)=>a===null?(b===null?0:1):b===null?-1:direction*(a-b);
   const validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)
     &&Number.isFinite(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
+  function calendarDate(value,today=null){
+    if(!validDate(value))return text(value,'Date not provided');
+    return `${value===today?'Today, ':''}${new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'long',month:'long',day:'numeric'}).format(new Date(value+'T12:00:00Z'))}`;
+  }
+  function reportedDate(value){
+    const datePrefix=typeof value==='string'&&/^(\d{4}-\d{2}-\d{2})/.exec(value);
+    if(datePrefix&&!validDate(datePrefix[1]))return text(value);
+    const at=instant(value);
+    if(at!==null)return `${calendarDate(localDate(at))} · ${clock(value)}`;
+    const raw=text(value),m=/^(\d{2})\/(\d{2})\/(\d{4})(.*)$/.exec(raw);
+    if(m){const day=`${m[3]}-${m[1]}-${m[2]}`;return validDate(day)?calendarDate(day)+m[4]:raw;}
+    const iso=/^(\d{4}-\d{2}-\d{2})(.*)$/.exec(raw);
+    return iso&&validDate(iso[1])?calendarDate(iso[1])+iso[2]:raw;
+  }
+  function cityLocation(value,fallback){
+    return text(text(value,fallback).replace(/(?:^|\s+)at North Parkway and McLean Boulevard\b/gi,'').trim(),fallback);
+  }
   function visitOrder(a,b,timeField){
     const ad=validDate(a.date)?a.date:null,bd=validDate(b.date)?b.date:null;
     if(ad!==bd)return ad===null?1:bd===null?-1:ad.localeCompare(bd);
@@ -198,8 +215,8 @@
     if(value.rows.some(row=>!row?.id||!states.includes(row.status)||!row.facility?.startsWith('15Z')))return unavailable;
     const rows=value.rows.slice().sort((a,b)=>orderedTime(instant(a.requested_at),instant(b.requested_at),-1)||stableId(a,b));
     return{title:'Open City work orders',cards:rows.map(row=>({id:row.id,source:'City of Memphis',
-      title:`${row.work_order_id?'#'+row.work_order_id:'Request '+row.id} · ${text(row.facility)}`,state:'OPEN',
-      status:row.status,lines:[row.status,text(row.description,'Description unavailable.'),`Requested: ${instant(row.requested_at)===null?'Date unknown':stamp(row.requested_at)}`,
+      title:`${row.work_order_id?'#'+row.work_order_id:'Request '+row.id} · ${cityLocation(row.facility)}`,state:'OPEN',
+      status:row.status,lines:[row.status,cityLocation(row.description,'Description unavailable.'),`Requested: ${instant(row.requested_at)===null?'Date unknown':stamp(row.requested_at)}`,
         ...(row.facility_label_conflict===true?['City facility labels differ; verify the location.']:[])]})),
       note:`City active list · ${value.rows.length} Zoo work orders · newest requested date first; unknown dates last · updated ${stamp(value.generated_at)}.`};
   }
@@ -226,7 +243,7 @@
     const seen=new Set(),cards=[];
     for(const row of scan){if(!row?.ticket_id||seen.has(row.ticket_id))continue;seen.add(row.ticket_id);
       cards.push({id:`scan:${row.ticket_id}`,source:'Scan session',title:text(row.location_name||row.location_code,'Location not provided'),
-        state:'OPEN',lines:[text(row.maintenance_issue),`Reported: ${text(row.date_submitted_display||row.created_at_display)}`,
+        state:'OPEN',lines:[text(row.maintenance_issue),`Reported: ${reportedDate(row.date_submitted_display||row.created_at_display)}`,
           ...(row.fixture_identifier?[`Fixture: ${text(row.fixture_identifier)}`]:[])]});}
     for(const row of hasFeed(mail)?mail.rows:[]){
       if(!row?.ticket_id||row.custodial!==true||row.active!==true||row.status==='Closed'||seen.has(`spice:${row.ticket_id}`))continue;
@@ -237,13 +254,15 @@
       :mail?.state==='current'?'Spiceworks: verified imported status; this board never edits external tickets.':'Spiceworks unavailable: no complete validated imported snapshot is available.';
     return{title:'Custodial tickets',cards,note:`Open the Dashboard to close eligible scan-session tickets. Other managers cannot close tickets from unrelated sources. No separate delete control.\n${mailNote}`};
   }
-  function events(rows,now){const cards=[],history=[];
+  function events(rows,now,{labelToday=false}={}){const cards=[],history=[];
+    const today=labelToday?localDate(now):null;
+    const eventDate=value=>calendarDate(value,today);
     for(const row of Array.isArray(rows)?rows.filter(row=>row?.id).slice().sort((a,b)=>visitOrder(a,b,'start_at')):[]){
       const end=instant(row.end_at),lastDate=row.end_date||row.date;
       const pastDate=end===null&&/^\d{4}-\d{2}-\d{2}$/.test(lastDate||'')&&lastDate<localDate(now);
       const ended=end!==null?end<=now:pastDate;
       const status=row.needs_review?'REVIEW_REQUIRED':text(row.status,'UNKNOWN');
-      const when=`${text(row.date,'Date not provided')}${row.end_date&&row.end_date!==row.date?` → ${row.end_date}`:''}`;
+      const when=`${eventDate(row.date)}${row.end_date&&row.end_date!==row.date?` → ${eventDate(row.end_date)}`:''}`;
       const start=instant(row.start_at)!==null?clock(row.start_at):localTime(row.start_time);
       const finish=end!==null?clock(row.end_at):localTime(row.end_time);
       const card={id:row.id,revision:row.revision,source:'Events',state:status,title:text(row.name,'Unnamed event'),
@@ -271,7 +290,7 @@
       const inactive=row.status==='CANCELLED'||row.status==='SUPERSEDED';
       const identified=count(row.students)!==null&&count(row.adults)!==null?count(row.students+row.adults):null;
       const card={id:row.id,source:'School visit',title:text(row.name),state:inactive?row.status:contradiction?'REVIEW_REQUIRED':'SCHEDULED',
-        lines:[`${row.date} · Arrival ${clock(row.arrival_at)} · Departure not provided`,
+        lines:[`${calendarDate(row.date)} · Arrival ${clock(row.arrival_at)} · Departure not provided`,
           `Students: ${number(row.students)} · Chaperones: ${number(row.chaperones)} · Teachers: ${number(row.teachers)}`,
           `Adults: ${number(row.adults)} · Identified people: ${number(identified)} · Unclassified ticket units: ${number(row.unclassified)} · Reported quantity: ${number(row.total)} · Buses: ${number(row.buses)}`,
           text(row.notes,'Operational notes not provided'),inactive?row.status:contradiction?'GAP: source arrival/departure needs review; no departure or overnight visit inferred.':row.date<today?'Past scheduled date — arrival, presence and departure not independently confirmed.':row.date>today?'Upcoming scheduled visit — arrival and departure not independently confirmed.':start>now?'Expected later today — arrival not independently confirmed; departure time not provided.':'Expected arrival time has passed — arrival, presence and departure not independently confirmed.']};
@@ -309,6 +328,6 @@
       :['activity','tickets'].includes(kind)&&!view.cards.length&&/unavailable/i.test(view.note)?'Ticket details unavailable.':notes[kind]||view.note;
     return{...view,note,cards:view.cards.map(present),...(view.history?{history:view.history.map(present)}:{})};
   }
-  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,operations,managerOnDuty,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,orderedSchools,cleaning,publicCleaning,operationalView});
+  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,calendarDate,reportedDate,operations,managerOnDuty,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,orderedSchools,cleaning,publicCleaning,operationalView});
   root.MemphisOperationsData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

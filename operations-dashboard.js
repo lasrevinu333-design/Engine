@@ -125,11 +125,11 @@
       const activity=activityKinds.flatMap(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
         return (cards.length?cards.map(card=>card.title):[summary?'No open tickets':'Tickets unavailable']).map(text=>labels[kind]+': '+text);});
       recordTicker('ops-activity-ticker',activity,'Tickets unavailable');
-      const events=ops?DATA.events(ops.events,now()).cards.filter(card=>card.active):[];
+      const events=ops?DATA.events(ops.events,now(),{labelToday:true}).cards.filter(card=>card.active):[];
       recordTicker('ops-events-ticker',events.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]} · ${card.lines[2]}`),ops?'No upcoming events loaded':'Events unavailable');
       const schoolRows=DATA.orderedSchools(ops?.schools).filter(row=>!['CANCELLED','SUPERSEDED'].includes(row.status)&&row.date>=DATA.localDate(now()));
       const count=value=>DATA.count(value)===null?'Unknown':String(value);
-      recordTicker('ops-schools-ticker',schoolRows.map(row=>`${DATA.text(row.name)} · ${row.date} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`),ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable');
+      recordTicker('ops-schools-ticker',schoolRows.map(row=>`${DATA.text(row.name)} · ${DATA.calendarDate(row.date,DATA.localDate(now()))} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`),ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable');
       const internal=view('tickets');
       recordTicker('ops-tickets-ticker',internal.cards.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]}`),summary?'No open Custodial tickets':'Custodial tickets unavailable');
       const spice=view('spiceworks'),city=view('city');

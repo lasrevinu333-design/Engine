@@ -1,0 +1,45 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const D=require('../operations-dashboard-data.js');
+test('calendar dates retain their day without timezone rollover',()=>{
+ assert.equal(D.calendarDate('2026-11-13'),'Friday, November 13');
+ assert.equal(D.calendarDate('2026-02-30'),'2026-02-30');
+ assert.equal(D.reportedDate('2026-02-30T12:00:00Z'),'2026-02-30T12:00:00Z');
+ assert.equal(D.calendarDate(null),'Date not provided');
+ assert.equal(D.reportedDate('11/13/2026 08:00 AM Central'),'Friday, November 13 08:00 AM Central');
+ assert.equal(D.reportedDate('2026-11-13T02:00:00Z'),'Thursday, November 12 · 8:00 PM CST');
+});
+test('event and school cards retain location time and counts',()=>{
+ const now=Date.parse('2026-11-12T17:00:00Z');
+ const card=D.events([{id:'1',name:'Event',date:'2026-11-13',end_date:'2026-11-14',location:'Birdhouse',start_time:'08:00',end_time:'17:00',attendees:60,status:'SCHEDULED'}],now).cards[0];
+ assert.equal(card.lines[0],'Birdhouse');assert.match(card.lines[1],/Friday, November 13 → Saturday, November 14/);assert.match(card.lines[1],/8:00 a.m./);assert.equal(card.lines[2],'Attendees: 60');
+ const school=D.schools({state:'snapshot',rows:[{id:'s',date:'2026-11-13',name:'School',arrival_at:'2026-11-13T14:00:00Z',students:40,adults:20}]},now).cards[0];
+ assert.match(school.lines[0],/^Friday, November 13 · Arrival 8:00 AM CST/);
+ const ticket=D.tickets({open_tickets:[{ticket_id:'t',date_submitted_display:'11/13/2026 08:00 AM Central'}]}).cards[0];
+ assert.equal(ticket.lines[1],'Reported: Friday, November 13 08:00 AM Central');
+});
+test('city removes only generic intersection and preserves source and operational details',()=>{
+ const row={id:'1',work_order_id:'123',facility:'15Z05 Birdhouse at North Parkway and McLean Boulevard',status:'Approved',description:'Repair light at North Parkway and McLean Boulevard. Zoo location: Birdhouse kitchen',requested_at:'2026-11-13T14:00:00Z'};
+ const original=JSON.stringify(row),card=D.cityWorkOrders({state:'current',coverage:'city_active_zoo',rows:[row]}).cards[0];
+ assert.equal(card.title,'#123 · 15Z05 Birdhouse');assert.equal(card.lines[0],'Approved');assert.equal(card.lines[1],'Repair light. Zoo location: Birdhouse kitchen');assert.match(card.lines[2],/^Requested:/);assert.equal(JSON.stringify(row),original);
+});
+
+test('City details without generic address preserve leading decimal and punctuation',()=>{
+ for(const description of ['.5-inch supply pipe leaking; replace fitting.',', verify repair details.']){
+  const card=D.cityWorkOrders({state:'current',coverage:'city_active_zoo',rows:[{id:'1',facility:'15Z05 Birdhouse',status:'Approved',description}]}).cards[0];
+  assert.equal(card.lines[1],description);
+ }
+});
+
+test('event ticker Today label uses Memphis calendar day, never host or UTC day',()=>{
+ const event={id:'e',name:'Event',date:'2026-11-13',location:'Birdhouse',start_time:'08:00',end_time:'17:00',attendees:60,status:'SCHEDULED'};
+ for(const [now,expected] of [['2026-11-13T05:59:59Z','Friday, November 13'],['2026-11-13T06:00:00Z','Today, Friday, November 13']]){
+  const card=D.events([event],Date.parse(now),{labelToday:true}).cards[0];
+  assert.ok(card.lines[1].startsWith(expected+' ·'));assert.equal(card.lines[0],'Birdhouse');assert.equal(card.lines[2],'Attendees: 60');
+ }
+ const dayAfter=D.events([event],Date.parse('2026-11-14T06:00:00Z'),{labelToday:true});
+ assert.equal(dayAfter.cards.length,0);assert.ok(dayAfter.history[0].lines[1].startsWith('Friday, November 13 ·'));
+ const summer={...event,date:'2026-07-01'};
+ assert.ok(D.events([summer],Date.parse('2026-07-01T05:00:00Z'),{labelToday:true}).cards[0].lines[1].startsWith('Today, Wednesday, July 1 ·'));
+ assert.ok(D.events([event],Date.parse('2026-11-13T06:00:00Z')).cards[0].lines[1].startsWith('Friday, November 13 ·'));
+});

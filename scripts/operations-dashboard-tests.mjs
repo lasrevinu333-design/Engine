@@ -1237,7 +1237,7 @@ test('upcoming school board preserves tomorrow and historical dates without pret
  const past={...visit,id:'yesterday',name:'Yesterday School',date:'2026-10-04',arrival_at:'2026-10-04T14:30:00Z'};
  const board=D.schools({state:'snapshot',generated_at:'2026-10-05T17:00:00Z',rows:[future,past,visit]},noon);
  assert.deepEqual(board.cards.map(r=>r.id),[visit.id,future.id]);assert.equal(board.history[0].id,past.id);
- assert.match(board.cards[1].lines[0],/2026-10-06/);assert.equal(board.cards[1].state,'SCHEDULED');
+ assert.match(board.cards[1].lines[0],/Tuesday, October 6/);assert.equal(board.cards[1].state,'SCHEDULED');
  assert.match(board.note,/Today.*50 students.*58 reported quantity/);assert.doesNotMatch(board.note,/150 students/);
  assert.match(board.history[0].lines.join(' '),/Past scheduled date.*not independently confirmed/);
 });
@@ -1311,4 +1311,49 @@ test('Events and school visits share chronological date/time ordering with unkno
  const sorted=D.orderedSchools({state:'current',rows:schools});
  assert.deepEqual(sorted.map(r=>r.id),D.schools({state:'current',rows:schools},noon).cards.map(r=>r.id));
  assert.equal(sorted[0].id,'early');assert.equal(sorted.at(-1).id,'tomorrow');
+});
+
+
+test('City cleanup preserves unrelated leading decimal details in both card and ticker for both audiences',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});
+  try{
+   for(const description of ['.5-inch supply pipe leaking; replace fitting.',', verify the existing repair detail.', 'Repair light at North Parkway and McLean Boulevard. Zoo location: Birdhouse kitchen']){
+    const city={state:'current',coverage:'city_active_zoo',generated_at:'2026-10-05T17:00:00Z',rows:[{id:'1',work_order_id:'123',facility:'15Z05 Birdhouse',status:'Approved',description,requested_at:'2026-10-05T14:00:00Z'}]};
+    const original=JSON.stringify(city),expected=description.replace(' at North Parkway and McLean Boulevard','');
+    await loaded(f,{operations:{ok:true,data:{...payload.data,city}}});
+    assert.ok(f.text(f.elements['ops-city-ticker']).includes(expected));
+    f.controller.openBoard('city');assert.ok(f.text(f.content).includes(expected));
+    assert.equal(JSON.stringify(city),original);f.controller.closeBoard();
+   }
+  }finally{f.clean();}
+ }
+});
+
+test('event ticker changes Today label at Memphis midnight without a fresh fetch',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});try{
+   f.setNow(Date.parse('2026-11-13T05:59:00Z'));
+   const event={id:'e',name:'Midnight fixture',date:'2026-11-13',location:'Birdhouse',start_time:'08:00',end_time:'17:00',attendees:60,status:'SCHEDULED'};
+   await loaded(f,{operations:{ok:true,data:{...payload.data,events:[event]}}});
+   const track=f.elements['ops-events-ticker'];assert.match(f.text(track),/Friday, November 13/);assert.doesNotMatch(f.text(track),/Today,/);
+   f.setNow(Date.parse('2026-11-13T06:00:00Z'));f.controller.tick();
+   assert.match(f.text(track),/Today, Friday, November 13/);assert.match(f.text(track),/Birdhouse.*8:00 a.m..*5:00 p.m..*Attendees: 60/);
+   f.setNow(Date.parse('2026-11-14T06:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(track),/Today,|Midnight fixture/);
+  }finally{f.clean();}
+ }
+});
+
+test('school bus ticker gains Today at Memphis midnight and expires the prior date',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});try{
+   f.setNow(Date.parse('2026-11-13T05:59:00Z'));
+   const schools={state:'current',generated_at:'2026-11-12T17:00:00Z',rows:[{id:'s',name:'Bus fixture',date:'2026-11-13',arrival_at:'2026-11-13T14:00:00Z',buses:2,students:40,adults:20}]};
+   await loaded(f,{operations:{ok:true,data:{...payload.data,schools}}});
+   const track=f.elements['ops-schools-ticker'];assert.match(f.text(track),/Friday, November 13/);assert.doesNotMatch(f.text(track),/Today,/);
+   f.setNow(Date.parse('2026-11-13T06:00:00Z'));f.controller.tick();
+   assert.match(f.text(track),/Today, Friday, November 13.*Expected 8:00 AM CST.*2 buses.*60 planned people/);
+   f.setNow(Date.parse('2026-11-14T06:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(track),/Today,|Bus fixture/);
+  }finally{f.clean();}
+ }
 });
