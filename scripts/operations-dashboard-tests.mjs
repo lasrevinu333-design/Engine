@@ -1167,11 +1167,11 @@ test('PRODUCT current original SQL-summary-dashboard callable source composition
  }
 });
 
-test('requested Spiceworks ticker keeps both opened and closed activity inside rolling24h and never substitutes open inventory',()=>{
+test('requested Spiceworks ticker keeps both opened and closed activity inside rolling72h and never substitutes open inventory',()=>{
  const source={state:'snapshot',generated_at:new Date(noon).toISOString(),rows:[
   {ticket_id:'1',title:'Synthetic',kind:'opened',at:new Date(noon-3600000).toISOString()},
   {ticket_id:'1',title:'Synthetic',kind:'closed',at:new Date(noon-1800000).toISOString()},
-  {ticket_id:'2',kind:'opened',at:new Date(noon-86400001).toISOString()},
+  {ticket_id:'2',kind:'opened',at:new Date(noon-259200001).toISOString()},
   {ticket_id:'3',kind:'opened',at:new Date(noon+1).toISOString()}]};
  const out=D.spiceworksActivity(source,noon);assert.deepEqual(out.cards.map(r=>r.activity),['closed','opened']);
  assert.match(out.note,/Other ticket activity may not yet be received/);

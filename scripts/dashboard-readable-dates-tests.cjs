@@ -68,3 +68,16 @@ test('City observed abbreviated address is removed while real details survive',(
   assert.equal(D.cityWorkOrders({state:'current',coverage:'city_active_zoo',rows:[{...row,facility:value}]}).cards[0].title,'#123 · '+value);
  }
 });
+
+test('Spiceworks72h boundaries, rollover, duplicate and status-only display',()=>{
+ const now=Date.parse('2026-11-12T18:00:00Z'),h=3600000;
+ const rows=[0,24,48,72,72+1/h,-1/h].map((age,i)=>({ticket_id:String(i+1),title:'Synthetic',kind:i%2?'closed':'opened',at:new Date(now-age*h).toISOString()}));
+ rows.push({...rows[2]});
+ const feed={state:'snapshot',generated_at:new Date(now).toISOString(),rows};
+ const before=JSON.stringify(feed),out=D.spiceworksActivity(feed,now);
+ assert.equal(out.title,'Spiceworks · last 72 hours');assert.equal(out.cards.length,4);
+ assert.deepEqual(out.cards.map(c=>c.lines),[['Opened'],['Closed'],['Opened'],['Closed']]);
+ assert.doesNotMatch(JSON.stringify(out),/email activity/i);assert.equal(JSON.stringify(feed),before);
+ assert.equal(D.spiceworksActivity(feed,now+1).cards.some(c=>c.id.startsWith('4:')),false);
+ assert.equal(D.spiceworksActivity(null,now).title,'Spiceworks · last 72 hours');
+});

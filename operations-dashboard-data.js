@@ -193,20 +193,20 @@
       ?value.name.trim():'Unavailable';
   }
   function spiceworksActivity(value,now=Date.now()){
-    const unavailable={title:'Spiceworks · last 24 hours',cards:[],note:'Recent ticket activity unavailable.'};
+    const unavailable={title:'Spiceworks · last 72 hours',cards:[],note:'Recent ticket activity unavailable.'};
     if(!hasFeed(value)||!Array.isArray(value.rows))return unavailable;
     const cards=[],seen=new Set();
     for(const row of value.rows){
       const at=instant(row?.at);
       if(!/^[1-9]\d{0,9}$/.test(row?.ticket_id||'')||!['opened','closed','reopened'].includes(row.kind)||at===null)return unavailable;
-      if(at<now-86400000||at>now)continue;
+      if(at<now-72*60*60*1000||at>now)continue;
       const key=`${row.ticket_id}:${row.kind}:${row.at}`;if(seen.has(key))continue;seen.add(key);
       cards.push({id:key,source:'Spiceworks',title:`#${row.ticket_id} · ${text(row.title,'Ticket title unavailable')}`,
         state:row.kind==='closed'?'CLOSED':'OPEN',activity:row.kind,at,
-        lines:[`${row.kind[0].toUpperCase()+row.kind.slice(1)} · Email activity ${stamp(row.at)}`]});
+        lines:[`${row.kind[0].toUpperCase()+row.kind.slice(1)}`]});
     }
     cards.sort((a,b)=>b.at-a.at||stableId(a,b));
-    return{title:'Spiceworks · last 24 hours',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported openings or closures in this period. '}Newest email activity first; ticket creation dates are unavailable. Other ticket activity may not yet be received.`};
+    return{title:'Spiceworks · last 72 hours',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported openings or closures in this period. '}Newest imported notifications first; ticket creation dates are unavailable. Other ticket activity may not yet be received.`};
   }
   function cityWorkOrders(value){
     const unavailable={title:'Open City work orders',cards:[],note:'Current City work orders unavailable.'};
