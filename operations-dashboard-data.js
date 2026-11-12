@@ -29,7 +29,7 @@
     return iso&&validDate(iso[1])?calendarDate(iso[1])+iso[2]:raw;
   }
   function cityLocation(value,fallback){
-    return text(text(value,fallback).replace(/(?:^|\s+)at North Parkway and McLean Boulevard\b/gi,'').trim(),fallback);
+    return text(text(value,fallback).replace(/(^|\s+|[^\p{L}\p{N}\s_])at North Parkway and McLean Boulevard\b/giu,(_,boundary)=>/^\s+$/.test(boundary)?'':boundary).trim(),fallback);
   }
   function visitOrder(a,b,timeField){
     const ad=validDate(a.date)?a.date:null,bd=validDate(b.date)?b.date:null;

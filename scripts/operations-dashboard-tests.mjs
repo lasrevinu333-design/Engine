@@ -1318,9 +1318,9 @@ test('City cleanup preserves unrelated leading decimal details in both card and 
  for(const audience of ['manager','public_readonly']){
   const f=fixture({audience});
   try{
-   for(const description of ['.5-inch supply pipe leaking; replace fitting.',', verify the existing repair detail.', 'Repair light at North Parkway and McLean Boulevard. Zoo location: Birdhouse kitchen']){
+   for(const description of ['.5-inch supply pipe leaking; replace fitting.',', verify the existing repair detail.', 'Repair light at North Parkway and McLean Boulevard. Zoo location: Birdhouse kitchen','Repair (at North Parkway and McLean Boulevard). Zoo location: Birdhouse kitchen']){
     const city={state:'current',coverage:'city_active_zoo',generated_at:'2026-10-05T17:00:00Z',rows:[{id:'1',work_order_id:'123',facility:'15Z05 Birdhouse',status:'Approved',description,requested_at:'2026-10-05T14:00:00Z'}]};
-    const original=JSON.stringify(city),expected=description.replace(' at North Parkway and McLean Boulevard','');
+    const original=JSON.stringify(city),expected=description.replace(' at North Parkway and McLean Boulevard','').replace('(at North Parkway and McLean Boulevard)','()');
     await loaded(f,{operations:{ok:true,data:{...payload.data,city}}});
     assert.ok(f.text(f.elements['ops-city-ticker']).includes(expected));
     f.controller.openBoard('city');assert.ok(f.text(f.content).includes(expected));

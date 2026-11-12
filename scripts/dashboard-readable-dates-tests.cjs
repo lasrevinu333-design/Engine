@@ -43,3 +43,18 @@ test('event ticker Today label uses Memphis calendar day, never host or UTC day'
  assert.ok(D.events([summer],Date.parse('2026-07-01T05:00:00Z'),{labelToday:true}).cards[0].lines[1].startsWith('Today, Wednesday, July 1 ·'));
  assert.ok(D.events([event],Date.parse('2026-11-13T06:00:00Z')).cards[0].lines[1].startsWith('Friday, November 13 ·'));
 });
+
+// R4: remove only the exact standalone address, retaining its punctuation.
+test('City address recognizes punctuation boundaries without erasing operational text',()=>{
+ const cases=[
+  ['Repair (at North Parkway and McLean Boulevard). Zoo location: Birdhouse kitchen','Repair (). Zoo location: Birdhouse kitchen'],
+  ['.5-inch pipe,at North Parkway and McLean Boulevard; retain fitting.','.5-inch pipe,; retain fitting.'],
+  ['Repair [at North Parkway and McLean Boulevard] now','Repair [] now'],
+  ['greatat North Parkway and McLean Boulevard','greatat North Parkway and McLean Boulevard'],
+  ['at North Parkway and McLean Boulevardish','at North Parkway and McLean Boulevardish'],
+ ];
+ for(const [description,expected] of cases){
+  const row={id:'1',facility:'15Z05 Birdhouse',status:'Approved',description};
+  const before=JSON.stringify(row);assert.equal(D.cityWorkOrders({state:'current',coverage:'city_active_zoo',rows:[row]}).cards[0].lines[1],expected);assert.equal(JSON.stringify(row),before);
+ }
+});
