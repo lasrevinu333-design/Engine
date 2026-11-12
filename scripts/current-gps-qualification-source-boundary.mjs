@@ -7,7 +7,7 @@ import {resolve,relative,dirname,basename,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const PROFILE_SHA='5b2d3aad3c8b8de8407a34ceec154bcddbfa14a832fd95dee48ab31fda8592c9';
-const DIAGNOSTIC_PROFILE_SHA='1557d8844c6ba1da9d08e77aaee1855259a21221de1cf0eb226a3b05578f0b82';
+const DIAGNOSTIC_PROFILE_SHA='3babce12abdf25ee017b5ea03d886ca307a554dad04cbe48720d8ff96b93977f';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){

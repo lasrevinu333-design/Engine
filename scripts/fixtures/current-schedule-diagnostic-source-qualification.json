@@ -2548,8 +2548,8 @@
     },
     {
       "path": "scripts/current-gps-qualification-gate.mjs",
-      "bytes": 2632,
-      "sha256": "a2d5dbcae6c04513bd9d573961f400c86bf16d9d504ed8cac9ba236eaa6919fa"
+      "bytes": 2682,
+      "sha256": "9b4b1395c87766f49b606942d4a56d8c171c622fd78949883b74945317d41454"
     },
     {
       "path": "scripts/current-gps-source-qualification-tests.mjs",
@@ -2862,9 +2862,14 @@
       "sha256": "6aad02816a7c9751917839edb7d3734c836ea92f03de4e8fb75a896b98bdfff2"
     },
     {
+      "path": "scripts/schedule-diagnostic-discovery-tests.mjs",
+      "bytes": 2721,
+      "sha256": "b1ebd1c3e42fd352f32b3d78d098d98fc1d6ddb63c825c83d20dce8e4f438208"
+    },
+    {
       "path": "scripts/schedule-diagnostic-qualification-tests.mjs",
-      "bytes": 655,
-      "sha256": "a88e1699bbabc87235d17497c6e08c177e546e362f81e519d4b40249a494bbce"
+      "bytes": 1704,
+      "sha256": "50fc7e3dd13f5b6225b469c87ab866d97d169207997846fa36d014017514b340"
     },
     {
       "path": "scripts/schedule-diagnostic/employee-schedule.html",
@@ -3580,7 +3585,8 @@
     "public-dashboard-view-tests.mjs": "scripts/public-dashboard-view-tests.mjs",
     "manager-name-first-login-tests.mjs": "scripts/manager-name-first-login-tests.mjs",
     "server-revalidation-principal-enrichment-tests.mjs": "scripts/server-revalidation-principal-enrichment-tests.mjs",
-    "owner-test-readiness-diagnostic-tests.mjs": "scripts/owner-test-readiness-diagnostic-tests.mjs"
+    "owner-test-readiness-diagnostic-tests.mjs": "scripts/owner-test-readiness-diagnostic-tests.mjs",
+    "schedule-diagnostic-discovery-tests.mjs": "scripts/schedule-diagnostic-discovery-tests.mjs"
   },
   "deltas": [
     {
@@ -4104,7 +4110,7 @@
       "kind": "modified",
       "prior_sha256": "4e2aee6d12ab88601f17e9ee55fb0b26331c12f653d04a1ebee35897c1036ba7",
       "prior_bytes": 2578,
-      "current_sha256": "a2d5dbcae6c04513bd9d573961f400c86bf16d9d504ed8cac9ba236eaa6919fa",
+      "current_sha256": "9b4b1395c87766f49b606942d4a56d8c171c622fd78949883b74945317d41454",
       "hunks": [
         {
           "old_start": 20,
@@ -4115,7 +4121,7 @@
             "for(const script of ['scripts/current-gps-source-qualification-tests.mjs','scripts/current-provider-comparison-source-tests.mjs','scripts/current-gps-native-lifecycle-tests.mjs',"
           ],
           "after": [
-            "for(const script of ['scripts/schedule-diagnostic-qualification-tests.mjs','scripts/current-gps-source-qualification-tests.mjs','scripts/current-provider-comparison-source-tests.mjs','scripts/current-gps-native-lifecycle-tests.mjs',"
+            "for(const script of ['scripts/schedule-diagnostic-discovery-tests.mjs','scripts/schedule-diagnostic-qualification-tests.mjs','scripts/current-gps-source-qualification-tests.mjs','scripts/current-provider-comparison-source-tests.mjs','scripts/current-gps-native-lifecycle-tests.mjs',"
           ]
         }
       ]
