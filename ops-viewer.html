@@ -9,7 +9,7 @@
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css">
   <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
-  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.11.artwork-centered">
+  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.12.daily-totals-r8">
   <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
 </head><body class="mapWebPage operationsPage" data-memphis-context="viewer">
   <main class="mapPage commandPage">
@@ -18,8 +18,8 @@
 
     <div id="operations-panels" hidden>
       <header class="telemetry" aria-label="Date, attendance and weather">
-        <section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="ops-clock" class="bigClock">—</time><div id="ops-date" class="calendarDate"></div></section>
-        <section class="attendanceCard"><div class="eyebrow">CURRENT GATE COUNT</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div></section>
+        <section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="ops-clock" class="bigClock">—</time><div id="ops-date" class="calendarDate"></div><div class="dailyExpected"><div class="eyebrow">TODAY’S SCHOOL GROUPS · EXPECTED</div><strong id="ops-schools-expected">Unknown</strong><div class="metricNote" id="ops-schools-expected-note">Source not yet read.</div></div></section>
+        <section class="attendanceCard"><div class="eyebrow">CURRENT GATE COUNT</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div><div class="dailyExpected"><div class="eyebrow">TODAY’S EVENTS · EXPECTED</div><strong id="ops-events-expected">Unknown</strong><div class="metricNote" id="ops-events-expected-note">Source not yet read.</div></div></section>
         <section class="weatherCard"><div class="weatherNow"><svg class="weatherArt" viewBox="0 0 120 84" aria-hidden="true"><g class="sunRays" stroke="#ffd46b" stroke-width="3"><path d="M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4"/></g><circle cx="45" cy="32" r="19" fill="#ffd46b"/><path class="weatherCloud" d="M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z" fill="#d8efff"/></svg><div><div class="eyebrow">MEMPHIS WEATHER</div><strong id="ops-weather">Unavailable</strong><div id="ops-weather-high-low" class="metricNote">High/low unavailable.</div><div id="ops-weather-note" class="metricNote">Forecast source not yet read.</div></div></div><div id="ops-hour" class="hourForecast">Next-hour forecast unavailable.</div></section>
       </header>
     <button type="button" id="ops-locations-button" class="tickerBand locationsBand" data-board="locations" hidden><span class="tickerLabel">Location Status</span><span class="tickerWindow"><span id="ops-locations-ticker" class="tickerTrack">Waiting for current cleaning status.</span></span><span class="feedButton" aria-hidden="true">All locations ↗</span></button>
@@ -39,7 +39,7 @@
     </section>
 
       <button type="button" class="tickerBand" data-board="tickets" aria-label="Open Custodial Tickets"><span class="tickerLabel">OPEN CUSTODIAL TICKETS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-tickets-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
-      <button type="button" class="tickerBand" data-board="spiceworks" aria-label="Spiceworks tickets opened and closed in the last 72 hours"><span class="tickerLabel">SPICEWORKS · 72H</span><span class="tickerWindow"><span class="tickerTrack" id="ops-spiceworks-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
+      <button type="button" class="tickerBand" data-board="spiceworks" aria-label="Spiceworks new-ticket notices received in the last 72 hours"><span class="tickerLabel">SPICEWORKS · NEW NOTICES · 72H</span><span class="tickerWindow"><span class="tickerTrack" id="ops-spiceworks-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
       <button type="button" class="tickerBand" data-board="city" aria-label="Open City work orders"><span class="tickerLabel">CITY WORK ORDERS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-city-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
     </div>
     <details class="dashboardTools"><summary>Dashboard tools</summary><button id="refresh-dashboard" type="button">Refresh</button><button id="operations-motion" type="button" aria-pressed="false">Pause motion</button></details>
@@ -50,6 +50,6 @@
     <p id="operations-board-note" class="boardNote" role="status"></p><div id="operations-board-content" class="boardContent" tabindex="0" aria-label="Scrollable operations rows"></div>
   </dialog>
   <script src="./dashboard-map-staging.js?v=2026.11.11.operations-layout"></script><script src="./custodial-gps-approved-overall-fit.js"></script><script src="./dashboard-map-renderer.js"></script>
-  <script src="./operations-dashboard-data.js?v=2026.11.12.daily-high-low-r7"></script><script src="./operations-dashboard.js?v=2026.11.12.daily-high-low-r7"></script>
+  <script src="./operations-dashboard-data.js?v=2026.11.12.daily-totals-r8"></script><script src="./operations-dashboard.js?v=2026.11.12.daily-totals-r8"></script>
   <script src="./ops-viewer.js?v=2026.11.11.operations-layout"></script>
 </body></html>

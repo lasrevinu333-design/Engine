@@ -193,20 +193,20 @@
       ?value.name.trim():'Unavailable';
   }
   function spiceworksActivity(value,now=Date.now()){
-    const unavailable={title:'Spiceworks · last 72 hours',cards:[],note:'Recent ticket activity unavailable.'};
+    const unavailable={title:'Spiceworks · new-ticket notices · 72h',cards:[],note:'New-ticket notices unavailable.'};
     if(!hasFeed(value)||!Array.isArray(value.rows))return unavailable;
     const cards=[],seen=new Set();
     for(const row of value.rows){
       const at=instant(row?.at);
       if(!/^[1-9]\d{0,9}$/.test(row?.ticket_id||'')||!['opened','closed','reopened'].includes(row.kind)||at===null)return unavailable;
-      if(at<now-72*60*60*1000||at>now)continue;
+      if(row.kind!=='opened'||at<now-72*60*60*1000||at>now)continue;
       const key=`${row.ticket_id}:${row.kind}:${row.at}`;if(seen.has(key))continue;seen.add(key);
       cards.push({id:key,source:'Spiceworks',title:`#${row.ticket_id} · ${text(row.title,'Ticket title unavailable')}`,
         state:row.kind==='closed'?'CLOSED':'OPEN',activity:row.kind,at,
         lines:[`${row.kind[0].toUpperCase()+row.kind.slice(1)}`]});
     }
     cards.sort((a,b)=>b.at-a.at||stableId(a,b));
-    return{title:'Spiceworks · last 72 hours',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported openings or closures in this period. '}Newest imported notifications first; ticket creation dates are unavailable. Other ticket activity may not yet be received.`};
+    return{title:'Spiceworks · new-ticket notices · 72h',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported new-ticket notices received in this period. '}Only new-ticket notices received in the last 72 hours, newest received first. This is notification receipt time, not verified ticket creation time. Other new-ticket notices may not yet be received; current ticket status is not confirmed.`};
   }
   function cityWorkOrders(value){
     const unavailable={title:'Open City work orders',cards:[],note:'Current City work orders unavailable.'};
@@ -280,6 +280,39 @@
     }
     return{title:'Events',cards,history,note:'Structured Events data only. Cancelled, superseded and scheduled-ended records move to history; source mail is not displayed. Scheduled end is not a physical departure observation.'};
   }
+  // Planned attendance is not live occupancy or distinct visitors across events.
+  function dailyExpected(ops,now=Date.now()){
+    const today=localDate(now);
+    function total(rows,available,school,snapshot=false){
+      if(!available)return {value:'Unknown',note:'Source unavailable.'};
+      let sum=0,unknown=false;const seen=new Map(),conflicts=new Set();
+      for(const row of rows){if(!row?.id)continue;const signature=JSON.stringify(row);
+        if(seen.has(row.id)&&seen.get(row.id)!==signature)conflicts.add(row.id);else seen.set(row.id,signature);}
+      seen.clear();
+      for(const row of rows){
+        if(!row||['CANCELLED','SUPERSEDED'].includes(row.status))continue;
+        if(!validDate(row.date)){unknown=true;continue;}
+        if(!school&&row.end_date&&(!validDate(row.end_date)||row.end_date<row.date)){unknown=true;continue;}
+        if(school?row.date!==today:row.date>today||(row.end_date||row.date)<today)continue;
+        if(!row.id||conflicts.has(row.id)){unknown=true;continue;}
+        const signature=JSON.stringify(row);
+        if(seen.has(row.id)){if(seen.get(row.id)!==signature)unknown=true;continue;}
+        seen.set(row.id,signature);
+        if(row.needs_review||row.status!=='SCHEDULED'){unknown=true;continue;}
+        // A whole-run attendance estimate cannot be allocated to individual days.
+        if(!school&&row.end_date&&row.end_date!==row.date){unknown=true;continue;}
+        const n=school?(count(row.students)!==null&&count(row.adults)!==null?count(row.students+row.adults):null):count(row.attendees);
+        if(n===null){unknown=true;continue;}
+        sum+=n;
+        if(school&&(count(row.unclassified)===null||row.unclassified>0))unknown=true;
+      }
+      if(!Number.isSafeInteger(sum))return {value:'Unknown',note:'Counts need review.'};
+      return {value:unknown?(sum?`${number(sum)} known · incomplete`:'Unknown · incomplete'):number(sum),
+        note:`Planned people in loaded records; not live occupancy.${snapshot?' Imported snapshot; freshness unverified.':''}${school?'':' Not unique visitors.'}`};
+    }
+    return {schools:total(ops?.schools?.rows||[],hasFeed(ops?.schools)&&Array.isArray(ops?.schools?.rows),true,ops?.schools?.state==='snapshot'),
+      events:total(ops?.events||[],Array.isArray(ops?.events),false)};
+  }
   function schools(value,now){
     const today=localDate(now),rows=orderedSchools(value);
     const totals={students:0,adults:0,total:0,unclassified:0};let unknown=false;
@@ -333,6 +366,6 @@
       :['activity','tickets'].includes(kind)&&!view.cards.length&&/unavailable/i.test(view.note)?'Ticket details unavailable.':notes[kind]||view.note;
     return{...view,note,cards:view.cards.map(present),...(view.history?{history:view.history.map(present)}:{})};
   }
-  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,calendarDate,reportedDate,operations,managerOnDuty,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,orderedSchools,cleaning,publicCleaning,operationalView});
+  const api=Object.freeze({ZONE,text,count,instant,localDate,clock,calendarDate,reportedDate,operations,managerOnDuty,attendance,weather,tickets,spiceworksActivity,cityWorkOrders,events,schools,dailyExpected,orderedSchools,cleaning,publicCleaning,operationalView});
   root.MemphisOperationsData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

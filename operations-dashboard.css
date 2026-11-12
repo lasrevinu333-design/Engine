@@ -134,3 +134,8 @@
   content:"";position:absolute;inset:var(--map-art-top) var(--map-art-right) var(--map-art-bottom) var(--map-art-left);
   z-index:-1;border-radius:9px;background:#0d1f2f;box-shadow:0 0 0 1px var(--ux-line);pointer-events:none;
 }
+
+/* Daily planned counts share the existing telemetry card, not the map. */
+.dailyExpected{display:grid;gap:4px;margin-top:8px}
+.dailyExpected strong{font-size:18px;line-height:1.2;overflow-wrap:anywhere}
+.dailyExpected .eyebrow{white-space:normal}

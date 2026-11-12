@@ -123,6 +123,11 @@
 
     }
     function renderActivity(){
+      const expected=DATA.dailyExpected(ops,now());
+      for(const kind of ['schools','events']){
+        txt('ops-'+kind+'-expected',expected[kind].value);
+        txt('ops-'+kind+'-expected-note',expected[kind].note+(delayedFeeds.has(kind)?' Update delayed; showing last received records.':''));
+      }
       const labels={tickets:'TICKETS'};
       const activity=activityKinds.flatMap(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
         return (cards.length?cards.map(card=>card.title):[summary?'No open tickets':'Tickets unavailable']).map(text=>labels[kind]+': '+text);});

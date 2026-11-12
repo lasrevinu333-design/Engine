@@ -1167,16 +1167,16 @@ test('PRODUCT current original SQL-summary-dashboard callable source composition
  }
 });
 
-test('requested Spiceworks ticker keeps both opened and closed activity inside rolling72h and never substitutes open inventory',()=>{
+test('requested Spiceworks ticker keeps new-ticket notices inside rolling72h and never substitutes open inventory',()=>{
  const source={state:'snapshot',generated_at:new Date(noon).toISOString(),rows:[
   {ticket_id:'1',title:'Synthetic',kind:'opened',at:new Date(noon-3600000).toISOString()},
   {ticket_id:'1',title:'Synthetic',kind:'closed',at:new Date(noon-1800000).toISOString()},
   {ticket_id:'2',kind:'opened',at:new Date(noon-259200001).toISOString()},
   {ticket_id:'3',kind:'opened',at:new Date(noon+1).toISOString()}]};
- const out=D.spiceworksActivity(source,noon);assert.deepEqual(out.cards.map(r=>r.activity),['closed','opened']);
- assert.match(out.note,/Other ticket activity may not yet be received/);
+ const out=D.spiceworksActivity(source,noon);assert.deepEqual(out.cards.map(r=>r.activity),['opened']);
+ assert.match(out.note,/Other new-ticket notices may not yet be received/);
  assert.equal(D.spiceworksActivity({...source,rows:[{ticket_id:'1',status:'Open'}]},noon).cards.length,0);
- assert.match(D.spiceworksActivity({...source,rows:[]},noon).note,/No imported openings or closures/);
+ assert.match(D.spiceworksActivity({...source,rows:[]},noon).note,/No imported new-ticket notices received/);
 });
 test('City ticker requires the complete active Zoo source and displays original status',()=>{
  const source={state:'current',coverage:'city_active_zoo',generated_at:new Date(noon).toISOString(),rows:[{id:'1',work_order_id:'123',facility:'15Z05 Birdhouse',status:'In Progress',description:'Repair light',requested_at:new Date(noon).toISOString()}]};
