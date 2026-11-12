@@ -58,3 +58,13 @@ test('City address recognizes punctuation boundaries without erasing operational
   const before=JSON.stringify(row);assert.equal(D.cityWorkOrders({state:'current',coverage:'city_active_zoo',rows:[row]}).cards[0].lines[1],expected);assert.equal(JSON.stringify(row),before);
  }
 });
+
+// R5: observed literal City export suffix; no generic address inference.
+test('City observed abbreviated address is removed while real details survive',()=>{
+ const row={id:'1',work_order_id:'123',facility:'15Z05 Birdhouse @ N Parkway & N Mclean Blvd',status:'Approved',description:'.5-inch fitting; Zoo location: Birdhouse kitchen'};
+ const before=JSON.stringify(row),card=D.cityWorkOrders({state:'current',coverage:'city_active_zoo',rows:[row]}).cards[0];
+ assert.equal(card.title,'#123 · 15Z05 Birdhouse');assert.equal(card.lines[1],row.description);assert.equal(JSON.stringify(row),before);
+ for(const value of ['15Z05 Birdhouse @ N Parkway & N Mclean Blvdish','15Z05 Birdhouse @ N Parkway & Other Blvd','15Z05 Birdhouse @ N Parkway','15Z05 Birdhouse email@ N Parkway & N Mclean Blvd']){
+  assert.equal(D.cityWorkOrders({state:'current',coverage:'city_active_zoo',rows:[{...row,facility:value}]}).cards[0].title,'#123 · '+value);
+ }
+});
