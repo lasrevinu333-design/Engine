@@ -234,8 +234,13 @@
     const h=payload.hourly,idx=Array.isArray(h?.time)?h.time.findIndex(t=>Number.isFinite(t)&&t*1000>now&&t*1000<=now+3600000):-1;
     const valid=idx>=0&&Number.isFinite(h.temperature_2m?.[idx])&&Number.isFinite(h.precipitation_probability?.[idx])
       &&h.precipitation_probability[idx]>=0&&h.precipitation_probability[idx]<=100&&payload.hourly_units?.temperature_2m==='°F';
+    const day=localDate(now),daily=payload.daily;
+    const di=payload.timezone===ZONE&&Array.isArray(daily?.time)?daily.time.findIndex(t=>Number.isFinite(t)&&Math.abs(t*1000)<=8640000000000000&&localDate(t*1000)===day):-1;
+    const high=di>=0?daily.temperature_2m_max?.[di]:null,low=di>=0?daily.temperature_2m_min?.[di]:null;
+    const validDaily=Number.isFinite(high)&&Number.isFinite(low)&&high>=low&&payload.daily_units?.temperature_2m_max==='°F'&&payload.daily_units?.temperature_2m_min==='°F';
+    const highLow=validDaily?`High ${Math.round(high)}°F · Low ${Math.round(low)}°F`:'High/low unavailable.';
     const forecastTime=new Intl.DateTimeFormat('en-US',{timeZone:ZONE,hour:'numeric',minute:'2-digit'}).format(new Date(at)).replace(':00','').replace('AM','a.m.').replace('PM','p.m.');
-    return{value:`${Math.round(c.temperature_2m)}°F`,note:`${forecastTime}${stale?' · Stale forecast':''}`,
+    return{day,highLow,value:`${Math.round(c.temperature_2m)}°F`,note:`${forecastTime}${stale?' · Stale forecast':''}`,
       hour:valid?`${clock(new Date(h.time[idx]*1000).toISOString())}: ${Math.round(h.temperature_2m[idx])}°F · ${h.precipitation_probability[idx]}% rain`:'Next-hour forecast unavailable.',stale};
   }
   function tickets(summary,mail){

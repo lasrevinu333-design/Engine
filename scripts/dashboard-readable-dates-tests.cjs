@@ -81,3 +81,11 @@ test('Spiceworks72h boundaries, rollover, duplicate and status-only display',()=
  assert.equal(D.spiceworksActivity(feed,now+1).cards.some(c=>c.id.startsWith('4:')),false);
  assert.equal(D.spiceworksActivity(null,now).title,'Spiceworks · last 72 hours');
 });
+
+test('weather daily high/low matches Memphis day and rejects incomplete or wrong-unit data',()=>{
+ const now=Date.parse('2026-11-13T05:59:59Z');
+ const p={timezone:'America/Chicago',current:{time:now/1000,temperature_2m:60},current_units:{temperature_2m:'°F'},daily_units:{temperature_2m_max:'°F',temperature_2m_min:'°F'},daily:{time:[Date.parse('2026-11-12T06:00:00Z')/1000,Date.parse('2026-11-13T06:00:00Z')/1000],temperature_2m_max:[65.3,48],temperature_2m_min:[42.6,33.9]}};
+ assert.equal(D.weather(p,now).highLow,'High 65°F · Low 43°F');
+ assert.equal(D.weather(p,now+1000).highLow,'High 48°F · Low 34°F');
+ for(const bad of [{daily:null},{timezone:'UTC'},{daily_units:{temperature_2m_max:'°C',temperature_2m_min:'°F'}},{daily:{...p.daily,temperature_2m_max:[null,48]}},{daily:{...p.daily,temperature_2m_min:[99,34]}},{daily:{...p.daily,time:[1e100]}}])assert.equal(D.weather({...p,...bad},now).highLow,'High/low unavailable.');
+});

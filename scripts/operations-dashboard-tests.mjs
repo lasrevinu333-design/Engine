@@ -1357,3 +1357,15 @@ test('school bus ticker gains Today at Memphis midnight and expires the prior da
   }finally{f.clean();}
  }
 });
+
+test('daily high/low clears previous Memphis day even without a successful refresh',async()=>{
+ for(const audience of ['manager','public_readonly']){
+ const f=fixture({audience});try{
+ const now=Date.parse('2026-11-13T05:59:59Z');f.setNow(now);
+ const weather={timezone:D.ZONE,current:{time:now/1000,temperature_2m:60},current_units:{temperature_2m:'°F'},daily_units:{temperature_2m_max:'°F',temperature_2m_min:'°F'},daily:{time:[Date.parse('2026-11-12T06:00:00Z')/1000],temperature_2m_max:[65],temperature_2m_min:[43]}};
+ await f.controller.refresh({headers:{},isCurrent:()=>true,summary:{open_tickets:[]},fetchImpl:async url=>({ok:true,json:async()=>url.includes('open-meteo')?weather:url.endsWith('/operations')?payload:null})});
+ assert.equal(f.elements['ops-weather-high-low'].textContent,'High 65°F · Low 43°F');
+ f.setNow(now+1000);f.controller.tick();assert.equal(f.elements['ops-weather-high-low'].textContent,'High/low unavailable.');
+ }finally{f.clean();}
+ }
+});

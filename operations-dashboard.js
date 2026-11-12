@@ -2,7 +2,7 @@
   'use strict';
   const DATA=root.MemphisOperationsData;
   const API='https://memphis-zoo-mcp.onrender.com';
-  const WEATHER='https://api.open-meteo.com/v1/forecast?latitude=35.1506&longitude=-89.9944&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability&temperature_unit=fahrenheit&timeformat=unixtime&timezone=America%2FChicago&forecast_days=2';
+  const WEATHER='https://api.open-meteo.com/v1/forecast?latitude=35.1506&longitude=-89.9944&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timeformat=unixtime&timezone=America%2FChicago&forecast_days=2';
   const KINDS=Object.freeze(['activity','tickets','events','schools','spiceworks','city','locations']);
   const ACTIVITY_KINDS=Object.freeze(['tickets']);
   // Close geographic/display neighbors, without changing any approved point.
@@ -111,8 +111,10 @@
       content.scrollTop=top;
       if(focused)Array.from(content.querySelectorAll('[data-location-select]')).find(n=>n.dataset.locationSelect===focused)?.focus({preventScroll:true});
     }
+    function renderHighLow(){txt('ops-weather-high-low',lastWeather?.day===DATA.localDate(now())?lastWeather.highLow:'High/low unavailable.');}
     function tick(){if(!active||closed)return;
       if(!bound()){unavailable();return;}
+      renderHighLow();
       const at=new Date(now());txt('ops-clock',new Intl.DateTimeFormat('en-US',{timeZone:DATA.ZONE,hour:'numeric',minute:'2-digit',second:'2-digit'}).format(at));
       txt('ops-date',new Intl.DateTimeFormat('en-US',{timeZone:DATA.ZONE,weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(at));
       const minute=Math.floor(now()/60000);
@@ -203,7 +205,7 @@
         }),
         load(WEATHER,false).catch(()=>null).then(value=>{
           if(!publish())return;const weather=DATA.weather(value,now());
-          if(weather.value!=='Unavailable')lastWeather=weather;
+          if(weather.value!=='Unavailable')lastWeather=weather;renderHighLow();
           txt('ops-weather',weather.value==='Unavailable'&&lastWeather?lastWeather.value:weather.value);
           txt('ops-weather-note',weather.value==='Unavailable'&&lastWeather?`${lastWeather.note} · Update delayed`:weather.note);el('ops-weather-note').dataset.stale=String(weather.stale);txt('ops-hour',weather.value==='Unavailable'&&lastWeather?lastWeather.hour:weather.hour);
         })
@@ -278,7 +280,7 @@
       const preserveOwner=active&&!closed&&sameOwner();
       if(!preserveBoard||!preserveOwner)closeBoard({history:false,focus:false});
       if(!preserveMap||!preserveOwner)void exitMap();
-      txt('ops-attendance','Unavailable');txt('ops-attendance-note','Current gate count unavailable.');txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderFeeds();}
+      txt('ops-attendance','Unavailable');txt('ops-attendance-note','Current gate count unavailable.');txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderHighLow();renderFeeds();}
     function suspend(){active=false;if(tickerFrame!==null)window.cancelAnimationFrame(tickerFrame);tickerFrame=null;tickerTime=null;unavailable();panel.hidden=true;el('ops-locations-button').hidden=true;}
     function activate(renderer){if(closed)return;map=renderer;owner=publicRead?null:session();active=publicRead||!!owner;
       panel.hidden=!active;el('ops-locations-button').hidden=!active;if(active)tick();else unavailable();}
