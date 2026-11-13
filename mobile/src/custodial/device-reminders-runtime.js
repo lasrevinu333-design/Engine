@@ -553,7 +553,8 @@ export function installDeviceReminders(options) {
   }
 
   function debugReminderAlert() {
-    const speakerName = state.currentDisplayName || 'Markeisha';
+    const speakerName = safeText(state.currentDisplayName);
+    if (!speakerName) throw new Error('The assigned employee identity is required for a reminder sample.');
     const lead = personalizedLead(speakerName);
     return {
       id: `debug:${Date.now()}`,

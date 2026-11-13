@@ -345,7 +345,7 @@ test('PRODUCT Home preserves genuine zero and Central service day without fabric
  const at='2026-10-11T01:00:00Z',epoch=Date.parse(at)/1000;
  const f=await managerHomeFixture({attendance:{attendance:0,planned:null,stale:false,source_timestamp:at,service_date:'2026-10-10'},weather:{current:{time:epoch,temperature_2m:0,weather_code:null},current_units:{time:'unixtime',temperature_2m:'°F'}}});
  assert.equal(f.nodes.get('attendance-value').textContent,'0');assert.match(f.nodes.get('attendance-meta').textContent,/Current.*Planned unavailable.*Central/);
- assert.equal(f.nodes.get('weather-value').textContent,'0°F');assert.equal(f.nodes.get('weather-meta').textContent,'');assert.doesNotMatch(f.nodes.get('weather-value').textContent,/clear|sunny|high|low/i);
+ assert.equal(f.nodes.get('weather-value').textContent,'0°F');assert.equal(f.nodes.get('weather-meta').textContent,'High / Low unavailable · Precipitation unavailable');assert.doesNotMatch(f.nodes.get('weather-value').textContent,/clear|sunny|high|low/i);
  assert.match(f.nodes.get('date').textContent,/October 10/);assert.match(f.nodes.get('clock').textContent,/8:00/);
  assert.ok(f.requests.some(url=>{const u=new URL(url);return u.hostname==='api.open-meteo.com'&&u.searchParams.get('temperature_unit')==='fahrenheit'&&u.searchParams.get('timeformat')==='unixtime';}));
  for(const attendance of [{attendance:null},{attendance:false},{attendance:0,available:false},{attendance:4,source_timestamp:'2026-10-10T01:00:00Z'},{attendance:4,source_timestamp:'2026-10-11T02:00:00Z'}]){
