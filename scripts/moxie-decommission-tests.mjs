@@ -16,14 +16,16 @@ for (const path of [
 ]) assert.equal(existsSync(new URL(`../${path}`, import.meta.url)), false, path);
 
 
-// October 5–6 consolidation retired manual event intake. Preserve only a
-// compatibility entry to the one shared Events page; no old writer UI returns.
-assert.equal(existsSync(new URL('../events-admin.html', import.meta.url)), true, 'retained Events compatibility entry');
+// The retired Moxie/Annie routes remain forbidden. The owner subsequently
+// restored manual Events intake through the current authenticated cohort API.
+assert.equal(existsSync(new URL('../events-admin.html', import.meta.url)), true, 'current manual Events input');
 const retainedEventsAdmin = read('events-admin.html');
 assert.doesNotMatch(retainedEventsAdmin, /\/moxie(?:[\/?#\s"'`]|$)|moxie-link|data-mz-annie-back|ANNIE_RETURN_URL|ANNIE_ORIGIN_SESSION_KEY|isAnnieOrigin|preserveAnnieOrigin/);
-assert.match(retainedEventsAdmin, /window\.location\.replace\(new URL\('\.\/events\.html', window\.location\.href\)\.href\)/);
-assert.match(retainedEventsAdmin, /href="\.\/events\.html"/);
-assert.doesNotMatch(retainedEventsAdmin, /<form|<input|<button|admin-api|saveEvent|deleteEvent|loadEventForEdit|fetch\(/);
+assert.match(retainedEventsAdmin, /https:\/\/memphis-zoo-mcp\.onrender\.com\/admin-api\/manual-events/);
+assert.match(retainedEventsAdmin, /requireOpsManagerSession\(\{interactive:false,redirect:true\}\)/);
+assert.match(retainedEventsAdmin, /MemphisAuth\.opsManagerAuthHeaders\(\)/);
+assert.match(retainedEventsAdmin, /manual-event-operation\.v1/);
+assert.doesNotMatch(retainedEventsAdmin, /\/admin-api\/events(?:[\/?#"']|$)/, 'retired direct event writer stays absent');
 
 assert.doesNotMatch(read('mobile/src/manager/index.html'), /moxie-mobile|moxie-tile/i);
 assert.doesNotMatch(read('mobile/src/shell/roles/manager/routes.ts'), /manager\.moxie|moxie-mobile/i);

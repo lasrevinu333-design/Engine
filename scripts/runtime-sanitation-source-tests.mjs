@@ -6,6 +6,7 @@ import { dirname, resolve, relative } from 'node:path';
 import vm from 'node:vm';
 import { discoverRuntimeFiles } from './refresh-frontend-release-manifest.mjs';
 import { assertSourceRuntimeSanitation, inspectSourceRuntimeRecords } from './lib/runtime-sanitation-policy.mjs';
+import {normalizeCurrentGpsForHistoricalComparison} from './current-gps-qualification-source-boundary.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 let checks = 0;
@@ -25,8 +26,12 @@ function rejected(record, rule) {
 // Real fail-before coverage demonstration: run the unchanged old finite checker
 // against an in-memory source overlay. A new runtime asset outside its named
 // files is invisible to it; the new actual-graph policy must reject that record.
-const oldPath = resolve(root, 'scripts/moxie-decommission-tests.mjs');
+const oldPath = resolve(root, 'scripts/fixtures/runtime-sanitation-predecessor/moxie-decommission-tests.mjs');
 const oldSource = readFileSync(oldPath, 'utf8');
+check(createHash('sha256').update(oldSource).digest('hex'), '2d40dfc71a77400a431524e035456e1d8192a1115b4ad98a8baf2d0948088795', 'genuine unchanged finite-checker predecessor');
+const eventsAdminPath = resolve(root, 'events-admin.html');
+const historicalEventsAdmin = normalizeCurrentGpsForHistoricalComparison('events-admin.html', readFileSync(eventsAdminPath, 'utf8'));
+assert.match(historicalEventsAdmin, /window\.location\.replace/, 'old checker receives only the genuine historical Events compatibility input');
 const oldBody = oldSource.replace(/^import .*;\r?\n/gm, '')
   .replaceAll('import.meta.url', JSON.stringify(new URL('../scripts/moxie-decommission-tests.mjs', import.meta.url).href));
 check((oldSource.match(/^import /gm) || []).length, 2, 'exact inherited checker imports');
@@ -36,10 +41,14 @@ vm.runInNewContext(oldBody, {
   assert, URL,
   existsSync: value => fileURLToPath(value) === resolve(root, resurrection.path) || existsSync(value),
   readFileSync: (value, encoding) => fileURLToPath(value) === resolve(root, resurrection.path)
-    ? resurrection.bytes.toString(encoding) : readFileSync(value, encoding),
+    ? resurrection.bytes.toString(encoding) : fileURLToPath(value) === eventsAdminPath
+      ? historicalEventsAdmin : readFileSync(value, encoding),
   console: { log: value => { legacyPassed = value === 'MOXIE_DECOMMISSION_FRONTEND_PASS'; } },
 }, { timeout: 1000 });
 check(legacyPassed, true, 'old finite source checker misses new runtime asset');
+// Current manual intake is checked separately; the old compatibility view
+// above is confined to this historical comparison and never ships.
+await import('./moxie-decommission-tests.mjs');
 rejected(resurrection, 'retired-moxie-source-surface');
 rejected(rec('nested/encoded%2ejs', '/moxie/health'), 'retired-moxie-source-surface');
 
