@@ -635,12 +635,12 @@
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
       "bytes": 1166,
-      "sha256": "a28a0878d50dfd5c92208a38213537d9fbc91bd40a72e0d883244ed357fc8adb"
+      "sha256": "03bda96f948e7702ca43833a94f9dcc069a321008cd080c54ef4214928a424d2"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
       "bytes": 1239,
-      "sha256": "f7b92248e8908357fb67fbfbf559e58732ce58005d0b1a08d7090fbcd2d505dc"
+      "sha256": "eaeda08c7b1cdbe58a314103e0349a9443210683f2a8b599dcac830cce021b26"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
@@ -2954,12 +2954,12 @@
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
       "bytes": 881,
-      "sha256": "2f838f18f85be3cf1a3fd8f30eb3f8f20b2848dca87fb2161a57f5c33311498a"
+      "sha256": "62f39d1b7582d932652c7f156ca40605d85adece99cac4bdcee978e3491a4af1"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
       "bytes": 837,
-      "sha256": "323289acc609342c85fe71606dda7197119b9cb7f86d9fc219bb6e01dd013485"
+      "sha256": "a5905d50ac2ddd04168fa24f89f6826b4e59ab24b2a1c4469e51aaa5521d9463"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/dist/esm/index.js",
@@ -24763,7 +24763,7 @@
       "prior_bytes": 510,
       "prior_sha256": "c2e86842901efe30576f2c772a7c6afb267545bfaf2ffa5c866c41ff7871188d",
       "current_bytes": 1166,
-      "current_sha256": "a28a0878d50dfd5c92208a38213537d9fbc91bd40a72e0d883244ed357fc8adb",
+      "current_sha256": "03bda96f948e7702ca43833a94f9dcc069a321008cd080c54ef4214928a424d2",
       "hunks": [
         {
           "old_start": 1,
@@ -24795,7 +24795,7 @@
             "        try {",
             "            return new NativeProviderAudioAdmission.Entry[] {",
             "                new NativeProviderAudioAdmission.Entry(80L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
-            "                    \"c7f6869105eac96cb7e7612155c2a0227ec731c887094310b128c254173dbeab\", \"327a9a0ba342f5e853b090defcc21469642f3acf7dc3f6e6a62eeb92a9a85401\",",
+            "                    \"bf1981760b4b0955de7159726112bb69baeef8f9558b6bef014cea8ebd8fb2ac\", \"327a9a0ba342f5e853b090defcc21469642f3acf7dc3f6e6a62eeb92a9a85401\",",
             "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"))",
             "            };",
             "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }",
@@ -24813,7 +24813,7 @@
       "prior_bytes": 497,
       "prior_sha256": "a44c8fba6dd520ddb1219684dd3518ac7c7e88b0fd5581d889ab3522a1a742e1",
       "current_bytes": 1239,
-      "current_sha256": "f7b92248e8908357fb67fbfbf559e58732ce58005d0b1a08d7090fbcd2d505dc",
+      "current_sha256": "eaeda08c7b1cdbe58a314103e0349a9443210683f2a8b599dcac830cce021b26",
       "hunks": [
         {
           "old_start": 1,
@@ -24846,7 +24846,7 @@
             "            return new NativeProviderReleaseAdmission.Release[] {",
             "                new NativeProviderReleaseAdmission.Release(80L, \"1.0.0\",",
             "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
-            "                    \"c7f6869105eac96cb7e7612155c2a0227ec731c887094310b128c254173dbeab\", \"327a9a0ba342f5e853b090defcc21469642f3acf7dc3f6e6a62eeb92a9a85401\")",
+            "                    \"bf1981760b4b0955de7159726112bb69baeef8f9558b6bef014cea8ebd8fb2ac\", \"327a9a0ba342f5e853b090defcc21469642f3acf7dc3f6e6a62eeb92a9a85401\")",
             "            };",
             "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }",
             "    }",
@@ -33078,7 +33078,7 @@
       "prior_bytes": 129,
       "prior_sha256": "4dac90e171c456601b2eaf0cda78498fc16c2b5b51a7f5f544de9439e5ea8fcb",
       "current_bytes": 881,
-      "current_sha256": "2f838f18f85be3cf1a3fd8f30eb3f8f20b2848dca87fb2161a57f5c33311498a",
+      "current_sha256": "62f39d1b7582d932652c7f156ca40605d85adece99cac4bdcee978e3491a4af1",
       "hunks": [
         {
           "old_start": 1,
@@ -33101,7 +33101,7 @@
             "    {",
             "      \"version_code\": 80,",
             "      \"version_name\": \"1.0.0\",",
-            "      \"backend_protocol_evidence_sha256\": \"c7f6869105eac96cb7e7612155c2a0227ec731c887094310b128c254173dbeab\",",
+            "      \"backend_protocol_evidence_sha256\": \"bf1981760b4b0955de7159726112bb69baeef8f9558b6bef014cea8ebd8fb2ac\",",
             "      \"composition_evidence_sha256\": \"327a9a0ba342f5e853b090defcc21469642f3acf7dc3f6e6a62eeb92a9a85401\",",
             "      \"profile\": {",
             "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
@@ -33125,7 +33125,7 @@
       "prior_bytes": 135,
       "prior_sha256": "d48e25b21dedffbc4797680cf03d11482f07f5c148aa9fe12f74849fd5eb87bd",
       "current_bytes": 837,
-      "current_sha256": "323289acc609342c85fe71606dda7197119b9cb7f86d9fc219bb6e01dd013485",
+      "current_sha256": "a5905d50ac2ddd04168fa24f89f6826b4e59ab24b2a1c4469e51aaa5521d9463",
       "hunks": [
         {
           "old_start": 1,
@@ -33148,7 +33148,7 @@
             "    {",
             "      \"version_code\": 80,",
             "      \"version_name\": \"1.0.0\",",
-            "      \"backend_protocol_evidence_sha256\": \"c7f6869105eac96cb7e7612155c2a0227ec731c887094310b128c254173dbeab\",",
+            "      \"backend_protocol_evidence_sha256\": \"bf1981760b4b0955de7159726112bb69baeef8f9558b6bef014cea8ebd8fb2ac\",",
             "      \"composition_evidence_sha256\": \"327a9a0ba342f5e853b090defcc21469642f3acf7dc3f6e6a62eeb92a9a85401\",",
             "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
             "      \"policy\": {",

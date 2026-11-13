@@ -5,7 +5,7 @@
     {
       "version_code": 80,
       "version_name": "1.0.0",
-      "backend_protocol_evidence_sha256": "c7f6869105eac96cb7e7612155c2a0227ec731c887094310b128c254173dbeab",
+      "backend_protocol_evidence_sha256": "bf1981760b4b0955de7159726112bb69baeef8f9558b6bef014cea8ebd8fb2ac",
       "composition_evidence_sha256": "327a9a0ba342f5e853b090defcc21469642f3acf7dc3f6e6a62eeb92a9a85401",
       "clock_fingerprint": "a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785",
       "policy": {
