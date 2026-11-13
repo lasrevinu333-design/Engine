@@ -1377,7 +1377,7 @@ test('Spiceworks entries show ID and title without repeated status for both dash
   const f=fixture({audience});try{
    await loaded(f,{operations:{ok:true,data:{...payload.data,spiceworks_activity:{state:'snapshot',coverage:'imported_only',mailbox_completeness_verified:false,generated_at:new Date(noon).toISOString(),rows:[{ticket_id:'321',title:'Synthetic drain',kind:'opened',at:new Date(noon-1000).toISOString()}]}}}});
    assert.equal(f.elements['ops-spiceworks-ticker'].children[0].textContent,'#321 · Synthetic drain');
-   f.triggers.find(n=>n.dataset.board==='spiceworks').emit('click');
+   f.controller.openBoard('spiceworks');
    assert.equal(f.elements['operations-board-title'].textContent,'Spiceworks 72 Hours');
    assert.doesNotMatch(f.text(f.content),/\b(?:Open|Opened|undefined)\b/);
    assert.match(f.text(f.content),/#321 · Synthetic drain/);
