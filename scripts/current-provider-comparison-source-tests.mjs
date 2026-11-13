@@ -21,7 +21,7 @@ const historicalInventory=assertGpsHistoricalInventoryProjection(approvedPreserv
 assert.equal(historicalInventory.actual_main,currentInventory.main);
 assert.equal(historicalInventory.historical_main,193);
 assert.equal(currentInventory.main-historicalInventory.historical_main,1);
-assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),["mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java","mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java","scripts/provider-best-effort-release-tests.mjs"]);
+assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),["mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java","mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java","mobile/plugins/custodial-native-vault/dist/esm/index.d.ts","mobile/plugins/custodial-native-vault/dist/esm/index.js","mobile/plugins/custodial-native-vault/dist/plugin.cjs","scripts/provider-best-effort-release-tests.mjs"]);
 assert.ok(currentGpsQualification.main_java.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));
 assert.ok(!approvedPreservationComparisonPins.current_java_inventory.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));
 checks+=9;

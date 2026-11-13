@@ -2568,8 +2568,8 @@
     },
     {
       "path": "scripts/current-provider-comparison-source-tests.mjs",
-      "bytes": 4692,
-      "sha256": "8aa6fed0990d39385f22f48b50c911d4d24c248c1d99f50343cdbe3b6cbe38a7"
+      "bytes": 4866,
+      "sha256": "2add85840f51a397851bec271960c336a930329c214d28959555fa3f13171825"
     },
     {
       "path": "scripts/custodial-android-manifest-security-contract-tests.mjs",
@@ -2960,6 +2960,21 @@
       "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
       "bytes": 837,
       "sha256": "323289acc609342c85fe71606dda7197119b9cb7f86d9fc219bb6e01dd013485"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/dist/esm/index.js",
+      "bytes": 127,
+      "sha256": "d2176e6b484c771137010a0eedc512775a6086c43a0f071ccd431ac3dc056dbe"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+      "bytes": 9616,
+      "sha256": "7dbb8604be8eff53d2a15ff8ba2b630707224ee41e1ae43aa8e884930d6b646b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/dist/plugin.cjs",
+      "bytes": 133,
+      "sha256": "da8b9c0d5d487a9902829ecc552e59db69accf8d37a1aef2f185d65ff5eeb340"
     }
   ],
   "basename_aliases": {
@@ -3632,6 +3647,9 @@
     "provider-audio-release-policy-tests.mjs": "scripts/provider-audio-release-policy-tests.mjs",
     "provider-reviewed-releases.json": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
     "provider-reviewed-audio-releases.json": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+    "index.js": "mobile/plugins/custodial-native-vault/dist/esm/index.js",
+    "index.d.ts": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+    "plugin.cjs": "mobile/plugins/custodial-native-vault/dist/plugin.cjs",
     "NativeProviderBestEffortTest.java": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java"
   },
   "deltas": [
@@ -32597,8 +32615,8 @@
       "kind": "modified",
       "prior_bytes": 4365,
       "prior_sha256": "8203cc7a2f08572c62dc3d7d32fe6dad72e503ae6c12e4fb4fdc7441b3b00d3c",
-      "current_bytes": 4692,
-      "current_sha256": "8aa6fed0990d39385f22f48b50c911d4d24c248c1d99f50343cdbe3b6cbe38a7",
+      "current_bytes": 4866,
+      "current_sha256": "2add85840f51a397851bec271960c336a930329c214d28959555fa3f13171825",
       "hunks": [
         {
           "old_start": 1,
@@ -32676,7 +32694,7 @@
             "assert.equal(historicalInventory.actual_main,currentInventory.main);",
             "assert.equal(historicalInventory.historical_main,193);",
             "assert.equal(currentInventory.main-historicalInventory.historical_main,1);",
-            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),[\"mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java\",\"mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java\",\"scripts/provider-best-effort-release-tests.mjs\"]);",
+            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),[\"mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java\",\"mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java\",\"mobile/plugins/custodial-native-vault/dist/esm/index.d.ts\",\"mobile/plugins/custodial-native-vault/dist/esm/index.js\",\"mobile/plugins/custodial-native-vault/dist/plugin.cjs\",\"scripts/provider-best-effort-release-tests.mjs\"]);",
             "assert.ok(currentGpsQualification.main_java.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));",
             "assert.ok(!approvedPreservationComparisonPins.current_java_inventory.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));",
             "checks+=9;",
@@ -33105,6 +33123,24 @@
           ]
         }
       ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/dist/esm/index.js",
+      "kind": "added",
+      "current_bytes": 127,
+      "current_sha256": "d2176e6b484c771137010a0eedc512775a6086c43a0f071ccd431ac3dc056dbe"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+      "kind": "added",
+      "current_bytes": 9616,
+      "current_sha256": "7dbb8604be8eff53d2a15ff8ba2b630707224ee41e1ae43aa8e884930d6b646b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/dist/plugin.cjs",
+      "kind": "added",
+      "current_bytes": 133,
+      "current_sha256": "da8b9c0d5d487a9902829ecc552e59db69accf8d37a1aef2f185d65ff5eeb340"
     },
     {
       "path": "scripts/operations-dashboard-tests.mjs",
