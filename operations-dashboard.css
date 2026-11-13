@@ -113,25 +113,28 @@
 .modCard{display:flex;flex-direction:column;justify-content:center;gap:8px}.modCard strong{font-size:22px;line-height:1.2;overflow-wrap:anywhere}
 @media(max-width:950px){.telemetry.hasMod{grid-template-columns:1fr 1fr}.telemetry.hasMod .weatherCard{grid-column:auto;border-left:0;border-top:1px solid #3d5363}.telemetry.hasMod .modCard{border-top:1px solid #3d5363}.modCard strong{font-size:20px}}
 
-/* Keep all 47 pins readable on narrow screens without changing map coordinates. */
-.operationsPage .commandMap[data-map-presentation="original-horizontal"]{min-width:0;overflow-x:auto;overscroll-behavior-x:contain}
-.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame{min-width:900px}
-
-/* Frame the opaque artwork (x=55..1141, y=55..431) rather than the
-   asymmetric transparent canvas. Keep the existing viewport dimensions and
-   shared artwork/pin/GPS surface: translating that surface cannot change its
-   scale or the positions of its contents relative to one another. The wide
-   unpainted holders remain available for pins and narrow-screen panning. */
-.operationsPage .commandPage .commandMap[data-map-presentation="original-horizontal"]{background:transparent;border-color:transparent;box-shadow:none}
-.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame .mzMapViewport{background:transparent}
+/* Crop the actual interactive frame to the approved opaque artwork bounds
+   x=55..1141, y=55..431. The complete original canvas, pins and GPS still
+   share one coordinate surface; transparent margins are outside its clip.
+   Narrow screens pan only inside this centered artwork-width scroll box. */
+.operationsPage .commandPage .commandMap.mzMapStage[data-map-presentation="original-horizontal"]{
+  box-sizing:border-box;width:calc(100% * 1086 / 1282);max-width:100%;
+  margin-inline:auto;padding:0;gap:0;border:0;background:transparent;box-shadow:none;
+  overflow-x:auto;overflow-y:hidden;overscroll-behavior:auto;
+}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame{
+  min-width:calc(900px * 1086 / 1282);width:100%;aspect-ratio:1086 / 376;
+}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame .mzMapViewport{
+  inset-inline:auto;left:calc(-55 / 1086 * 100%);top:calc(-55 / 376 * 100%);
+  width:calc(1282 / 1086 * 100%);height:auto;aspect-ratio:1282 / 550;
+  min-height:0;border:0;border-radius:0;background:transparent;overscroll-behavior:auto;
+}
 .operationsPage .commandMap[data-map-presentation="original-horizontal"] .mzMapSurface{
-  --map-art-left:calc(55 / 1282 * 100%);--map-art-right:calc(141 / 1282 * 100%);
-  --map-art-top:10%;--map-art-bottom:calc(119 / 550 * 100%);
-  --map-art-center-shift:calc(43 / 1282 * 100%);
-  isolation:isolate;transform:translateX(var(--map-art-center-shift));
+  isolation:isolate;transform:none;
 }
 .operationsPage .commandMap[data-map-presentation="original-horizontal"] .mzMapSurface::before{
-  content:"";position:absolute;inset:var(--map-art-top) var(--map-art-right) var(--map-art-bottom) var(--map-art-left);
+  content:"";position:absolute;inset:10% calc(141 / 1282 * 100%) calc(119 / 550 * 100%) calc(55 / 1282 * 100%);
   z-index:-1;border-radius:9px;background:#0d1f2f;box-shadow:0 0 0 1px var(--ux-line);pointer-events:none;
 }
 

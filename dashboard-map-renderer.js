@@ -23,9 +23,9 @@
   // neighborhood for an exposed icon. A leader ends at the unchanged anchor.
   // Reserve the largest 42px interactive size, so hover and status refreshes
   // do not move other icons. Narrow screens pan the same readable map.
-  function separatePins(points,{width,top=0,bottom}){
+  function separatePins(points,{width,left=0,right=width,top=0,bottom}){
     const placed=[],result=new Map(),gap=42,maxOffset=150;
-    const inside=p=>p.x>=21&&p.x<=width-21&&p.y>=top+21&&p.y<=bottom-21;
+    const inside=p=>p.x>=left+21&&p.x<=right-21&&p.y>=top+21&&p.y<=bottom-21;
     function position(point,neighbors){
       const collision=p=>neighbors.reduce((sum,q)=>sum+Math.max(0,gap-Math.hypot(p.x-q.x,p.y-q.y))**2,0);
       let best={x:point.x,y:point.y},score=Infinity,found=false;
@@ -47,7 +47,7 @@
       // A greedy earlier choice can consume the final available slot in a
       // dense group. Retry that one neighbor, retaining all other placements,
       // the same spacing, bounds and 150px limit. Skip infeasibly small maps.
-      if(!found&&width*(bottom-top)>=points.length*gap*gap){
+      if(!found&&(right-left)*(bottom-top)>=points.length*gap*gap){
         const neighbors=placed.map((p,index)=>({index,distance:Math.hypot(p.x-best.x,p.y-best.y)}))
           .filter(p=>p.distance<gap*2).sort((a,b)=>a.distance-b.distance||a.index-b.index);
         for(const {index} of neighbors){
@@ -153,7 +153,7 @@
       gpsLayer?.setAttribute('viewBox',`0 0 ${displayWidth} ${displayHeight}`);
       const urgent=[];
       const screenPoints=markers.map(marker=>({id:marker.locationId,...MAP.screenPoint(displayPoint(marker.canvasPoint),{fitScale:fit.fitScale,zoom:1})}));
-      const spaced=horizontal?separatePins(screenPoints,{width:fit.width,top:55*fit.fitScale,bottom:431*fit.fitScale}):null;
+      const spaced=horizontal?separatePins(screenPoints,{width:fit.width,left:55*fit.fitScale,right:1141*fit.fitScale,top:55*fit.fitScale,bottom:431*fit.fitScale}):null;
       for(const marker of markers){
         const button=buttons.get(marker.locationId),view=MAP.presentation(marker,{interaction,
           reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true});
