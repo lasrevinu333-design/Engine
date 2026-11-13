@@ -171,7 +171,8 @@ html[data-trail-theme="terracotta"] .locationTickerItem[data-status=unknown]::be
 color:var(--trail-ink)}
 html[data-trail-theme="terracotta"] .tickerRecord+.tickerRecord{border-inline-start:double var(--trail-border)}
 html[data-trail-theme="terracotta"] .tickerBand[data-stale=true] .tickerLabel{color:var(--trail-warning)}
-html[data-trail-theme="terracotta"] .operationsPage .tickerBand .tickerLabel{background:var(--trail-surface);color:var(--trail-ink)}
+/* Preserve the established section palette from operations-dashboard.css. */
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand .tickerLabel{background:var(--feed-bg);color:var(--feed-fg)}
 @media(max-width:950px){
 html[data-trail-theme="terracotta"] .telemetry.hasMod .weatherCard{border-left:0;border-top:1px solid var(--trail-border)}
 html[data-trail-theme="terracotta"] .telemetry.hasMod .modCard{border-top:1px solid var(--trail-border)}}
@@ -259,3 +260,6 @@ html[data-trail-theme="terracotta"] #restroom-wrap tbody tr:has(.status-not_clea
   border-bottom: 0}
 html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
   border-bottom: 0}}
+
+/* Separate cards do not inherit the older joined-bar divider offsets. */
+html[data-trail-theme="terracotta"] .telemetry.separateTelemetry.hasMod>section{border:0}

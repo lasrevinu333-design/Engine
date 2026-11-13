@@ -1,0 +1,16 @@
+{
+  "schema": "custodial.dashboard-map-current-context-pins.v3",
+  "baseline_commit": "3ed81907d9c03cd9602ef8949853f900edbcf7a8",
+  "files": {
+    "start_page1.html": "63b00147ac40706bf3da8f296ccd3bc732662f994975cf4d39ced7527ce3b77b",
+    "ops-hub.css": "498082b98c2fa1b1315098aa61dae684863a5d8d3e39ddfecc90cbff6ec049e5",
+    "manager-ux.css": "7536bfea55d42c12cb7c4b17f28833c57f54b7c8329de8937385f30c5d95979c",
+    "memphis-auth.js": "a05db5faaaa3c5a990e9cc90c46bca90a072919c199cee98b43aae784226aad3",
+    "dashboard.html": "bf70a4fa777b294e753d57f64d3c62a6f1828dc0deec778ccb52b14a20a534a1",
+    "employee-hub.html": "918d114ceb00601ca002d51dac80792ee932bde697c5110329461adb20dd54f3",
+    "mobile/capacitor.config.ts": "ef8cd3a43bfc513288bed2f3113e5e55ec5454135e70137c58fdd5ac540564f4",
+    "mobile/scripts/build.mjs": "f2c12109e338a6e9eb08b1e99a5b173444c163cf79df533bb4d12cbe11d2aa6e"
+  },
+  "predecessor_context_sha256": "2d53a50a1df087ebdafa8685313883c36e8a246b94e19e10cb4e411303b070c4",
+  "scope": "Successor exact context after established Terracotta presentation, guest card and bottom-nav repairs. Runtime map/auth contracts remain checked separately. No production or physical claim."
+}

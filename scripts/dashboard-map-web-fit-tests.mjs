@@ -154,17 +154,17 @@ await test('unauthorized route never constructs artwork, renderer or dashboard r
     assert.equal(denied.section.hidden,true);denied.controller.stop();
   }
 });
-await test('map tile inherits sibling components with existing Memphis art and map imagery',()=>{
+await test('map tile inherits sibling components with the established Trail map illustration',()=>{
   const html=read('start_page1.html'),tile=html.match(/<a id="dashboard-map-link"[\s\S]*?<\/a>/)?.[0];
-  assert.ok(tile);assert.match(tile,/class="hubTile primary"/);assert.match(tile,/class="tileIcon dashboardMapIcon"/);
-  assert.match(tile,/src="\.\/memphis_avatar_ui\.webp"/);assert.match(tile,/<svg viewBox="0 0 32 28"/);
+  assert.ok(tile);assert.match(tile,/class="hubTile primary"/);assert.match(tile,/class="tileIcon hubIllustratedIcon"/);
+  assert.match(tile,/src="\.\/assets\/trail-v1\/map-320\.webp"/);assert.match(tile,/<svg viewBox="0 0 24 24"/);
   // Current contextual pages include the integrated leadership/weather fixes.
   // Pin their exact existing bytes rather than applying an obsolete map-only
   // ancestor to this complete candidate or requiring hidden local Git history.
-  const pinBytes=readFileSync(new URL('scripts/fixtures/dashboard-map-current-context-pins-v2.json',root));
-  assert.equal(createHash('sha256').update(pinBytes).digest('hex'),'2d53a50a1df087ebdafa8685313883c36e8a246b94e19e10cb4e411303b070c4');
+  const pinBytes=readFileSync(new URL('scripts/fixtures/dashboard-map-current-context-pins-v3.json',root));
+  assert.equal(createHash('sha256').update(pinBytes).digest('hex'),'c5d46a5b45dcdecee5e09df27b4fb27843ddb977aa0b09bd94cf35b106a26913');
   const pins=JSON.parse(pinBytes);
-  assert.equal(pins.schema,'custodial.dashboard-map-current-context-pins.v2');
+  assert.equal(pins.schema,'custodial.dashboard-map-current-context-pins.v3');
   assert.equal(Object.keys(pins.files).length,8);
   for(const [name,digest]of Object.entries(pins.files))
     assert.equal(createHash('sha256').update(readFileSync(new URL(name,root))).digest('hex'),digest,'exact frozen current map context: '+name);
@@ -195,6 +195,10 @@ await test('layout uses matching Hub background, fit-only map, upright constant-
   assert.match(css,/height:100dvh/);assert.match(css,/orientation:landscape/);assert.match(css,/orientation:portrait/);
   assert.match(css,/\.mzMapViewport\{[^}]*overflow:hidden/);
   assert.doesNotMatch(read('dashboard-map-renderer.js'),/Math\.max\(\.45|data-map-zoom/);
-  assert.doesNotMatch(css+read('dashboard-map-staging.css'),/rotate\(|matrix\(/);
+  const staging=read('dashboard-map-staging.css');
+  // The established leader line points to an offset pin. Artwork and pin
+  // containers must stay upright; only that line may rotate.
+  assert.match(staging,/\.mzMapLeader\{[^}]*transform:rotate\(var\(--map-leader-angle\)\)/);
+  assert.doesNotMatch(css+staging.replace(/\.mzMapLeader\{[^}]*\}/g,''),/rotate\(|matrix\(/);
 });
 console.log('PASS Dashboard Map web fit/source/combined VM',checks,'NO_BROWSER_NO_BACKEND_NO_LIVE_VISUAL_CLAIM');

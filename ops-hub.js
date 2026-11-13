@@ -89,7 +89,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     if(!current(state.generation))return;
     const messagesUrl=new URL('./messages.html',window.location.href);
     const scheduleUrl=new URL('./schedule-weekly.html',window.location.href);
-    const eventsUrl=new URL('./events.html',window.location.href);
+    const eventsUrl=new URL('./events-admin.html',window.location.href);
     const dashboardMapUrl=new URL('./operations-dashboard.html',window.location.href);
     const dashboardUrl=new URL('./dashboard.html',window.location.href);
     const insightsUrl=new URL('./operational-insights.html',window.location.href);
@@ -157,12 +157,11 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
       const at=sourceInstant(data.source_timestamp||data.fetched_at||data.updated_at),declared=data.service_date??data.date;
       if(at!==null&&(at>now+60000||localDay(at)!==localDay(now))||declared!==undefined&&declared!==localDay(now))throw new Error('Today’s guest count unavailable');
       const freshnessUnknown=at===null||typeof data.stale!=='boolean',stale=freshnessUnknown||data.stale===true||now-at>3600000;
-      els.attendanceValue.textContent=count.toLocaleString();
-      const plan=numeric(data.planned),planned=plan!==null&&Number.isSafeInteger(plan)&&plan>=0?plan.toLocaleString():'unavailable';
-      const sourceLabel=at!==null?new Date(at).toLocaleTimeString([],{timeZone:ZONE,hour:'numeric',minute:'2-digit'}):'unknown';
-      els.attendanceMeta.textContent=`${freshnessUnknown?'Gate count; freshness unknown':stale?'Stale gate count':'Current gate count'} · Planned ${planned} · source ${sourceLabel}${at!==null?' Central':''}`;
+      els.attendanceValue.textContent=stale?'Unavailable':count.toLocaleString();
+      const plan=numeric(data.planned),planned=!stale&&plan!==null&&Number.isSafeInteger(plan)&&plan>=0?plan.toLocaleString():'unavailable';
+      els.attendanceMeta.textContent=`Today’s plan: ${planned}`;
       els.attendanceMeta.classList.toggle('stale',stale);
-    }catch{if(!current(generation))return;els.attendanceValue.textContent='Unavailable';els.attendanceMeta.textContent='Gate count feed could not refresh.';els.attendanceMeta.classList.add('stale');}
+    }catch{if(!current(generation))return;els.attendanceValue.textContent='Unavailable';els.attendanceMeta.textContent='Today’s plan: Unavailable';els.attendanceMeta.classList.add('stale');}
   }
 
   async function setBuildStamp(){

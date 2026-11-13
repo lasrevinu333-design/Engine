@@ -265,7 +265,7 @@ test('OPS_HUB_BINDING_NEW pagehide during admission never starts feeds or late i
 });
 test('OPS_HUB_BINDING_NEW owner and read-only current sessions preserve existing role tools and exact device',async()=>{
  for(const name of ['SYNTHETIC Jennifer','SYNTHETIC Annie','SYNTHETIC owner']){
-  const f=await managerHomeFixture({attendance:{attendance:0},configure:f=>{
+  const f=await managerHomeFixture({attendance:{attendance:0,source_timestamp:'2026-10-11T01:00:00Z',stale:false},configure:f=>{
    f.session().manager_display_name=name;
    if(name==='SYNTHETIC owner'){f.session().read_only=false;f.session().access_level='full_access';f.session().permissions.owner=true;}
   }});
@@ -274,7 +274,7 @@ test('OPS_HUB_BINDING_NEW owner and read-only current sessions preserve existing
   assert.equal(f.node('owner-coverage-link').hidden,name!=='SYNTHETIC owner');
   assert.equal(f.node('device-security-link').hidden,false);assert.equal(f.node('insights-link').hidden,false);
   assert.match(f.node('access-mode').textContent,name==='SYNTHETIC owner'?/Owner · full control/:/Read-only/);
-  assert.equal(f.node('attendance-value').textContent,'0');assert.match(f.node('attendance-meta').textContent,/freshness unknown/);
+  assert.equal(f.node('attendance-value').textContent,'0');assert.equal(f.node('attendance-meta').textContent,'Today’s plan: unavailable');
   f.emit('pagehide');assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
  }
 });
@@ -302,8 +302,8 @@ test('OPS_HUB_BINDING_NEW changed identity in feature body await cannot reactiva
 test('OPS_HUB_BINDING_NEW pagehide suppresses late successes and failures without changing public facts',async()=>{
  for(const fail of [false,true]){
   const body=homeDeferred();
-  const f=await managerHomeFixture({attendance:{attendance:0},configure:f=>{f.fetchOverride=url=>url.includes('guest-api')
-   ?{ok:true,json:()=>body.promise}:homeResponse(url.includes('current-attendance')?{ok:true,data:{attendance:0}}:{});}});
+  const f=await managerHomeFixture({attendance:{attendance:0,source_timestamp:'2026-10-11T01:00:00Z',stale:false},configure:f=>{f.fetchOverride=url=>url.includes('guest-api')
+   ?{ok:true,json:()=>body.promise}:homeResponse(url.includes('current-attendance')?{ok:true,data:{attendance:0,source_timestamp:'2026-10-11T01:00:00Z',stale:false}}:{});}});
   const statusBefore=f.node('attendance-meta').textContent;
   f.emit('pagehide');const status=f.node('hub-status').textContent;
   if(fail)body.reject(Error('SYNTHETIC delayed refusal'));else body.release({ok:true,data:{enabled:true}});
@@ -344,14 +344,16 @@ test('OPS_HUB_BINDING_NEW missing current session or port cannot publish privile
 test('PRODUCT Home preserves genuine zero and Central service day without fabricating missing facts',async()=>{
  const at='2026-10-11T01:00:00Z',epoch=Date.parse(at)/1000;
  const f=await managerHomeFixture({attendance:{attendance:0,planned:null,stale:false,source_timestamp:at,service_date:'2026-10-10'},weather:{current:{time:epoch,temperature_2m:0,weather_code:null},current_units:{time:'unixtime',temperature_2m:'°F'}}});
- assert.equal(f.nodes.get('attendance-value').textContent,'0');assert.match(f.nodes.get('attendance-meta').textContent,/Current.*Planned unavailable.*Central/);
+ assert.equal(f.nodes.get('attendance-value').textContent,'0');assert.equal(f.nodes.get('attendance-meta').textContent,'Today’s plan: unavailable');
  assert.equal(f.nodes.get('weather-value').textContent,'0°F');assert.equal(f.nodes.get('weather-meta').textContent,'');assert.doesNotMatch(f.nodes.get('weather-value').textContent,/clear|sunny|high|low/i);
  assert.match(f.nodes.get('date').textContent,/October 10/);assert.match(f.nodes.get('clock').textContent,/8:00/);
  assert.ok(f.requests.some(url=>{const u=new URL(url);return u.hostname==='api.open-meteo.com'&&u.searchParams.get('temperature_unit')==='fahrenheit'&&u.searchParams.get('timeformat')==='unixtime';}));
  for(const attendance of [{attendance:null},{attendance:false},{attendance:0,available:false},{attendance:4,source_timestamp:'2026-10-10T01:00:00Z'},{attendance:4,source_timestamp:'2026-10-11T02:00:00Z'}]){
   f.attendance=attendance;await f.intervals.get(30000)();assert.equal(f.nodes.get('attendance-value').textContent,'Unavailable');
  }
- f.attendance={attendance:9};await f.intervals.get(30000)();assert.equal(f.nodes.get('attendance-value').textContent,'9');assert.match(f.nodes.get('attendance-meta').textContent,/freshness unknown/);assert.ok(f.nodes.get('attendance-meta').classList.values.has('stale'));
+ for(const planned of [0,3000]){f.attendance={attendance:785,planned,source_timestamp:at,stale:false,service_date:'2026-10-10'};await f.intervals.get(30000)();assert.equal(f.nodes.get('attendance-value').textContent,'785');assert.equal(f.nodes.get('attendance-meta').textContent,`Today’s plan: ${planned.toLocaleString()}`);}
+ for(const patch of [{stale:true},{source_timestamp:'2026-10-10T23:00:00Z'},{source_timestamp:null},{service_date:'2026-10-09'}]){f.attendance={attendance:785,planned:3000,source_timestamp:at,stale:false,service_date:'2026-10-10',...patch};await f.intervals.get(30000)();assert.equal(f.nodes.get('attendance-value').textContent,'Unavailable');assert.match(f.nodes.get('attendance-meta').textContent,/^Today’s plan: unavailable$/i);}
+ f.attendance={attendance:9};await f.intervals.get(30000)();assert.equal(f.nodes.get('attendance-value').textContent,'Unavailable');assert.equal(f.nodes.get('attendance-meta').textContent,'Today’s plan: unavailable');assert.ok(f.nodes.get('attendance-meta').classList.values.has('stale'));
 });
 test('PRODUCT Home rejects absent weather observations and labels stale source time',async()=>{
  const now=Date.parse('2026-10-11T01:00:00Z'),f=await managerHomeFixture({attendance:null,weather:{current:{time:now/1000,temperature_2m:null,weather_code:null},current_units:{time:'unixtime',temperature_2m:'°F'}}});

@@ -146,3 +146,6 @@ html[data-trail-theme="terracotta"] #manager-weather-hours li{border:1px solid v
 html[data-trail-theme="terracotta"] #manager-weather [data-stale="true"]{color:var(--trail-warning)}
 html[data-trail-theme="terracotta"] #today-events article{border-bottom:1px solid var(--trail-border)}
 html[data-trail-theme="terracotta"] #open-problems-list article{border-bottom:1px solid var(--trail-border)}}
+
+/* The hub uses its main tiles; no fixed bottom navigation reserve. */
+html[data-trail-theme="terracotta"] .hubPage{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
