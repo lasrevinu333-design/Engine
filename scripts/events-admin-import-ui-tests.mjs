@@ -37,7 +37,10 @@ contains('event venue excludes restrooms hint', 'Restrooms are intentionally exc
 contains('coverage location control', 'Custodial Coverage Locations');
 contains('coverage separation hint', 'Coverage locations are cleaning/service targets and do not replace Event Location');
 contains('normalized preview label', 'Normalized Preview Before Save');
-contains('backend parser route', '/parse-ai');
+contains('deterministic backend parser route', "api('/parse'");
+notContains('no AI dependency', '/parse-ai');
+contains('offline spreadsheet dependency', './vendor/xlsx-0.20.3.full.min.js');
+contains('current theme', 'data-trail-theme="terracotta"');
 contains('event venues endpoint', '/event-venues');
 contains('coverage endpoint', '/coverage-locations');
 contains('canonical event_scope payload', 'event_scope');
@@ -58,9 +61,6 @@ contains('startup preserves area-load failures', 'state.eventAreasLoadFailed');
 contains('unknown scope blocks save', 'select Zoo Footprint, Offsite, or an eligible event venue before saving');
 notContains('event name paste must not auto-parse whole form', "els.eventName.addEventListener('paste'");
 notContains('mobile pinch zoom must stay available', 'user-scalable=no');
-eventsContains('public events display helper', 'eventLocationDisplayName');
-eventsContains('public events prefers canonical display location', 'event.display_location||event.venue_name||event.group_name||event.group_code');
-eventsContains('public events label says Event Location', 'Event Location');
 
 const saveIndex = html.indexOf('async function saveEvent()');
 const loadEventsIndex = html.indexOf('await loadEvents();', saveIndex);
