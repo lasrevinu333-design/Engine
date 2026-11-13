@@ -252,6 +252,7 @@
       restorePendingSave(session);
       await loadReferenceData();
       await loadEvents();
+      if(state.retired)return;
       if(state.pendingSave)await reconcileSave();
       else {resetForm(false);setStatus('');}
     }
@@ -359,9 +360,11 @@
     function finishPendingSave(proof){
       const pending=state.pendingSave;
       if(!pending||proof?.operation_id!==pending.operation_id||proof?.request_digest!==pending.request_digest||!['SAVED','NOT_SAVED'].includes(proof.state))throw Object.assign(new Error('Original save result is not confirmed.'),{unknown:true});
-      if(proof.state==='SAVED'&&(!proof.event?.id||(pending.event_id&&proof.event.id!==pending.event_id)))throw Object.assign(new Error('Original event readback is missing.'),{unknown:true});
+      if(proof.state==='SAVED'&&(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(proof.event?.id||'')||!Number.isSafeInteger(proof.event.revision)||proof.event.revision<1||(pending.event_id?proof.event.id!==pending.event_id:proof.event.operation_id!==pending.operation_id)))throw Object.assign(new Error('Original event readback is missing.'),{unknown:true});
       if(localStorage.getItem(state.pendingKey)!==JSON.stringify(pending))throw Object.assign(new Error('Original save identity changed.'),{unknown:true});
-      localStorage.removeItem(state.pendingKey);state.pendingSave=null;state.writeUnconfirmed=false;els.reconcileBtn.hidden=true;
+      localStorage.removeItem(state.pendingKey);
+      if(localStorage.getItem(state.pendingKey)!==null)throw Object.assign(new Error('Confirmed save marker could not be retired.'),{unknown:true});
+      state.pendingSave=null;state.writeUnconfirmed=false;els.reconcileBtn.hidden=true;
       return proof;
     }
     async function reconcileSave(){
@@ -503,11 +506,14 @@
       if (!window.XLSX) throw new Error('Spreadsheet parser is still loading. Try again in a moment.');
       const workbook = window.XLSX.read(await file.arrayBuffer(), { type: 'array', cellNF:true });
       const date1904 = Boolean(workbook.Workbook?.WBProps?.date1904);
-      const rows = [];
+      const rows = [];let scannedCells=0;
       for (const sheetName of workbook.SheetNames) {
         const sheet = workbook.Sheets[sheetName];
         if(!sheet['!ref'])continue;
         const range=window.XLSX.utils.decode_range(sheet['!ref']);
+        const cells=(range.e.r-range.s.r+1)*(range.e.c-range.s.c+1);
+        if(!Number.isSafeInteger(cells)||cells<1||cells>40000-scannedCells)throw new Error('Spreadsheet used range is too large. Remove unused rows and columns or import smaller sections.');
+        scannedCells+=cells;
         const cellAt=(r,c)=>sheet[window.XLSX.utils.encode_cell({r,c})];
         const headers=[];
         for(let c=range.s.c;c<=range.e.c;c++)headers.push(String(cellAt(range.s.r,c)?.v??'').trim()||`Column ${c+1}`);
@@ -527,7 +533,7 @@
             row[header]=value;
           });
           const text=spreadsheetRowText(row);
-          if(text)rows.push({text,source_row:r+1,sheet_name:sheetName});
+          if(text){if(rows.length>=200)throw new Error('Import at most 200 event rows at a time.');rows.push({text,source_row:r+1,sheet_name:sheetName});}
         }
       }
       return rows;
@@ -690,7 +696,7 @@
         locationGroupId = primaryVenue?.location_group_id || '';
       } else if (scope === 'MULTI_VENUE') {
         venueIds = selectedVenues.map((venue) => venue.venue_id);
-        primaryVenue = selectedVenues[0] || null;
+        primaryVenue = selectedVenues.find(venue => venue.venue_id === state.loadedRecord?.primary_venue_id) || selectedVenues[0] || null;
         displayLocation = selectedVenues.map((venue) => venue.display_name).join(', ');
         locationGroupId = primaryVenue?.location_group_id || '';
       } else if (scope === 'OFFSITE') {
@@ -701,6 +707,9 @@
       } else {
         displayLocation = 'Needs Review';
       }
+      const locationUnchanged=state.loadedRecord?.event_scope===scope
+        && JSON.stringify([...(state.loadedRecord.venue_ids||[])].sort())===JSON.stringify([...venueIds].sort());
+      if(locationUnchanged&&state.loadedRecord.display_location)displayLocation=state.loadedRecord.display_location;
       return {
         operation_id: state.currentOperationId || (state.currentOperationId=crypto.randomUUID()),
         event_name: cleanupLooseText(String(els.eventName.value || '').trim()),
@@ -714,7 +723,7 @@
         staffing_area_ids: [...(state.loadedRecord?.staffing_area_ids || [])],
         custodial_note_codes: [...(state.loadedRecord?.custodial_note_codes || [])],
         custodial_public_notes: state.loadedRecord?.custodial_public_notes ?? null,
-        source_location_text: displayLocation,
+        source_location_text: locationUnchanged ? state.loadedRecord.source_location_text : displayLocation,
         source_text: state.sourceEvidence?.text || null,
         source_format: state.sourceEvidence ? state.sourceEvidence.format : 'manual_form',
         parser_confidence: null,
@@ -723,7 +732,7 @@
         manually_overridden: Boolean(state.editingEventId),
         event_timezone: EVENTS_TIME_ZONE,
         event_date: String(els.eventDate.value || '').trim(),
-        end_date: String(els.endDate.value || els.eventDate.value || '').trim(),
+        end_date: formEndDate(),
         ...preservedTimeInstants(),
         start_time: preservedFormTime('start_time',els.startTime),
         end_time: preservedFormTime('end_time',els.endTime),
@@ -732,6 +741,17 @@
       };
     }
 
+    function followingDate(date){
+      const instant=new Date(date+'T12:00:00Z');if(!Number.isFinite(instant.getTime()))return '';
+      instant.setUTCDate(instant.getUTCDate()+1);return instant.toISOString().slice(0,10);
+    }
+    function formEndDate(){
+      if(els.endDate.value)return els.endDate.value;
+      const date=els.eventDate.value||'';
+      const overnight=isOvernightEventPayload({event_name:els.eventName.value,notes:els.notes.value,source_text:state.sourceEvidence?.text,start_time:els.startTime.value,end_time:els.endTime.value});
+      return overnight?followingDate(date):date;
+    }
+    function comparisonTime(value){const text=String(value||'');return text.length===5?text+':00':text;}
     function preservedFormTime(key,element){
       const value=String(element.value||'').trim(),prior=state.loadedRecord?.[key];
       return prior&&value===toInputTime(prior)?prior:value;
@@ -756,7 +776,7 @@
         previewRow('Event Location', payload.display_location || 'Needs Review'),
         previewRow('Event Venue IDs', payload.venue_ids.length ? payload.venue_ids.length === 1 ? venueById(payload.venue_ids[0])?.display_name || payload.venue_ids[0] : `${payload.venue_ids.length} venues selected` : 'None'),
         previewRow('Custodial Coverage', coverageLabels(payload.coverage_location_ids).join(', ') || 'None selected'),
-        previewRow('Date / Time', `${payload.event_date || 'Missing date'} • ${payload.start_time || '—'} to ${payload.end_time || '—'}`),
+        previewRow('Date / Time', `${payload.event_date || 'Missing date'}${payload.end_date>payload.event_date?' → '+payload.end_date:''} • ${payload.start_time || '—'} to ${payload.end_time || '—'}`),
         previewRow('Attendance', payload.attendee_count == null ? 'Not listed' : `${Number(payload.attendee_count).toLocaleString()} attendees`),
         previewRow('Validation', problems.length ? problems.join('; ') : 'Ready to save'),
       ].join('');
@@ -767,6 +787,7 @@
     function validateEventPayload(payload) {
       const problems = [];
       if (!payload.event_name) problems.push('missing event name');
+      if(!state.editingEventId&&!['paste','csv','spreadsheet','manual_form'].includes(payload.source_format))problems.push('select a supported import source before saving');
       if (!EVENT_SCOPES.has(payload.event_scope)) problems.push('invalid event scope');
       if (payload.event_scope === 'UNKNOWN' || payload.needs_review) problems.push('select Zoo Footprint, Offsite, or an eligible event venue before saving');
       if (payload.event_scope === 'ZOO_WIDE' && payload.display_location !== ZOO_WIDE_DISPLAY_LOCATION) problems.push('zoo-wide events must display Zoo Footprint');
@@ -778,10 +799,10 @@
       if (coverageVenueConflict) problems.push('coverage locations must not overwrite the event venue');
       if (!payload.location_group_id) problems.push('event location could not be resolved');
       if (!payload.event_date) problems.push('missing event date');
-      if(payload.end_date&&payload.end_date<payload.event_date)problems.push('end date must not precede the event date');
+      if(payload.end_date&&(payload.end_date<payload.event_date||payload.end_date>followingDate(payload.event_date)))problems.push('end date must be the event date or the next day');
       if (!payload.start_time) problems.push('missing start time');
       if (!payload.end_time) problems.push('missing end time');
-      if (payload.start_time && payload.end_time && payload.end_time <= payload.start_time && !isOvernightEventPayload(payload)) problems.push('end time must be later than start time unless explicitly overnight');
+      if (payload.start_time && payload.end_time && comparisonTime(payload.end_time) <= comparisonTime(payload.start_time) && !isOvernightEventPayload(payload)) problems.push('end time must be later than start time unless explicitly overnight');
       if (payload.attendee_count != null && !/^\d+$/.test(String(payload.attendee_count))) problems.push('attendance must be a whole number or blank');
       return problems;
     }
@@ -816,6 +837,11 @@
         const pending=await rememberSave(payload,state.editingEventId);
         const saved=await api(path, { method, body: {...payload,request_digest:pending.request_digest} });
         finishPendingSave(saved);
+        if(saved.state==='NOT_SAVED'){
+          state.currentOperationId=crypto.randomUUID();
+          setStatus(saved.rejection_code==='EVENT_CHANGED'?'This event changed. Reopen it from Upcoming Events before editing.':'Event was not saved. Review its dates, times and location before saving again.',true);
+          return;
+        }
         try {await loadEvents();resetForm(false);setStatus('Event saved.');}
         catch {if(!state.retired)setStatus('Event saved. The refreshed list is unavailable; reopen Events to load it.',true);} 
       } catch (error) {
@@ -925,8 +951,9 @@
     function coverageLabels(ids = []) { return normalizeIdArray(ids).map((id) => groupById(id)?.group_name || id).filter(Boolean); }
     function toInputTime(value) { return String(value || '').slice(0,5); }
     function isOvernightEventPayload(payload = {}) {
+      if(payload.end_date&&payload.event_date)return payload.end_date>payload.event_date&&payload.end_date===followingDate(payload.event_date);
       const text = normalizeLoose([payload.event_name, payload.notes, payload.source_text].filter(Boolean).join(' '));
-      return Boolean(payload.start_time && payload.end_time && payload.end_time <= payload.start_time && /(^|\s)(zoo snooze|overnight|sleepover|campout|camp out|lock in|lockin)(\s|$)/.test(text));
+      return Boolean(payload.start_time && payload.end_time && comparisonTime(payload.end_time) <= comparisonTime(payload.start_time) && /(^|\s)(zoo snooze|overnight|sleepover|campout|camp out|lock in|lockin)(\s|$)/.test(text));
     }
     function hasZooWideLanguage(value = '') {
       const text = normalizeLoose(value);
