@@ -29,7 +29,8 @@ test('expected counts have separate cards in the requested order, never inside c
     assert.match(cards[4][2],/id="ops-schools-expected"/);
     for(const card of cards.slice(0,3))assert.doesNotMatch(card[2],/ops-(events|schools)-expected/);
     assert.match(header,/separateTelemetry/);
-    assert.match(s,/operations-dashboard\.css\?v=2026\.11\.13\.separate-cards-r9/);
+    for(const card of cards.slice(3,5)) assert.doesNotMatch(card[2],/expected-note|metricNote|occupancy|visitors|freshness/);
+    assert.match(s,/operations-dashboard\.css\?v=2026\.11\.13\.equal-cards-r10/);
     if(name==='operations-dashboard.html')assert.match(cards[5][1],/modCard/);
   }
 });
