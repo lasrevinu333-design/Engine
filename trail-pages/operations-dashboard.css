@@ -263,3 +263,43 @@ html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_clean
 
 /* Separate cards do not inherit the older joined-bar divider offsets. */
 html[data-trail-theme="terracotta"] .telemetry.separateTelemetry.hasMod>section{border:0}
+
+/* Owner-selected Midnight Harbor. The existing Trail roles carry this
+   map-dashboard palette; operational status colors stay distinct. */
+html[data-trail-theme="terracotta"] body.operationsPage{
+  color-scheme:dark;
+  --harbor-canvas:#041d2e;--harbor-surface:#0b2a3d;--harbor-border:#356078;
+  --harbor-text:#ffffff;--harbor-muted:#d1e1eb;
+  --harbor-clock:#125486;--harbor-gate:#0b5f58;--harbor-weather:#785716;
+  --harbor-events:#7b306e;--harbor-schools:#48458b;--harbor-manager:#873c3e;
+  --harbor-locations-feed:#123d33;--harbor-events-feed:#58213c;
+  --harbor-schools-feed:#153b69;--harbor-tickets-feed:#075365;
+  --harbor-spiceworks-feed:#78391f;--harbor-city-feed:#443167;
+  --trail-ink:var(--harbor-text);--trail-muted:var(--harbor-muted);
+  --trail-surface:var(--harbor-surface);--trail-raised:var(--harbor-surface);--trail-border:var(--harbor-border);
+  --trail-control-border:#7398ad;--trail-focus:#a8dfff;
+  --trail-brand:#a8dfff;--trail-on-brand:#041d2e;
+  --trail-warning:#ffe28a;--trail-danger:#ffabb2;--trail-info:#b2ddff;--trail-success:#a6f1b5;
+  --ux-text:var(--harbor-text);--ux-muted:var(--harbor-muted);
+  --ux-panel:var(--harbor-surface);--ux-panel-soft:var(--harbor-surface);--ux-line:var(--harbor-border);
+  color:var(--harbor-text);background:radial-gradient(ellipse at top,#0b3048,var(--harbor-canvas) 72%);
+}
+html[data-trail-theme="terracotta"] .operationsPage .telemetry.separateTelemetry>section{
+  color:var(--harbor-text);background:var(--harbor-tile);box-shadow:inset 0 0 0 1px #ffffff4d;
+}
+.operationsPage .separateTelemetry>.clockCard{--harbor-tile:var(--harbor-clock)}
+.operationsPage .separateTelemetry>.attendanceCard{--harbor-tile:var(--harbor-gate)}
+.operationsPage .separateTelemetry>.weatherCard{--harbor-tile:var(--harbor-weather)}
+.operationsPage .separateTelemetry>.eventsExpectedCard{--harbor-tile:var(--harbor-events)}
+.operationsPage .separateTelemetry>.schoolsExpectedCard{--harbor-tile:var(--harbor-schools)}
+.operationsPage .separateTelemetry>.modCard{--harbor-tile:var(--harbor-manager)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand[data-board="locations"]{--feed-bg:var(--harbor-locations-feed)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand[data-board="events"]{--feed-bg:var(--harbor-events-feed)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand[data-board="schools"]{--feed-bg:var(--harbor-schools-feed)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand[data-board="tickets"]{--feed-bg:var(--harbor-tickets-feed)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand[data-board="spiceworks"]{--feed-bg:var(--harbor-spiceworks-feed)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand[data-board="city"]{--feed-bg:var(--harbor-city-feed)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand[data-board],
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand[data-board] .tickerLabel{
+  --feed-fg:var(--harbor-text);background:var(--feed-bg);color:var(--harbor-text);border-color:var(--harbor-border);
+}
