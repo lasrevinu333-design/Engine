@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../employee-schedule.html', import.meta.url), 'utf8');
 
-assert.match(html, /<h1>Your areas now<\/h1>/, 'Schedule must describe the employee task in plain language');
+assert.match(html, /<h1 class="trailPageTitle">Your areas now<\/h1>/, 'The Trail heading must retain the employee task in plain language');
 assert.doesNotMatch(html, /Later today|upcoming-content|upcoming-areas/, 'Employee Schedule shows only current assignments, without a future-area section');
 assert.doesNotMatch(readFileSync(new URL('../mobile/src/custodial/employee-schedule-runtime.js', import.meta.url), 'utf8'), /upcomingItems|upcomingAreas/, 'The native renderer must use the same current-only presentation');
 assert.match(
