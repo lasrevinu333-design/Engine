@@ -11,10 +11,11 @@ const DIAGNOSTIC_PROFILE_SHA='3babce12abdf25ee017b5ea03d886ca307a554dad04cbe4872
 const PRESENTATION_PROFILE_SHA='80edd54a897086075c8c07107b11d1a2880056aa323550ece1216b4e31487bc7';
 const TERRACOTTA_PROFILE_SHA='a6c9588bc591a676792ceb4376944dd34b01c367cd8519a25a0e8b46ad49c740';
 const TIMING_PROFILE_SHA='3ecfd3bcaead83f945fbd86bacc7999097c0f0d7c9d4b117d3cd06651e21a1a7';
+const WEB_READINESS_PROFILE_SHA='ea30a10b5e214511747b28532ae8fc59eab8debb79d7a910c8a3131a3b2afeff';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
- assert.ok([PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact separately reviewed GPS or additive diagnostic profile');
+ assert.ok([PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact separately reviewed GPS or additive diagnostic profile');
  assert.equal(value.schema,'custodial.current-gps-source-qualification.v1');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
  for(const rows of [value.main_java,value.test_java,value.auxiliary,value.legacy_proofs,value.core_sources,...(value.presentation_sources?[value.presentation_sources]:[])]){
@@ -22,8 +23,8 @@ export function validateCurrentGpsQualification(value){
   for(const row of rows){assert.ok(!isAbsolute(row.path)&&!row.path.split('/').some(x=>!x||x==='.'||x==='..'));
    assert.match(row.sha256,/^[0-9a-f]{64}$/);assert.ok(Number.isSafeInteger(row.bytes)&&row.bytes>0);}
  }
- assert.equal(value.main_java.length,194);assert.equal(value.test_java.length,sha(JSON.stringify(value))===TIMING_PROFILE_SHA?209:208);
- assert.equal(value.deltas.filter(row=>row.kind==='added'&&row.path.endsWith('.java')).length,sha(JSON.stringify(value))===TIMING_PROFILE_SHA?2:1);
+ assert.equal(value.main_java.length,194);assert.equal(value.test_java.length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA].includes(sha(JSON.stringify(value)))?209:208);
+ assert.equal(value.deltas.filter(row=>row.kind==='added'&&row.path.endsWith('.java')).length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA].includes(sha(JSON.stringify(value)))?2:1);
  return value;
 }
 const originalProfile=JSON.parse(readFileSync(new URL('./fixtures/current-gps-source-qualification.json',import.meta.url),'utf8'));
@@ -36,7 +37,9 @@ const terracottaProfile=JSON.parse(readFileSync(new URL('./fixtures/current-terr
 assert.equal(sha(JSON.stringify(terracottaProfile)),TERRACOTTA_PROFILE_SHA,'Exact Terracotta/departure source candidate required');
 const timingProfile=JSON.parse(readFileSync(new URL('./fixtures/current-reminder-timing-source-qualification.json',import.meta.url),'utf8'));
 assert.equal(sha(JSON.stringify(timingProfile)),TIMING_PROFILE_SHA,'Exact reminder successor inputs');
-export const currentGpsQualification=freeze(validateCurrentGpsQualification(timingProfile));
+const webReadinessProfile=JSON.parse(readFileSync(new URL('./fixtures/current-web-readiness-source-qualification.json',import.meta.url),'utf8'));
+assert.equal(sha(JSON.stringify(webReadinessProfile)),WEB_READINESS_PROFILE_SHA,'Exact website-readiness successor inputs');
+export const currentGpsQualification=freeze(validateCurrentGpsQualification(webReadinessProfile));
 const all=[...currentGpsQualification.main_java,...currentGpsQualification.test_java,...currentGpsQualification.auxiliary,...currentGpsQualification.core_sources,...(currentGpsQualification.presentation_sources||[])];
 const byPath=new Map(all.map(row=>[row.path,row]));
 const aliases=new Map(Object.entries(currentGpsQualification.basename_aliases));

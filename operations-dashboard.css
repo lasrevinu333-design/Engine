@@ -134,3 +134,9 @@
   content:"";position:absolute;inset:var(--map-art-top) var(--map-art-right) var(--map-art-bottom) var(--map-art-left);
   z-index:-1;border-radius:9px;background:#0d1f2f;box-shadow:0 0 0 1px var(--ux-line);pointer-events:none;
 }
+
+/* A shared heading row aligns titles independently of the value stack. */
+.telemetry.separateTelemetry>section{display:grid;grid-template-rows:2.7em minmax(0,1fr);align-items:stretch;justify-content:normal;aspect-ratio:1;box-sizing:border-box;padding:10px 12px;gap:6px}
+.telemetry.separateTelemetry>section>.eyebrow{align-self:start;display:flex;align-items:flex-start;min-height:2.7em;margin:0}
+.telemetry.separateTelemetry .telemetryValue{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.telemetry.separateTelemetry .telemetryValue>strong{font-size:22px;font-weight:720;line-height:1.2;letter-spacing:normal;font-variant-numeric:tabular-nums;max-width:100%;overflow-wrap:anywhere}
