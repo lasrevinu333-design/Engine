@@ -140,7 +140,7 @@
       const internal=view('tickets');
       recordTicker('ops-tickets-ticker',internal.cards.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]}`),summary?'No open Custodial tickets':'Custodial tickets unavailable');
       const spice=view('spiceworks'),city=view('city');
-      recordTicker('ops-spiceworks-ticker',spice.cards.map(card=>`${card.title} · ${card.lines[0]}`),spice.note);
+      recordTicker('ops-spiceworks-ticker',spice.cards.map(card=>card.title),spice.note);
       recordTicker('ops-city-ticker',city.cards.map(card=>`${card.title} · ${card.status} · ${card.lines[1]}`),city.note);
       for(const kind of ['events','schools','spiceworks','city']){
         const track=el('ops-'+kind+'-ticker'),band=track?.parentElement?.parentElement;

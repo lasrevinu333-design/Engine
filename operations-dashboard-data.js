@@ -194,7 +194,7 @@
       ?value.name.trim():'Unavailable';
   }
   function spiceworksActivity(value,now=Date.now()){
-    const unavailable={title:'Spiceworks · new-ticket notices · 72h',cards:[],note:'New-ticket notices unavailable.'};
+    const unavailable={title:'Spiceworks 72 Hours',cards:[],note:'New-ticket notices unavailable.'};
     if(!hasFeed(value)||!Array.isArray(value.rows))return unavailable;
     const cards=[],seen=new Set();
     for(const row of value.rows){
@@ -204,10 +204,10 @@
       const key=`${row.ticket_id}:${row.kind}:${row.at}`;if(seen.has(key))continue;seen.add(key);
       cards.push({id:key,source:'Spiceworks',title:`#${row.ticket_id} · ${text(row.title,'Ticket title unavailable')}`,
         state:row.kind==='closed'?'CLOSED':'OPEN',activity:row.kind,at,
-        lines:[`${row.kind[0].toUpperCase()+row.kind.slice(1)}`]});
+        lines:[]});
     }
     cards.sort((a,b)=>b.at-a.at||stableId(a,b));
-    return{title:'Spiceworks · new-ticket notices · 72h',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported new-ticket notices received in this period. '}Only new-ticket notices received in the last 72 hours, newest received first. This is notification receipt time, not verified ticket creation time. Other new-ticket notices may not yet be received; current ticket status is not confirmed.`};
+    return{title:'Spiceworks 72 Hours',cards,note:`Imported notifications · updated ${stamp(value.generated_at)}. ${cards.length?'':'No imported new-ticket notices received in this period. '}Only new-ticket notices received in the last 72 hours, newest received first. This is notification receipt time, not verified ticket creation time. Other new-ticket notices may not yet be received; current ticket status is not confirmed.`};
   }
   function cityWorkOrders(value){
     const unavailable={title:'Open City work orders',cards:[],note:'Current City work orders unavailable.'};

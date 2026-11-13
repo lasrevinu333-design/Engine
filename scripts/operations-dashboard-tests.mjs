@@ -1174,6 +1174,8 @@ test('requested Spiceworks ticker keeps new-ticket notices inside rolling72h and
   {ticket_id:'2',kind:'opened',at:new Date(noon-259200001).toISOString()},
   {ticket_id:'3',kind:'opened',at:new Date(noon+1).toISOString()}]};
  const out=D.spiceworksActivity(source,noon);assert.deepEqual(out.cards.map(r=>r.activity),['opened']);
+ assert.equal(out.title,'Spiceworks 72 Hours');assert.equal(out.cards[0].title,'#1 · Synthetic');assert.deepEqual(out.cards[0].lines,[]);
+ assert.equal(out.cards[0].state,'OPEN');assert.equal(source.rows[0].kind,'opened');
  assert.match(out.note,/Other new-ticket notices may not yet be received/);
  assert.equal(D.spiceworksActivity({...source,rows:[{ticket_id:'1',status:'Open'}]},noon).cards.length,0);
  assert.match(D.spiceworksActivity({...source,rows:[]},noon).note,/No imported new-ticket notices received/);
@@ -1367,5 +1369,19 @@ test('daily high/low clears previous Memphis day even without a successful refre
  assert.equal(f.elements['ops-weather-high-low'].textContent,'High 65°F · Low 43°F');
  f.setNow(now+1000);f.controller.tick();assert.equal(f.elements['ops-weather-high-low'].textContent,'High/low unavailable.');
  }finally{f.clean();}
+ }
+});
+
+test('Spiceworks entries show ID and title without repeated status for both dashboard audiences',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});try{
+   await loaded(f,{operations:{ok:true,data:{...payload.data,spiceworks_activity:{state:'snapshot',coverage:'imported_only',mailbox_completeness_verified:false,generated_at:new Date(noon).toISOString(),rows:[{ticket_id:'321',title:'Synthetic drain',kind:'opened',at:new Date(noon-1000).toISOString()}]}}}});
+   assert.equal(f.elements['ops-spiceworks-ticker'].children[0].textContent,'#321 · Synthetic drain');
+   f.triggers.find(n=>n.dataset.board==='spiceworks').emit('click');
+   assert.equal(f.elements['operations-board-title'].textContent,'Spiceworks 72 Hours');
+   assert.doesNotMatch(f.text(f.content),/\b(?:Open|Opened|undefined)\b/);
+   assert.match(f.text(f.content),/#321 · Synthetic drain/);
+   assert.match(f.elements['operations-board-note'].textContent,/current ticket status is not confirmed/);
+  }finally{f.clean();}
  }
 });
