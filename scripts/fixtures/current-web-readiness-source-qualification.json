@@ -2558,8 +2558,8 @@
     },
     {
       "path": "scripts/current-gps-source-qualification-tests.mjs",
-      "bytes": 8368,
-      "sha256": "756a96cedfceab8b3a43a8b99cdf260aafa26dff23693ea31a68f51e00770dfa"
+      "bytes": 8595,
+      "sha256": "b0384840ecb1c799f0333dda0eb3c86686e868225da3d3cf9f569fa177d0f597"
     },
     {
       "path": "scripts/current-provider-comparison-source-boundary.mjs",
@@ -2568,8 +2568,8 @@
     },
     {
       "path": "scripts/current-provider-comparison-source-tests.mjs",
-      "bytes": 4692,
-      "sha256": "8aa6fed0990d39385f22f48b50c911d4d24c248c1d99f50343cdbe3b6cbe38a7"
+      "bytes": 4750,
+      "sha256": "386a2510efcc27597431f8d661cc7f3d97b48dae5751714566b082b7fd772b15"
     },
     {
       "path": "scripts/custodial-android-manifest-security-contract-tests.mjs",
@@ -32280,8 +32280,8 @@
       "kind": "modified",
       "prior_bytes": 8448,
       "prior_sha256": "3ce3b369b71ef18ea87e77b9b7b7cc338c3a5e54c9bb16e0317cd1bfa77e476c",
-      "current_bytes": 9168,
-      "current_sha256": "cea7abb0ae0d20266c3d3b5e430bac5820ccbac436e26870c7a01cbd6500c62b",
+      "current_bytes": 9372,
+      "current_sha256": "ff991b874d3ed31b2f2f0cb859799f395a37504e81675aff672f97000b1df10f",
       "hunks": [
         {
           "old_start": 1,
@@ -32362,12 +32362,12 @@
             "",
             "    <div id=\"operations-panels\" hidden>",
             "      <header class=\"telemetry hasMod separateTelemetry\" aria-label=\"Date, gate count, weather, expected attendance and manager on duty\">",
-            "        <section class=\"clockCard\"><div class=\"eyebrow\"><span class=\"signalDot\" aria-hidden=\"true\"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id=\"ops-clock\" class=\"bigClock\">—</time><div id=\"ops-date\" class=\"calendarDate\"></div></section>",
-            "        <section class=\"attendanceCard\"><div class=\"eyebrow\">CURRENT GATE COUNT</div><div class=\"attendanceValue\" id=\"ops-attendance\">Unavailable</div><div class=\"metricNote\" id=\"ops-attendance-note\">Waiting for the gate count source.</div></section>",
-            "        <section class=\"weatherCard\"><div class=\"weatherNow\"><svg class=\"weatherArt\" viewBox=\"0 0 120 84\" aria-hidden=\"true\"><g class=\"sunRays\" stroke=\"#ffd46b\" stroke-width=\"3\"><path d=\"M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4\"/></g><circle cx=\"45\" cy=\"32\" r=\"19\" fill=\"#ffd46b\"/><path class=\"weatherCloud\" d=\"M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z\" fill=\"#d8efff\"/></svg><div><div class=\"eyebrow\">MEMPHIS WEATHER</div><strong id=\"ops-weather\">Unavailable</strong><div id=\"ops-weather-high-low\" class=\"metricNote\">High/low unavailable.</div><div id=\"ops-weather-note\" class=\"metricNote\">Forecast source not yet read.</div></div></div><div id=\"ops-hour\" class=\"hourForecast\">Next-hour forecast unavailable.</div></section>",
-            "        <section class=\"dailyExpected expectedCard eventsExpectedCard\"><div class=\"eyebrow\">TODAY’S EVENTS · EXPECTED</div><strong id=\"ops-events-expected\">Unknown</strong></section>",
-            "        <section class=\"dailyExpected expectedCard schoolsExpectedCard\"><div class=\"eyebrow\">TODAY’S SCHOOL GROUPS · EXPECTED</div><strong id=\"ops-schools-expected\">Unknown</strong></section>",
-            "        <section class=\"modCard\" id=\"ops-mod-card\"><div class=\"eyebrow\">MANAGER ON DUTY</div><strong id=\"ops-mod\">Unavailable</strong></section>",
+            "        <section class=\"clockCard\"><div class=\"eyebrow\"><span class=\"signalDot\" aria-hidden=\"true\"></span>MEMPHIS ZOO · CENTRAL TIME</div><div class=\"telemetryValue\"><time id=\"ops-clock\" class=\"bigClock\">—</time><div id=\"ops-date\" class=\"calendarDate\"></div></div></section>",
+            "        <section class=\"attendanceCard\"><div class=\"eyebrow\">CURRENT GATE COUNT</div><div class=\"telemetryValue\"><div class=\"attendanceValue\" id=\"ops-attendance\">Unavailable</div><div class=\"metricNote\" id=\"ops-attendance-note\">Waiting for the gate count source.</div></div></section>",
+            "        <section class=\"weatherCard\"><div class=\"eyebrow\">MEMPHIS WEATHER</div><div class=\"telemetryValue\"><div class=\"weatherNow\"><svg class=\"weatherArt\" viewBox=\"0 0 120 84\" aria-hidden=\"true\"><g class=\"sunRays\" stroke=\"#ffd46b\" stroke-width=\"3\"><path d=\"M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4\"/></g><circle cx=\"45\" cy=\"32\" r=\"19\" fill=\"#ffd46b\"/><path class=\"weatherCloud\" d=\"M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z\" fill=\"#d8efff\"/></svg><div><strong id=\"ops-weather\">Unavailable</strong><div id=\"ops-weather-high-low\" class=\"metricNote\">High/low unavailable.</div><div id=\"ops-weather-note\" class=\"metricNote\">Forecast source not yet read.</div></div></div><div id=\"ops-hour\" class=\"hourForecast\">Next-hour forecast unavailable.</div></div></section>",
+            "        <section class=\"dailyExpected expectedCard eventsExpectedCard\"><div class=\"eyebrow\">TODAY’S EVENTS · EXPECTED</div><div class=\"telemetryValue\"><strong id=\"ops-events-expected\">Unknown</strong></div></section>",
+            "        <section class=\"dailyExpected expectedCard schoolsExpectedCard\"><div class=\"eyebrow\">TODAY’S SCHOOL GROUPS · EXPECTED</div><div class=\"telemetryValue\"><strong id=\"ops-schools-expected\">Unknown</strong></div></section>",
+            "        <section class=\"modCard\" id=\"ops-mod-card\"><div class=\"eyebrow\">MANAGER ON DUTY</div><div class=\"telemetryValue\"><strong id=\"ops-mod\">Unavailable</strong></div></section>",
             "      </header>",
             "    <button type=\"button\" id=\"ops-locations-button\" class=\"tickerBand locationsBand\" data-board=\"locations\" hidden><span class=\"tickerLabel\">Location Status</span><span class=\"tickerWindow\"><span id=\"ops-locations-ticker\" class=\"tickerTrack\">Waiting for current cleaning status.</span></span><span class=\"feedButton\" aria-hidden=\"true\">All locations ↗</span></button>",
             "      <button type=\"button\" class=\"tickerBand\" data-board=\"events\" aria-label=\"Upcoming events\"><span class=\"tickerLabel\">Upcoming Events</span><span class=\"tickerWindow\"><span class=\"tickerTrack\" id=\"ops-events-ticker\">Loading…</span></span><span class=\"feedButton\" aria-hidden=\"true\">Open board ↗</span></button>",
@@ -32501,14 +32501,14 @@
       "kind": "modified",
       "prior_bytes": 7247,
       "prior_sha256": "12b64d33b7641bc9801e7b71c5f28e0638238daf55f55263c4e5ed7d1cfa1e7c",
-      "current_bytes": 8368,
-      "current_sha256": "756a96cedfceab8b3a43a8b99cdf260aafa26dff23693ea31a68f51e00770dfa",
+      "current_bytes": 8595,
+      "current_sha256": "b0384840ecb1c799f0333dda0eb3c86686e868225da3d3cf9f569fa177d0f597",
       "hunks": [
         {
           "old_start": 1,
           "old_count": 64,
           "new_start": 1,
-          "new_count": 72,
+          "new_count": 74,
           "before": [
             "// Current-byte inventory and adversarial source controls. No runtime admission.",
             "import assert from 'node:assert/strict';",
@@ -32618,7 +32618,9 @@
             "const temporary=mkdtempSync(join(tmpdir(),'custodial-gps-source-negatives-'));",
             "try{",
             " const paths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.legacy_proofs,...profile.core_sources,...profile.presentation_sources].map(row=>row.path));",
-            " paths.add('scripts/fixtures/current-reminder-timing-source-qualification.json');paths.add('scripts/fixtures/current-terracotta-departure-source-qualification.json');paths.add('scripts/fixtures/current-v80-presentation-source-qualification.json');paths.add('scripts/fixtures/current-schedule-diagnostic-source-qualification.json');paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');",
+            " // Profiles are validator inputs copied explicitly; putting the selected",
+            " // profile in its own hashed inventory would introduce a self-hash cycle.",
+            " paths.add('scripts/fixtures/current-web-readiness-source-qualification.json');paths.add('scripts/fixtures/current-reminder-timing-source-qualification.json');paths.add('scripts/fixtures/current-terracotta-departure-source-qualification.json');paths.add('scripts/fixtures/current-v80-presentation-source-qualification.json');paths.add('scripts/fixtures/current-schedule-diagnostic-source-qualification.json');paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');",
             " for(const path of paths){const target=join(temporary,path);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,readFileSync(join(root,path)));}",
             " writeFileSync(join(temporary,'package.json'),'{\"type\":\"module\"}\\n');",
             " const isolated=await import(pathToFileURL(join(temporary,'scripts/current-gps-qualification-source-boundary.mjs')));",
@@ -32657,8 +32659,8 @@
       "kind": "modified",
       "prior_bytes": 4365,
       "prior_sha256": "8203cc7a2f08572c62dc3d7d32fe6dad72e503ae6c12e4fb4fdc7441b3b00d3c",
-      "current_bytes": 4692,
-      "current_sha256": "8aa6fed0990d39385f22f48b50c911d4d24c248c1d99f50343cdbe3b6cbe38a7",
+      "current_bytes": 4750,
+      "current_sha256": "386a2510efcc27597431f8d661cc7f3d97b48dae5751714566b082b7fd772b15",
       "hunks": [
         {
           "old_start": 1,
@@ -32736,7 +32738,7 @@
             "assert.equal(historicalInventory.actual_main,currentInventory.main);",
             "assert.equal(historicalInventory.historical_main,193);",
             "assert.equal(currentInventory.main-historicalInventory.historical_main,1);",
-            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),[\"mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java\",\"mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java\",\"scripts/provider-best-effort-release-tests.mjs\"]);",
+            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),[\"mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java\",\"mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java\",\"scripts/provider-best-effort-release-tests.mjs\",\"vendor/LICENSE.sheetjs\",\"vendor/xlsx-0.20.3.full.min.js\"]);",
             "assert.ok(currentGpsQualification.main_java.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));",
             "assert.ok(!approvedPreservationComparisonPins.current_java_inventory.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));",
             "checks+=9;",
@@ -40576,8 +40578,8 @@
       "kind": "modified",
       "prior_bytes": 8984,
       "prior_sha256": "862676d14f6e5a69864feccc19cba83a55300dbfff2251f2514442c447753ab7",
-      "current_bytes": 8971,
-      "current_sha256": "fe6223ab20d2da6e37dcf2ca4270f56ecf51e08632a2e248ee7b7046cb478bcf",
+      "current_bytes": 9141,
+      "current_sha256": "012c6baf47a84de11afce51e84a5a9dc423f11bd825c5f9a17b5b3f3f3ed3077",
       "hunks": [
         {
           "old_start": 1,
@@ -40665,11 +40667,11 @@
             "",
             "    <div id=\"operations-panels\" hidden>",
             "      <header class=\"telemetry separateTelemetry\" aria-label=\"Date, attendance, weather and expected attendance\">",
-            "        <section class=\"clockCard\"><div class=\"eyebrow\"><span class=\"signalDot\" aria-hidden=\"true\"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id=\"ops-clock\" class=\"bigClock\">—</time><div id=\"ops-date\" class=\"calendarDate\"></div></section>",
-            "        <section class=\"attendanceCard\"><div class=\"eyebrow\">CURRENT GATE COUNT</div><div class=\"attendanceValue\" id=\"ops-attendance\">Unavailable</div><div class=\"metricNote\" id=\"ops-attendance-note\">Waiting for the gate count source.</div></section>",
-            "        <section class=\"weatherCard\"><div class=\"weatherNow\"><svg class=\"weatherArt\" viewBox=\"0 0 120 84\" aria-hidden=\"true\"><g class=\"sunRays\" stroke=\"#ffd46b\" stroke-width=\"3\"><path d=\"M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4\"/></g><circle cx=\"45\" cy=\"32\" r=\"19\" fill=\"#ffd46b\"/><path class=\"weatherCloud\" d=\"M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z\" fill=\"#d8efff\"/></svg><div><div class=\"eyebrow\">MEMPHIS WEATHER</div><strong id=\"ops-weather\">Unavailable</strong><div id=\"ops-weather-high-low\" class=\"metricNote\">High/low unavailable.</div><div id=\"ops-weather-note\" class=\"metricNote\">Forecast source not yet read.</div></div></div><div id=\"ops-hour\" class=\"hourForecast\">Next-hour forecast unavailable.</div></section>",
-            "        <section class=\"dailyExpected expectedCard eventsExpectedCard\"><div class=\"eyebrow\">TODAY’S EVENTS · EXPECTED</div><strong id=\"ops-events-expected\">Unknown</strong></section>",
-            "        <section class=\"dailyExpected expectedCard schoolsExpectedCard\"><div class=\"eyebrow\">TODAY’S SCHOOL GROUPS · EXPECTED</div><strong id=\"ops-schools-expected\">Unknown</strong></section>",
+            "        <section class=\"clockCard\"><div class=\"eyebrow\"><span class=\"signalDot\" aria-hidden=\"true\"></span>MEMPHIS ZOO · CENTRAL TIME</div><div class=\"telemetryValue\"><time id=\"ops-clock\" class=\"bigClock\">—</time><div id=\"ops-date\" class=\"calendarDate\"></div></div></section>",
+            "        <section class=\"attendanceCard\"><div class=\"eyebrow\">CURRENT GATE COUNT</div><div class=\"telemetryValue\"><div class=\"attendanceValue\" id=\"ops-attendance\">Unavailable</div><div class=\"metricNote\" id=\"ops-attendance-note\">Waiting for the gate count source.</div></div></section>",
+            "        <section class=\"weatherCard\"><div class=\"eyebrow\">MEMPHIS WEATHER</div><div class=\"telemetryValue\"><div class=\"weatherNow\"><svg class=\"weatherArt\" viewBox=\"0 0 120 84\" aria-hidden=\"true\"><g class=\"sunRays\" stroke=\"#ffd46b\" stroke-width=\"3\"><path d=\"M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4\"/></g><circle cx=\"45\" cy=\"32\" r=\"19\" fill=\"#ffd46b\"/><path class=\"weatherCloud\" d=\"M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z\" fill=\"#d8efff\"/></svg><div><strong id=\"ops-weather\">Unavailable</strong><div id=\"ops-weather-high-low\" class=\"metricNote\">High/low unavailable.</div><div id=\"ops-weather-note\" class=\"metricNote\">Forecast source not yet read.</div></div></div><div id=\"ops-hour\" class=\"hourForecast\">Next-hour forecast unavailable.</div></div></section>",
+            "        <section class=\"dailyExpected expectedCard eventsExpectedCard\"><div class=\"eyebrow\">TODAY’S EVENTS · EXPECTED</div><div class=\"telemetryValue\"><strong id=\"ops-events-expected\">Unknown</strong></div></section>",
+            "        <section class=\"dailyExpected expectedCard schoolsExpectedCard\"><div class=\"eyebrow\">TODAY’S SCHOOL GROUPS · EXPECTED</div><div class=\"telemetryValue\"><strong id=\"ops-schools-expected\">Unknown</strong></div></section>",
             "      </header>",
             "    <button type=\"button\" id=\"ops-locations-button\" class=\"tickerBand locationsBand\" data-board=\"locations\" hidden><span class=\"tickerLabel\">Location Status</span><span class=\"tickerWindow\"><span id=\"ops-locations-ticker\" class=\"tickerTrack\">Waiting for current cleaning status.</span></span><span class=\"feedButton\" aria-hidden=\"true\">All locations ↗</span></button>",
             "      <button type=\"button\" class=\"tickerBand\" data-board=\"events\" aria-label=\"Upcoming events\"><span class=\"tickerLabel\">Upcoming Events</span><span class=\"tickerWindow\"><span class=\"tickerTrack\" id=\"ops-events-ticker\">Loading…</span></span><span class=\"feedButton\" aria-hidden=\"true\">Open board ↗</span></button>",
@@ -40712,14 +40714,14 @@
       "kind": "modified",
       "prior_bytes": 12310,
       "prior_sha256": "5450247854cf21577de49598c697e87062a56d1ce69e51b686da48532c645b65",
-      "current_bytes": 12329,
-      "current_sha256": "0d28f4d0f73a957321d4d1ec39c1771a799c72d8ab6c7d05c0978f74ff5d852d",
+      "current_bytes": 11759,
+      "current_sha256": "911c17a1d41136094fda8070c6c3f77ebcd99d5b6ea11c7440bd09edf62e846e",
       "hunks": [
         {
           "old_start": 1,
           "old_count": 97,
           "new_start": 1,
-          "new_count": 97,
+          "new_count": 89,
           "before": [
             "<!doctype html>",
             "<html lang=\"en\" data-trail-theme=\"terracotta\" data-trail-section=\"dashboard\">",
@@ -40902,14 +40904,6 @@
             "",
             "    <footer class=\"hubFooter\"><a class=\"weatherAttribution\" href=\"https://open-meteo.com/\" target=\"_blank\" rel=\"noopener noreferrer\">Weather data</a><span id=\"hub-status\" class=\"uxStatus\" aria-live=\"polite\"></span><span id=\"build-stamp\">Checking release…</span></footer>",
             "  </main>",
-            "",
-            "  <nav class=\"hubNav\" aria-label=\"Operations Hub\">",
-            "    <a href=\"./start_page1.html\" class=\"active\" aria-current=\"page\"><span aria-hidden=\"true\">⌂</span><small>Home</small></a>",
-            "    <a href=\"./messages.html?hub=manager\"><span aria-hidden=\"true\">◫</span><small>Messages</small></a>",
-            "    <a href=\"./schedule-weekly.html\"><span aria-hidden=\"true\">▦</span><small>Schedule</small></a>",
-            "    <a href=\"./dashboard.html\"><span aria-hidden=\"true\">●</span><small>Status</small></a>",
-            "    <a href=\"#more\"><span aria-hidden=\"true\">•••</span><small>More</small></a>",
-            "  </nav>",
             "",
             "  <script src=\"./memphis-auth.js?v=owner-access-20261006\"></script>",
             "  <script src=\"./memphis-ui.js?v=release-2026.07.19.custodial-v3.12\"></script>",
