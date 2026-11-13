@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head>
+<html lang="en" data-trail-theme="terracotta" data-trail-section="map"><head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="no-referrer">
@@ -11,9 +11,11 @@
   <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
   <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.13.spiceworks-wording-r1">
   <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/ops-viewer.css">
 </head><body class="mapWebPage operationsPage" data-memphis-context="viewer">
   <main class="mapPage commandPage">
-    <header class="dashboardPageHeader"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt=""><h1>Custodial Operations</h1></div><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Full screen</button></header>
+    <header class="dashboardPageHeader"><div class="mapTitle"><img src="./dashboard_tiger_icon.svg" alt=""><h1 class="trailPageTitle">Custodial Operations</h1></div><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Full screen</button></header>
     <nav class="publicViewNav" aria-label="Read-only views"><a id="public-dashboard-link" href="#dashboard" aria-current="page">Dashboard</a><a id="public-map-link" href="#map">Map</a></nav><p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Loading read-only operations…</p>
 
     <div id="operations-panels" hidden>
