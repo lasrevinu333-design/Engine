@@ -1,5 +1,8 @@
 /* Terracotta presentation adapter for messages.html. No layout, visibility or behavior overrides. */
 @media screen {
+    /* Override the inherited important aquatic backdrop without changing layout. */
+    html[data-trail-theme="terracotta"][data-trail-section="messenger"] body {background:var(--trail-background),url('../assets/trail-v1/terracotta.webp') center/cover fixed!important;color:var(--trail-ink)}
+
     html[data-trail-theme="terracotta"] .mz-secondary-link {
   border: 1px solid var(--trail-border);
   background: var(--trail-surface);
