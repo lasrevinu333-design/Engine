@@ -8,7 +8,7 @@ import {currentGpsQualification as p,assertCurrentGpsInventory} from './current-
 const root=fileURLToPath(new URL('../',import.meta.url)),temp=mkdtempSync(join(tmpdir(),'custodial-diagnostic-inputs-'));
 try{
  const paths=new Set([...p.main_java,...p.test_java,...p.auxiliary,...p.legacy_proofs,...p.core_sources,...p.presentation_sources].map(x=>x.path));
- for(const path of ['scripts/fixtures/current-reminder-timing-source-qualification.json','scripts/fixtures/current-terracotta-departure-source-qualification.json','scripts/fixtures/current-v80-presentation-source-qualification.json','package.json','scripts/current-gps-qualification-source-boundary.mjs','scripts/fixtures/current-gps-source-qualification.json','scripts/fixtures/current-schedule-diagnostic-source-qualification.json'])paths.add(path);
+ for(const path of ['scripts/fixtures/current-web-readiness-source-qualification.json','scripts/fixtures/current-reminder-timing-source-qualification.json','scripts/fixtures/current-terracotta-departure-source-qualification.json','scripts/fixtures/current-v80-presentation-source-qualification.json','package.json','scripts/current-gps-qualification-source-boundary.mjs','scripts/fixtures/current-gps-source-qualification.json','scripts/fixtures/current-schedule-diagnostic-source-qualification.json'])paths.add(path);
  for(const path of paths){const dest=join(temp,path);mkdirSync(dirname(dest),{recursive:true});copyFileSync(join(root,path),dest);}
  const folder=join(temp,'scripts/schedule-diagnostic'),extra=join(folder,'test-aaa-unpinned.mjs'),marker=join(temp,'UNPINNED_EXECUTED');
  const run=()=>spawnSync(process.execPath,['scripts/schedule-diagnostic-qualification-tests.mjs'],{cwd:temp,encoding:'utf8',timeout:30000});

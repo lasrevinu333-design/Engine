@@ -2868,8 +2868,8 @@
     },
     {
       "path": "scripts/schedule-diagnostic-discovery-tests.mjs",
-      "bytes": 2960,
-      "sha256": "a615ca0f470f47014935677642c84583c6adfa7ea6c3abb3b998b68e286d4b7b"
+      "bytes": 3027,
+      "sha256": "cd3c39829a52060d724e0083fdd738273a27ae34859cb341e5cd9a43d6e902f8"
     },
     {
       "path": "scripts/schedule-diagnostic-qualification-tests.mjs",
@@ -32769,8 +32769,8 @@
       "kind": "modified",
       "prior_bytes": 2721,
       "prior_sha256": "b1ebd1c3e42fd352f32b3d78d098d98fc1d6ddb63c825c83d20dce8e4f438208",
-      "current_bytes": 2960,
-      "current_sha256": "a615ca0f470f47014935677642c84583c6adfa7ea6c3abb3b998b68e286d4b7b",
+      "current_bytes": 3027,
+      "current_sha256": "cd3c39829a52060d724e0083fdd738273a27ae34859cb341e5cd9a43d6e902f8",
       "hunks": [
         {
           "old_start": 1,
@@ -32815,7 +32815,7 @@
             "const root=fileURLToPath(new URL('../',import.meta.url)),temp=mkdtempSync(join(tmpdir(),'custodial-diagnostic-inputs-'));",
             "try{",
             " const paths=new Set([...p.main_java,...p.test_java,...p.auxiliary,...p.legacy_proofs,...p.core_sources,...p.presentation_sources].map(x=>x.path));",
-            " for(const path of ['scripts/fixtures/current-reminder-timing-source-qualification.json','scripts/fixtures/current-terracotta-departure-source-qualification.json','scripts/fixtures/current-v80-presentation-source-qualification.json','package.json','scripts/current-gps-qualification-source-boundary.mjs','scripts/fixtures/current-gps-source-qualification.json','scripts/fixtures/current-schedule-diagnostic-source-qualification.json'])paths.add(path);",
+            " for(const path of ['scripts/fixtures/current-web-readiness-source-qualification.json','scripts/fixtures/current-reminder-timing-source-qualification.json','scripts/fixtures/current-terracotta-departure-source-qualification.json','scripts/fixtures/current-v80-presentation-source-qualification.json','package.json','scripts/current-gps-qualification-source-boundary.mjs','scripts/fixtures/current-gps-source-qualification.json','scripts/fixtures/current-schedule-diagnostic-source-qualification.json'])paths.add(path);",
             " for(const path of paths){const dest=join(temp,path);mkdirSync(dirname(dest),{recursive:true});copyFileSync(join(root,path),dest);}",
             " const folder=join(temp,'scripts/schedule-diagnostic'),extra=join(folder,'test-aaa-unpinned.mjs'),marker=join(temp,'UNPINNED_EXECUTED');",
             " const run=()=>spawnSync(process.execPath,['scripts/schedule-diagnostic-qualification-tests.mjs'],{cwd:temp,encoding:'utf8',timeout:30000});",

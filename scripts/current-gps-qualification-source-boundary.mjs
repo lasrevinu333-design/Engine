@@ -11,7 +11,7 @@ const DIAGNOSTIC_PROFILE_SHA='3babce12abdf25ee017b5ea03d886ca307a554dad04cbe4872
 const PRESENTATION_PROFILE_SHA='80edd54a897086075c8c07107b11d1a2880056aa323550ece1216b4e31487bc7';
 const TERRACOTTA_PROFILE_SHA='a6c9588bc591a676792ceb4376944dd34b01c367cd8519a25a0e8b46ad49c740';
 const TIMING_PROFILE_SHA='3ecfd3bcaead83f945fbd86bacc7999097c0f0d7c9d4b117d3cd06651e21a1a7';
-const WEB_READINESS_PROFILE_SHA='0d6119a7233ea85307599991e191e61477be292a1bfa9bae4ae3325359a89edf';
+const WEB_READINESS_PROFILE_SHA='a539c57c5b8b26c20d260cff3ee75070f5dcd99d9d66dd7447ef7cbfd50663ba';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
