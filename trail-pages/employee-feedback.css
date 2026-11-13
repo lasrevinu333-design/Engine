@@ -128,7 +128,7 @@
     html[data-trail-theme="terracotta"] .choice span {border:2px solid var(--trail-border);background:var(--trail-surface);
         color: var(--trail-ink)
     }
-    html[data-trail-theme="terracotta"] .choice input:checked+span {border-color:var(--trail-border);background:var(--trail-raised);box-shadow:var(--trail-shadow);
+    html[data-trail-theme="terracotta"] .choice input:checked+span {border-color:var(--trail-brand);background:var(--trail-selected);box-shadow:var(--trail-shadow);
         color: var(--trail-ink)
     }
     html[data-trail-theme="terracotta"] .choice input:focus-visible+span {outline:4px solid var(--trail-focus);outline-offset:2px
