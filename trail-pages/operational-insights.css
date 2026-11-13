@@ -1,0 +1,176 @@
+/* Terracotta presentation adapter for operational-insights.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] {
+  color-scheme:light
+    }
+    html[data-trail-theme="terracotta"] {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] body {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] button:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] a:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] input:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] textarea:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] select:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] .uxButton {border:1px solid var(--trail-control-border);background:var(--trail-surface);
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .uxButton.primary {background:var(--trail-brand);color:var(--trail-on-brand);border-color:var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .uxButton.danger {background:var(--trail-danger-soft);color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .uxInput {border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .uxTextarea {border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .uxSelect {border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .uxCard {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .uxMuted {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .uxEyebrow {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .uxStatus {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .uxStatus.ok {color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .uxStatus.error {color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .uxStatus.info {color:var(--trail-info)
+    }
+    html[data-trail-theme="terracotta"] .uxToast {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] body::before {
+  background:
+    transparent
+    }
+    html[data-trail-theme="terracotta"] .insightsHeader {background:var(--trail-surface);border-color:var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .canonicalBack {background:var(--trail-surface);color:var(--trail-ink);border-color:var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .insightsBrand p {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .insightsMark {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .summaryCard {background:var(--trail-surface);border-color:var(--trail-border);
+        color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .summaryCard.needsAttention {border-color:var(--trail-warning);background:var(--trail-warning-soft);
+        color:var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .summaryLabel {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .summaryCard strong {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .summaryCard small {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .workspace {background:var(--trail-surface);border-color:var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .insightsTabs {background:var(--trail-surface);border-bottom:1px solid var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .insightsTab {border:1px solid var(--trail-border);background:transparent;color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .windowButton {border:1px solid var(--trail-control-border);background:transparent;color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .insightsTab.active {background:var(--trail-brand);border-color:var(--trail-border);color:var(--trail-on-brand)
+    }
+    html[data-trail-theme="terracotta"] .windowButton.active {background:var(--trail-brand);border-color:var(--trail-border);color:var(--trail-on-brand)
+    }
+    html[data-trail-theme="terracotta"] .panelHeading p {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .filterGrid {border:1px solid var(--trail-border);background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .filterGrid label {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .inspectionTypeRow label {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .scoreGrid label {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .notesField {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .emptyState {border:1px dashed var(--trail-border);color:var(--trail-ink);background:var(--trail-surface)
+    }
+    html[data-trail-theme="terracotta"] .dataCard {border:1px solid var(--trail-border);background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .dataCard p {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .metaChip {background:var(--trail-surface);border:1px solid var(--trail-border);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .metric {background:var(--trail-surface);border:1px solid var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .metric span {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .scorePill {border:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .trendPill {border:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .scorePill.good {background:var(--trail-success-soft);color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .scorePill.warn {background:var(--trail-warning-soft);color:var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .scorePill.bad {background:var(--trail-danger-soft);color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .scorePill.none {background:var(--trail-raised);color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .trendPill.hotspot {background:var(--trail-danger-soft);color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .trendPill.recurring {background:var(--trail-warning-soft);color:var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .trendPill.repeat {background:var(--trail-info-soft);color:var(--trail-info)
+    }
+    html[data-trail-theme="terracotta"] .trendPill.isolated {background:var(--trail-raised);color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .delta.up {color:var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .delta.down {color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .windowButton {border-color:var(--trail-border);background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .inspectionOverlay {background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .inspectionDialog {background:var(--trail-surface);border-color:var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .dialogHeader p {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .overallScore {background:var(--trail-surface);border:1px solid var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .overallScore span {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .overallScore strong {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .overallScore small {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .findingsFieldset {border:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .findingsFieldset legend {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .findingsGrid label {background:var(--trail-surface);border:1px solid var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .inspectionFlags label {background:var(--trail-surface);border:1px solid var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] #cleaning-correction-content th {border-bottom:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] #cleaning-correction-content td {border-bottom:1px solid var(--trail-border)
+    }
+}

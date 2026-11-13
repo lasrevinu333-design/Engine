@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-trail-theme="terracotta" data-trail-section="dashboard">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
@@ -15,9 +15,11 @@
     label{display:block;margin:12px 0 8px;color:#eef2f7;text-align:left;font-size:1.05rem;font-weight:800}select,input,textarea,button{width:100%;padding:18px 16px;margin-top:12px;font-size:1.05rem;border:none;border-radius:14px}select,input,textarea{background:#fff;color:#111827}textarea{min-height:110px;resize:vertical}button{cursor:pointer;font-weight:900}.startBtn{background:var(--lime);color:#111827}.continueBtn{background:var(--amber);color:#111827;font-size:1.35rem;padding:22px;border-radius:18px}.submitBtn{background:var(--cyan);color:#111827}.continueBtnLink{text-decoration:none;display:block}.checkboxRow{display:flex;align-items:flex-start;gap:12px;text-align:left;margin-top:12px;padding:14px 16px;background:rgba(255,255,255,.06);border-radius:14px}.checkboxRow input,.radioRow input{width:24px;height:24px;margin:0;flex:0 0 auto}.checkboxLabel,.radioLabel{margin:0;text-align:left;color:#eef2f7;font-size:1rem;font-weight:600;line-height:1.3;display:block}.checkboxTitle{display:block;font-weight:900}.checkboxDesc{display:block;margin-top:6px;color:var(--muted);font-size:.9rem;font-weight:500;line-height:1.28}.formHeader{width:100%;border-radius:14px;margin-bottom:16px;display:block}.sectionTitle{margin:18px 0 8px;color:#fff;font-size:1.15rem;font-weight:900;text-align:left}.radioWrap{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-top:12px}.radioRow{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:14px 16px;background:rgba(255,255,255,.06);border-radius:14px}
     @media (max-width:640px){html{font-size:17px}.shell{padding:12px 12px max(14px, env(safe-area-inset-bottom))}.card{width:96vw;padding:28px 18px 20px;border-radius:20px}.title-green,.title-blue,.title-amber,.title-red{font-size:2.1rem}.location{font-size:1.85rem}.timer{font-size:3rem}.continueBtn{font-size:1.35rem;padding:22px}.radioWrap{grid-template-columns:1fr}.infoRowTight{font-size:.84rem}.debugPanel{display:none !important}}
   </style>
-  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./assets/trail-v1/dashboard.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
   <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/index.css">
 </head>
 <body data-memphis-context="employee">
   <div id="sync-badge" class="syncBadge" hidden></div>
@@ -40,7 +42,7 @@
   <script src="./memphis-device-reminders.js?v=release-2026.07.19.custodial-v3.12"></script>
   <script src="./memphis-completion-taxonomy.js"></script>
 <script>
-    const CONFIG={APP_VERSION:"release-2026.07.19.custodial-v3.12",MINIMUM_BACKEND_VERSION:"release-2026.07.19.custodial-v3.12",REQUIRED_SCAN_CONTRACT_VERSION:"scan.v4.snapshot-bound-authority",REQUIRED_BACKEND_SCHEMA_FINGERPRINT:"fea262d4eb49204e7c920662cef476c36015c28330435cafd238a358defd79dc",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",SCAN_HEALTH_URL:"https://memphis-zoo-mcp.onrender.com/scan-api/health",DEFAULT_BACKGROUND_IMAGE_URL:"./Background1_optimized.webp?v=release-2026.07.19.custodial-v3.12",FORM_HEADER_IMAGE_URL:"./Header_ui.webp?v=release-2026.07.19.custodial-v3.12",DEVICE_STORAGE_KEY:"mz_scan_device_id",AUTH_DEVICE_STORAGE_KEY:"memphisAssignedDeviceId",DEV_FALLBACK_DEVICE_ID:"1e74fe4c-dc20b3b9",QUEUE_DB_NAME:"mz_scan_queue",QUEUE_STORE_NAME:"actions",SYNC_INTERVAL_MS:30000,SCAN_API_URL:"https://memphis-zoo-mcp.onrender.com/scan-api/rpc"};
+    const CONFIG={APP_VERSION:"release-2026.07.19.custodial-v3.12",MINIMUM_BACKEND_VERSION:"release-2026.07.19.custodial-v3.12",REQUIRED_SCAN_CONTRACT_VERSION:"scan.v4.snapshot-bound-authority",REQUIRED_BACKEND_SCHEMA_FINGERPRINT:"fea262d4eb49204e7c920662cef476c36015c28330435cafd238a358defd79dc",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",SCAN_HEALTH_URL:"https://memphis-zoo-mcp.onrender.com/scan-api/health",DEFAULT_BACKGROUND_IMAGE_URL:"./Background1_optimized.webp?v=release-2026.07.19.custodial-v3.12",FORM_HEADER_IMAGE_URL:"./Zoo_Logo_ui.webp",DEVICE_STORAGE_KEY:"mz_scan_device_id",AUTH_DEVICE_STORAGE_KEY:"memphisAssignedDeviceId",DEV_FALLBACK_DEVICE_ID:"1e74fe4c-dc20b3b9",QUEUE_DB_NAME:"mz_scan_queue",QUEUE_STORE_NAME:"actions",SYNC_INTERVAL_MS:30000,SCAN_API_URL:"https://memphis-zoo-mcp.onrender.com/scan-api/rpc"};
     const BUILD_REFRESH_KEY="mz_scan_build_refresh",BACKEND_REFRESH_KEY="mz_scan_backend_refresh",SCAN_CONTRACT_CACHE_KEY=`mz_scan_contract_cache:${CONFIG.APP_VERSION}`,SCAN_AUTHORITY_SNAPSHOT_PREFIX="mz_scan_authority_snapshot:";
     const RESTROOM_SERVICES=window.MemphisCompletionTaxonomy.services('restroom');
     const RESTROOM_ISSUES=window.MemphisCompletionTaxonomy.issues('restroom');

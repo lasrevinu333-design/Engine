@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-trail-theme="terracotta" data-trail-section="notifications">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#081422">
+  <meta name="theme-color" content="#A45434">
   <meta name="robots" content="noindex">
   <title>Phone Notifications · Memphis Zoo Operations</title>
-  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="icon" href="./assets/trail-v1/notifications.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css">
   <link rel="stylesheet" href="./memphis-ui.css">
   <style>
@@ -26,6 +26,8 @@
     .backButton:focus-visible{outline:3px solid #f7fafc;outline-offset:4px}
     @media(max-width:480px){body{place-items:start center;padding:calc(max(18px,env(safe-area-inset-top)) + 12px) 14px}.notificationCard{border-radius:20px}}
   </style>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/notifications.css">
 </head>
 <body data-memphis-context="manager">
   <main class="notificationPage">
@@ -35,7 +37,7 @@
         <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
         <div class="uxEyebrow">Operations leadership</div>
       </div>
-      <h1 id="notification-title">Phone notifications</h1>
+      <h1 id="notification-title" class="trailPageTitle">Phone notifications</h1>
       <p>Native alert permission, delivery tests, and notification choices are managed inside the Memphis Zoo Ops app on the enrolled manager phone.</p>
       <div class="notificationNote">
         <strong>This browser is not registered for native push.</strong>

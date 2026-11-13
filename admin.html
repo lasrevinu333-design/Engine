@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-trail-theme="terracotta" data-trail-section="phones">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
@@ -469,9 +469,11 @@
       h1 { font-size: 1.8rem; }
     }
   </style>
-  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./assets/trail-v1/phones.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
   <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/admin.css">
 </head>
 <body data-memphis-context="manager">
   <div class="page">
@@ -481,9 +483,9 @@
     <section class="hero">
       <div class="heroTop">
         <div>
-          <img src="./Header_ui.webp?v=release-2026.07.19.custodial-v3.12" alt="Memphis Zoo header" class="headerImg" width="900" height="254" decoding="async" />
+          <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo header" class="headerImg trailZooBrand" width="512" height="512" decoding="async" />
           <div class="eyebrow">Memphis Zoo Custodial Admin</div>
-          <h1>Operations and Recovery Console</h1>
+          <h1 class="trailPageTitle">Operations and Recovery Console</h1>
           <div class="subtext">
             This page is for boring, important things: seeing what is broken, closing tickets, forcing stuck sessions
             shut, and checking whether the system is quietly bleeding in a corner.

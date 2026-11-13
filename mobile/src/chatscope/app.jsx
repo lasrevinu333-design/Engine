@@ -20,7 +20,7 @@ import { createHomeAssistantEntry } from './home-assistant-entry.mjs';
 import { createMessageHistory } from './message-history.mjs';
 
 const API = 'https://memphis-zoo-mcp.onrender.com/messaging-api';
-const MEMPHIS_AVATAR = './memphis_avatar_ui.webp';
+const MEMPHIS_AVATAR = './assets/trail-v1/messenger-320.webp';
 const ZOO_LOGO = './Zoo_Logo_ui.webp';
 const ZERO_TIME = '1970-01-01T00:00:00.000Z';
 const ZERO_ID = '00000000-0000-0000-0000-000000000000';

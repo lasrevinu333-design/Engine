@@ -1,0 +1,17 @@
+/* Terracotta presentation adapter for supply-coming-soon.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] {color-scheme:light
+    }
+    html[data-trail-theme="terracotta"] body {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] main {border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] p {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .note {border:1px solid var(--trail-border);color:var(--trail-muted);background:var(--trail-surface)
+    }
+    html[data-trail-theme="terracotta"] .back {color:var(--trail-on-brand)
+    }
+    html[data-trail-theme="terracotta"] .back:focus-visible {outline:3px solid var(--trail-focus);outline-offset:4px
+    }
+}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-trail-theme="terracotta" data-trail-section="dashboard">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
@@ -34,9 +34,11 @@
     .unlockBtn{margin-top:16px;min-width:min(220px,70vw);padding:16px 24px;border:none;border-radius:18px;background:linear-gradient(180deg,#9be11f,#7ec40f);color:#09111a;font-size:1.05rem;font-weight:900;box-shadow:0 12px 28px rgba(0,0,0,.26)}
     @media(max-width:520px){.page{padding-inline:16px}.apps{gap:14px}.app{min-height:170px;padding:18px 10px;border-radius:24px;gap:13px}.icon{width:94px;height:94px;border-radius:24px}.label{font-size:1.08rem}}
   </style>
-  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./assets/trail-v1/dashboard.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
   <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/employee-hub.css">
 </head>
 <body class="kiosk-locked" data-memphis-context="employee">
   <div id="kiosk-lock-screen" class="kioskLock" aria-label="Kiosk lock screen" role="button" tabindex="0">
@@ -52,10 +54,10 @@
   <main class="page" aria-label="Employee Home">
     <div id="home-employee-name" class="employeeName" aria-live="polite" hidden></div>
     <nav class="apps" aria-label="Employee choices">
-      <a id="schedule-link" class="app" href="./employee-schedule.html"><span class="icon"><img alt="" src="./scheduler_icon_ui.webp?v=release-2026.07.19.custodial-v3.12" width="320" height="320" decoding="async" /></span><span class="label">Schedule</span></a>
-      <a id="messages-link" class="app" href="./messages.html"><span class="icon"><img alt="" src="./memphis_avatar_ui.webp?v=release-2026.07.19.custodial-v3.12" width="320" height="320" decoding="async" /></span><span class="label">Messages</span></a>
-      <a id="events-link" class="app" href="./events.html"><span class="icon"><img alt="" src="./Event_Icon_ui.webp?v=release-2026.07.19.custodial-v3.12" width="320" height="320" decoding="async" /></span><span class="label">Events</span></a>
-      <a id="feedback-link" class="app" href="./system-feedback.html"><span class="icon" aria-hidden="true">💬</span><span class="label">Feedback</span></a>
+      <a id="schedule-link" class="app" href="./employee-schedule.html"><span class="icon"><img class="trailIcon" src="./assets/trail-v1/schedule-320.webp" width="64" height="64" alt="" decoding="async"></span><span class="label">Schedule</span></a>
+      <a id="messages-link" class="app" href="./messages.html"><span class="icon"><img class="trailIcon" src="./assets/trail-v1/messenger-320.webp" width="64" height="64" alt="" decoding="async"></span><span class="label">Messages</span></a>
+      <a id="events-link" class="app" href="./events.html"><span class="icon"><img class="trailIcon" src="./assets/trail-v1/events-320.webp" width="64" height="64" alt="" decoding="async"></span><span class="label">Events</span></a>
+      <a id="feedback-link" class="app" href="./system-feedback.html"><span class="icon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/feedback-320.webp" width="112" height="112" alt="" decoding="async"></span><span class="label">Feedback</span></a>
     </nav>
   </main>
   <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>

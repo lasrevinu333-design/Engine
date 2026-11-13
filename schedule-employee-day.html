@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-trail-theme="terracotta" data-trail-section="schedule">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
@@ -19,9 +19,11 @@
     @media(max-width:900px){.toolbar{grid-template-columns:1fr}.actions{justify-content:stretch}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.employeeHeader{grid-template-columns:1fr}.assignmentTable{display:none}.mobileAssignments{display:block}.assignmentSections{grid-template-columns:1fr;padding:10px}.phaseRow{grid-template-columns:1fr}.phaseTime{text-align:left;color:var(--muted)}.employeeName{font-size:1.35rem}.employeeMeta{font-size:.95rem}.btn.small{width:100%;min-height:42px}.page{padding-left:10px;padding-right:10px}}
     @media print{body{background:#fff;color:#111827}.page{max-width:none;padding:0}.toolbar,.status,.summary,.btn,.openCard{display:none}.employeeCard{box-shadow:none;border:1px solid #ddd;break-inside:avoid;background:#fff;color:#111827;margin-bottom:14px}.employeeHeader{background:#f3f4f6;color:#111827}.employeeMeta,.notes{color:#374151}.assignmentSections{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px}.assignmentSection{background:#fff;border-color:#ddd}.phaseTitle{background:#f3f4f6;color:#111827}.phaseRow{border-color:#ddd}.assignmentTable th{background:#f3f4f6;color:#111827}.assignmentTable th,.assignmentTable td{border-color:#ddd}.pill{border-color:#ddd;background:#fff;color:#111827}.printHint{display:block}}
   </style>
-  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./assets/trail-v1/schedule.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
   <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/schedule-employee-day.css">
 </head>
 <body data-memphis-context="manager">
   <div class="page">

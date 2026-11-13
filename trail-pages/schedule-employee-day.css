@@ -1,0 +1,129 @@
+/* Terracotta presentation adapter for schedule-employee-day.html. No layout, visibility or behavior overrides. */
+@media screen{
+    html[data-trail-theme="terracotta"] .mz-secondary-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-brand)}
+    html[data-trail-theme="terracotta"] .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+    html[data-trail-theme="terracotta"] .operationsPage .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+    html[data-trail-theme="terracotta"] .mz-back-link:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-icon-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-field:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-select:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-textarea:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-button{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-button--secondary{ background: var(--trail-surface); color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-button--danger{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .mz-card{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  box-shadow: var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-status{
+  border: 1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .mz-alert{
+  border: 1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .mz-empty{
+  border: 1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .mz-error{
+  border: 1px solid var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .mz-status{ background: var(--trail-surface); color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-alert--success{ background: var(--trail-success-soft); color: var(--trail-success)}
+    html[data-trail-theme="terracotta"] .mz-alert--warning{ background: var(--trail-warning-soft); color: var(--trail-warning)}
+    html[data-trail-theme="terracotta"] .mz-alert--error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .mz-error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .mz-empty{ border-style: dashed; background: var(--trail-surface); color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-field{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-select{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-textarea{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-loading{
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-loading::before{
+  border: 2px solid var(--trail-border);
+  border-top-color: var(--trail-brand)}
+    html[data-trail-theme="terracotta"] .mz-visually-hidden{
+  border: 0 !important}
+    html[data-trail-theme="terracotta"] #restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+    html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+    html[data-trail-theme="terracotta"] body{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .toolbar{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .summary{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+        color: var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .employeeCard{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .openCard{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .sub{color:var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .field label{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .field input{border:none;background:var(--trail-raised);color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .field select{border:none;background:var(--trail-raised);color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .btn{border:none}
+    html[data-trail-theme="terracotta"] .btn.primary{background:var(--trail-brand);color:var(--trail-on-brand)}
+    html[data-trail-theme="terracotta"] .btn.blue{background:var(--trail-surface);color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .btn.ghost{background:var(--trail-surface);color:var(--trail-ink);border:1px solid var(--trail-control-border)}
+    html[data-trail-theme="terracotta"] .status{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .stat{background:var(--trail-surface);border:1px solid var(--trail-border);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .statLabel{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .employeeHeader{border-bottom:1px solid var(--trail-border);background:var(--trail-surface);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .employeeMeta{color:var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .pill{background:var(--trail-surface);border:1px solid var(--trail-border);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .pill.ok{background:var(--trail-success-soft);color:var(--trail-success)}
+    html[data-trail-theme="terracotta"] .pill.warn{background:var(--trail-warning-soft);color:var(--trail-warning)}
+    html[data-trail-theme="terracotta"] .assignmentTable th{border-bottom:1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .assignmentTable td{border-bottom:1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .assignmentTable th{color:var(--trail-ink);background:var(--trail-raised)}
+    html[data-trail-theme="terracotta"] .assignmentSection{border:1px solid var(--trail-border);background:var(--trail-surface);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .phaseBlock{border-top:1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .phaseTitle{color:var(--trail-ink);background:var(--trail-surface)}
+    html[data-trail-theme="terracotta"] .phaseRow{border-top:1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .phaseTime{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .notes{color:var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .assignmentCard{border-top:1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .assignmentCode{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .assignmentNote{color:var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .empty{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .openItem{border:1px solid var(--trail-border);background:var(--trail-surface);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .printHint{color:var(--trail-muted)}
+    @media(max-width:900px){
+        html[data-trail-theme="terracotta"] .phaseTime{color:var(--trail-ink)}}}

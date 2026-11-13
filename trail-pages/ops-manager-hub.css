@@ -1,0 +1,15 @@
+/* Terracotta presentation adapter for ops-manager-hub.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] body {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] button {background:var(--trail-surface);color:var(--trail-ink);border:0
+    }
+    html[data-trail-theme="terracotta"] input {background:var(--trail-raised);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] select {background:var(--trail-raised);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .note {border:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] a {color:var(--trail-brand)
+    }
+}

@@ -1,0 +1,163 @@
+/* Terracotta presentation adapter for events.html. No layout, visibility or behavior overrides. */
+@media screen{
+html[data-trail-theme="terracotta"] .operationsPage{color-scheme:light;color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .commandPage.mapPage{background:transparent}
+html[data-trail-theme="terracotta"] .operationsPage button:not(.mzMapPin){color:inherit;border:1px solid var(--trail-control-border);background:var(--trail-surface)}
+html[data-trail-theme="terracotta"] .operationsPage select{color:inherit;border:1px solid var(--trail-control-border);background:var(--trail-raised)}
+html[data-trail-theme="terracotta"] .operationsPage :focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] .telemetry{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .telemetry>section+section{border-left:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .eyebrow{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .calendarDate{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .attendanceValue{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .metricNote{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .metricNote[data-stale=true]{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .hourForecast{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .tickerLabel{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .feedButton{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .commandPage .commandMap.mzMapStage{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .statusCounts{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .statusCounts span{border:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .statusCounts [data-status=due_soon]{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .statusCounts [data-status=overdue]{color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .statusCounts [data-status=in_progress]{color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .commandPage .mzMapViewport{background:var(--trail-surface);border:1px solid var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .operationsPage .locationsBand{background:var(--trail-surface);border-color:var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .locationsBand .tickerLabel{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .operationsBoard{border:0;background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .operationsBoard::backdrop{background:var(--trail-scrim)}
+html[data-trail-theme="terracotta"] .boardHeader{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .boardNote{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .boardCard{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .boardCard .sourceTag{border:1px solid var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .boardCard[data-state=REVIEW_REQUIRED]{border-color:var(--trail-border)}
+html[data-trail-theme="terracotta"]:fullscreen{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"].dashboard-expanded{background:var(--trail-surface);color:var(--trail-ink)}
+@media(max-width:699px){
+html[data-trail-theme="terracotta"] .telemetry .weatherCard{border-left:0;border-top:1px solid var(--trail-border)}}
+html[data-trail-theme="terracotta"] .publicViewNav a{border:1px solid var(--trail-border);color:var(--trail-brand);background:var(--trail-surface)}
+html[data-trail-theme="terracotta"] .publicViewNav a[aria-current=page]{background:var(--trail-brand);border-color:var(--trail-border);color:var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .publicMetric{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicMetric span{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicReport{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicReport h2{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .publicReport th{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .publicReport td{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .publicReport th{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicReport .cleaningState{border:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=okay]{color:var(--trail-success)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=in_progress]{color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=due_soon]{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=overdue]{color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=unknown]{color:var(--trail-ink);border-style:dashed}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=pending_submit]{color:var(--trail-info);border-style:dashed}
+@media(max-width:699px){
+html[data-trail-theme="terracotta"] .publicReport td:before{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicReport tr+tr{border-top:2px solid var(--trail-border)}}
+html[data-trail-theme="terracotta"] .locationTickerItem{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .locationTickerItem::before{border:2px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=okay]::before{background:var(--trail-success-soft);color:var(--trail-success)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=in_progress]::before{background:var(--trail-info-soft);color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=due_soon]::before{background:var(--trail-warning-soft);color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=overdue]::before{background:var(--trail-danger-soft);color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=not_cleaned]::before{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=pending_submit]::before{background:var(--trail-info-soft);color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=unknown]::before{background:var(--trail-surface);border-style:dashed;color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .tickerRecord+.tickerRecord{border-inline-start:double var(--trail-border)}
+html[data-trail-theme="terracotta"] .tickerBand[data-stale=true] .tickerLabel{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand .tickerLabel{background:var(--trail-surface);color:var(--trail-ink)}
+@media(max-width:950px){
+html[data-trail-theme="terracotta"] .telemetry.hasMod .weatherCard{border-left:0;border-top:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .telemetry.hasMod .modCard{border-top:1px solid var(--trail-border)}}
+html[data-trail-theme="terracotta"] .operationsPage .commandPage .commandMap[data-map-presentation="original-horizontal"]{background:transparent;border-color:var(--trail-border);box-shadow:none}
+html[data-trail-theme="terracotta"] .telemetry.separateTelemetry{border:0;background:transparent}
+html[data-trail-theme="terracotta"] .telemetry.separateTelemetry>section{border:0;box-shadow:var(--trail-shadow);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .eventsPage[data-stale=true] #events-status{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .mz-secondary-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-brand)}
+html[data-trail-theme="terracotta"] .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .operationsPage .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .mz-back-link:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-icon-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-field:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-select:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-textarea:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-button{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-button--secondary{ background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-button--danger{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-card{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  box-shadow: var(--trail-shadow);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-status{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-alert{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-empty{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-error{
+  border: 1px solid var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-status{ background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-alert--success{ background: var(--trail-success-soft); color: var(--trail-success)}
+html[data-trail-theme="terracotta"] .mz-alert--warning{ background: var(--trail-warning-soft); color: var(--trail-warning)}
+html[data-trail-theme="terracotta"] .mz-alert--error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-empty{ border-style: dashed; background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-field{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-select{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-textarea{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-loading{
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-loading::before{
+  border: 2px solid var(--trail-border);
+  border-top-color: var(--trail-brand)}
+html[data-trail-theme="terracotta"] .mz-visually-hidden{
+  border: 0 !important}
+html[data-trail-theme="terracotta"] #restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+html[data-trail-theme="terracotta"] .mz-held-review{color:var(--trail-ink);background:var(--trail-surface);border:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-held-review-intro{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-held-review-card{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-held-review-status{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-held-review-card dt{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-held-correction{border-top:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-held-correction [data-correction-status]{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-held-correction-missing{color:var(--trail-ink)}}

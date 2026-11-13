@@ -39,7 +39,7 @@ const result = await build({
   },
   // These images are existing Engine assets copied beside the generated bundle
   // for both GitHub Pages and Capacitor. Keep their runtime-relative URLs.
-  external: ['./Background1_optimized.webp', './Zoo_Logo_ui.webp', './memphis_avatar_ui.webp'],
+  external: ['./Background1_optimized.webp', './Zoo_Logo_ui.webp', './memphis_avatar_ui.webp', './assets/trail-v1/messenger-320.webp'],
   define: {
     'process.env.NODE_ENV': '"production"',
   },

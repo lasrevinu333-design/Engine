@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-trail-theme="terracotta" data-trail-section="schedule">
 <head>
-  <link rel="icon" href="./Zoo_Logo_ui.webp" type="image/webp">
+  <link rel="icon" href="./assets/trail-v1/schedule.svg" type="image/svg+xml">
   <meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Schedule</title>
   <style>
     :root{--text:#fff;--muted:#e5edf5;--panel:rgba(5,15,22,.91);--line:rgba(255,255,255,.25);--green:#b7e66a}
@@ -9,10 +9,12 @@
     main{width:min(680px,100%);min-height:100vh;margin:auto;padding:max(24px,env(safe-area-inset-top)) 14px max(28px,env(safe-area-inset-bottom));display:grid;align-content:start;gap:14px}header,.content,.notice,.state{border:1px solid var(--line);border-radius:22px;background:var(--panel);box-shadow:0 14px 34px rgba(0,0,0,.36)}header{padding:17px}.back{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 22px;border-radius:16px;background:#e6f3bf;color:#102106;text-decoration:none;font-size:1.05rem;font-weight:900}h1{margin:17px 0 0;font-size:2.2rem;line-height:1.05}.employee{margin:9px 0 0;color:#f1ffd2;font-size:1.28rem;font-weight:900;line-height:1.2}.date{margin:7px 0 0;color:var(--muted);font-size:1rem}.content{padding:16px}.areas{list-style:none;margin:0;padding:0;display:grid;gap:12px}.area{padding:17px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.06)}.areaName{font-size:1.25rem;font-weight:900;line-height:1.25}.areaDetail{margin-top:8px;color:var(--muted);font-size:1rem;font-weight:800;line-height:1.35}.notice,.state{padding:18px;text-align:center;font-size:1.04rem;line-height:1.4}.notice{color:#f1ffd2}.state{color:var(--muted)}.retry{display:block;width:100%;min-height:54px;margin-top:14px;border:0;border-radius:16px;background:#fff;color:#111827;font-size:1.05rem;font-weight:900}
   </style>
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12"><script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/employee-schedule.css">
 </head>
 <body data-memphis-context="employee">
   <main>
-    <header><a class="back" data-mz-back href="./index.html">Back</a><h1>Your areas now</h1><div id="employee" class="employee">Employee</div><div id="date" class="date"></div></header>
+    <header><a class="back" data-mz-back href="./index.html">Back</a><h1 class="trailPageTitle">Your areas now</h1><div id="employee" class="employee">Employee</div><div id="date" class="date"></div></header>
     <section id="state" class="state" aria-live="polite"><span id="state-text">Loading…</span><button id="retry" class="retry" type="button" hidden>Try Again</button></section>
     <section id="notice" class="notice" hidden></section>
     <section id="content" class="content" hidden><h2>Regular areas</h2><ul id="areas" class="areas"></ul></section>

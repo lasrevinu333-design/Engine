@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-trail-theme="terracotta" data-trail-section="feedback">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#081422">
+  <meta name="theme-color" content="#A45434">
   <title>Program Feedback</title>
-  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
+  <link rel="icon" href="./assets/trail-v1/feedback.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12">
   <style>
@@ -23,6 +23,8 @@
     .feedbackInbox{margin-top:14px;padding:18px}.feedbackInboxHead{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.feedbackInboxTools{display:flex;gap:8px;flex-wrap:wrap}.feedbackList{display:grid;gap:10px;margin-top:14px}.feedbackItem{padding:14px;border:1px solid var(--ux-line);border-radius:var(--ux-radius-md);background:rgba(255,255,255,.045)}.feedbackItem h3{margin:0 0 5px}.feedbackMeta{font-size:.84rem;color:var(--ux-muted);margin-bottom:8px}.feedbackItemActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.feedbackImage{display:block;max-width:100%;max-height:280px;border-radius:14px;margin-top:10px}
     @media(max-width:520px){.feedbackActions .uxButton{width:100%}.feedbackHeader{align-items:flex-start}}
   </style>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/system-feedback.css">
 </head>
 <body data-memphis-context="contextual">
   <main class="feedbackPage">
@@ -34,8 +36,8 @@
     </nav>
 
     <header class="feedbackHeader uxCard">
-      <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
-      <div><div class="uxEyebrow">Custodial program</div><h1>Send feedback</h1><p class="uxMuted">Tell us what went wrong or what would make the app easier.</p></div>
+      <img class="trailIcon" src="./assets/trail-v1/feedback-320.webp" width="80" height="80" alt="" decoding="async">
+      <div><div class="uxEyebrow">Custodial program</div><h1 class="trailPageTitle">Send feedback</h1><p class="uxMuted">Tell us what went wrong or what would make the app easier.</p></div>
     </header>
 
     <section class="feedbackCard uxCard">
