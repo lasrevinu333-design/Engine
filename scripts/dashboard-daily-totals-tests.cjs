@@ -30,7 +30,7 @@ test('expected counts have separate cards in the requested order, never inside c
     for(const card of cards.slice(0,3))assert.doesNotMatch(card[2],/ops-(events|schools)-expected/);
     assert.match(header,/separateTelemetry/);
     for(const card of cards.slice(3,5)) assert.doesNotMatch(card[2],/expected-note|metricNote|occupancy|visitors|freshness/);
-    assert.match(s,/operations-dashboard\.css\?v=2026\.11\.13\.balanced-cards-r11/);
+    assert.match(s,/operations-dashboard\.css\?v=2026\.11\.13\.centered-cards-r12/);
     if(name==='operations-dashboard.html')assert.match(cards[5][1],/modCard/);
   }
 });

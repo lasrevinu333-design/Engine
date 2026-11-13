@@ -159,3 +159,18 @@
 .telemetry.separateTelemetry .weatherNow>div{min-width:0;overflow-wrap:anywhere}
 .telemetry.separateTelemetry .hourForecast{max-width:100%;flex:1 1 100%;overflow-wrap:anywhere}
 .telemetry.separateTelemetry .bigClock{font-size:clamp(24px,2vw,38px)}
+
+/* Shared type hierarchy and centered alignment for the map's telemetry cards. */
+.telemetry.separateTelemetry>section{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px}
+.telemetry.separateTelemetry .eyebrow{justify-content:center;text-align:center;font-size:11px;font-weight:750;line-height:1.35;letter-spacing:.08em}
+.telemetry.separateTelemetry .bigClock,
+.telemetry.separateTelemetry .attendanceValue,
+.telemetry.separateTelemetry #ops-weather,
+.telemetry.separateTelemetry .dailyExpected>strong,
+.telemetry.separateTelemetry .modCard>strong{font-size:22px;font-weight:720;line-height:1.2;letter-spacing:normal;font-variant-numeric:tabular-nums;max-width:100%;overflow-wrap:anywhere}
+.telemetry.separateTelemetry .calendarDate,
+.telemetry.separateTelemetry .metricNote,
+.telemetry.separateTelemetry .hourForecast{font-size:12px;line-height:1.4;text-align:center}
+.telemetry.separateTelemetry .weatherNow{flex-direction:column;justify-content:center;gap:4px;width:100%}
+.telemetry.separateTelemetry .weatherArt{width:40px;height:28px}
+.telemetry.separateTelemetry .hourForecast{flex:0 1 auto;width:100%}
