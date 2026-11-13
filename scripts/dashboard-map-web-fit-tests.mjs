@@ -58,8 +58,8 @@ const fixture=({session=principal}={})=>{
   const document=new Element();document.hidden=false;document.createElement=()=>new Element();document.createTextNode=text=>({textContent:text});
   const observers=[];
   class ResizeObserver{
-    constructor(callback){this.callback=callback;this.disconnected=false;observers.push(this);}
-    observe(target){assert.equal(target,elements.viewport);}
+    constructor(callback){this.callback=callback;this.disconnected=false;this.targets=new Set();observers.push(this);}
+    observe(target){assert.ok([elements.viewport,elements.surface,section].includes(target));this.targets.add(target);}
     disconnect(){this.disconnected=true;}
   }
   const window=Object.assign(new Element(),{document,crypto:webcrypto,ResizeObserver,matchMedia:()=>({matches:false})});
@@ -93,7 +93,7 @@ await test('real page and renderer initialize from hidden layout with exactly47 
   assert.equal(f.elements.locations.children.length,47);assert.equal(f.timers.size,2);
   assert.deepEqual([...f.timers.values()].map(value=>value.ms).sort((a,b)=>a-b),[1000,30000]);
   assert.deepEqual(f.counts(),{anchorReads:1,summaryReads:1,validations:1,creates:1});
-  assert.equal(f.observers.length,1);
+  assert.equal(f.observers.length,2);
 });
 await test('resize observer fits unchanged pin centers to short landscape; no pan or zoom is needed in geometry',()=>{
   f.resize(620,155);
@@ -134,14 +134,14 @@ await test('synthetic persisted lifecycle validates principal and gets one new s
     assert.equal(f.counts().summaryReads,before.summaryReads+cycle);
     assert.equal(f.window.listeners.size,listeners);
   }
-  assert.equal(f.observers.length,1);assert.equal(f.counts().creates,1);assert.equal(f.counts().anchorReads,1);
+  assert.equal(f.observers.length,2);assert.deepEqual([...f.observers[0].targets],[f.elements.viewport]);assert.deepEqual([...f.observers[1].targets],[f.elements.surface,f.section]);assert.equal(f.counts().creates,1);assert.equal(f.counts().anchorReads,1);
 });
 await test('changed credential on restore stays hidden without fetching or retaining another principal status',async()=>{
   const before=f.counts();f.window.fire('pagehide',{persisted:true});f.session({...principal,credential_id:'changed'});
   f.window.fire('pageshow',{persisted:true});await flush();
   assert.equal(f.section.hidden,true);assert.equal(f.timers.size,0);assert.equal(f.counts().summaryReads,before.summaryReads);
   assert.equal(f.elements.layer.children.length,0);assert.equal(f.elements.locations.children.length,0);
-  assert.equal(f.observers[0].disconnected,true);
+  assert.ok(f.observers.every(observer=>observer.disconnected));
 });
 await test('final close releases only map-owned observers, controls, timers and listeners',()=>{
   f.controller.stop();assert.equal(f.timers.size,0);assert.equal(f.document.listeners.size,0);
