@@ -139,3 +139,16 @@
 .dailyExpected{display:grid;gap:4px;margin-top:8px}
 .dailyExpected strong{font-size:18px;line-height:1.2;overflow-wrap:anywhere}
 .dailyExpected .eyebrow{white-space:normal}
+
+/* Independent cards keep planned attendance out of the clock and gate cards. */
+.telemetry.separateTelemetry{grid-template-columns:minmax(210px,1fr) minmax(180px,.8fr) minmax(340px,1.4fr) repeat(2,minmax(180px,.8fr));gap:8px;align-items:start;border:0;border-radius:0;background:transparent;overflow:visible}
+.telemetry.separateTelemetry>section{border:0;box-shadow:inset 0 0 0 1px var(--ux-line);border-radius:16px;background:var(--ux-panel-soft);margin:0}
+.telemetry.separateTelemetry .weatherCard{grid-column:auto}
+.telemetry.separateTelemetry .expectedCard{align-content:start}
+@media(max-width:699px){.telemetry.separateTelemetry{grid-template-columns:1fr}.telemetry.separateTelemetry .weatherCard{grid-column:auto}}
+
+.telemetry.separateTelemetry.hasMod{grid-template-columns:minmax(210px,1fr) minmax(180px,.8fr) minmax(340px,1.4fr) repeat(2,minmax(180px,.8fr)) minmax(160px,.7fr)}
+@media(max-width:1350px){.telemetry.separateTelemetry,.telemetry.separateTelemetry.hasMod{grid-template-columns:1fr 1fr}}
+@media(max-width:699px){.telemetry.separateTelemetry,.telemetry.separateTelemetry.hasMod{grid-template-columns:1fr}}
+
+.telemetry.separateTelemetry .attendanceValue{font-size:22px;line-height:1.2;overflow-wrap:anywhere}

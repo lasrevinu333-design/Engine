@@ -17,3 +17,19 @@ test('snapshot visibly qualified',()=>assert.match(run([],[],{schools:{state:'sn
 test('both page families contain distinct labelled fields within telemetry',()=>{const fs=require('node:fs');for(const name of ['operations-dashboard.html','ops-viewer.html']){const s=fs.readFileSync(__dirname+'/../'+name,'utf8');for(const id of ['ops-schools-expected','ops-events-expected']){assert.equal(s.split('id="'+id+'"').length,2);assert.ok(s.indexOf('id="'+id+'"')<s.indexOf('</header>',s.indexOf('<header class="telemetry')));}}});
 
 test('reversed event date range is incomplete not zero',()=>assert.match(run([event('a',50,{end_date:'2026-11-11'})]).events.value,/Unknown.*incomplete/));
+
+test('expected counts have separate cards in the requested order, never inside clock or gate',()=>{
+  const fs=require('node:fs');
+  for(const name of ['operations-dashboard.html','ops-viewer.html']){
+    const s=fs.readFileSync(__dirname+'/../'+name,'utf8');
+    const header=s.match(/<header class="telemetry[^>]*>[\s\S]*?<\/header>/)[0];
+    const cards=[...header.matchAll(/<section class="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g)];
+    assert.deepEqual(cards.slice(0,5).map(m=>m[1].split(' ')[0]),['clockCard','attendanceCard','weatherCard','dailyExpected','dailyExpected']);
+    assert.match(cards[3][2],/id="ops-events-expected"/);
+    assert.match(cards[4][2],/id="ops-schools-expected"/);
+    for(const card of cards.slice(0,3))assert.doesNotMatch(card[2],/ops-(events|schools)-expected/);
+    assert.match(header,/separateTelemetry/);
+    assert.match(s,/operations-dashboard\.css\?v=2026\.11\.13\.separate-cards-r9/);
+    if(name==='operations-dashboard.html')assert.match(cards[5][1],/modCard/);
+  }
+});

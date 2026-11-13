@@ -9,7 +9,7 @@
   <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./manager-ux.css"><link rel="stylesheet" href="./ops-hub.css">
   <link rel="stylesheet" href="./dashboard-map-staging.css"><link rel="stylesheet" href="./dashboard-map.css">
-  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.12.daily-totals-r8">
+  <link rel="stylesheet" href="./operations-dashboard.css?v=2026.11.13.separate-cards-r9">
   <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
 </head><body class="mapWebPage operationsPage" data-memphis-context="manager">
   <main class="mapPage commandPage">
@@ -17,10 +17,12 @@
     <p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Checking manager access…</p>
 
     <div id="operations-panels" hidden>
-      <header class="telemetry hasMod" aria-label="Date, attendance, weather and manager on duty">
-        <section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="ops-clock" class="bigClock">—</time><div id="ops-date" class="calendarDate"></div><div class="dailyExpected"><div class="eyebrow">TODAY’S SCHOOL GROUPS · EXPECTED</div><strong id="ops-schools-expected">Unknown</strong><div class="metricNote" id="ops-schools-expected-note">Source not yet read.</div></div></section>
-        <section class="attendanceCard"><div class="eyebrow">CURRENT GATE COUNT</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div><div class="dailyExpected"><div class="eyebrow">TODAY’S EVENTS · EXPECTED</div><strong id="ops-events-expected">Unknown</strong><div class="metricNote" id="ops-events-expected-note">Source not yet read.</div></div></section>
+      <header class="telemetry hasMod separateTelemetry" aria-label="Date, gate count, weather, expected attendance and manager on duty">
+        <section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="ops-clock" class="bigClock">—</time><div id="ops-date" class="calendarDate"></div></section>
+        <section class="attendanceCard"><div class="eyebrow">CURRENT GATE COUNT</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div></section>
         <section class="weatherCard"><div class="weatherNow"><svg class="weatherArt" viewBox="0 0 120 84" aria-hidden="true"><g class="sunRays" stroke="#ffd46b" stroke-width="3"><path d="M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4"/></g><circle cx="45" cy="32" r="19" fill="#ffd46b"/><path class="weatherCloud" d="M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z" fill="#d8efff"/></svg><div><div class="eyebrow">MEMPHIS WEATHER</div><strong id="ops-weather">Unavailable</strong><div id="ops-weather-high-low" class="metricNote">High/low unavailable.</div><div id="ops-weather-note" class="metricNote">Forecast source not yet read.</div></div></div><div id="ops-hour" class="hourForecast">Next-hour forecast unavailable.</div></section>
+        <section class="dailyExpected expectedCard eventsExpectedCard"><div class="eyebrow">TODAY’S EVENTS · EXPECTED</div><strong id="ops-events-expected">Unknown</strong><div class="metricNote" id="ops-events-expected-note">Source not yet read.</div></section>
+        <section class="dailyExpected expectedCard schoolsExpectedCard"><div class="eyebrow">TODAY’S SCHOOL GROUPS · EXPECTED</div><strong id="ops-schools-expected">Unknown</strong><div class="metricNote" id="ops-schools-expected-note">Source not yet read.</div></section>
         <section class="modCard" id="ops-mod-card"><div class="eyebrow">MANAGER ON DUTY</div><strong id="ops-mod">Unavailable</strong></section>
       </header>
     <button type="button" id="ops-locations-button" class="tickerBand locationsBand" data-board="locations" hidden><span class="tickerLabel">Location Status</span><span class="tickerWindow"><span id="ops-locations-ticker" class="tickerTrack">Waiting for current cleaning status.</span></span><span class="feedButton" aria-hidden="true">All locations ↗</span></button>
