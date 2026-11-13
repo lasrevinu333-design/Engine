@@ -187,8 +187,9 @@
   }
   function managerOnDuty(value,now=Date.now()){
     return value?.schema==='custodial.manager-on-duty.v1'&&value.state==='confirmed'
-      &&value.service_date===localDate(now)&&typeof value.manager_id==='string'
-      &&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value.manager_id)
+      &&value.service_date===localDate(now)
+      &&(value.manager_id===null||(typeof value.manager_id==='string'
+        &&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value.manager_id)))
       &&typeof value.name==='string'&&value.name.trim()&&value.name.length<=100
       ?value.name.trim():'Unavailable';
   }

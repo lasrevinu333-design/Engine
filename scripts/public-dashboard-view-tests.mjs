@@ -183,3 +183,19 @@ test('public dashboard shows actual current and recorded workers and keeps pendi
   f.page.suspend();assert.doesNotMatch(text(f.node('public-restrooms')),/Fixture active worker|Fixture pending worker/);
  }finally{f.clean();}
 });
+
+test('public MOD displays approved name, clears at Central midnight, and refreshes without login',async()=>{
+ const f=fixture({audience:'public_readonly'});f.window.MemphisAuth={readSession(){assert.fail('No login identity for public MOD');}};
+ const load=async(name,service_date)=>f.controller.refresh({isCurrent:()=>true,summary,fetchImpl:async(url,options)=>{
+  assert.equal(options.credentials,'omit');assert.equal(options.headers,undefined);
+  return {ok:true,json:async()=>url.endsWith('/operations')?{ok:true,data:{schema:'custodial.operations-board.v1',timezone:D.ZONE,generated_at:new Date().toISOString(),events:[],manager_on_duty:{schema:'custodial.manager-on-duty.v1',state:'confirmed',service_date,manager_id:null,name}}}:null};
+ }});
+ try{
+  f.setNow(Date.parse('2026-11-14T05:59:59Z'));await load('Haley Lejman','2026-11-13');
+  assert.equal(f.elements['ops-mod-card'].hidden,false);assert.equal(f.elements['ops-mod'].textContent,'Haley Lejman');
+  f.setNow(Date.parse('2026-11-14T06:00:00Z'));f.controller.tick();assert.equal(f.elements['ops-mod'].textContent,'Unavailable');
+  await load('Josh','2026-11-14');assert.equal(f.elements['ops-mod'].textContent,'Josh');
+  await f.controller.refresh({isCurrent:()=>true,summary,fetchImpl:async()=>{throw Error('Synthetic outage');}});
+  assert.equal(f.elements['ops-mod'].textContent,'Unavailable');
+ }finally{f.clean();}
+});

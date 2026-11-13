@@ -373,7 +373,7 @@ test('MOD follows the confirmed Chicago date and clears at midnight or invalid a
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-11T05:59:59Z')),'Unavailable');
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-11T06:00:00Z')),'Eric McKenney');
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-12T06:00:00Z')),'Unavailable');
- for(const patch of [{state:'unavailable'},{manager_id:null},{service_date:null},{name:''},{schema:'other'}])
+ for(const patch of [{state:'unavailable'},{manager_id:undefined},{service_date:null},{name:''},{schema:'other'}])
   assert.equal(D.managerOnDuty({...value,...patch},Date.parse('2026-11-11T12:00:00Z')),'Unavailable');
 });
 test('map forecast caption retains the actual Central source time and stale state',()=>{

@@ -150,8 +150,8 @@
       measureTickers();
     }
     function renderFeeds(){
-      if(el('ops-mod-card'))el('ops-mod-card').hidden=publicRead;
-      txt('ops-mod',publicRead?'':DATA.managerOnDuty(ops?.manager_on_duty,now()));
+      if(el('ops-mod-card'))el('ops-mod-card').hidden=false;
+      txt('ops-mod',DATA.managerOnDuty(ops?.manager_on_duty,now()));
       renderActivity();const locations=view('locations');
       const labels={okay:'Cleaned',in_progress:'In progress',due_soon:'Due soon',overdue:'Overdue',not_cleaned:'Not cleaned',pending_submit:'Saved pending',unknown:'Unavailable'};
       const ticker=el('ops-locations-ticker');

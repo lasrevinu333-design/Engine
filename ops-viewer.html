@@ -17,12 +17,13 @@
     <nav class="publicViewNav" aria-label="Read-only views"><a id="public-dashboard-link" href="#dashboard" aria-current="page">Dashboard</a><a id="public-map-link" href="#map">Map</a></nav><p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Loading read-only operations…</p>
 
     <div id="operations-panels" hidden>
-      <header class="telemetry separateTelemetry" aria-label="Date, attendance, weather and expected attendance">
+      <header class="telemetry hasMod separateTelemetry" aria-label="Date, attendance, weather, expected attendance and manager on duty">
         <section class="clockCard"><div class="eyebrow"><span class="signalDot" aria-hidden="true"></span>MEMPHIS ZOO · CENTRAL TIME</div><time id="ops-clock" class="bigClock">—</time><div id="ops-date" class="calendarDate"></div></section>
         <section class="attendanceCard"><div class="eyebrow">CURRENT GATE COUNT</div><div class="attendanceValue" id="ops-attendance">Unavailable</div><div class="metricNote" id="ops-attendance-note">Waiting for the gate count source.</div></section>
         <section class="weatherCard"><div class="weatherNow"><svg class="weatherArt" viewBox="0 0 120 84" aria-hidden="true"><g class="sunRays" stroke="#ffd46b" stroke-width="3"><path d="M45 7v-5M45 63v-5M17 32h-5M78 32h-5M25 12l-4-4M69 56l-4-4"/></g><circle cx="45" cy="32" r="19" fill="#ffd46b"/><path class="weatherCloud" d="M42 65c-20 0-19-25-3-27 5-21 35-23 43-2 23-3 30 29 8 29z" fill="#d8efff"/></svg><div><div class="eyebrow">MEMPHIS WEATHER</div><strong id="ops-weather">Unavailable</strong><div id="ops-weather-high-low" class="metricNote">High/low unavailable.</div><div id="ops-weather-note" class="metricNote">Forecast source not yet read.</div></div></div><div id="ops-hour" class="hourForecast">Next-hour forecast unavailable.</div></section>
         <section class="dailyExpected expectedCard eventsExpectedCard"><div class="eyebrow">TODAY’S EVENTS · EXPECTED</div><strong id="ops-events-expected">Unknown</strong></section>
         <section class="dailyExpected expectedCard schoolsExpectedCard"><div class="eyebrow">TODAY’S SCHOOL GROUPS · EXPECTED</div><strong id="ops-schools-expected">Unknown</strong></section>
+        <section class="modCard" id="ops-mod-card"><div class="eyebrow">MANAGER ON DUTY</div><strong id="ops-mod">Unavailable</strong></section>
       </header>
     <button type="button" id="ops-locations-button" class="tickerBand locationsBand" data-board="locations" hidden><span class="tickerLabel">Location Status</span><span class="tickerWindow"><span id="ops-locations-ticker" class="tickerTrack">Waiting for current cleaning status.</span></span><span class="feedButton" aria-hidden="true">All locations ↗</span></button>
       <button type="button" class="tickerBand" data-board="events" aria-label="Upcoming events"><span class="tickerLabel">Upcoming Events</span><span class="tickerWindow"><span class="tickerTrack" id="ops-events-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
@@ -52,6 +53,6 @@
     <p id="operations-board-note" class="boardNote" role="status"></p><div id="operations-board-content" class="boardContent" tabindex="0" aria-label="Scrollable operations rows"></div>
   </dialog>
   <script src="./dashboard-map-staging.js?v=2026.11.11.operations-layout"></script><script src="./custodial-gps-approved-overall-fit.js"></script><script src="./dashboard-map-renderer.js"></script>
-  <script src="./operations-dashboard-data.js?v=2026.11.12.daily-totals-r8"></script><script src="./operations-dashboard.js?v=2026.11.12.daily-totals-r8"></script>
+  <script src="./operations-dashboard-data.js?v=2026.11.13.mod-rota-r1"></script><script src="./operations-dashboard.js?v=2026.11.13.mod-rota-r1"></script>
   <script src="./ops-viewer.js?v=2026.11.11.operations-layout"></script>
 </body></html>
