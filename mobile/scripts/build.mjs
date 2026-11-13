@@ -391,7 +391,10 @@ async function distributionHashes(directory) {
 }
 async function verifyDistributionReferences(directory) {
   const files = await distributionHashes(directory);
-  const cssUrlPattern = /url\(\s*["']?([^"'()]+)["']?\s*\)/gi;
+  // Consume a complete quoted URL before looking for another token. SVG data
+  // images may themselves contain url(%23gradient); that is not a local file.
+  const cssUrlPattern = /url\(\s*(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|([^"'()]*))\s*\)/gi;
+  const cssReferences = source => Array.from(source.matchAll(cssUrlPattern), match => match[1] ?? match[2] ?? match[3]);
   const htmlReferences = (source) => {
     const references = [];
     const structuralSource = source.replace(
@@ -404,10 +407,10 @@ async function verifyDistributionReferences(directory) {
       }
     }
     for (const style of source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
-      for (const match of style[1].matchAll(cssUrlPattern)) references.push(match[1]);
+      references.push(...cssReferences(style[1]));
     }
     for (const tag of source.matchAll(/<[^>]+\sstyle\s*=\s*["']([^"'<>]+)["'][^>]*>/gi)) {
-      for (const match of tag[1].matchAll(cssUrlPattern)) references.push(match[1]);
+      references.push(...cssReferences(tag[1]));
     }
     return references;
   };
@@ -417,7 +420,7 @@ async function verifyDistributionReferences(directory) {
     const sourceBytes = await readFile(join(directory, path), 'utf8');
     const references = extension === '.html'
       ? htmlReferences(sourceBytes)
-      : Array.from(sourceBytes.matchAll(cssUrlPattern), (match) => match[1]);
+      : cssReferences(sourceBytes);
     for (const candidate of references) {
         const reference = String(candidate || '').trim();
         if (

@@ -2033,8 +2033,8 @@
     },
     {
       "path": "codemagic.yaml",
-      "bytes": 47967,
-      "sha256": "1dac83a8ee8b72561dbdeabb917cdf7047f650390dc1117791d924c0bf2df72f"
+      "bytes": 48025,
+      "sha256": "432a3274af4bb5adee166b5c13e49cbb7bc99ed800f5b75d062393888fc92aa6"
     },
     {
       "path": "custodial-gps-approved-overall-fit.js",
@@ -2567,6 +2567,11 @@
       "sha256": "0aebc47894d6650dfc1784c4d82998f92f80566111856fdf11f7a200fceda005"
     },
     {
+      "path": "scripts/css-distribution-reference-tests.mjs",
+      "bytes": 2757,
+      "sha256": "5582d2717249599dafc032c0dd4821ccf34eff269055b9ba266db57e9958ee71"
+    },
+    {
       "path": "scripts/current-approved-preservation-source-boundary.mjs",
       "bytes": 3087,
       "sha256": "ba335ef1ccaf20b1bbf1a7f2b6b1308ad35530146581ed8342a1d14bbeef1aa9"
@@ -2603,8 +2608,8 @@
     },
     {
       "path": "scripts/current-provider-comparison-source-tests.mjs",
-      "bytes": 4750,
-      "sha256": "386a2510efcc27597431f8d661cc7f3d97b48dae5751714566b082b7fd772b15"
+      "bytes": 4797,
+      "sha256": "385429584ac1d0a21926006146fb25f26f5ec3333dc450ca9bff1ca27a62b55f"
     },
     {
       "path": "scripts/custodial-android-manifest-security-contract-tests.mjs",
@@ -3698,7 +3703,8 @@
     "xlsx-0.20.3.full.min.js": "vendor/xlsx-0.20.3.full.min.js",
     "LICENSE.sheetjs": "vendor/LICENSE.sheetjs",
     "NativeProviderBestEffortTest.java": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java",
-    "operations-dashboard.css": "operations-dashboard.css"
+    "operations-dashboard.css": "operations-dashboard.css",
+    "css-distribution-reference-tests.mjs": "scripts/css-distribution-reference-tests.mjs"
   },
   "deltas": [
     {
@@ -13591,14 +13597,14 @@
       "kind": "modified",
       "prior_bytes": 30321,
       "prior_sha256": "f2c12109e338a6e9eb08b1e99a5b173444c163cf79df533bb4d12cbe11d2aa6e",
-      "current_bytes": 31897,
-      "current_sha256": "d42c888196a5f8a412a3c70aaa4a61b18658ad87a0d7fb39596879cb30435ddd",
+      "current_bytes": 32095,
+      "current_sha256": "055216019faa27a27f9ac3abe235c11a598db6df312b2ffb7d05b0893dd5afcd",
       "hunks": [
         {
           "old_start": 1,
           "old_count": 628,
           "new_start": 1,
-          "new_count": 667,
+          "new_count": 670,
           "before": [
             "import { createHash } from 'node:crypto';",
             "import { execFileSync } from 'node:child_process';",
@@ -14623,7 +14629,10 @@
             "}",
             "async function verifyDistributionReferences(directory) {",
             "  const files = await distributionHashes(directory);",
-            "  const cssUrlPattern = /url\\(\\s*[\"']?([^\"'()]+)[\"']?\\s*\\)/gi;",
+            "  // Consume a complete quoted URL before looking for another token. SVG data",
+            "  // images may themselves contain url(%23gradient); that is not a local file.",
+            "  const cssUrlPattern = /url\\(\\s*(?:\"((?:\\\\.|[^\"\\\\])*)\"|'((?:\\\\.|[^'\\\\])*)'|([^\"'()]*))\\s*\\)/gi;",
+            "  const cssReferences = source => Array.from(source.matchAll(cssUrlPattern), match => match[1] ?? match[2] ?? match[3]);",
             "  const htmlReferences = (source) => {",
             "    const references = [];",
             "    const structuralSource = source.replace(",
@@ -14636,10 +14645,10 @@
             "      }",
             "    }",
             "    for (const style of source.matchAll(/<style\\b[^>]*>([\\s\\S]*?)<\\/style>/gi)) {",
-            "      for (const match of style[1].matchAll(cssUrlPattern)) references.push(match[1]);",
+            "      references.push(...cssReferences(style[1]));",
             "    }",
             "    for (const tag of source.matchAll(/<[^>]+\\sstyle\\s*=\\s*[\"']([^\"'<>]+)[\"'][^>]*>/gi)) {",
-            "      for (const match of tag[1].matchAll(cssUrlPattern)) references.push(match[1]);",
+            "      references.push(...cssReferences(tag[1]));",
             "    }",
             "    return references;",
             "  };",
@@ -14649,7 +14658,7 @@
             "    const sourceBytes = await readFile(join(directory, path), 'utf8');",
             "    const references = extension === '.html'",
             "      ? htmlReferences(sourceBytes)",
-            "      : Array.from(sourceBytes.matchAll(cssUrlPattern), (match) => match[1]);",
+            "      : cssReferences(sourceBytes);",
             "    for (const candidate of references) {",
             "        const reference = String(candidate || '').trim();",
             "        if (",
@@ -26506,14 +26515,14 @@
       "kind": "modified",
       "prior_bytes": 47967,
       "prior_sha256": "6f0a4bc6a9f3968995082e8ba33d5132a4887d225669456af24b336450d24445",
-      "current_bytes": 47967,
-      "current_sha256": "1dac83a8ee8b72561dbdeabb917cdf7047f650390dc1117791d924c0bf2df72f",
+      "current_bytes": 48025,
+      "current_sha256": "432a3274af4bb5adee166b5c13e49cbb7bc99ed800f5b75d062393888fc92aa6",
       "hunks": [
         {
           "old_start": 1,
           "old_count": 1009,
           "new_start": 1,
-          "new_count": 1009,
+          "new_count": 1010,
           "before": [
             "definitions:",
             "  scripts:",
@@ -27713,6 +27722,7 @@
             "        node scripts/custodial-android-manifest-security-contract-tests.mjs",
             "        node scripts/custodial-android-manifest-security-contract-tests.mjs --protected-preparation-only",
             "        node scripts/current-provider-comparison-source-tests.mjs",
+            "        node scripts/css-distribution-reference-tests.mjs",
             "        node scripts/build-batch-0b-browser-fixtures.mjs",
             "        node scripts/prepare-core-native-fixture.mjs",
             "        node scripts/custodial-core-release-gate-tests.mjs",
@@ -32665,8 +32675,8 @@
       "kind": "modified",
       "prior_bytes": 4365,
       "prior_sha256": "8203cc7a2f08572c62dc3d7d32fe6dad72e503ae6c12e4fb4fdc7441b3b00d3c",
-      "current_bytes": 4750,
-      "current_sha256": "386a2510efcc27597431f8d661cc7f3d97b48dae5751714566b082b7fd772b15",
+      "current_bytes": 4797,
+      "current_sha256": "385429584ac1d0a21926006146fb25f26f5ec3333dc450ca9bff1ca27a62b55f",
       "hunks": [
         {
           "old_start": 1,
@@ -32744,7 +32754,7 @@
             "assert.equal(historicalInventory.actual_main,currentInventory.main);",
             "assert.equal(historicalInventory.historical_main,193);",
             "assert.equal(currentInventory.main-historicalInventory.historical_main,1);",
-            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),[\"mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java\",\"mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java\",\"scripts/provider-best-effort-release-tests.mjs\",\"vendor/LICENSE.sheetjs\",\"vendor/xlsx-0.20.3.full.min.js\"]);",
+            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),[\"mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java\",\"mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java\",\"scripts/css-distribution-reference-tests.mjs\",\"scripts/provider-best-effort-release-tests.mjs\",\"vendor/LICENSE.sheetjs\",\"vendor/xlsx-0.20.3.full.min.js\"]);",
             "assert.ok(currentGpsQualification.main_java.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));",
             "assert.ok(!approvedPreservationComparisonPins.current_java_inventory.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));",
             "checks+=9;",
@@ -44533,6 +44543,12 @@
           ]
         }
       ]
+    },
+    {
+      "path": "scripts/css-distribution-reference-tests.mjs",
+      "kind": "added",
+      "current_bytes": 2757,
+      "current_sha256": "5582d2717249599dafc032c0dd4821ccf34eff269055b9ba266db57e9958ee71"
     }
   ],
   "legacy_proofs": [
@@ -45332,8 +45348,8 @@
     },
     {
       "path": "mobile/scripts/build.mjs",
-      "bytes": 31897,
-      "sha256": "d42c888196a5f8a412a3c70aaa4a61b18658ad87a0d7fb39596879cb30435ddd"
+      "bytes": 32095,
+      "sha256": "055216019faa27a27f9ac3abe235c11a598db6df312b2ffb7d05b0893dd5afcd"
     },
     {
       "path": "mobile/scripts/custodial-navigation-assets.mjs",

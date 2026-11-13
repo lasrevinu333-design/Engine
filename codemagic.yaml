@@ -185,6 +185,7 @@ definitions:
         node scripts/custodial-android-manifest-security-contract-tests.mjs
         node scripts/custodial-android-manifest-security-contract-tests.mjs --protected-preparation-only
         node scripts/current-provider-comparison-source-tests.mjs
+        node scripts/css-distribution-reference-tests.mjs
         node scripts/build-batch-0b-browser-fixtures.mjs
         node scripts/prepare-core-native-fixture.mjs
         node scripts/custodial-core-release-gate-tests.mjs
