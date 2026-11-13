@@ -1,0 +1,9 @@
+{
+  "appId": "org.memphiszoo.custodial.vault.runtime.test",
+  "appName": "Custodial Vault Runtime Test",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "localhost"
+  }
+}

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Events</title>
+  <link rel="stylesheet" href="./memphis-ui.css">
+</head>
+<body>
+  <main>
+    <h1>Events</h1>
+    <p>Events uses one shared page.</p>
+    <p><a href="./events.html">Open Events</a></p>
+  </main>
+  <script>
+    // Fixed same-origin compatibility route. Legacy selectors and tokens are not forwarded.
+    window.location.replace(new URL('./events.html', window.location.href).href);
+  </script>
+</body>
+</html>

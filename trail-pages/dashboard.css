@@ -1,0 +1,153 @@
+/* Terracotta presentation adapter for dashboard.html. No layout, visibility or behavior overrides. */
+@media screen{
+    html[data-trail-theme="terracotta"] .mz-secondary-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-brand)}
+    html[data-trail-theme="terracotta"] .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+    html[data-trail-theme="terracotta"] .operationsPage .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+    html[data-trail-theme="terracotta"] .mz-back-link:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-icon-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-field:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-select:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-textarea:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+    html[data-trail-theme="terracotta"] .mz-button{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-button--secondary{ background: var(--trail-surface); color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-button--danger{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .mz-card{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  box-shadow: var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-status{
+  border: 1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .mz-alert{
+  border: 1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .mz-empty{
+  border: 1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] .mz-error{
+  border: 1px solid var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .mz-status{ background: var(--trail-surface); color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-alert--success{ background: var(--trail-success-soft); color: var(--trail-success)}
+    html[data-trail-theme="terracotta"] .mz-alert--warning{ background: var(--trail-warning-soft); color: var(--trail-warning)}
+    html[data-trail-theme="terracotta"] .mz-alert--error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .mz-error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .mz-empty{ border-style: dashed; background: var(--trail-surface); color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-field{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-select{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-textarea{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-loading{
+  color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .mz-loading::before{
+  border: 2px solid var(--trail-border);
+  border-top-color: var(--trail-brand)}
+    html[data-trail-theme="terracotta"] .mz-visually-hidden{
+  border: 0 !important}
+    html[data-trail-theme="terracotta"] #restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+    html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+    html[data-trail-theme="terracotta"] body{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .backBtn{border:none;background:var(--trail-brand);color:var(--trail-on-brand);box-shadow:var(--trail-shadow);border:1px solid var(--trail-control-border)}
+    html[data-trail-theme="terracotta"] .shell{background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .heroBox{background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .kicker{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .title{color:var(--trail-ink);text-shadow:none}
+    html[data-trail-theme="terracotta"] .title .accent{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .infoDivider{background:var(--trail-surface);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .metaLabel{color:var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .infoBox .time{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .infoBox .subtime{color:var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .tile{background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .tile:hover{border-color:var(--trail-border);background:var(--trail-selected);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .tile:before{background:transparent}
+    html[data-trail-theme="terracotta"] .tileLabel{color:var(--trail-ink);text-shadow:none}
+    html[data-trail-theme="terracotta"] .tileValue{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .tile.alert{border-color:var(--trail-border)}
+    html[data-trail-theme="terracotta"] .tile.alert .tileValue{color:var(--trail-ink);text-shadow:none}
+    html[data-trail-theme="terracotta"] .filterBtn{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .filterBtn:hover{border-color:var(--trail-border);box-shadow:var(--trail-shadow)}
+    html[data-trail-theme="terracotta"] .filterBtn.active{background:var(--trail-brand);border-color:var(--trail-border);color:var(--trail-on-brand);box-shadow:var(--trail-shadow)}
+    html[data-trail-theme="terracotta"] .filterBtn[data-filter='due_soon']{color:var(--trail-warning)}
+    html[data-trail-theme="terracotta"] .filterBtn[data-filter='not_cleaned'].active{box-shadow:var(--trail-shadow)}
+    html[data-trail-theme="terracotta"] .sectionCard{background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .sectionHeader{background:var(--trail-surface);border-bottom:1px solid var(--trail-border);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .sectionTitle{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .sectionSub{color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] thead th{color:var(--trail-ink);background:var(--trail-raised);border-bottom:1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] tbody td{border-bottom:1px solid var(--trail-border);color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] tbody tr{background:var(--trail-surface);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] tbody tr:nth-child(even){background:var(--trail-surface);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] tbody tr:hover{background:var(--trail-selected);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .statusChip{border:1px solid var(--trail-border);box-shadow:var(--trail-shadow)}
+    html[data-trail-theme="terracotta"] .status-okay{background:var(--trail-success-soft);color:var(--trail-success)}
+    html[data-trail-theme="terracotta"] .status-ok{background:var(--trail-success-soft);color:var(--trail-success)}
+    html[data-trail-theme="terracotta"] .status-overdue{background:var(--trail-danger-soft);color:var(--trail-danger)}
+    html[data-trail-theme="terracotta"] .status-not_cleaned{background:var(--trail-surface);color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .status-due_soon{background:var(--trail-warning-soft);color:var(--trail-warning)}
+    html[data-trail-theme="terracotta"] .status-in_progress{background:var(--trail-info-soft);color:var(--trail-info)}
+    html[data-trail-theme="terracotta"] .status-cleaning_in_progress{background:var(--trail-info-soft);color:var(--trail-info)}
+    html[data-trail-theme="terracotta"] .employeeInProgress{color:var(--trail-info)}
+    html[data-trail-theme="terracotta"] .muted{color:var(--trail-muted)}
+    html[data-trail-theme="terracotta"] .closeBtn{border:none;background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+    html[data-trail-theme="terracotta"] .refreshBadge{background:var(--trail-surface);border:1px solid var(--trail-border);color:var(--trail-ink)}
+    html[data-trail-theme="terracotta"] .empty{color:var(--trail-ink);background:var(--trail-surface)}
+    html[data-trail-theme="terracotta"] .buildStamp{background:var(--trail-surface);color:var(--trail-ink);border:1px solid var(--trail-border)}
+    html[data-trail-theme="terracotta"] ::-webkit-scrollbar-thumb{background:var(--trail-control-border);
+        color: var(--trail-ink)}
+    html[data-trail-theme="terracotta"] ::-webkit-scrollbar-track{background:transparent}
+    @media (max-width:640px){
+        html[data-trail-theme="terracotta"] .filterBar{background:var(--trail-surface);border-bottom:1px solid var(--trail-border);
+            color: var(--trail-ink)}
+        html[data-trail-theme="terracotta"] .mobileStatusBar{background:var(--trail-surface);border:1px solid var(--trail-border);color:var(--trail-ink)}
+        html[data-trail-theme="terracotta"] tbody tr{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+            color: var(--trail-ink)}
+        html[data-trail-theme="terracotta"] tbody tr:hover{background:var(--trail-selected);
+            color: var(--trail-ink)}
+        html[data-trail-theme="terracotta"] tbody td{border-bottom:1px solid var(--trail-border)}
+        html[data-trail-theme="terracotta"] tbody td:before{color:var(--trail-ink)}}
+    html[data-trail-theme="terracotta"] .filterBtn[data-filter].active{
+        color: var(--trail-on-brand)}}

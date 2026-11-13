@@ -1,0 +1,472 @@
+#!/usr/bin/env node
+
+import { readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const scriptPath = fileURLToPath(import.meta.url);
+const mobileRoot = resolve(dirname(scriptPath), '..');
+const androidStart = '            <!-- MEMPHIS_ZOO_NATIVE_LINKS_START -->';
+const androidEnd = '            <!-- MEMPHIS_ZOO_NATIVE_LINKS_END -->';
+const iosStart = '\t<!-- MEMPHIS_ZOO_NATIVE_LINKS_START -->';
+const iosEnd = '\t<!-- MEMPHIS_ZOO_NATIVE_LINKS_END -->';
+const custodialMainActivity = `package org.memphiszoo.custodial;
+
+import android.content.Intent;
+import android.net.Uri;
+import android.nfc.NfcAdapter;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.tech.Ndef;
+import android.nfc.Tag;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.WindowManager;
+import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+
+import com.getcapacitor.BridgeActivity;
+import org.memphiszoo.custodial.vault.LegacyCustodialNfcUrl;
+import org.memphiszoo.custodial.vault.NativeNfcScanAuthority;
+import org.memphiszoo.custodial.vault.NativeNfcScanHandoff;
+import org.memphiszoo.custodial.vault.PhysicalNfcTagIdentity;
+
+public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCallback, NativeNfcScanAuthority {
+    private final ExecutorService physicalNfcExecutor = Executors.newSingleThreadExecutor();
+
+    @Override
+    public String recordPhysicalNfcHandoff(String url) {
+        return recordPhysicalNfcHandoff(url, "");
+    }
+
+    private String recordPhysicalNfcHandoff(String url, String identity) {
+        if (identity.isEmpty()) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    android.widget.Toast.makeText(MainActivity.this,
+                        "This tag identity could not be verified. Tap again or ask your manager. Your pending work is saved.",
+                        android.widget.Toast.LENGTH_LONG).show();
+                }
+            });
+            return "";
+        }
+        String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
+        if (canonicalUrl.isEmpty()) return "";
+        NativeNfcScanHandoff.ReadResult result = NativeNfcScanHandoff.recordPhysicalRead(this, canonicalUrl, identity);
+        if (result.ignored) return ""; // Keep the current Active screen; do not replay this observation.
+        if (!result.durable) {
+            if (!result.handoffId.isEmpty()) {
+                // Uncertain persistence is not authority to navigate or start.
+                // Retain its only locator before refusing this delivery.
+                setIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(canonicalUrl).buildUpon()
+                    .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, result.handoffId).build()));
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    android.widget.Toast.makeText(MainActivity.this,
+                        "The location could not be opened. Your pending work is saved. Tap again. If it keeps happening, tell your manager.",
+                        android.widget.Toast.LENGTH_LONG).show();
+                }
+            });
+            return "";
+        }
+        return result.handoffId;
+    }
+
+    // Package-private only for in-process instrumentation; production callers
+    // reach this exclusively from the live Tag worker.
+    void dispatchPhysicalNfcUrlFromReader(String url) {
+        dispatchPhysicalNfcUrlFromReader(url, "");
+    }
+
+    private void dispatchPhysicalNfcUrlFromReader(String url, String identity) {
+        String canonicalUrl = LegacyCustodialNfcUrl.normalize(url);
+        if (canonicalUrl.isEmpty()) return;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (isFinishing() || isDestroyed()) return;
+                // Lifecycle callbacks use this same UI thread. Persist and retain
+                // the locator together, so declined delivery cannot strand a
+                // pending handoff. All live NFC radio I/O stays on the worker.
+                String handoffId = recordPhysicalNfcHandoff(canonicalUrl, identity);
+                if (handoffId.isEmpty()) return;
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(canonicalUrl).buildUpon()
+                    .appendQueryParameter(NativeNfcScanHandoff.QUERY_PARAMETER, handoffId)
+                    .build());
+                setIntent(intent);
+                onNewIntent(intent);
+            }
+        });
+    }
+
+    private String readPhysicalNfcUrl(Tag tag) {
+        if (tag == null) return null;
+        Ndef ndef = Ndef.get(tag);
+        if (ndef == null) return null;
+        try {
+            ndef.connect();
+            NdefMessage message = ndef.getNdefMessage();
+            if (message == null) return null;
+            for (NdefRecord record : message.getRecords()) {
+                Uri uri = record.toUri();
+                String candidate = uri == null ? readTextRecord(record) : uri.toString();
+                if (candidate != null && !candidate.trim().isEmpty()) return candidate.trim();
+            }
+        } catch (IOException | android.nfc.FormatException ignored) {
+            // A stale or caller-fabricated Tag handle cannot connect to NFC service.
+        } finally {
+            try { ndef.close(); } catch (IOException ignored) {}
+        }
+        return null;
+    }
+
+    private String readPhysicalNfcIdentity(Tag tag) {
+        if (tag == null) return "";
+        try {
+            return PhysicalNfcTagIdentity.observe(tag.getId(), tag.getTechList());
+        } catch (RuntimeException ignored) {
+            return "";
+        }
+    }
+
+    private String readTextRecord(NdefRecord record) {
+        if (record == null
+            || record.getTnf() != NdefRecord.TNF_WELL_KNOWN
+            || !Arrays.equals(record.getType(), NdefRecord.RTD_TEXT)) return null;
+        byte[] payload = record.getPayload();
+        if (payload == null || payload.length < 2) return null;
+        int languageLength = payload[0] & 0x3f;
+        int textOffset = 1 + languageLength;
+        if (textOffset >= payload.length) return null;
+        return new String(
+            payload,
+            textOffset,
+            payload.length - textOffset,
+            (payload[0] & 0x80) == 0 ? StandardCharsets.UTF_8 : StandardCharsets.UTF_16
+        ).trim();
+    }
+
+    private Intent normalizeExternalIntent(Intent intent) {
+        if (intent == null) return intent;
+        String action = intent.getAction();
+        boolean physicalDispatch = NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
+            || Intent.ACTION_VIEW.equals(action);
+        if (!physicalDispatch) return intent;
+        Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+        if (tag == null) return intent;
+        enqueuePhysicalNfcTag(tag);
+        // The worker opens only a durably recorded live read. A neutral startup
+        // also prevents load() from retrying the same cold-dispatch Tag.
+        return new Intent(Intent.ACTION_MAIN);
+    }
+
+    private void enqueuePhysicalNfcTag(Tag tag) {
+        if (tag == null) return;
+        try {
+            physicalNfcExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    if (isFinishing() || isDestroyed()) return;
+                    String url = readPhysicalNfcUrl(tag);
+                    if (url == null) return;
+                    dispatchPhysicalNfcUrlFromReader(url, readPhysicalNfcIdentity(tag));
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // A late reader callback after Activity destruction cannot start work.
+        }
+    }
+
+    // Presentation only: no DevicePolicyManager, kiosk, permission or key interception changes.
+    private void hideCustodialNavigationBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                controller.hide(WindowInsets.Type.navigationBars());
+            }
+        } else {
+            View decor = getWindow().getDecorView();
+            decor.setSystemUiVisibility(decor.getSystemUiVisibility()
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideCustodialNavigationBar();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        hideCustodialNavigationBar();
+        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
+        if (adapter != null) adapter.enableReaderMode(this, this,
+            NfcAdapter.FLAG_READER_NFC_A | NfcAdapter.FLAG_READER_NFC_B | NfcAdapter.FLAG_READER_NFC_F | NfcAdapter.FLAG_READER_NFC_V,
+            null);
+    }
+
+    @Override
+    public void onPause() {
+        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
+        if (adapter != null) adapter.disableReaderMode(this);
+        super.onPause();
+    }
+
+    @Override
+    public void onTagDiscovered(Tag tag) {
+        enqueuePhysicalNfcTag(tag);
+    }
+
+    @Override
+    public void onDestroy() {
+        physicalNfcExecutor.shutdownNow();
+        super.onDestroy();
+    }
+
+    @Override
+    protected void load() {
+        // Same Capacitor construction/lifecycle, with our pre-plugin gate installed
+        // before initial intent dispatch. No manual plugin registration.
+        bridge = bridgeBuilder.addPlugins(initialPlugins).setConfig(config).create();
+        bridge.setWebViewClient(new org.memphiszoo.custodial.vault.CustodialWebViewClient(bridge));
+        this.keepRunning = bridge.shouldKeepRunning();
+        this.onNewIntent(getIntent());
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            // Preserve the owner-required OS swipe screen; never display over it.
+            setShowWhenLocked(false);
+            setTurnScreenOn(false);
+        }
+        setIntent(normalizeExternalIntent(getIntent()));
+        super.onCreate(savedInstanceState);
+        hideCustodialNavigationBar();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Intent normalized = normalizeExternalIntent(intent);
+        setIntent(normalized);
+        super.onNewIntent(normalized);
+    }
+}
+`;
+
+const editions = {
+  manager: {
+    appIdentifier: 'org.memphiszoo.ops',
+    scheme: 'memphiszoo-manager',
+    customHosts: ['route', 'event'],
+  },
+  custodial: {
+    appIdentifier: 'org.memphiszoo.custodial',
+    scheme: 'memphiszoo-custodial',
+    customHosts: ['route', 'event', 'scan'],
+  },
+  viewer: {
+    appIdentifier: 'org.memphiszoo.viewer',
+    scheme: 'memphiszoo-viewer',
+    customHosts: ['route'],
+  },
+};
+
+function definitionFor(edition) {
+  const definition = editions[edition];
+  if (!definition) throw new Error(`Unknown MZ_APP_EDITION "${edition}"`);
+  return definition;
+}
+
+function replaceMarkedBlock(source, start, end, block) {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end);
+  if (startIndex < 0 && endIndex < 0) return null;
+  if (
+    startIndex < 0
+    || endIndex < startIndex
+    || source.indexOf(start, startIndex + start.length) >= 0
+    || source.indexOf(end, endIndex + end.length) >= 0
+  ) {
+    throw new Error('Native-link configuration markers are malformed');
+  }
+  return `${source.slice(0, startIndex)}${block}${source.slice(endIndex + end.length)}`;
+}
+
+function androidLinksBlock(edition, shellProof) {
+  const definition = definitionFor(edition);
+  const customData = shellProof ? definition.customHosts
+    .map((host) => `                <data android:scheme="${definition.scheme}" android:host="${host}" />`)
+    .join('\n')
+    : '';
+  const shellLinks = customData
+    ? `
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+${customData}
+            </intent-filter>`
+    : '';
+  const custodialLinks = edition === 'custodial'
+    ? `
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index.html" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan.html" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="docs.google.com" android:path="/forms/d/e/1FAIpQLSdWR9SY-s1ZNn9riF6IumT7RWQFrDq71wwYIym2p7HiLamdPg/viewform" />
+                <data android:scheme="https" android:host="docs.google.com" android:path="/forms/d/e/1FAIpQLSdgjTn3Z-IwsRtXXKBxW063f3ifEPQzhqmazKyZXEOpArgrdw/viewform" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="memphiszoo" android:host="scan" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/index.html" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan" />
+                <data android:scheme="https" android:host="lasrevinu333-design.github.io" android:path="/Engine/scan.html" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="https" android:host="docs.google.com" android:path="/forms/d/e/1FAIpQLSdWR9SY-s1ZNn9riF6IumT7RWQFrDq71wwYIym2p7HiLamdPg/viewform" />
+                <data android:scheme="https" android:host="docs.google.com" android:path="/forms/d/e/1FAIpQLSdgjTn3Z-IwsRtXXKBxW063f3ifEPQzhqmazKyZXEOpArgrdw/viewform" />
+            </intent-filter>`
+    : '';
+  return `${androidStart}
+${shellLinks}${custodialLinks}
+${androidEnd}`;
+}
+
+export function configureAndroidManifestSource(source, edition, { shellProof = false } = {}) {
+  const block = androidLinksBlock(edition, shellProof);
+  const replaced = replaceMarkedBlock(source, androidStart, androidEnd, block);
+  if (replaced != null) return replaced;
+  const closingActivity = source.match(/\s*<\/activity>/g) || [];
+  if (closingActivity.length !== 1) {
+    throw new Error(`Android manifest must contain exactly one activity; found ${closingActivity.length}`);
+  }
+  return source.replace(/(\s*<\/activity>)/, `\n${block}$1`);
+}
+
+export function configureAndroidMainActivitySource(source, edition) {
+  definitionFor(edition);
+  const text = String(source || '').replaceAll('\r\n', '\n');
+  if (edition !== 'custodial') return text;
+  if (text === custodialMainActivity) return text;
+  if (!/^package org\.memphiszoo\.custodial;\s+import com\.getcapacitor\.BridgeActivity;\s+public class MainActivity extends BridgeActivity\s*\{\s*\}\s*$/s.test(text)) {
+    throw new Error('Custodial MainActivity differs from the reviewed Capacitor entrypoint');
+  }
+  return custodialMainActivity;
+}
+
+function iosLinksBlock(edition, shellProof) {
+  const definition = definitionFor(edition);
+  if (edition === 'custodial') {
+    throw new Error('Custodial is Android-only and cannot configure iOS native links');
+  }
+  const schemes = shellProof ? [definition.scheme] : [];
+  if (schemes.length === 0) return '';
+  const schemeEntries = schemes.map((scheme) => `\t\t\t\t<string>${scheme}</string>`).join('\n');
+  return `${iosStart}
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>${definition.appIdentifier}</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+${schemeEntries}
+			</array>
+		</dict>
+	</array>
+${iosEnd}`;
+}
+
+export function configureIosInfoPlistSource(source, edition, { shellProof = false } = {}) {
+  const block = iosLinksBlock(edition, shellProof);
+  const replaced = replaceMarkedBlock(source, iosStart, iosEnd, block);
+  if (replaced != null) return replaced;
+  if (!block) return source;
+  if (source.includes('<key>CFBundleURLTypes</key>')) {
+    throw new Error('Generated iOS Info.plist already defines unreviewed URL types');
+  }
+  const finalDictionary = source.lastIndexOf('</dict>');
+  if (finalDictionary < 0 || !/^\s*<\/plist>\s*$/.test(source.slice(finalDictionary + '</dict>'.length))) {
+    throw new Error('Generated iOS Info.plist has an unexpected root structure');
+  }
+  return `${source.slice(0, finalDictionary)}${block}\n${source.slice(finalDictionary)}`;
+}
+
+async function main() {
+  const platform = String(process.argv[2] || '').trim().toLowerCase();
+  const edition = String(process.env.MZ_APP_EDITION || '').trim().toLowerCase();
+  const shellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
+  definitionFor(edition);
+  if (platform === 'ios' && edition === 'custodial') {
+    throw new Error('Custodial is Android-only and cannot configure iOS native links');
+  }
+  let path;
+  let configure;
+  if (platform === 'android') {
+    path = join(mobileRoot, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+    configure = configureAndroidManifestSource;
+  } else if (platform === 'ios') {
+    path = join(mobileRoot, 'ios', 'App', 'App', 'Info.plist');
+    configure = configureIosInfoPlistSource;
+  } else {
+    throw new Error('Usage: node scripts/configure-native-links.mjs <android|ios>');
+  }
+  const source = await readFile(path, 'utf8');
+  await writeFile(path, configure(source, edition, { shellProof }));
+  if (platform === 'android' && edition === 'custodial') {
+    const mainActivityPath = join(
+      mobileRoot,
+      'android',
+      'app',
+      'src',
+      'main',
+      'java',
+      ...definitionFor(edition).appIdentifier.split('.'),
+      'MainActivity.java',
+    );
+    const mainActivity = await readFile(mainActivityPath, 'utf8');
+    await writeFile(mainActivityPath, configureAndroidMainActivitySource(mainActivity, edition));
+  }
+  console.log(`Configured ${edition} ${platform} native links.`);
+}
+
+if (resolve(process.argv[1] || '') === scriptPath) {
+  await main();
+}

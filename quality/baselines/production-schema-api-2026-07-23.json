@@ -1,0 +1,3219 @@
+{
+  "snapshot_version": "batch-0a.production-contract-baseline.v1",
+  "captured_at": "2026-07-23T19:34:42.259Z",
+  "purpose": "Read-only production schema and API baseline for the Batch 0A rollback boundary. Contains metadata only; no production row data or secrets.",
+  "source": {
+    "frontend_repository": "lasrevinu333-design/Engine",
+    "frontend_commit": "1bbdcb059e3fdf260f6ae76a6ab024502d9d26e5",
+    "backend_repository": "lasrevinu333-design/memphis-zoo-mcp",
+    "backend_commit": "ac70f68c78cfcaff11cf9834620e0b2775a339dd",
+    "mcp_manifest_version": "mcp-tools.v3"
+  },
+  "dependency_health": {
+    "production_environment": true,
+    "github_configured": true,
+    "supabase_configured": true,
+    "gemini_configured": true,
+    "strict_environment_errors": [],
+    "strict_environment_warnings": []
+  },
+  "api_contract_versions": {
+    "scan": "scan.v2",
+    "dashboard": "dashboard.v1",
+    "messaging": "messaging.v5",
+    "schedule": "schedule.v2",
+    "operational_analytics": "operational-analytics.v1",
+    "ops_manager_auth": "ops-manager-auth.v5.named-leadership",
+    "gemini_console": "gemini-console.v2"
+  },
+  "queue_compatibility_versions": {
+    "scan": [
+      "legacy-local-storage",
+      "indexeddb-v1",
+      "indexeddb-v2",
+      "indexeddb-v3",
+      "indexeddb-v4"
+    ],
+    "messaging": [
+      "local-storage-outbox-v1"
+    ],
+    "gemini_console": [
+      "indexeddb-outbox-v1"
+    ]
+  },
+  "mcp_tools": [
+    {
+      "name": "ping",
+      "safety": "read",
+      "requires": [],
+      "inputs": [
+        "message"
+      ]
+    },
+    {
+      "name": "server_tool_manifest",
+      "safety": "read",
+      "requires": [],
+      "inputs": [
+        "include_planned"
+      ]
+    },
+    {
+      "name": "server_deep_health",
+      "safety": "read",
+      "requires": [],
+      "inputs": [
+        "strict_env"
+      ]
+    },
+    {
+      "name": "github_debug_config",
+      "safety": "read",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "include_manifest"
+      ]
+    },
+    {
+      "name": "github_list_directory",
+      "safety": "read",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "ref",
+        "recursive",
+        "max_entries"
+      ]
+    },
+    {
+      "name": "github_repo_tree",
+      "safety": "read",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "ref",
+        "max_entries"
+      ]
+    },
+    {
+      "name": "github_read_file",
+      "safety": "read",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "paths",
+        "ref",
+        "format",
+        "max_bytes"
+      ]
+    },
+    {
+      "name": "github_read_file_at_ref",
+      "safety": "read",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "ref",
+        "format",
+        "max_bytes"
+      ]
+    },
+    {
+      "name": "github_batch_read",
+      "safety": "read",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "paths",
+        "ref",
+        "format",
+        "max_bytes"
+      ]
+    },
+    {
+      "name": "github_commit_status_summary",
+      "safety": "read",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "ref",
+        "compare_ref"
+      ]
+    },
+    {
+      "name": "github_write_file",
+      "safety": "safe-write",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "content",
+        "commit_message",
+        "branch",
+        "overwrite",
+        "dry_run"
+      ]
+    },
+    {
+      "name": "github_update_file",
+      "safety": "safe-write",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "content",
+        "find",
+        "replace",
+        "commit_message",
+        "branch",
+        "expected_sha",
+        "occurrence",
+        "expected_matches",
+        "dry_run"
+      ]
+    },
+    {
+      "name": "github_replace_text",
+      "safety": "safe-write",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "find",
+        "replace",
+        "commit_message",
+        "branch",
+        "expected_sha",
+        "occurrence",
+        "expected_matches",
+        "dry_run"
+      ]
+    },
+    {
+      "name": "github_restore_file_from_ref",
+      "safety": "safe-write",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "source_ref",
+        "commit_message",
+        "branch",
+        "expected_sha",
+        "dry_run"
+      ]
+    },
+    {
+      "name": "github_delete_file",
+      "safety": "safe-write",
+      "requires": [
+        "github"
+      ],
+      "inputs": [
+        "repo",
+        "path",
+        "commit_message",
+        "branch",
+        "expected_sha",
+        "dry_run"
+      ]
+    },
+    {
+      "name": "supabase_sql_read",
+      "safety": "read",
+      "requires": [
+        "supabase"
+      ],
+      "inputs": [
+        "sql",
+        "max_rows",
+        "max_response_bytes"
+      ]
+    },
+    {
+      "name": "supabase_migration_apply",
+      "safety": "migration",
+      "requires": [
+        "supabase"
+      ],
+      "inputs": [
+        "name",
+        "sql",
+        "dry_run",
+        "allow_large"
+      ]
+    }
+  ],
+  "database": {
+    "schema": "public",
+    "full_schema_fingerprint": {
+      "algorithm": "sha256",
+      "canonicalization": "Sorted public columns, constraints, indexes, and RLS policies with normalized field separators",
+      "schema_sha256": "4163c7cc6d52e0614f32cbcf3ea2dbe139bd95b91c34aec15177effdbfa5db68",
+      "columns_sha256": "ca563aa9b8717d08303975a036d28bd3833de14fe611944d4ff3b4d5f2b02e9f",
+      "constraints_sha256": "ecdd4634c806bf9125b01ad7749940286a43ab6a90a1c9d4e309cd1e0c98affb",
+      "indexes_sha256": "76415adcc9d5660348fdb001464ede9b0a6b68aacf081397588c5d1f8d0ff3d4",
+      "policies_sha256": "05fa7610f772942f92d820d7f97cf3503eebba3a42c4ec6e16e0e20b36622d0e",
+      "table_count": 156,
+      "column_count": 1847,
+      "constraint_count": 632,
+      "index_count": 493,
+      "policy_count": 23
+    },
+    "selected_tables": [
+      "custodial_employee_device_assignment_history",
+      "daily_group_assignments",
+      "daily_schedule_assignments",
+      "device_notification_acknowledgements",
+      "devices",
+      "employees",
+      "events_app_event_history",
+      "events_app_events",
+      "events_app_notification_log",
+      "msg_device_assignments",
+      "msg_hidden_threads_by_device",
+      "msg_message_deletions",
+      "msg_messages",
+      "msg_thread_participants",
+      "msg_thread_visibility",
+      "msg_threads",
+      "operational_notification_jobs",
+      "ops_manager_push_devices",
+      "scan_events",
+      "sessions"
+    ],
+    "columns": [
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "assignment_change_id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "device_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "device_identifier",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "previous_employee_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "previous_employee_name",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "new_employee_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "new_employee_name",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "changed_by_manager_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "change_reason",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "source",
+        "is_nullable": "NO",
+        "column_default": "'operations_app'::text",
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "jsonb",
+        "data_type": "jsonb",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "metadata_json",
+        "is_nullable": "NO",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "custodial_employee_device_assignment_history",
+        "column_name": "changed_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "daily_group_assignments",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "date",
+        "data_type": "date",
+        "table_name": "daily_group_assignments",
+        "column_name": "assignment_date",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "daily_group_assignments",
+        "column_name": "location_group_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "daily_group_assignments",
+        "column_name": "assigned_employee_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "daily_group_assignments",
+        "column_name": "derived_from_employee_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "daily_group_assignments",
+        "column_name": "assignment_type",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "daily_group_assignments",
+        "column_name": "reason_code",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "time",
+        "data_type": "time without time zone",
+        "table_name": "daily_group_assignments",
+        "column_name": "coverage_start",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "time",
+        "data_type": "time without time zone",
+        "table_name": "daily_group_assignments",
+        "column_name": "coverage_end",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "daily_group_assignments",
+        "column_name": "is_coverall",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "daily_group_assignments",
+        "column_name": "active",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "daily_group_assignments",
+        "column_name": "notes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "daily_group_assignments",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "daily_group_assignments",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 14
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "date",
+        "data_type": "date",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "service_date",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "location_group_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "int4",
+        "data_type": "integer",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "segment_number",
+        "is_nullable": "NO",
+        "column_default": "1",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "assigned_employee_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "owner_type",
+        "is_nullable": "NO",
+        "column_default": "'EMPLOYEE'::text",
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "time",
+        "data_type": "time without time zone",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "coverage_start",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "time",
+        "data_type": "time without time zone",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "coverage_end",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "status",
+        "is_nullable": "NO",
+        "column_default": "'ASSIGNED'::text",
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "numeric",
+        "data_type": "numeric",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "load_points",
+        "is_nullable": "NO",
+        "column_default": "0",
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "notes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "source_type",
+        "is_nullable": "NO",
+        "column_default": "'generated'::text",
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 14
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "daily_schedule_assignments",
+        "column_name": "coverage_purpose",
+        "is_nullable": "NO",
+        "column_default": "'area_owner'::text",
+        "ordinal_position": 15
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "device_identifier",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "notification_key",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "notification_type",
+        "is_nullable": "NO",
+        "column_default": "'notification'::text",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "displayed_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "dismissed_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "opened_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "acknowledged_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "jsonb",
+        "data_type": "jsonb",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "metadata_json",
+        "is_nullable": "NO",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "device_notification_acknowledgements",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "devices",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "devices",
+        "column_name": "device_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "devices",
+        "column_name": "device_name",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "devices",
+        "column_name": "active",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "devices",
+        "column_name": "assigned_employee_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "devices",
+        "column_name": "notes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "devices",
+        "column_name": "last_seen_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "devices",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "devices",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "employees",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "employees",
+        "column_name": "employee_code",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "employees",
+        "column_name": "display_name",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "employees",
+        "column_name": "active",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "employees",
+        "column_name": "role",
+        "is_nullable": "NO",
+        "column_default": "'staff'::text",
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "employees",
+        "column_name": "notes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "employees",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "employees",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_event_history",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_event_history",
+        "column_name": "event_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_event_history",
+        "column_name": "action",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_event_history",
+        "column_name": "actor",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_event_history",
+        "column_name": "reason",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "jsonb",
+        "data_type": "jsonb",
+        "table_name": "events_app_event_history",
+        "column_name": "previous_record",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "jsonb",
+        "data_type": "jsonb",
+        "table_name": "events_app_event_history",
+        "column_name": "new_record",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_event_history",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_events",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "event_name",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_events",
+        "column_name": "location_group_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "date",
+        "data_type": "date",
+        "table_name": "events_app_events",
+        "column_name": "event_date",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "time",
+        "data_type": "time without time zone",
+        "table_name": "events_app_events",
+        "column_name": "start_time",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "time",
+        "data_type": "time without time zone",
+        "table_name": "events_app_events",
+        "column_name": "end_time",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "int4",
+        "data_type": "integer",
+        "table_name": "events_app_events",
+        "column_name": "attendee_count",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "notes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "created_by",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_events",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_events",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "date",
+        "data_type": "date",
+        "table_name": "events_app_events",
+        "column_name": "end_date",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "event_scope",
+        "is_nullable": "NO",
+        "column_default": "'UNKNOWN'::text",
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_events",
+        "column_name": "primary_venue_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 14
+      },
+      {
+        "udt_name": "_uuid",
+        "data_type": "ARRAY",
+        "table_name": "events_app_events",
+        "column_name": "venue_ids",
+        "is_nullable": "NO",
+        "column_default": "'{}'::uuid[]",
+        "ordinal_position": 15
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "display_location",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 16
+      },
+      {
+        "udt_name": "_uuid",
+        "data_type": "ARRAY",
+        "table_name": "events_app_events",
+        "column_name": "coverage_location_ids",
+        "is_nullable": "NO",
+        "column_default": "'{}'::uuid[]",
+        "ordinal_position": 17
+      },
+      {
+        "udt_name": "_uuid",
+        "data_type": "ARRAY",
+        "table_name": "events_app_events",
+        "column_name": "staffing_area_ids",
+        "is_nullable": "NO",
+        "column_default": "'{}'::uuid[]",
+        "ordinal_position": 18
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "source_location_text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 19
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "source_text",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 20
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "source_format",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 21
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "parser_confidence",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 22
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "events_app_events",
+        "column_name": "needs_review",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 23
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "parse_reason",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 24
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "events_app_events",
+        "column_name": "manually_overridden",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 25
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "overridden_by",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 26
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_events",
+        "column_name": "overridden_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 27
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "event_timezone",
+        "is_nullable": "NO",
+        "column_default": "'America/Chicago'::text",
+        "ordinal_position": 28
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_events",
+        "column_name": "operation_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 29
+      },
+      {
+        "udt_name": "int4",
+        "data_type": "integer",
+        "table_name": "events_app_events",
+        "column_name": "revision",
+        "is_nullable": "NO",
+        "column_default": "1",
+        "ordinal_position": 30
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "status",
+        "is_nullable": "NO",
+        "column_default": "'SCHEDULED'::text",
+        "ordinal_position": 31
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_events",
+        "column_name": "cancelled_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 32
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "cancelled_by",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 33
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_events",
+        "column_name": "cancellation_reason",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 34
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_events",
+        "column_name": "archived_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 35
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_notification_log",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_notification_log",
+        "column_name": "event_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_notification_log",
+        "column_name": "employee_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_notification_log",
+        "column_name": "msg_user_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_notification_log",
+        "column_name": "thread_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_notification_log",
+        "column_name": "notification_kind",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamp",
+        "data_type": "timestamp without time zone",
+        "table_name": "events_app_notification_log",
+        "column_name": "scheduled_for_local",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_notification_log",
+        "column_name": "sent_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_notification_log",
+        "column_name": "status",
+        "is_nullable": "NO",
+        "column_default": "'sent'::text",
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "events_app_notification_log",
+        "column_name": "response_message_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "events_app_notification_log",
+        "column_name": "notes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_notification_log",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "events_app_notification_log",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_device_assignments",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_device_assignments",
+        "column_name": "device_identifier",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_device_assignments",
+        "column_name": "msg_user_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "msg_device_assignments",
+        "column_name": "is_active",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_device_assignments",
+        "column_name": "notes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_device_assignments",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_device_assignments",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_hidden_threads_by_device",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_hidden_threads_by_device",
+        "column_name": "thread_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_hidden_threads_by_device",
+        "column_name": "device_identifier",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_hidden_threads_by_device",
+        "column_name": "hidden_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_message_deletions",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_message_deletions",
+        "column_name": "message_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_message_deletions",
+        "column_name": "user_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_message_deletions",
+        "column_name": "deleted_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_messages",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_messages",
+        "column_name": "thread_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_messages",
+        "column_name": "sender_user_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_messages",
+        "column_name": "message_type",
+        "is_nullable": "NO",
+        "column_default": "'text'::text",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_messages",
+        "column_name": "body",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "jsonb",
+        "data_type": "jsonb",
+        "table_name": "msg_messages",
+        "column_name": "metadata_json",
+        "is_nullable": "NO",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_messages",
+        "column_name": "sent_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_messages",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "msg_messages",
+        "column_name": "is_deleted",
+        "is_nullable": "NO",
+        "column_default": "false",
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_messages",
+        "column_name": "client_message_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_messages",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_messages",
+        "column_name": "deleted_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_messages",
+        "column_name": "deleted_by_user_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_messages",
+        "column_name": "purge_after",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 14
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_thread_participants",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_thread_participants",
+        "column_name": "thread_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_thread_participants",
+        "column_name": "user_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_thread_participants",
+        "column_name": "joined_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_thread_participants",
+        "column_name": "left_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_thread_visibility",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_thread_visibility",
+        "column_name": "thread_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_thread_visibility",
+        "column_name": "user_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_thread_visibility",
+        "column_name": "device_identifier",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_thread_visibility",
+        "column_name": "hidden_before",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_thread_visibility",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_thread_visibility",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_threads",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_threads",
+        "column_name": "thread_type",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_threads",
+        "column_name": "title",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_threads",
+        "column_name": "created_by_user_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "msg_threads",
+        "column_name": "is_active",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_threads",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_threads",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_threads",
+        "column_name": "last_message_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_threads",
+        "column_name": "system_key",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "msg_threads",
+        "column_name": "client_thread_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_threads",
+        "column_name": "deleted_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_threads",
+        "column_name": "deleted_by_user_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "msg_threads",
+        "column_name": "deletion_operation_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "msg_threads",
+        "column_name": "purge_after",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 14
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "operational_notification_jobs",
+        "column_name": "job_id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "operational_notification_jobs",
+        "column_name": "job_key",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "operational_notification_jobs",
+        "column_name": "job_type",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "operational_notification_jobs",
+        "column_name": "source_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "operational_notification_jobs",
+        "column_name": "status",
+        "is_nullable": "NO",
+        "column_default": "'pending'::text",
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "int4",
+        "data_type": "integer",
+        "table_name": "operational_notification_jobs",
+        "column_name": "attempts",
+        "is_nullable": "NO",
+        "column_default": "0",
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "int4",
+        "data_type": "integer",
+        "table_name": "operational_notification_jobs",
+        "column_name": "max_attempts",
+        "is_nullable": "NO",
+        "column_default": "12",
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "operational_notification_jobs",
+        "column_name": "available_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "operational_notification_jobs",
+        "column_name": "leased_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "operational_notification_jobs",
+        "column_name": "leased_until",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "operational_notification_jobs",
+        "column_name": "lease_token",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "operational_notification_jobs",
+        "column_name": "worker_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "operational_notification_jobs",
+        "column_name": "completed_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "operational_notification_jobs",
+        "column_name": "last_error",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 14
+      },
+      {
+        "udt_name": "jsonb",
+        "data_type": "jsonb",
+        "table_name": "operational_notification_jobs",
+        "column_name": "payload_json",
+        "is_nullable": "NO",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 15
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "operational_notification_jobs",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 16
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "operational_notification_jobs",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 17
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "push_device_id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "credential_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "manager_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "device_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "provider",
+        "is_nullable": "NO",
+        "column_default": "'fcm'::text",
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "platform",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "fcm_token",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "bool",
+        "data_type": "boolean",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "enabled",
+        "is_nullable": "NO",
+        "column_default": "true",
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "app_version",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "app_build",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "last_registered_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "last_seen_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "revoked_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "last_error",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 14
+      },
+      {
+        "udt_name": "jsonb",
+        "data_type": "jsonb",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "metadata_json",
+        "is_nullable": "NO",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 15
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 16
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "ops_manager_push_devices",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 17
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "scan_events",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "scan_events",
+        "column_name": "scanned_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "scan_events",
+        "column_name": "location_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "scan_events",
+        "column_name": "location_code",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "scan_events",
+        "column_name": "device_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "scan_events",
+        "column_name": "device_identifier",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "scan_events",
+        "column_name": "session_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "scan_events",
+        "column_name": "event_type",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "scan_events",
+        "column_name": "result",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "scan_events",
+        "column_name": "notes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "jsonb",
+        "data_type": "jsonb",
+        "table_name": "scan_events",
+        "column_name": "payload_json",
+        "is_nullable": "NO",
+        "column_default": "'{}'::jsonb",
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "scan_events",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "scan_events",
+        "column_name": "client_event_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "sessions",
+        "column_name": "id",
+        "is_nullable": "NO",
+        "column_default": "gen_random_uuid()",
+        "ordinal_position": 1
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "sessions",
+        "column_name": "session_uuid",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 2
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "sessions",
+        "column_name": "location_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 3
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "sessions",
+        "column_name": "employee_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 4
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "sessions",
+        "column_name": "device_id",
+        "is_nullable": "NO",
+        "column_default": null,
+        "ordinal_position": 5
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "sessions",
+        "column_name": "status",
+        "is_nullable": "NO",
+        "column_default": "'active'::text",
+        "ordinal_position": 6
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "sessions",
+        "column_name": "started_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 7
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "sessions",
+        "column_name": "ended_at",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 8
+      },
+      {
+        "udt_name": "int4",
+        "data_type": "integer",
+        "table_name": "sessions",
+        "column_name": "duration_minutes",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 9
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "sessions",
+        "column_name": "duration_display",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 10
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "sessions",
+        "column_name": "completion_source",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 11
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "sessions",
+        "column_name": "created_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 12
+      },
+      {
+        "udt_name": "timestamptz",
+        "data_type": "timestamp with time zone",
+        "table_name": "sessions",
+        "column_name": "updated_at",
+        "is_nullable": "NO",
+        "column_default": "now()",
+        "ordinal_position": 13
+      },
+      {
+        "udt_name": "text",
+        "data_type": "text",
+        "table_name": "sessions",
+        "column_name": "client_session_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 14
+      },
+      {
+        "udt_name": "uuid",
+        "data_type": "uuid",
+        "table_name": "sessions",
+        "column_name": "finish_operation_id",
+        "is_nullable": "YES",
+        "column_default": null,
+        "ordinal_position": 15
+      }
+    ],
+    "constraints": [
+      {
+        "definition": "FOREIGN KEY (previous_employee_id) REFERENCES employees(id) ON DELETE SET NULL",
+        "table_name": "custodial_employee_device_assignment_history",
+        "constraint_name": "custodial_employee_device_assignment__previous_employee_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (changed_by_manager_id) REFERENCES ops_manager_managers(manager_id) ON DELETE SET NULL",
+        "table_name": "custodial_employee_device_assignment_history",
+        "constraint_name": "custodial_employee_device_assignment_changed_by_manager_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (new_employee_id) REFERENCES employees(id) ON DELETE SET NULL",
+        "table_name": "custodial_employee_device_assignment_history",
+        "constraint_name": "custodial_employee_device_assignment_histo_new_employee_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE RESTRICT",
+        "table_name": "custodial_employee_device_assignment_history",
+        "constraint_name": "custodial_employee_device_assignment_history_device_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (assignment_change_id)",
+        "table_name": "custodial_employee_device_assignment_history",
+        "constraint_name": "custodial_employee_device_assignment_history_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL",
+        "table_name": "daily_group_assignments",
+        "constraint_name": "daily_group_assignments_assigned_employee_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (derived_from_employee_id) REFERENCES employees(id) ON DELETE SET NULL",
+        "table_name": "daily_group_assignments",
+        "constraint_name": "daily_group_assignments_derived_from_employee_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (location_group_id) REFERENCES location_groups(id) ON DELETE CASCADE",
+        "table_name": "daily_group_assignments",
+        "constraint_name": "daily_group_assignments_location_group_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "daily_group_assignments",
+        "constraint_name": "daily_group_assignments_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "CHECK (coverage_end > coverage_start)",
+        "table_name": "daily_group_assignments",
+        "constraint_name": "daily_group_assignments_time_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (assignment_type = ANY (ARRAY['primary_full_day'::text, 'primary_partial_day'::text, 'backup_day_off'::text, 'backup_partial_day'::text, 'absence_reassignment'::text, 'shift_end_reassignment'::text, 'coverall'::text, 'manual_override'::text]))",
+        "table_name": "daily_group_assignments",
+        "constraint_name": "daily_group_assignments_type_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL",
+        "table_name": "daily_schedule_assignments",
+        "constraint_name": "daily_schedule_assignments_assigned_employee_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (coverage_end > coverage_start)",
+        "table_name": "daily_schedule_assignments",
+        "constraint_name": "daily_schedule_assignments_coverage_end_after_start_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (location_group_id) REFERENCES location_groups(id) ON DELETE CASCADE",
+        "table_name": "daily_schedule_assignments",
+        "constraint_name": "daily_schedule_assignments_location_group_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "daily_schedule_assignments",
+        "constraint_name": "daily_schedule_assignments_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "CHECK (coverage_purpose = ANY (ARRAY['deep_clean'::text, 'area_owner'::text, 'restroom_upkeep'::text, 'reminder'::text, 'late_coverage'::text, 'lunch_coverage'::text, 'response_only'::text]))",
+        "table_name": "daily_schedule_assignments",
+        "constraint_name": "daily_schedule_assignments_purpose_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "UNIQUE (service_date, location_group_id, segment_number)",
+        "table_name": "daily_schedule_assignments",
+        "constraint_name": "daily_schedule_assignments_service_date_location_group_id_s_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "CHECK (length(notification_key) >= 1 AND length(notification_key) <= 500)",
+        "table_name": "device_notification_acknowledgements",
+        "constraint_name": "device_notification_ack_key_length",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "UNIQUE (device_identifier, notification_key)",
+        "table_name": "device_notification_acknowledgements",
+        "constraint_name": "device_notification_ack_unique",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "device_notification_acknowledgements",
+        "constraint_name": "device_notification_acknowledgements_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL",
+        "table_name": "devices",
+        "constraint_name": "devices_assigned_employee_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "UNIQUE (device_id)",
+        "table_name": "devices",
+        "constraint_name": "devices_device_id_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "devices",
+        "constraint_name": "devices_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "UNIQUE (employee_code)",
+        "table_name": "employees",
+        "constraint_name": "employees_employee_code_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "employees",
+        "constraint_name": "employees_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "CHECK (role = ANY (ARRAY['staff'::text, 'supervisor'::text, 'admin'::text]))",
+        "table_name": "employees",
+        "constraint_name": "employees_role_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (length(action) >= 1 AND length(action) <= 80)",
+        "table_name": "events_app_event_history",
+        "constraint_name": "events_app_event_history_action_len",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (event_id) REFERENCES events_app_events(id) ON DELETE RESTRICT",
+        "table_name": "events_app_event_history",
+        "constraint_name": "events_app_event_history_event_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (new_record IS NULL OR jsonb_typeof(new_record) = 'object'::text)",
+        "table_name": "events_app_event_history",
+        "constraint_name": "events_app_event_history_new_object",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "events_app_event_history",
+        "constraint_name": "events_app_event_history_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "CHECK (previous_record IS NULL OR jsonb_typeof(previous_record) = 'object'::text)",
+        "table_name": "events_app_event_history",
+        "constraint_name": "events_app_event_history_previous_object",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (attendee_count IS NULL OR attendee_count >= 0)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_attendee_count_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (end_time IS NULL OR end_date > event_date OR end_time > start_time)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_end_after_start_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (end_date >= event_date)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_end_date_not_before_start_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (event_scope = ANY (ARRAY['ZOO_WIDE'::text, 'SINGLE_VENUE'::text, 'MULTI_VENUE'::text, 'OFFSITE'::text, 'UNKNOWN'::text]))",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_event_scope_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (location_group_id) REFERENCES location_groups(id) ON DELETE RESTRICT",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_location_group_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (event_scope <> 'MULTI_VENUE'::text OR COALESCE(array_length(venue_ids, 1), 0) >= 2)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_multi_venue_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (parser_confidence IS NULL OR (parser_confidence = ANY (ARRAY['high'::text, 'medium'::text, 'low'::text])))",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_parser_confidence_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (primary_venue_id) REFERENCES event_venues(id)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_primary_venue_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (event_scope <> 'SINGLE_VENUE'::text OR primary_venue_id IS NOT NULL)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_single_venue_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (status = ANY (ARRAY['SCHEDULED'::text, 'CANCELLED'::text, 'ARCHIVED'::text]))",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_status_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (event_timezone = 'America/Chicago'::text)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_timezone_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (event_scope <> 'UNKNOWN'::text OR needs_review IS TRUE)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_unknown_review_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (event_scope <> 'ZOO_WIDE'::text OR display_location = 'Zoo Footprint'::text)",
+        "table_name": "events_app_events",
+        "constraint_name": "events_app_events_zoo_wide_display_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE",
+        "table_name": "events_app_notification_log",
+        "constraint_name": "events_app_notification_log_employee_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (event_id) REFERENCES events_app_events(id) ON DELETE CASCADE",
+        "table_name": "events_app_notification_log",
+        "constraint_name": "events_app_notification_log_event_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (notification_kind = ANY (ARRAY['event_reminder'::text, 'day_of_event'::text, 'two_days_out'::text, 'three_days_out'::text, 'two_days_before'::text, 'day_before'::text, 'morning_of'::text, 'shift_plus_15'::text, 'shift_plus_fifteen'::text]))",
+        "table_name": "events_app_notification_log",
+        "constraint_name": "events_app_notification_log_kind_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (msg_user_id) REFERENCES msg_users(id) ON DELETE SET NULL",
+        "table_name": "events_app_notification_log",
+        "constraint_name": "events_app_notification_log_msg_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "events_app_notification_log",
+        "constraint_name": "events_app_notification_log_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (response_message_id) REFERENCES msg_messages(id) ON DELETE SET NULL",
+        "table_name": "events_app_notification_log",
+        "constraint_name": "events_app_notification_log_response_message_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (status = ANY (ARRAY['sending'::text, 'sent'::text, 'error'::text, 'superseded'::text]))",
+        "table_name": "events_app_notification_log",
+        "constraint_name": "events_app_notification_log_status_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (thread_id) REFERENCES msg_threads(id) ON DELETE SET NULL",
+        "table_name": "events_app_notification_log",
+        "constraint_name": "events_app_notification_log_thread_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "UNIQUE (device_identifier)",
+        "table_name": "msg_device_assignments",
+        "constraint_name": "msg_device_assignments_device_identifier_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "FOREIGN KEY (msg_user_id) REFERENCES msg_users(id) ON DELETE CASCADE",
+        "table_name": "msg_device_assignments",
+        "constraint_name": "msg_device_assignments_msg_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "msg_device_assignments",
+        "constraint_name": "msg_device_assignments_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "msg_hidden_threads_by_device",
+        "constraint_name": "msg_hidden_threads_by_device_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "UNIQUE (thread_id, device_identifier)",
+        "table_name": "msg_hidden_threads_by_device",
+        "constraint_name": "msg_hidden_threads_by_device_thread_id_device_identifier_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "FOREIGN KEY (thread_id) REFERENCES msg_threads(id) ON DELETE CASCADE",
+        "table_name": "msg_hidden_threads_by_device",
+        "constraint_name": "msg_hidden_threads_by_device_thread_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (message_id) REFERENCES msg_messages(id) ON DELETE CASCADE",
+        "table_name": "msg_message_deletions",
+        "constraint_name": "msg_message_deletions_message_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "UNIQUE (message_id, user_id)",
+        "table_name": "msg_message_deletions",
+        "constraint_name": "msg_message_deletions_message_id_user_id_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "msg_message_deletions",
+        "constraint_name": "msg_message_deletions_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (user_id) REFERENCES msg_users(id) ON DELETE CASCADE",
+        "table_name": "msg_message_deletions",
+        "constraint_name": "msg_message_deletions_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (length(body) <= 2000)",
+        "table_name": "msg_messages",
+        "constraint_name": "msg_messages_body_max_len",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (length(btrim(body)) > 0)",
+        "table_name": "msg_messages",
+        "constraint_name": "msg_messages_body_not_blank",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (deleted_by_user_id) REFERENCES msg_users(id) ON DELETE SET NULL",
+        "table_name": "msg_messages",
+        "constraint_name": "msg_messages_deleted_by_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (is_deleted IS FALSE AND deleted_at IS NULL AND purge_after IS NULL OR is_deleted IS TRUE AND deleted_at IS NOT NULL AND purge_after = (deleted_at + '14 days'::interval))",
+        "table_name": "msg_messages",
+        "constraint_name": "msg_messages_deletion_state_chk",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (message_type = ANY (ARRAY['text'::text, 'system'::text, 'broadcast'::text, 'bot_response'::text]))",
+        "table_name": "msg_messages",
+        "constraint_name": "msg_messages_message_type_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "msg_messages",
+        "constraint_name": "msg_messages_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (sender_user_id) REFERENCES msg_users(id) ON DELETE RESTRICT",
+        "table_name": "msg_messages",
+        "constraint_name": "msg_messages_sender_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (thread_id) REFERENCES msg_threads(id) ON DELETE CASCADE",
+        "table_name": "msg_messages",
+        "constraint_name": "msg_messages_thread_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "msg_thread_participants",
+        "constraint_name": "msg_thread_participants_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (thread_id) REFERENCES msg_threads(id) ON DELETE CASCADE",
+        "table_name": "msg_thread_participants",
+        "constraint_name": "msg_thread_participants_thread_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "UNIQUE (thread_id, user_id)",
+        "table_name": "msg_thread_participants",
+        "constraint_name": "msg_thread_participants_thread_id_user_id_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "FOREIGN KEY (user_id) REFERENCES msg_users(id) ON DELETE CASCADE",
+        "table_name": "msg_thread_participants",
+        "constraint_name": "msg_thread_participants_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "msg_thread_visibility",
+        "constraint_name": "msg_thread_visibility_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (thread_id) REFERENCES msg_threads(id) ON DELETE CASCADE",
+        "table_name": "msg_thread_visibility",
+        "constraint_name": "msg_thread_visibility_thread_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "UNIQUE (thread_id, user_id, device_identifier)",
+        "table_name": "msg_thread_visibility",
+        "constraint_name": "msg_thread_visibility_thread_id_user_id_device_identifier_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "FOREIGN KEY (user_id) REFERENCES msg_users(id) ON DELETE CASCADE",
+        "table_name": "msg_thread_visibility",
+        "constraint_name": "msg_thread_visibility_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (client_thread_id IS NULL OR length(btrim(client_thread_id)) >= 8 AND length(btrim(client_thread_id)) <= 200 AND client_thread_id = btrim(client_thread_id))",
+        "table_name": "msg_threads",
+        "constraint_name": "msg_threads_client_thread_id_format_chk",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (created_by_user_id) REFERENCES msg_users(id) ON DELETE RESTRICT",
+        "table_name": "msg_threads",
+        "constraint_name": "msg_threads_created_by_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (deleted_by_user_id) REFERENCES msg_users(id) ON DELETE SET NULL",
+        "table_name": "msg_threads",
+        "constraint_name": "msg_threads_deleted_by_user_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (deleted_at IS NULL AND purge_after IS NULL OR is_active IS FALSE AND deleted_at IS NOT NULL AND purge_after = (deleted_at + '14 days'::interval))",
+        "table_name": "msg_threads",
+        "constraint_name": "msg_threads_deletion_state_chk",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "msg_threads",
+        "constraint_name": "msg_threads_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "CHECK (system_key IS NULL OR system_key ~ '^[a-z][a-z0-9_]{2,79}$'::text)",
+        "table_name": "msg_threads",
+        "constraint_name": "msg_threads_system_key_format_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (thread_type = ANY (ARRAY['direct'::text, 'broadcast'::text, 'bot'::text, 'group'::text]))",
+        "table_name": "msg_threads",
+        "constraint_name": "msg_threads_thread_type_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (attempts >= 0 AND max_attempts >= 1 AND max_attempts <= 100)",
+        "table_name": "operational_notification_jobs",
+        "constraint_name": "operational_notification_jobs_attempts_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "UNIQUE (job_key)",
+        "table_name": "operational_notification_jobs",
+        "constraint_name": "operational_notification_jobs_job_key_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "CHECK (length(job_key) >= 1 AND length(job_key) <= 240)",
+        "table_name": "operational_notification_jobs",
+        "constraint_name": "operational_notification_jobs_key_length",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "PRIMARY KEY (job_id)",
+        "table_name": "operational_notification_jobs",
+        "constraint_name": "operational_notification_jobs_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'leased'::text, 'completed'::text, 'dead'::text]))",
+        "table_name": "operational_notification_jobs",
+        "constraint_name": "operational_notification_jobs_status_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (length(job_type) >= 1 AND length(job_type) <= 100)",
+        "table_name": "operational_notification_jobs",
+        "constraint_name": "operational_notification_jobs_type_length",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (credential_id) REFERENCES ops_manager_trusted_devices(credential_id) ON DELETE CASCADE",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_credential_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "UNIQUE (credential_id)",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_credential_id_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "UNIQUE (fcm_token)",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_fcm_token_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "CHECK (length(btrim(device_id)) >= 1 AND length(btrim(device_id)) <= 96)",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_id_len",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (manager_id) REFERENCES ops_manager_managers(manager_id) ON DELETE CASCADE",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_manager_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (jsonb_typeof(metadata_json) = 'object'::text)",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_metadata_object",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "PRIMARY KEY (push_device_id)",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "CHECK (platform = ANY (ARRAY['ios'::text, 'android'::text]))",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_platform",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (provider = 'fcm'::text)",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_provider",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "CHECK (length(fcm_token) >= 20 AND length(fcm_token) <= 4096)",
+        "table_name": "ops_manager_push_devices",
+        "constraint_name": "ops_manager_push_devices_token_len",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL",
+        "table_name": "scan_events",
+        "constraint_name": "scan_events_device_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (event_type = ANY (ARRAY['scan_received'::text, 'scan_blocked'::text, 'scan_start'::text, 'scan_finish'::text, 'scan_resume_pending'::text, 'scan_invalid_location'::text, 'scan_unauthorized_device'::text, 'scan_error'::text, 'work_position_check'::text]))",
+        "table_name": "scan_events",
+        "constraint_name": "scan_events_event_type_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL",
+        "table_name": "scan_events",
+        "constraint_name": "scan_events_location_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "scan_events",
+        "constraint_name": "scan_events_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL",
+        "table_name": "scan_events",
+        "constraint_name": "scan_events_session_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "CHECK (completion_source IS NULL OR (completion_source = ANY (ARRAY['kiosk_form'::text, 'admin'::text, 'repair'::text, 'system'::text, 'incident_recovery'::text, 'system_timeout_cancelled'::text])))",
+        "table_name": "sessions",
+        "constraint_name": "sessions_completion_source_check",
+        "constraint_type": "c"
+      },
+      {
+        "definition": "FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE RESTRICT",
+        "table_name": "sessions",
+        "constraint_name": "sessions_device_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT",
+        "table_name": "sessions",
+        "constraint_name": "sessions_employee_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE RESTRICT",
+        "table_name": "sessions",
+        "constraint_name": "sessions_location_id_fkey",
+        "constraint_type": "f"
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "sessions",
+        "constraint_name": "sessions_pkey",
+        "constraint_type": "p"
+      },
+      {
+        "definition": "UNIQUE (session_uuid)",
+        "table_name": "sessions",
+        "constraint_name": "sessions_session_uuid_key",
+        "constraint_type": "u"
+      },
+      {
+        "definition": "CHECK (status = ANY (ARRAY['active'::text, 'pending_submit'::text, 'closed'::text, 'cancelled'::text]))",
+        "table_name": "sessions",
+        "constraint_name": "sessions_status_check",
+        "constraint_type": "c"
+      }
+    ],
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "true",
+        "roles": "{service_role}",
+        "table_name": "events_app_event_history",
+        "with_check": "true",
+        "policy_name": "events_app_event_history_service_all"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "true",
+        "roles": "{authenticated}",
+        "table_name": "events_app_events",
+        "with_check": null,
+        "policy_name": "events_app_events_authed_read"
+      },
+      {
+        "cmd": "ALL",
+        "qual": "true",
+        "roles": "{service_role}",
+        "table_name": "events_app_events",
+        "with_check": "true",
+        "policy_name": "events_app_events_service_all"
+      }
+    ]
+  },
+  "capture_limits": {
+    "columns": {
+      "row_count": 242,
+      "truncated": false
+    },
+    "constraints": {
+      "row_count": 114,
+      "truncated": false
+    },
+    "policies": {
+      "row_count": 3,
+      "truncated": false
+    }
+  }
+}

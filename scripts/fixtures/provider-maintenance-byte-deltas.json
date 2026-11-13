@@ -1,0 +1,203 @@
+{
+  "schema": 1,
+  "base": "0415699e6b8548c746429cd58a674d67554c4e91",
+  "preserved": {
+    "compaction_method_sha256": "be748632e7159983f7a836758ae250021fc71db711b9feb81dde1c2d24a1b1d0",
+    "VaultEngine.java": "4b9c70608bcbd98fd5c26668f1202cf7fd8014c96c5319bba00f7c1cca8c72d5",
+    "OfflineAuthorityTime.java": "0ae5be7fa6c106a900a81bcf75c30c8ae87332da248fb6dd9bc9dc36b534f407",
+    "NativeNfcScanHandoff.java": "674d7abe36779a7341e16f63588b6452596db23348397287a991f1138991aa77",
+    "CustodialNativeVaultPlugin.java": "2d15293fd5ce8b058c279d32c7a6a24951e1a75e1db266658ac4a4fce8f62490",
+    "CustodialNativeRuntime.java": "c78871f54e2a85f06f90fa89685c0e7c11f88510e50e2ffd5af05fc2c117686c",
+    "manifest": "5714fc43190e46dfe043749b8a5b9bf2903bed60cd2bc86ef2077875248c854a"
+  },
+  "files": [
+    {
+      "name": "NativeProviderRuntimeOwner.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "origin": "0415699e6b8548c746429cd58a674d67554c4e91",
+      "base_sha256": "51b682e21f0d4c9911cc6dc2d18d7795e2abd76465ced59d2a20f69285c269ee",
+      "current_sha256": "77306009289e5142fd5b384995330b0397057cda60f88a452abcc3ffc82c78af",
+      "hunks": [
+        {
+          "old_start": 129,
+          "old_count": 0,
+          "new_start": 130,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            value.put(\"last_local_failure\",journal.lastLocalFailure(current.principal,current.revision));"
+          ]
+        },
+        {
+          "old_start": 179,
+          "old_count": 0,
+          "new_start": 181,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        NativeProviderJournal.MaintenanceScope maintenance=null;"
+          ]
+        },
+        {
+          "old_start": 181,
+          "old_count": 0,
+          "new_start": 184,
+          "new_count": 5,
+          "before": [],
+          "after": [
+            "            synchronized(engine){synchronized(coordinator){",
+            "                NativeProviderAuthority.Current current=reconcileLocked();",
+            "                if(current.principal==null)return NativeProviderJobLifecycle.Result.SUSPEND;",
+            "                maintenance=journal.maintenanceScope(current.principal,current.revision);",
+            "            }}"
+          ]
+        },
+        {
+          "old_start": 227,
+          "old_count": 0,
+          "new_start": 235,
+          "new_count": 5,
+          "before": [],
+          "after": [
+            "                // Re-read after effects: an earlier display observation must not become",
+            "                // cleanup authority after its own horizon expires. Predicates stay in",
+            "                // the sole journal owner; no expiry guesses or uncertain-work eviction.",
+            "                invocation.attempt.check();current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();",
+            "                if(cleanup.bounds!=null)journal.compactSettledRecords(current.principal,cleanup,16);"
+          ]
+        },
+        {
+          "old_start": 231,
+          "old_count": 0,
+          "new_start": 244,
+          "new_count": 8,
+          "before": [],
+          "after": [
+            "        } catch(VaultFailure|RuntimeException failure) {",
+            "            if(maintenance!=null)try{synchronized(engine){synchronized(coordinator){",
+            "                NativeProviderAuthority.Current current=reconcileLocked();",
+            "                journal.recordMaintenanceFailure(current.principal,current.revision,maintenance,NativeProviderFailureDisposition.of(failure));",
+            "            }}}catch(VaultFailure|RuntimeException unavailable){failure.addSuppressed(unavailable);}",
+            "            // Preserve the exact original failure and attempt. A diagnostic neither",
+            "            // fabricates remote revocation nor settles/suppresses pending work.",
+            "            throw failure;"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderJournal.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "origin": "0415699e6b8548c746429cd58a674d67554c4e91",
+      "base_sha256": "722f1f298af1418fe2e5206b09800a910e08384ef95e4031414783722992e1a0",
+      "current_sha256": "8e5b6bb867c2521e6ecb5ec231a20ecb3bd0400a0b609edc852b6add83467b9d",
+      "action_freshness_delta": {
+        "prior_sha256": "c56884f57e7e0f169dafcbffdc640427b0bb05d8ab7f8a289bb64f1fdfc85695",
+        "added_lines": [
+          "                // PC02 gates a NEW action, not replay of an already durable original event.",
+          "                requireLive(expected.payload, observation);"
+        ]
+      },
+      "hunks": [
+        {
+          "old_start": 18,
+          "old_count": 0,
+          "new_start": 19,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    private static final ProviderRecordStore.Key MAINTENANCE = ProviderRecordStore.key(ProviderEnvelopeCrypto.Domain.METADATA, \"last-local-failure\");"
+          ]
+        },
+        {
+          "old_start": 25,
+          "old_count": 0,
+          "new_start": 27,
+          "new_count": 60,
+          "before": [],
+          "after": [
+            "    /** A captured native invocation scope, NOT proof of a server operation outcome.",
+            "     * Full principal is retained privately; no diagnostic exposes its secret seal. */",
+            "    static final class MaintenanceScope {",
+            "        private final NativeProviderPrincipal principal;",
+            "        private final String binding;",
+            "        private final long engineRevision,epoch,journalRevision;",
+            "        private MaintenanceScope(NativeProviderPrincipal principal,String binding,long revision,long epoch,long journalRevision) {",
+            "            this.principal=principal;this.binding=binding;engineRevision=revision;this.epoch=epoch;this.journalRevision=journalRevision;",
+            "        }",
+            "    }",
+            "    MaintenanceScope maintenanceScope(NativeProviderPrincipal current,long engineRevision) throws VaultFailure {",
+            "        return transition(()->{",
+            "            if(engineRevision<0)throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "            ProviderRecordStore.Snapshot snapshot=store.load();JSONObject meta=metadata(snapshot);requireAvailable(meta,current);",
+            "            return new MaintenanceScope(current,meta.getString(\"binding_id\"),engineRevision,number(meta,\"invalidation_epoch\"),snapshot.revision);",
+            "        });",
+            "    }",
+            "    /** Best-effort diagnostic only, with CAS/readback and no event/authority changes.",
+            "     * At capacity the existing reserved CAPACITY_PRESERVED diagnostic remains owner.",
+            "     * A corrupt/unreadable store is never repaired to persist this diagnostic. */",
+            "    boolean recordMaintenanceFailure(NativeProviderPrincipal current,long engineRevision,MaintenanceScope expected,",
+            "        NativeProviderFailureDisposition failure) throws VaultFailure {",
+            "        return transition(()->{",
+            "            if(failure==null||expected==null||current==null||!current.same(expected.principal)||engineRevision!=expected.engineRevision)return false;",
+            "            ProviderRecordStore.Snapshot snapshot=store.load();JSONObject meta=metadata(snapshot);requireAvailable(meta,current);",
+            "            if(number(meta,\"invalidation_epoch\")!=expected.epoch||!expected.binding.equals(meta.getString(\"binding_id\")))return false;",
+            "            JSONObject prior=snapshot.keys().contains(MAINTENANCE)?maintenanceDiagnostic(snapshot):null;",
+            "            if(prior!=null&&maintenanceMatches(prior,current,engineRevision,meta)",
+            "                &&failure.name().equals(prior.getString(\"reason\")))return true; // No write churn for an identical failure.",
+            "            JSONObject diagnostic=new JSONObject().put(\"schema\",SCHEMA).put(\"maintenance_version\",1)",
+            "                .put(\"scope_kind\",\"NATIVE_INVOCATION_ONLY\").put(\"principal_digest\",current.digest)",
+            "                .put(\"binding_id\",expected.binding).put(\"engine_revision\",engineRevision).put(\"invalidation_epoch\",expected.epoch)",
+            "                .put(\"observed_journal_revision\",expected.journalRevision).put(\"reason\",failure.name()).put(\"handling\",failure.handling);",
+            "            Map<ProviderRecordStore.Key,char[]> writes=new HashMap<>();put(writes,MAINTENANCE,diagnostic);commit(snapshot,writes);return true;",
+            "        });",
+            "    }",
+            "    /** Last observed LOCAL failure, not an active block, revocation or settlement.",
+            "     * Old binding diagnostics remain encrypted but are not exposed as current. */",
+            "    Map<String,Object> lastLocalFailure(NativeProviderPrincipal current,long engineRevision) throws VaultFailure {",
+            "        return transition(()->{",
+            "            if(current==null)return null;ProviderRecordStore.Snapshot snapshot=store.load();JSONObject meta=metadata(snapshot);requireAvailable(meta,current);",
+            "            if(!snapshot.keys().contains(MAINTENANCE))return null;",
+            "            JSONObject diagnostic=maintenanceDiagnostic(snapshot);if(!maintenanceMatches(diagnostic,current,engineRevision,meta))return null;",
+            "            Map<String,Object> status=new java.util.LinkedHashMap<>();status.put(\"reason\",diagnostic.getString(\"reason\"));",
+            "            status.put(\"handling\",diagnostic.getString(\"handling\"));status.put(\"durable\",true);return Collections.unmodifiableMap(status);",
+            "        });",
+            "    }",
+            "    private static JSONObject maintenanceDiagnostic(ProviderRecordStore.Snapshot snapshot) throws Exception {",
+            "        JSONObject value=required(snapshot,MAINTENANCE);",
+            "        if(value.length()!=10||number(value,\"maintenance_version\")!=1||!\"NATIVE_INVOCATION_ONLY\".equals(value.get(\"scope_kind\")))throw corrupt();",
+            "        NativeLegacyLineageJournal.hex(value.getString(\"principal_digest\"));NativeLegacyLineageJournal.uuid(value.getString(\"binding_id\"));",
+            "        number(value,\"engine_revision\");number(value,\"invalidation_epoch\");",
+            "        if(number(value,\"observed_journal_revision\")>snapshot.revision)throw corrupt();",
+            "        NativeProviderFailureDisposition failure=NativeProviderFailureDisposition.valueOf(value.getString(\"reason\"));",
+            "        if(!failure.handling.equals(value.get(\"handling\")))throw corrupt();return value;",
+            "    }",
+            "    private static boolean maintenanceMatches(JSONObject value,NativeProviderPrincipal current,long revision,JSONObject meta) throws Exception {",
+            "        return current.digest.equals(value.get(\"principal_digest\"))&&revision==number(value,\"engine_revision\")",
+            "            &&number(meta,\"invalidation_epoch\")==number(value,\"invalidation_epoch\")&&meta.get(\"binding_id\").equals(value.get(\"binding_id\"));",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 1111,
+          "old_count": 0,
+          "new_start": 1173,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "            } else if (key.equals(MAINTENANCE)) {",
+            "                // Known non-authoritative diagnostic stays byte-identical. Its old",
+            "                // binding/epoch cannot be exposed as current after the fence changes.",
+            "                maintenanceDiagnostic(snapshot);"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderFailureDisposition.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderFailureDisposition.java",
+      "origin": null,
+      "current_sha256": "ffe77794067e7aa767d0b4e58942f6b09e0674e1bb12462d63f36d1186571af9"
+    }
+  ]
+}

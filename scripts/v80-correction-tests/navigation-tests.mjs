@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync,mkdtempSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import vm from 'node:vm';
+import {spawnSync} from 'node:child_process';
+import {assertGeneratedCustodialMainActivity} from './configure-custodial-generated-app-test.mjs';
+const source=readFileSync(new URL('../../mobile/scripts/configure-native-links.mjs',import.meta.url),'utf8');
+const activity=vm.runInNewContext(source.match(/const custodialMainActivity = (`[\s\S]*?`);/)[1],{});
+assertGeneratedCustodialMainActivity(activity);
+assert.match(activity,/setShowWhenLocked\(false\)/);
+assert.match(activity,/setTurnScreenOn\(false\)/);
+assert.doesNotMatch(activity,/setShowWhenLocked\(true\)|setTurnScreenOn\(true\)|FLAG_SHOW_WHEN_LOCKED|FLAG_DISMISS_KEYGUARD|requestDismissKeyguard/);
+const start=activity.indexOf('    private void hideCustodialNavigationBar()'),end=activity.indexOf('    @Override\n    public void onResume()',start),portion=activity.slice(start,end);
+assert.match(portion,/SDK_INT >= Build.VERSION_CODES.R/);assert.match(portion,/controller != null/);
+assert.match(portion,/controller.hide\(WindowInsets.Type.navigationBars\(\)\)/);
+assert.match(portion,/BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE/);assert.match(portion,/decor.getSystemUiVisibility\(\)/);
+assert.match(portion,/SYSTEM_UI_FLAG_HIDE_NAVIGATION \| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY/);
+assert.match(portion,/super.onWindowFocusChanged\(hasFocus\);\s*if \(hasFocus\) hideCustodialNavigationBar\(\);/);
+assert.match(activity,/super.onResume\(\);\s*hideCustodialNavigationBar\(\);/);
+assert.match(activity,/super.onCreate\(savedInstanceState\);\s*hideCustodialNavigationBar\(\);/);
+assert.doesNotMatch(portion,/DevicePolicyManager|startLockTask|stopLockTask|Settings\.|onBackPressed|dispatchKeyEvent|onKeyDown|FLAG_KEEP_SCREEN_ON/);
+if(process.env.EXISTING_FIXTURE_MANIFEST){
+ const manifest=JSON.parse(readFileSync(process.env.EXISTING_FIXTURE_MANIFEST,'utf8'));
+ const output=mkdtempSync(join(tmpdir(),'custodial-navigation-compile-'));
+ const pkg=join(output,'org/memphiszoo/custodial');mkdirSync(pkg,{recursive:true});writeFileSync(join(pkg,'MainActivity.java'),activity);
+ const cp=['/home/eric/Android/Sdk/platforms/android-36/android.jar',...manifest.classpath].join(':');
+ const result=spawnSync('javac',['--release','21','-cp',cp,'-d',output,join(pkg,'MainActivity.java')],{encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);console.log('PASS actual generated Activity compiles with existing SDK/fixture dependencies; no artifact or hardware claim');
+}
+console.log('PASS scoped navigation presentation lifecycle contracts; original NFC and pre-plugin gate retained; no kiosk policy mutation');

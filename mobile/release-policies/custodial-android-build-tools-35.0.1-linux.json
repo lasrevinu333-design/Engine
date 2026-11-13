@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "platform": "linux",
+  "android_build_tools_version": "35.0.1",
+  "repository_index": "https://dl.google.com/android/repository/repository2-1.xml",
+  "archive": {
+    "url": "https://dl.google.com/android/repository/build-tools_r35.0.1_linux.zip",
+    "size_bytes": 61959297,
+    "sha1": "e009a9b188cfeb1d2b4c318ab5cb4f1ddc368861",
+    "sha256": "5993499f3229a021b89f87088c57242aeefaa62316bf3d69da7de40bfd5350f1"
+  },
+  "installed_files_sha256": {
+    "aapt2": "5bca541bb691be2783137821b4304beabdf02daacd159ae56e1a4a3a52980637",
+    "apksigner": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
+    "lib/apksigner.jar": "00ef9948f843fe395d2440ae3ef41405b8040a6d5d46493bd1902ac0ee6deae7",
+    "source.properties": "1ce878b52b027d9b7aba4dfb85d4be3c601e27849fc2b99b1db54b4c25d682a5",
+    "zipalign": "a205d94a45c8522ca1b571dcbe190df145c818f0a29dfb366e4dd78eef4f56a7"
+  }
+}

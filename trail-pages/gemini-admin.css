@@ -1,0 +1,130 @@
+/* Terracotta presentation adapter for gemini-admin.html. No layout, visibility or behavior overrides. */
+@media screen{
+html[data-trail-theme="terracotta"]{color-scheme:light}
+html[data-trail-theme="terracotta"] body{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .auth-card{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .auth-card p{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .sidebar{background:var(--trail-surface);border-right:1px solid var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .search-label{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .search-row input{border:1px solid var(--trail-control-border);background:var(--trail-raised);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .conversation-item{border:1px solid var(--trail-border);background:transparent;color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .conversation-item:hover{background:var(--trail-selected);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .conversation-item.active{background:var(--trail-brand);border-color:var(--trail-border);color:var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .conversation-time{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hub-link{color:var(--trail-brand)}
+html[data-trail-theme="terracotta"] .hub-link:hover{color:var(--trail-brand)}
+html[data-trail-theme="terracotta"] .topbar{border-bottom:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .status{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .status.working{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .status.error{color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .icon-button{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .button{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .icon-button.danger{color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .button.primary{background:var(--trail-brand);border-color:var(--trail-border);color:var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .button.secondary{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .welcome{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .welcome h2{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .gemini-mark{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .message.user .bubble{background:var(--trail-selected);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .message.assistant .bubble{background:var(--trail-surface);border:1px solid var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .message.failed .bubble{border-color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .message-meta{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .proposal-card{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .job-card{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .proposal-card p{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .job-card p{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .composer-wrap{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .composer{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .composer.dragging{border-color:var(--trail-border);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] textarea{border:0;background:transparent;color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] textarea::placeholder{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .attachment-hint{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .attachment-chip{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .attachment-chip button{border:0;background:transparent;color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .attachment-chip.failed{border-color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .footnote{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .empty{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .loading{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .retry-button{border:0;background:var(--trail-surface);color:var(--trail-ink)}
+@media(max-width:760px){
+html[data-trail-theme="terracotta"] .sidebar{box-shadow:var(--trail-shadow)}}
+html[data-trail-theme="terracotta"] .mz-secondary-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-brand)}
+html[data-trail-theme="terracotta"] .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .operationsPage .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .mz-back-link:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-icon-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-field:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-select:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-textarea:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-button{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-button--secondary{ background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-button--danger{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-card{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  box-shadow: var(--trail-shadow);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-status{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-alert{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-empty{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-error{
+  border: 1px solid var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-status{ background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-alert--success{ background: var(--trail-success-soft); color: var(--trail-success)}
+html[data-trail-theme="terracotta"] .mz-alert--warning{ background: var(--trail-warning-soft); color: var(--trail-warning)}
+html[data-trail-theme="terracotta"] .mz-alert--error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-empty{ border-style: dashed; background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-field{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-select{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-textarea{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-loading{
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-loading::before{
+  border: 2px solid var(--trail-border);
+  border-top-color: var(--trail-brand)}
+html[data-trail-theme="terracotta"] .mz-visually-hidden{
+  border: 0 !important}
+html[data-trail-theme="terracotta"] #restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+html[data-trail-theme="terracotta"] .conversation-item.active .conversation-time{color:var(--trail-on-brand)}}

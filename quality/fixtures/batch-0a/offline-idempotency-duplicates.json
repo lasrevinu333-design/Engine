@@ -1,0 +1,65 @@
+{
+  "fixture_version": "offline.idempotency-duplicates.v1",
+  "contract": "scan.v2.offline-v4",
+  "cases": [
+    {
+      "name": "same-operation-same-payload",
+      "operation_id": "50000000-0000-4000-8000-000000000001",
+      "logical_key": "start_session:50000000-0000-4000-8000-000000000001",
+      "attempt_count": 3,
+      "expected_http_statuses": [
+        200,
+        200,
+        200
+      ],
+      "expected_domain_rows": 1,
+      "expected_queue_rows_after_ack": 0
+    },
+    {
+      "name": "same-operation-different-payload",
+      "operation_id": "50000000-0000-4000-8000-000000000002",
+      "first_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "second_payload_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "expected_http_statuses": [
+        200,
+        409
+      ],
+      "expected_domain_rows": 1
+    },
+    {
+      "name": "two-tabs-same-logical-operation",
+      "operation_id": "50000000-0000-4000-8000-000000000003",
+      "logical_key": "commit_workflow:50000000-0000-4000-8000-000000000003",
+      "tab_count": 2,
+      "expected_queue_rows": 1,
+      "expected_domain_rows": 1
+    },
+    {
+      "name": "response-received-before-local-delete-crash",
+      "operation_id": "50000000-0000-4000-8000-000000000004",
+      "restarts": 1,
+      "expected_domain_rows": 1,
+      "expected_final_queue_rows": 0
+    },
+    {
+      "name": "permanent-client-error",
+      "operation_id": "50000000-0000-4000-8000-000000000005",
+      "http_status": 422,
+      "expected_state": "dead-letter",
+      "expected_preserved_for_reconciliation": true
+    },
+    {
+      "name": "rate-limited-retry",
+      "operation_id": "50000000-0000-4000-8000-000000000006",
+      "http_status": 429,
+      "retry_after_ms": 30000,
+      "expected_state": "pending",
+      "expected_retry_count": 1
+    }
+  ],
+  "ordering": [
+    "created_at",
+    "id"
+  ],
+  "never_silently_discard_unresolved_work": true
+}

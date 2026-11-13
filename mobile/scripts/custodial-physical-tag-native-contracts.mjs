@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,readdirSync,readFileSync,writeFileSync,mkdirSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {dirname,join,resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {runInNewContext} from 'node:vm';
+import {spawnSync} from 'node:child_process';
+import {assertGeneratedCustodialMainActivity} from './configure-custodial-generated-app-test.mjs';
+const mobile=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const main=join(mobile,'plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault');
+const template=readFileSync(join(mobile,'scripts/configure-native-links.mjs'),'utf8');
+const literal=template.match(/const custodialMainActivity = (`[\s\S]*?`);/)[1];
+const activity=runInNewContext(literal,{});
+assertGeneratedCustodialMainActivity(activity);
+assert.match(activity,/dispatchPhysicalNfcUrlFromReader\(url, readPhysicalNfcIdentity\(tag\)\)/);
+assert.match(activity,/enqueuePhysicalNfcTag\(tag\)/);
+assert.match(activity,/PhysicalNfcTagIdentity.observe\(tag.getId\(\), tag.getTechList\(\)\)/);
+assert.doesNotMatch(activity,/transceive|NFC_FORUM_TYPE_2|GET_VERSION/);
+assert.match(activity,/recordPhysicalRead\(this, canonicalUrl, identity\)/);
+assert.match(activity,/return recordPhysicalNfcHandoff\(url, ""\)/);
+assert.match(activity,/if \(identity.isEmpty\(\)\) \{[\s\S]*?return "";/);
+const plugin=readFileSync(join(main,'CustodialNativeVaultPlugin.java'),'utf8');
+assert.match(plugin,/entryId, allowCreate, PhysicalNfcTagIdentity.fromRecord\(handoff\)/);
+assert.match(plugin,/record != null,\s*PhysicalNfcTagIdentity.fromRecord\(record\)/);
+assert.equal((plugin.match(/verified \? PhysicalNfcTagIdentity.fromRecord\(requireScanEntry\(entryId\)\) : ""/g)||[]).length,2);
+assert.match(plugin,/requireFinishTagOrPreservedProof\(sessionId, entryId,[\s\S]*?bindScanEntryRecord\(entryId, sessionId, locationCode, deviceId, "finish"\)/);
+assert.match(plugin,/result.remove\("native_tag_identity"\)/);
+assert.doesNotMatch(activity,/GPS|geolocation|LocationManager/);
+console.log('PASS: 14 native reader, handoff, private identity and strict occurrence wiring contracts; source checks only.');
+for (const name of ['ANDROID_API_JAR','CAPACITOR_API_JAR','ANDROIDX_API_CLASSPATH']) if(!process.env[name])throw Error(name+' required for compile');
+const owned=mkdtempSync(join(tmpdir(),'custodial-tag-native-api-'));
+try{
+ const generated=join(owned,'org/memphiszoo/custodial');mkdirSync(generated,{recursive:true});writeFileSync(join(generated,'MainActivity.java'),activity);
+ const result=spawnSync('javac',['--release','21','-cp',[process.env.ANDROID_API_JAR,process.env.CAPACITOR_API_JAR,process.env.ANDROIDX_API_CLASSPATH].join(':'),'-d',join(owned,'classes'),...readdirSync(main).filter(x=>x.endsWith('.java')).map(x=>join(main,x)),join(generated,'MainActivity.java')],{stdio:'inherit',timeout:120000});
+ if(result.error)throw result.error;if(result.status!==0)process.exitCode=result.status||1;else console.log('PASS: all native vault production sources and generated MainActivity compile against Android 36 / Capacitor API. No APK, signing or phone operation.');
+}finally{rmSync(owned,{recursive:true,force:true});}

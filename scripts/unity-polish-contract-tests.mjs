@@ -1,0 +1,167 @@
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const root = resolve(new URL('..', import.meta.url).pathname);
+const read = (file) => readFileSync(resolve(root, file), 'utf8');
+
+const secondaryPages = new Map([
+  ['admin.html', 'manager'],
+  ['coverall-print.html', 'manager'],
+  ['dashboard.html', 'manager'],
+  ['device-security.html', 'manager'],
+  ['employee-schedule.html', 'employee'],
+  ['events.html', 'contextual'],
+  ['gemini-admin.html', 'manager'],
+  ['guest-issues.html', 'manager'],
+  ['manager-access.html', 'manager'],
+  ['schedule-employee-day.html', 'manager'],
+  ['schedule-simple.html', 'manager'],
+  ['schedule-weekly.html', 'manager'],
+  ['schedule.html', 'manager'],
+  ['system-feedback.html', 'contextual'],
+]);
+
+for (const [file, context] of secondaryPages) {
+  const source = read(file);
+  if(file==='coverall-print.html'){
+    // The current accepted-revision PDF adapter retains its read-only workflow;
+    // shared UI owns the one canonical manager Hub Back control.
+    assert.match(source,/href="\.\/memphis-ui\.css"/,'print page still loads the shared design tokens');
+    assert.match(source,/src="\.\/memphis-auth\.js"/);assert.match(source,/src="\.\/memphis-scheduler-actions\.js"/);
+    assert.match(source,/src="\.\/coverall-print\.js"/,'current read-only print controller is shipped');
+    assert.match(source,/src="\.\/memphis-ui\.js\?v=release-2026\.07\.19\.custodial-v3\.12"/,'print page ships the shared interaction owner');
+    assert.match(source,/data-memphis-context="manager"/);assert.equal((source.match(/id="back"/g)||[]).length,1);
+    assert.equal((source.match(/data-mz-back(?:\s|=|>)/g)||[]).length,1,'print page has exactly one canonical Hub Back control');
+    assert.match(source,/id="back"[^>]*data-mz-back[^>]*href="\.\/start_page1\.html"[^>]*aria-label="Back"[^>]*>Back</);
+    assert.equal((source.match(/id="prepare"/g)||[]).length,1);assert.match(source,/English and Spanish/);
+    continue;
+  }
+  if(file==='schedule-simple.html'||file==='schedule.html'){
+    assert.match(source,/schedule-weekly\.html/,'Retired ad hoc scheduler leads to the approved weekly owner');
+    assert.match(source,/window\.location\.replace/);assert.doesNotMatch(source,/generate-day|absence-override/,'Alias has no schedule mutation');continue;
+  }
+  if(file==='events.html'){
+    assert.match(source,/href="\.\/operations-dashboard\.css"/,'one Events view uses its map board design tokens');
+    assert.match(source,/src="\.\/events-view\.js"/,'one Events controller owns role-aware Back and scrolling');
+    assert.equal((source.match(/id="events-back"/g)||[]).length,1,'one canonical Back control');
+    assert.match(source,/id="events-back"[^>]*>Back</,'initial Back label is present');
+    const controller=read('events-view.js');assert.match(controller,/function returnTarget/);assert.match(controller,/operations-dashboard\.html/);assert.match(controller,/\.\/index\.html/);
+    continue;
+  }
+  assert.match(source, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.19\.custodial-v3\.12"/, `${file} must load the shared design tokens`);
+  assert.match(source, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.19\.custodial-v3\.12"/, `${file} must load the shared interaction layer`);
+  assert.match(source, new RegExp(`data-memphis-context="${context}"`), `${file} must declare its navigation context`);
+  assert.equal((source.match(/data-mz-back(?:\s|=|>)/g) || []).length, 1, `${file} must have exactly one canonical Hub control`);
+  assert.match(source, /data-mz-back[^>]*>Back</, `${file} must expose the canonical label before JavaScript runs`);
+}
+
+const messages = read('messages.html');
+const chatScope = read('mobile/src/chatscope/app.jsx');
+const chatScopeOverrides = read('chatscope-mobile-overrides.css');
+const legacyThread = read('thread.html');
+assert.match(messages, /href="\.\/memphis-ui\.css\?v=release-2026\.07\.19\.custodial-v3\.12"/, 'Messenger must load the shared design tokens');
+assert.match(messages, /src="\.\/memphis-ui\.js\?v=release-2026\.07\.19\.custodial-v3\.12"/, 'Messenger must load the shared interaction layer');
+assert.match(messages, /data-memphis-context="contextual"/);
+assert.match(messages, /id="chatscope-root"/);
+assert.doesNotMatch(messages, /messenger-runtime-patch\.js/);
+assert.match(chatScope, /function navigateBack\(\)/, 'Messenger routing must be owned by the React application');
+assert.doesNotMatch(chatScope, /window\.fetch\s*=|MutationObserver/, 'Messenger must not intercept platform globals or patch rendered DOM');
+assert.match(chatScope, /mobileThread \? 'Chats' : 'Back'/, 'ChatScope must expose an ordinary Back control and a contextual Chats control');
+assert.match(chatScopeOverrides, /--mz-chat-back-width:116px/);
+assert.match(chatScopeOverrides, /--mz-chat-control-height:52px/);
+assert.match(chatScopeOverrides, /\.mz-chat-toolbar>\.mz-button:first-child\{[^}]*width:var\(--mz-chat-back-width\)[^}]*height:var\(--mz-chat-control-height\)[^}]*border-radius:16px/s, 'ChatScope Back must match every native module');
+assert.match(chatScopeOverrides, /#chatscope-root\{height:100%!important\}/);
+assert.doesNotMatch(
+  chatScopeOverrides,
+  /mz-chat-system-guard|#chatscope-root\{height:calc\(/,
+  'native body padding must be the sole system-bar guard',
+);
+assert.match(read('mobile/src/shared/native-layout.js'), /--mz-native-bottom-guard:\$\{android \? '78px'/, 'the shared native layout must clear Android system navigation');
+assert.match(legacyThread, /new URL\(['"]\.\/messages\.html['"],location\.href\)/);
+assert.match(legacyThread, /searchParams\.set\(key,value\)/);
+assert.match(legacyThread, /target\.hash=location\.hash/);
+
+const allProduction = [
+  ...secondaryPages.keys(),
+  'messages.html',
+  'thread.html',
+  'employee-hub.html',
+  'guest-qr.html',
+  'guest-report.html',
+  'index.html',
+  'ops-manager-hub.html',
+  'start_page1.html',
+];
+for (const file of allProduction) {
+  const source = read(file);
+  assert.doesNotMatch(source, /data-mz-back[^>]*>\s*(?:Back to Ops Hub|Back to Custodial Hub|Return to Ops Hub|Return to Hub|Back to Dashboard|Back to Hub|Go Back)\s*</i, `${file} must not expose a competing canonical label`);
+}
+
+assert.equal(existsSync(resolve(root, 'employee-schedule-mockup.html')), false, 'unreferenced schedule mockup must not ship');
+const printController=read('coverall-print.js');
+assert.match(printController,/auth\.requireOpsManagerSession\(\{interactive:false,redirect:true,throwOnFailure:true\}\)/);
+assert.match(printController,/auth\.opsManagerAuthHeaders\(\)/);assert.match(printController,/actions\.same\(owner,actions\.principal\(auth\)\)/);
+assert.match(printController,/method:'GET'/);assert.doesNotMatch(printController,/method:'(?:PUT|PATCH|DELETE)'/);
+assert.equal((printController.match(/method:'POST'/g)||[]).length,1,'only the canonical link transport may POST');
+assert.match(printController,/if\(!\['\/static-weekly\/coverall-links','\/static-weekly\/coverall-links\/revoke'\]\.includes\(path\)\)throw/,'canonical link transport rejects other mutation paths');
+assert.deepEqual([...printController.matchAll(/await postLink\('([^']+)'/g)].map(match=>match[1]).sort(),
+ ['/static-weekly/coverall-links','/static-weekly/coverall-links/revoke'],'only selected capacity issue and exact saved revoke are admitted');
+assert.match(printController,/request\('\/static-weekly\/manager-snapshot\?week_start='\+encodeURIComponent\(week\)\)/,'print uses the actual owning named-manager snapshot');
+assert.match(printController,/\/static-weekly\/coverall-print/);assert.match(printController,/expected_revision:String\(expected\.revision\),projection_id:expected\.projectionId/);
+assert.match(printController,/file\.sha256/);assert.match(printController,/URL\.revokeObjectURL/);
+assert.doesNotMatch(printController,/\/schedule-api|\/coverall\/links\/revoke/,'retired link console must not be restored');
+assert.doesNotMatch(printController,/dashboard-api\/coverall-printable/,'retired dashboard print route remains absent from the controller');
+assert.doesNotMatch(read('coverall-print.html'), /dashboard-api\/coverall-printable/);
+
+const sharedCss = read('memphis-ui.css');
+for (const token of ['--mz-green', '--mz-bg', '--mz-panel', '--mz-text', '--mz-danger', '--mz-focus', '--mz-touch', '--mz-transition']) {
+  assert.match(sharedCss, new RegExp(`${token.replace(/-/g, '\\-')}\\s*:`), `shared CSS must define ${token}`);
+}
+assert.match(sharedCss, /prefers-reduced-motion/);
+assert.match(sharedCss, /:focus-visible/);
+assert.match(sharedCss, /min-height:\s*var\(--mz-touch\)/);
+
+const sharedJs = read('memphis-ui.js');
+assert.match(sharedJs, /const OPS_HUB = "\.\/start_page1\.html"/);
+assert.match(sharedJs, /const EMPLOYEE_HUB = "\.\/employee-hub\.html"/);
+assert.match(sharedJs, /data-mz-protect-unsaved/);
+assert.match(sharedJs, /beforeunload/);
+assert.match(sharedJs, /stopImmediatePropagation/);
+assert.match(sharedJs, /enforceTopLevelNavigation/);
+
+function relativeLuminance(hex) {
+  const channels = hex.match(/[0-9a-f]{2}/gi).map((value) => Number.parseInt(value, 16) / 255);
+  const linear = channels.map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+}
+function contrast(a, b) {
+  const [light, dark] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+assert.ok(contrast('102106', '84c341') >= 4.5, 'dark text on canonical green must meet WCAG AA normal-text contrast');
+assert.ok(contrast('f8fafc', '071018') >= 4.5, 'canonical text on background must meet WCAG AA normal-text contrast');
+assert.ok(contrast('d7e0ec', '071018') >= 4.5, 'canonical muted text on background must meet WCAG AA normal-text contrast');
+
+const optimizedAssets = ['Header_ui.webp', 'Zoo_Logo_ui.webp', 'Guest_Issues_Icon_ui.webp', 'Event_Icon_Pink_ui.webp', 'Event_Icon_ui.webp', 'scheduler_icon_ui.webp', 'Dashboard_Avatar_ui.webp', 'memphis_avatar_ui.webp'];
+for (const file of optimizedAssets) {
+  assert.ok(statSync(resolve(root, file)).size < 120_000, `${file} must remain below 120 KB`);
+}
+
+assert.match(read('gemini-admin.html'), /class="gemini-global-back mz-back-link" data-mz-back/);
+assert.doesNotMatch(read('gemini-admin.html'), /class="hub-button"/);
+assert.match(read('gemini-console.css'), /\.gemini-global-back/);
+assert.match(read('system-feedback.html'), /data-mz-protect-unsaved="true"/);
+assert.match(read('guest-report.html'), /data-mz-protect-unsaved="true"/);
+assert.match(read('404.html'), /Page not found/);
+assert.match(read('404.html'), /start_page1\.html/);
+assert.match(read('404.html'), /employee-hub\.html/);
+
+console.log(JSON.stringify({
+  ok: true,
+  classification: 'source-contract',
+  secondary_pages_checked: secondaryPages.size,
+  optimized_assets_checked: optimizedAssets.length,
+  release_id: 'release-2026.07.19.custodial-v3.12',
+  messenger: 'chatscope',
+}));

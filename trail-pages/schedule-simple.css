@@ -1,0 +1,51 @@
+/* Terracotta presentation adapter for schedule-simple.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] {
+  color-scheme:light
+    }
+    html[data-trail-theme="terracotta"] {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] body {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] button:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] a:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] input:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] textarea:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] select:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] .uxButton {border:1px solid var(--trail-control-border);background:var(--trail-surface);
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .uxButton.primary {background:var(--trail-brand);color:var(--trail-on-brand);border-color:var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .uxButton.danger {background:var(--trail-danger-soft);color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .uxInput {border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .uxTextarea {border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .uxSelect {border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .uxCard {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .uxMuted {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .uxEyebrow {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .uxStatus {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .uxStatus.ok {color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .uxStatus.error {color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .uxStatus.info {color:var(--trail-info)
+    }
+    html[data-trail-theme="terracotta"] .uxToast {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color:var(--trail-ink)
+    }
+}

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en" data-trail-theme="terracotta" data-trail-section="dashboard">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0.0,viewport-fit=cover" />
+  <title>Memphis Zoo Custodial Dashboard</title>
+  <style>
+    :root{--lime:#8ac53f;--lime-strong:#9bd84b;--text:#f7fbff;--muted:rgba(235,243,248,.72);--line:rgba(255,255,255,.11);--line-strong:rgba(255,255,255,.18);--panel:rgba(7,13,18,.58);--panel-strong:rgba(8,12,16,.74);--panel-soft:rgba(8,12,16,.44);--shadow:0 18px 42px rgba(0,0,0,.34);--ok:#22c55e;--overdue:#d22e2e;--not-cleaned:#111;--due-soon:#facc15;--in-progress:#2f8ee5;--radius:24px;--zoo-green-1:#a8e146;--zoo-green-2:#6cb81f}
+    *{box-sizing:border-box}html{font-size:18px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+    @keyframes overduePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 2px rgba(255,255,255,.06),0 0 0 0 rgba(255,61,61,.58)}50%{transform:scale(1.22);box-shadow:0 0 0 2px rgba(255,255,255,.08),0 0 0 9px rgba(255,61,61,0)}}
+    @keyframes overdueChipGlow{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 rgba(255,61,61,0)}50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 18px rgba(255,61,61,.28)}}
+    @keyframes overdueNumberGlow{0%,100%{text-shadow:0 0 10px rgba(255,61,61,.2),0 0 0 rgba(255,255,255,0);transform:scale(1)}50%{text-shadow:0 0 22px rgba(255,61,61,.65),0 0 9px rgba(255,225,225,.55);transform:scale(1.035)}}
+    body{margin:0;min-height:100vh;font-family:Arial,sans-serif;color:var(--text);background:linear-gradient(rgba(6,10,14,.34),rgba(6,10,14,.56)),url('./dashboard-bg_optimized.webp?v=release-2026.07.19.custodial-v3.12') center/cover no-repeat fixed}
+    .page{padding:calc(max(18px, env(safe-area-inset-top)) + 16px) 18px 18px}
+    .managerBar{max-width:1820px;margin:0 auto 14px;display:flex;justify-content:flex-start}
+    .backBtn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 22px;border:none;border-radius:999px;background:linear-gradient(180deg,var(--zoo-green-1) 0%,var(--zoo-green-2) 100%);color:#102106;font-size:1.04rem;font-weight:900;letter-spacing:.01em;cursor:pointer;box-shadow:0 12px 24px rgba(28,73,12,.24);border:1px solid rgba(255,255,255,.16)}
+    .backBtn:active{transform:translateY(1px)}
+    .shell{max-width:1820px;margin:0 auto;background:linear-gradient(180deg,rgba(9,14,19,.42),rgba(9,14,19,.24));border:1px solid var(--line);backdrop-filter:blur(10px);border-radius:28px;overflow:hidden;box-shadow:var(--shadow)}
+    .hero{padding:18px 20px 8px}
+    .topbar{display:grid;grid-template-columns:minmax(240px,330px) minmax(520px,1fr) minmax(240px,330px);gap:22px;align-items:center;max-width:1540px;margin:0 auto}
+    .heroBox{display:flex;align-items:center;justify-content:center;justify-self:center;width:330px;max-width:100%;height:128px;min-height:128px;padding:14px 16px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+    .brand img{width:100%;max-width:100%;max-height:100%;height:auto;display:block;object-fit:contain;object-position:center;filter:drop-shadow(0 6px 16px rgba(0,0,0,.22))}
+    .titleWrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:128px;padding:6px 0}.kicker{display:inline-block;padding:6px 12px;border-radius:999px;border:1px solid rgba(151,210,71,.24);background:rgba(151,210,71,.08);color:#d6efb2;font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.title{margin:10px 0 0;color:#f4fbff;font-size:clamp(1.45rem,2.2vw,2.15rem);line-height:.96;font-weight:900;letter-spacing:0;text-shadow:0 4px 16px rgba(0,0,0,.22);white-space:nowrap}.title .accent{color:#f4fbff}
+    .infoBox{flex-direction:column;gap:6px;text-align:center}.infoGroup{display:grid;gap:3px;justify-items:center;width:100%}.infoDivider{width:min(60%,160px);height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent)}.metaLabel{font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}.infoBox .time{display:block;color:var(--lime);font-size:clamp(.92rem,1.05vw,1.12rem);font-weight:900;line-height:1}.infoBox .subtime{display:block;color:#f4fbff;font-size:.68rem;line-height:1.08;font-weight:700}
+    .tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:8px 6px 16px}.tile{padding:9px 11px 5px;border-radius:18px;background:linear-gradient(180deg,rgba(10,17,23,.88),rgba(10,16,22,.68));border:1px solid var(--line);box-shadow:var(--shadow);display:grid;gap:3px;align-content:start;justify-items:center;min-height:0;position:relative;overflow:hidden;transition:transform .18s ease,border-color .18s ease,background .18s ease}.tile:hover{transform:translateY(-2px);border-color:rgba(151,210,71,.32);background:linear-gradient(180deg,rgba(14,23,31,.92),rgba(10,16,22,.72))}.tile:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 34%);pointer-events:none}.tileGlyph{font-size:1.8rem;line-height:1;filter:drop-shadow(0 6px 16px rgba(0,0,0,.35));width:48px;min-height:34px;margin:0 auto;display:flex;align-items:center;justify-content:center;text-align:center}.tileGlyph.composite{position:relative;width:48px;height:38px;margin:0 auto}.tileGlyph.composite span{position:absolute;left:0;top:0;font-size:1.8rem;line-height:1}.tileGlyph.composite small{position:absolute;right:0;bottom:0;font-size:.92rem;line-height:1}.tileLabel{text-align:center;color:rgba(255,255,255,.92);font-size:.88rem;line-height:1.1;min-height:0;text-shadow:0 1px 6px rgba(0,0,0,.25)}.tileValue{width:100%;text-align:center;font-size:clamp(1.4rem,1.9vw,2.1rem);line-height:1;font-weight:900;color:#fff}.tile.alert{border-color:rgba(255,61,61,.34)}.tile.alert .tileValue{color:#ffe1e1;text-shadow:0 0 18px rgba(255,61,61,.35)}.tile.overdueTile .tileValue{animation:overdueNumberGlow 4.8s ease-in-out infinite;display:inline-block}.tileMeta{display:none}
+    .filterBar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:0 6px 14px}.filterBtn{--filter-color:rgba(255,255,255,.32);--filter-bg:rgba(10,16,22,.62);border:1px solid color-mix(in srgb,var(--filter-color) 54%,transparent);border-radius:999px;background:linear-gradient(180deg,color-mix(in srgb,var(--filter-color) 18%,transparent),var(--filter-bg));color:var(--text);font-weight:900;font-size:.78rem;letter-spacing:.04em;padding:9px 12px;cursor:pointer;transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease}.filterBtn:hover{transform:translateY(-1px);border-color:var(--filter-color);box-shadow:0 0 12px color-mix(in srgb,var(--filter-color) 30%,transparent)}.filterBtn.active{background:linear-gradient(180deg,color-mix(in srgb,var(--filter-color) 42%,transparent),color-mix(in srgb,var(--filter-color) 22%,rgba(10,16,22,.86)));border-color:var(--filter-color);color:#fff;box-shadow:0 0 0 2px color-mix(in srgb,var(--filter-color) 20%,transparent),0 0 22px color-mix(in srgb,var(--filter-color) 55%,transparent)}.filterBtn[data-filter='all']{--filter-color:#a855f7}.filterBtn[data-filter='okay']{--filter-color:#a8e146}.filterBtn[data-filter='overdue']{--filter-color:#ef4444}.filterBtn[data-filter='not_cleaned']{--filter-color:#0b0f14}.filterBtn[data-filter='due_soon']{--filter-color:#facc15;color:#fff}.filterBtn[data-filter='in_progress']{--filter-color:#2f8ee5}.filterBtn[data-filter='tickets']{--filter-color:#f97316}.filterBtn[data-filter='not_cleaned'].active{box-shadow:0 0 0 2px rgba(255,255,255,.16),0 0 20px rgba(0,0,0,.9)}.mobileStatusBar{display:none}.section{padding:0 12px 14px}.section.hidden{display:none}.servicesText{cursor:pointer}.servicesText:after{content:""}.servicesText.expanded{display:block}.sectionCard{border-radius:24px;overflow:hidden;background:linear-gradient(180deg,rgba(10,16,22,.72),rgba(10,16,22,.54));border:1px solid var(--line);box-shadow:var(--shadow)}.sectionHeader{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border-bottom:1px solid var(--line)}.sectionTitle{margin:0;color:#f4fbff;font-size:clamp(1.2rem,1.8vw,1.75rem);font-weight:900;letter-spacing:.02em}.sectionSub{margin-top:3px;color:var(--muted);font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800}.tableWrap{padding:0 8px 8px}
+    table{width:100%;border-collapse:collapse;table-layout:fixed}thead th{padding:13px 12px 12px;color:#d5f1ac;font-size:.84rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:left;background:rgba(255,255,255,.03);border-bottom:1px solid var(--line-strong)}tbody td{padding:13px 12px;border-bottom:1px solid rgba(255,255,255,.08);font-size:.97rem;color:#f7fbff;vertical-align:top;word-break:break-word}tbody tr{background:rgba(255,255,255,.015)}tbody tr:nth-child(even){background:rgba(255,255,255,.028)}tbody tr:hover{background:rgba(151,210,71,.06)}
+    .statusChip{display:inline-flex;align-items:center;gap:8px;min-height:34px;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:900;letter-spacing:.05em;border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}.statusDot{width:12px;height:12px;border-radius:999px;display:inline-block;box-shadow:0 0 0 2px rgba(255,255,255,.06)}.status-okay,.status-ok{background:rgba(34,197,94,.18);color:#d5ffe4}.status-okay .statusDot,.status-ok .statusDot{background:#4cff7a}.status-overdue{background:rgba(210,46,46,.24);color:#ffe1e1;animation:overdueChipGlow 3.1s infinite}.status-overdue .statusDot{background:#ff3d3d;animation:overduePulse 4.2s infinite}tbody tr:nth-child(2n) .status-overdue .statusDot{animation-delay:.7s}tbody tr:nth-child(3n) .status-overdue .statusDot{animation-delay:1.4s}tbody tr:nth-child(4n) .status-overdue .statusDot{animation-delay:2.1s}tbody tr:nth-child(5n) .status-overdue .statusDot{animation-delay:2.8s}tbody tr:nth-child(6n) .status-overdue .statusDot{animation-delay:3.5s}.status-not_cleaned{background:rgba(17,17,17,.85);color:#fff}.status-not_cleaned .statusDot{background:#666}.status-due_soon{background:rgba(250,204,21,.22);color:#fff3bc}.status-due_soon .statusDot{background:#ffd93a}.status-in_progress,.status-cleaning_in_progress{background:rgba(47,142,229,.24);color:#d7ebff}.status-in_progress .statusDot,.status-cleaning_in_progress .statusDot{background:#4db2ff}
+    @keyframes workSignalBlink{0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,.28)}50%{opacity:.45;transform:scale(1.35);box-shadow:0 0 0 8px rgba(255,255,255,0)}}.workSignalDot{display:inline-block;width:13px;height:13px;border-radius:999px;margin-right:8px;vertical-align:-1px;animation:workSignalBlink 1.05s ease-in-out infinite;border:1px solid rgba(255,255,255,.38)}.workSignal-near{background:#22c55e;box-shadow:0 0 14px rgba(34,197,94,.75)}.workSignal-away{background:#ef4444;box-shadow:0 0 14px rgba(239,68,68,.8)}.workSignal-warn{background:#facc15;box-shadow:0 0 14px rgba(250,204,21,.75)}.timestampCell{font-size:.88rem;line-height:1.1;white-space:nowrap}.employeeInProgress{color:#bce0ff;font-weight:800}.tiny{font-size:.84rem}.muted{color:var(--muted)}
+    .closeBtn{border:none;border-radius:999px;background:linear-gradient(180deg,#ff6a6a,#d62d2d);color:#fff;font-weight:900;padding:8px 14px;font-size:.82rem;line-height:1;box-shadow:0 6px 14px rgba(0,0,0,.22);cursor:pointer;white-space:nowrap}.closeBtn:hover{filter:brightness(1.04)}.closeBtn:disabled{opacity:.6;cursor:wait}
+    .footer{display:flex;justify-content:space-between;gap:12px;padding:8px 16px 18px}.refreshBadge{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(10,16,22,.6);border:1px solid var(--line);font-size:.84rem;color:var(--muted)}.empty{padding:18px;color:#fff;background:rgba(20,25,30,.34)}
+    .buildStamp{position:fixed;left:8px;bottom:8px;z-index:9999;background:rgba(0,0,0,.55);color:#d7e0ec;padding:6px 10px;border-radius:999px;font-size:.72rem;border:1px solid rgba(255,255,255,.1);max-width:72vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .scrollArea{max-height:370px;overflow:auto}.scrollArea.tickets{max-height:300px}::-webkit-scrollbar{height:10px;width:10px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:999px}::-webkit-scrollbar-track{background:transparent}
+    @media (max-width:1280px){.topbar{grid-template-columns:1fr;justify-items:center;max-width:none}.heroBox{width:330px;max-width:100%}.titleWrap{min-height:auto;padding:10px 0 2px}.title{white-space:normal;font-size:clamp(1.35rem,2.8vw,2rem)}.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:640px){html{font-size:16px}.page{padding:calc(max(18px, env(safe-area-inset-top)) + 20px) 8px 8px}.managerBar{margin-bottom:10px}.shell{border-radius:22px}.hero{padding:12px 10px 4px}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));padding-left:0;padding-right:0;gap:8px}.tile{min-height:112px;padding:9px 8px}.tile:nth-child(5){grid-column:1/-1;max-width:52%;width:100%;justify-self:center}.tileGlyph{font-size:1.45rem;min-height:28px}.tileGlyph.composite{height:32px}.tileGlyph.composite span{font-size:1.45rem}.tileLabel{font-size:.78rem}.tileValue{font-size:1.75rem}.filterBar{position:sticky;top:0;z-index:20;padding:8px 4px 10px;background:linear-gradient(180deg,rgba(7,13,18,.96),rgba(7,13,18,.72));backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.08)}.filterBtn{font-size:.7rem;padding:8px 10px}.mobileStatusBar{display:flex;position:sticky;top:52px;z-index:19;justify-content:center;gap:10px;align-items:center;margin:0 2px 10px;padding:9px 10px;border-radius:999px;background:rgba(0,0,0,.54);border:1px solid rgba(255,255,255,.1);color:#efffde;font-size:.76rem;font-weight:900;letter-spacing:.02em;backdrop-filter:blur(10px)}.section{padding:0 8px 12px}.sectionHeader{padding:13px 14px}.tableWrap{padding:0}.scrollArea,.scrollArea.tickets{max-height:none;overflow:visible}table,thead,tbody,tr,td{display:block;width:100%}table{min-width:0}thead{display:none}tbody tr{margin:10px;border:1px solid rgba(255,255,255,.1);border-radius:18px;overflow:hidden;background:rgba(255,255,255,.035);box-shadow:0 10px 22px rgba(0,0,0,.16)}tbody tr:hover{background:rgba(151,210,71,.05)}tbody td{display:grid;grid-template-columns:108px 1fr;gap:10px;align-items:start;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.07);font-size:.92rem}tbody td:before{content:attr(data-label);color:#d5f1ac;font-size:.68rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.timestampCell{white-space:normal}.servicesText{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.servicesText.expanded{-webkit-line-clamp:unset}.closeBtn{width:100%;min-height:40px}.footer{flex-direction:column;padding:8px 10px 14px}.buildStamp{max-width:88vw;font-size:.62rem}.backBtn{min-height:52px;padding:0 18px;font-size:.98rem}.heroBox{width:100%;max-width:330px}.title{white-space:normal}.statusChip{min-height:30px;font-size:.72rem}}
+  </style>
+  <link rel="icon" href="./assets/trail-v1/dashboard.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/dashboard.css">
+</head>
+<body data-memphis-context="manager">
+  <div id="build-stamp" class="buildStamp">dashboard build</div>
+  <div class="page">
+    <nav class="managerBar mz-page-header mz-nav-actions" aria-label="Application navigation"><a id="back-btn" class="mz-back-link" data-mz-back href="./start_page1.html">Back</a></nav>
+    <div class="shell">
+      <section class="hero">
+        <div class="topbar">
+          <div class="heroBox brand"><img class="trailZooBrand" alt="Memphis Zoo logo" src="./Zoo_Logo_ui.webp" width="512" height="512" decoding="async" /></div>
+          <div class="titleWrap"><span class="kicker">Operations Dashboard</span><h1 class="title trailPageTitle"><span class="accent">Custodial</span> Tracking System</h1></div>
+          <div class="heroBox infoBox"><div class="infoGroup"><div class="metaLabel">Today</div><span class="time" id="current-clock">--:--</span><span class="subtime" id="current-date">--</span></div><div class="infoDivider"></div><div class="infoGroup"><div class="metaLabel">Current Attendance</div><span class="time" id="attendance-time">--</span></div></div>
+        </div>
+        <div class="tiles" id="tiles"></div>
+        <div class="filterBar" id="filter-bar" aria-label="Dashboard filters">
+          <button class="filterBtn active" type="button" data-filter="all">All</button>
+          <button class="filterBtn" type="button" data-filter="okay">Okay</button>
+          <button class="filterBtn" type="button" data-filter="overdue">Overdue</button>
+          <button class="filterBtn" type="button" data-filter="not_cleaned">Not Cleaned</button>
+          <button class="filterBtn" type="button" data-filter="due_soon">Due Soon</button>
+          <button class="filterBtn" type="button" data-filter="in_progress">In Progress</button>
+          <button class="filterBtn" type="button" data-filter="tickets">Tickets</button>
+        </div>
+        <div class="mobileStatusBar" id="mobile-status">Loading dashboard…</div>
+      </section>
+      <section class="section" id="restroom-section"><div class="sectionCard"><div class="sectionHeader"><div><h2 class="sectionTitle">Restroom Status Report</h2><div class="sectionSub">Live operational state</div></div></div><div class="tableWrap"><div class="scrollArea" id="restroom-wrap"></div></div></div></section>
+      <section class="section" id="exhibit-section"><div class="sectionCard"><div class="sectionHeader"><div><h2 class="sectionTitle">Exhibit Status Report</h2><div class="sectionSub">Live operational state</div></div></div><div class="tableWrap"><div class="scrollArea" id="exhibit-wrap"></div></div></div></section>
+      <section class="section" id="tickets-section"><div class="sectionCard"><div class="sectionHeader"><div><h2 class="sectionTitle">Open Tickets</h2><div class="sectionSub">Maintenance items awaiting resolution</div></div></div><div class="tableWrap"><div class="scrollArea tickets" id="tickets-wrap"></div></div></div></section>
+      <div class="footer"><div class="refreshBadge">Dashboard refreshes automatically every 30 seconds.</div><div class="refreshBadge" id="refresh-status">Waiting for first refresh…</div></div>
+    </div>
+  </div>
+  <dialog id="ticket-close-dialog" style="max-width:520px;width:calc(100% - 32px);border:1px solid var(--trail-control-border,#778b72);border-radius:16px;background:var(--trail-surface,#10202b);color:var(--trail-ink,#fff);padding:22px">
+    <form method="dialog"><h2>Close ticket</h2><p>Select what actually happened. This does not submit a work order.</p>
+      <label for="ticket-close-outcome">Outcome</label><select id="ticket-close-outcome" required style="display:block;width:100%;min-height:44px;margin:8px 0 16px"><option value="">Choose outcome</option><option value="mark_fixed">Issue fixed</option><option value="work_order_sent">Work order already submitted</option></select>
+      <label for="ticket-close-reference">Submitted work-order reference</label><input id="ticket-close-reference" maxlength="120" style="display:block;width:100%;min-height:44px;margin:8px 0 16px" disabled>
+      <label for="ticket-close-notes">Notes (optional)</label><textarea id="ticket-close-notes" maxlength="1000" style="display:block;width:100%;min-height:70px;margin:8px 0 16px"></textarea>
+      <button value="cancel" formnovalidate type="submit">Cancel</button><button id="ticket-close-confirm" value="confirm" type="submit" style="margin-left:15px">Record outcome and close</button>
+    </form>
+  </dialog>
+  <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+<script src="./memphis-ticket-actions.js"></script>
+<script>
+    const CONFIG={APP_VERSION:"release-2026.07.19.custodial-v3.12",REQUIRED_DASHBOARD_CONTRACT_VERSION:"dashboard.v1",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",API_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/summary",WORK_ALERTS_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/"+("work-session-"+"alerts"),ATTENDANCE_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/current-attendance",SCAN_RPC_URL:"https://memphis-zoo-mcp.onrender.com/scan-api/rpc",CLOSE_TICKET_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/close-ticket",REFRESH_MS:30000,DEVICE_STORAGE_KEY:'mz_scan_device_id',ICONS:{people:"🚻",paw:"🐾",clock:"🕒",wrench:"🔧"}};
+    const BUILD_REFRESH_KEY="mz_dashboard_build_refresh";const BACKEND_REFRESH_KEY="mz_dashboard_backend_refresh";
+    const els={backBtn:document.getElementById("back-btn"),tiles:document.getElementById("tiles"),filterBar:document.getElementById("filter-bar"),mobileStatus:document.getElementById("mobile-status"),restroomSection:document.getElementById("restroom-section"),exhibitSection:document.getElementById("exhibit-section"),ticketsSection:document.getElementById("tickets-section"),restroomWrap:document.getElementById("restroom-wrap"),exhibitWrap:document.getElementById("exhibit-wrap"),ticketsWrap:document.getElementById("tickets-wrap"),refreshStatus:document.getElementById("refresh-status"),attendanceTime:document.getElementById("attendance-time"),currentClock:document.getElementById("current-clock"),currentDate:document.getElementById("current-date"),buildStamp:document.getElementById("build-stamp")};
+    const dashboardState={restrooms:[],exhibits:[],tickets:[],workAlerts:[],filter:'all'};
+    let ticketActions=window.MemphisTicketActions.create();
+    let dashboardRefreshGeneration=0,dashboardPublicationBinding=null,dashboardAccessWithdrawn=false;
+    // Local publication fences only. The normal auth/controller still supplies
+    // credentials and verifies each request; this page never grants permissions.
+    function dashboardSessionFacts(session){ return JSON.stringify([session.role,session.manager_id,session.credential_id,session.device_id,session.token,session.expires_at,session.access_level,session.read_only,session.roles,Object.entries(session.permissions||{}).sort(([a],[b])=>a.localeCompare(b))]); }
+    function captureDashboardBinding(){ const session=window.MemphisAuth.readSession(); const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if(session?.role!=='ops_manager'||!session.token||!uuid.test(session.manager_id||'')||!uuid.test(session.credential_id||'')||!session.device_id||!(Date.parse(session.expires_at)>Date.now())||session.permissions?.schema!=='custodial.manager-permissions.v1'||session.permissions.read!==true) return null;
+      return {session,facts:dashboardSessionFacts(session)};
+    }
+    function matchesDashboardBinding(binding){ const current=captureDashboardBinding(); return !!current&&current.session===binding?.session&&current.facts===binding.facts; }
+    function withdrawDashboardAccess(){ dashboardRefreshGeneration++;dashboardPublicationBinding=null;dashboardAccessWithdrawn=true;ticketActions.clear();
+      dashboardState.restrooms=[];dashboardState.exhibits=[];dashboardState.tickets=[];dashboardState.workAlerts=[];
+      for(const wrap of [els.restroomWrap,els.exhibitWrap,els.ticketsWrap]) wrap.innerHTML='<div class="empty">Dashboard access changed. Refresh with your current manager session.</div>';
+      els.tiles.innerHTML='';els.mobileStatus.textContent='Dashboard access unavailable';renderAttendanceBox(null);
+      const dialog=document.getElementById('ticket-close-dialog');if(dialog.open){dialog.returnValue='';dialog.close();}
+      els.refreshStatus.textContent='Dashboard access changed. Refresh with your current manager session.';
+    }
+    function currentDashboardRefresh(context){ if(context.attempt!==dashboardRefreshGeneration) return false; if(!matchesDashboardBinding(context.binding)){withdrawDashboardAccess();return false;}return true; }
+    function currentDashboardPublication(){ if(dashboardPublicationBinding&&!matchesDashboardBinding(dashboardPublicationBinding)) withdrawDashboardAccess(); return !dashboardAccessWithdrawn; }
+    async function dashboardAuthHeaders(binding){ if(!matchesDashboardBinding(binding)) throw Error('Manager access changed.');const headers=await window.MemphisAuth.opsManagerAuthHeaders();if(!matchesDashboardBinding(binding)) throw Error('Manager access changed.');return headers; }
+    function dashboardTicketActions(binding){ return window.MemphisTicketActions.create({auth:{readSession:()=>matchesDashboardBinding(binding)?window.MemphisAuth.readSession():null,isCustodialManagementAdmin:session=>matchesDashboardBinding(binding)&&session===binding.session&&window.MemphisAuth.isCustodialManagementAdmin?.(session)===true,opsManagerAuthHeaders:()=>dashboardAuthHeaders(binding)}}); }
+    init();
+    function isDemoMode(){ return new URL(window.location.href).searchParams.get("demo")==="1"; }
+    async function init(){ await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true}); els.backBtn.addEventListener('click', navigateBack); els.filterBar.addEventListener('click', handleFilterClick); els.tiles.addEventListener('click', handleTileClick); document.addEventListener('click', handleExpandableServices); window.addEventListener('hashchange', applyHashFilter); applyHashFilter(); setBuildStamp(CONFIG.APP_VERSION); startClock(); if(isDemoMode()){ renderDemoDashboard(); return; } if(await ensureFreshClientBuild()) return; if(await verifyBackendCompatibility()) return; refreshData(); setInterval(refreshData, CONFIG.REFRESH_MS); }
+    function navigateBack(){  const url=new URL('./start_page1.html', window.location.href); const device=String(new URL(window.location.href).searchParams.get('device')||localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY)||'').trim(); if(device) url.searchParams.set('device', device); window.location.href=url.toString(); }
+    function setBuildStamp(frontVersion, backendVersion=""){ if(!els.buildStamp) return; els.buildStamp.textContent=backendVersion?`${frontVersion} • ${backendVersion}`:frontVersion; }
+    function urlWithParam(key,value){ const url=new URL(window.location.href); url.searchParams.set(key,value); return url.toString(); }
+    function updateClock(){ const now=new Date(); els.currentClock.textContent=now.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" }); els.currentDate.textContent=now.toLocaleDateString([], { weekday:"short", month:"short", day:"numeric", year:"numeric" }); }
+    function startClock(){ updateClock(); setInterval(updateClock,1000); setInterval(refreshGpsFreshness,5000); }
+    async function ensureFreshClientBuild(){ const url=new URL(window.location.href); const currentBuild=url.searchParams.get("build")||""; const targetBuild=CONFIG.APP_VERSION; if(currentBuild===targetBuild){ sessionStorage.setItem(BUILD_REFRESH_KEY,`build:${targetBuild}`); return false; } const token=`build:${targetBuild}`; if(sessionStorage.getItem(BUILD_REFRESH_KEY)===token) return false; sessionStorage.setItem(BUILD_REFRESH_KEY, token); window.location.replace(urlWithParam("build", targetBuild)); return true; }
+    async function verifyBackendCompatibility(){ try{ const response=await fetch(CONFIG.VERSION_URL,{cache:"no-store"}); const payload=await response.json().catch(()=>null); const backendVersion=String((payload&&payload.version)||"").trim(); const backendContract=String((payload&&payload.contracts&&payload.contracts.dashboard)||"").trim(); setBuildStamp(CONFIG.APP_VERSION, backendVersion||""); if(backendContract&&backendContract!==CONFIG.REQUIRED_DASHBOARD_CONTRACT_VERSION){ els.refreshStatus.textContent="Dashboard update required. Reloading..."; window.location.replace(urlWithParam("build", CONFIG.APP_VERSION)); return true; } if(backendVersion){ const url=new URL(window.location.href); const currentBackend=url.searchParams.get("backend_version")||""; const token=`backend:${backendVersion}`; if(currentBackend!==backendVersion&&sessionStorage.getItem(BACKEND_REFRESH_KEY)!==token){ sessionStorage.setItem(BACKEND_REFRESH_KEY, token); url.searchParams.set("backend_version", backendVersion); url.searchParams.set("build", CONFIG.APP_VERSION); window.location.replace(url.toString()); return true; } sessionStorage.setItem(BACKEND_REFRESH_KEY, token); } }catch(error){ console.warn("Dashboard compatibility check failed", error); setBuildStamp(CONFIG.APP_VERSION); } return false; }
+    async function fetchAttendance(context){ try{ const response=await fetch(CONFIG.ATTENDANCE_URL,{method:"GET",cache:"no-store"});if(!currentDashboardRefresh(context)) return null; const payload=await response.json().catch(()=>null);if(!currentDashboardRefresh(context)) return null; if(!response.ok||!payload||!payload.ok) return null; return payload.data||null; }catch{ return null; } }
+    async function refreshData(){ const context={attempt:++dashboardRefreshGeneration,binding:captureDashboardBinding()};if(!context.binding){withdrawDashboardAccess();return;}if(dashboardPublicationBinding&&!matchesDashboardBinding(dashboardPublicationBinding)){withdrawDashboardAccess();return;}
+      els.refreshStatus.textContent="Refreshing dashboard…";
+      try{const session=await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:false,throwOnFailure:true});if(!currentDashboardRefresh(context))return;if(session!==context.binding.session){withdrawDashboardAccess();return;}
+        const authHeaders=await dashboardAuthHeaders(context.binding);if(!currentDashboardRefresh(context))return;
+        const [summaryResponse,attendance,workRows]=await Promise.all([fetch(CONFIG.API_URL,{method:"GET",cache:"no-store",headers:authHeaders}),fetchAttendance(context),fetch(CONFIG.WORK_ALERTS_URL,{method:"GET",cache:"no-store",headers:authHeaders}).then(r=>r.json()).catch(()=>({ok:false,data:[]}))]);if(!currentDashboardRefresh(context))return;
+        if([401,403].includes(summaryResponse.status)){withdrawDashboardAccess();return;}
+        const payload=await summaryResponse.json();if(!currentDashboardRefresh(context))return;
+        if(!summaryResponse.ok||!payload||!payload.ok)throw Error((payload&&payload.error)||`HTTP ${summaryResponse.status}`);
+        const meta=payload.data?.meta;if(meta?.contracts?.dashboard&&meta.contracts.dashboard!==CONFIG.REQUIRED_DASHBOARD_CONTRACT_VERSION){els.refreshStatus.textContent="Dashboard contract changed. Reloading...";window.location.replace(urlWithParam("build",CONFIG.APP_VERSION));return;}
+        const restrooms=await enrichActiveRows(sortRows(Array.isArray(payload.data?.restrooms)?payload.data.restrooms:[]),context);if(!currentDashboardRefresh(context))return;
+        const exhibits=await enrichActiveRows(sortRows(Array.isArray(payload.data?.exhibits)?payload.data.exhibits:[]),context);if(!currentDashboardRefresh(context))return;
+        const tickets=Array.isArray(payload.data?.open_tickets)?payload.data.open_tickets:[],candidateActions=dashboardTicketActions(context.binding);let ticketAccessUnavailable=false;
+        try{ticketAccessUnavailable=!(await candidateActions.refresh(tickets));}catch{candidateActions.clear();ticketAccessUnavailable=true;}if(!currentDashboardRefresh(context))return;
+        // Publish snapshot, eligibility and stamps together, only after all awaits.
+        ticketActions=candidateActions;dashboardPublicationBinding=context.binding;dashboardAccessWithdrawn=false;
+        dashboardState.restrooms=restrooms;dashboardState.exhibits=exhibits;dashboardState.tickets=tickets;dashboardState.workAlerts=Array.isArray(workRows?.data)?workRows.data:[];
+        if(meta?.version)setBuildStamp(CONFIG.APP_VERSION,meta.version);renderTiles({restrooms,exhibits,open_tickets:tickets});renderAttendanceBox(attendance);renderDashboardViews();wireCloseButtons();
+        els.refreshStatus.textContent=`Last refresh: ${new Date().toLocaleString()}${dashboardState.workAlerts.length?` • Work checks: ${dashboardState.workAlerts.length}`:''}${ticketAccessUnavailable?' • Ticket closure access unavailable':''}`;
+      }catch(error){if(!currentDashboardRefresh(context))return;els.refreshStatus.textContent=`Refresh failed: ${safe(error)}`;}
+    }
+    async function enrichActiveRows(rows,context){ const copy=rows.map(row=>({...row}));await Promise.all(copy.map(async row=>{if(normalizeStatus(row)!=='in_progress'||!currentDashboardRefresh(context))return;try{const state=await fetchScanState(row.location_code,context);if(!currentDashboardRefresh(context))return;if(state&&(state.latest_session_status==='active'||state.suggested_action==='finish_session'||state.suggested_action==='blocked_location_active')){row.open_session_employee_name=state.latest_employee_name||row.open_session_employee_name;row.latest_completed_at_display='—';row.duration_display=runningDurationDisplay(state.started_at)||row.duration_display||'—';row.services_performed=[];}}catch{/* A missing enrichment never grants authority or publishes another refresh. */}}));return copy; }
+    async function fetchScanState(locationCode,context){const headers=await dashboardAuthHeaders(context.binding);if(!currentDashboardRefresh(context))return null;const response=await fetch(CONFIG.SCAN_RPC_URL,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify({fn:'tool_get_location_scan_state',args:{p_location_code:locationCode,p_device_id:'dashboard-display'}})});if(!currentDashboardRefresh(context))return null;const payload=await response.json().catch(()=>null);if(!currentDashboardRefresh(context))return null;if(!response.ok||!payload?.ok)throw Error((payload&&payload.error)||`HTTP ${response.status}`);return payload.data; }
+    async function closeTicket(ticketId,button){if(!ticketId||!currentDashboardPublication()||!dashboardPublicationBinding)return;const binding=dashboardPublicationBinding,actions=ticketActions,reviewGeneration=dashboardRefreshGeneration;const choice=await chooseTicketOutcome();if(!matchesDashboardBinding(binding)){if(dashboardPublicationBinding===binding)withdrawDashboardAccess();return;}if(!choice||reviewGeneration!==dashboardRefreshGeneration||actions!==ticketActions)return;button.disabled=true;button.textContent='Closing…';
+      // Invalidate pre-closure snapshots so they cannot resurrect the ticket.
+      const context={attempt:++dashboardRefreshGeneration,binding};
+      try{await actions.close(ticketId,choice);if(!currentDashboardRefresh(context))return;dashboardState.tickets=dashboardState.tickets.filter(r=>r.ticket_id!==ticketId);renderTiles({restrooms:dashboardState.restrooms,exhibits:dashboardState.exhibits,open_tickets:dashboardState.tickets});renderDashboardViews();wireCloseButtons();els.refreshStatus.textContent='Ticket closure verified.';}
+      catch(error){if(!currentDashboardRefresh(context))return;button.disabled=false;button.textContent='Close';els.refreshStatus.textContent=`Close not verified: ${safe(error)}`;}
+    }
+    function chooseTicketOutcome(){const dialog=document.getElementById('ticket-close-dialog'),outcome=document.getElementById('ticket-close-outcome'),reference=document.getElementById('ticket-close-reference'),notes=document.getElementById('ticket-close-notes');if(dialog.open)return Promise.resolve(null);outcome.value='';reference.value='';reference.disabled=true;reference.required=false;notes.value='';dialog.returnValue='';outcome.onchange=()=>{reference.disabled=outcome.value!=='work_order_sent';reference.required=!reference.disabled;if(reference.disabled)reference.value='';};return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'?{outcome:outcome.value,reference:reference.value||null,notes:notes.value||null}:null),{once:true});dialog.showModal();outcome.focus();});}
+    function wireCloseButtons(){ els.ticketsWrap.querySelectorAll(".closeBtn").forEach((btn)=>{ btn.addEventListener("click",()=>{ if(btn.disabled) return; closeTicket(btn.dataset.ticketId,btn); }); }); }
+    function runningDurationDisplay(startedAt){ if(!startedAt) return "—"; const ms=Date.now()-new Date(startedAt).getTime(); if(!Number.isFinite(ms)||ms<0) return "—"; return `${Math.max(0, Math.round(ms/60000))} min`; }
+
+    function renderDemoDashboard(){ const data=demoDashboardData(); dashboardState.restrooms=sortRows(data.restrooms); dashboardState.exhibits=sortRows(data.exhibits); dashboardState.tickets=data.open_tickets; renderTiles(data); renderAttendanceBox({attendance:8124}); renderDashboardViews(); els.refreshStatus.textContent="Demo view: sample operational instances for documentation"; }
+    function demoDashboardData(){ return {restrooms:[
+      {location_code:"AQUARIUM",location_name:"Aquarium Restrooms",status_code:"okay",latest_completed_at_display:"Today 9:42 AM Central",duration_display:"18 min",services_performed:["Toilets and urinals cleaned","Sinks and counters cleaned","Paper towels restocked","Final inspection completed before scanning the location tag"],latest_employee_name:"Tammy Miller"},
+      {location_code:"CHINA",location_name:"China Restrooms",status_code:"due_soon",latest_completed_at_display:"Today 8:16 AM Central",duration_display:"16 min",services_performed:["Floors swept and mopped","Soap restocked","Trash emptied and receptacles cleaned"],latest_employee_name:"Marcus Reed"},
+      {location_code:"TETON_RR",location_name:"Teton Trek Restrooms",status_code:"overdue",latest_completed_at_display:"Yesterday 4:58 PM Central",duration_display:"22 min",services_performed:["Full cleaning and inspection completed"],latest_employee_name:"Tammy Miller"},
+      {location_code:"ENTRANCE",location_name:"Front Entrance Restrooms",status_code:"okay",latest_completed_at_display:"Today 10:08 AM Central",duration_display:"14 min",services_performed:["Mirrors and stainless steel surfaces cleaned and polished","Toilet tissue restocked","Soap restocked"],latest_employee_name:"Dana Cole"}
+    ],exhibits:[
+      {location_code:"TETON",location_name:"Teton Trek Exhibit",status_code:"okay",latest_completed_at_display:"Today 9:55 AM Central",duration_display:"24 min",services_performed:["Floors swept or vacuumed, including corners","Interior glass cleaned","Final inspection completed before scanning the location tag"],latest_employee_name:"Tammy Miller"},
+      {location_code:"AQUARIUM_EX",location_name:"Aquarium Exhibit",status_code:"due_soon",latest_completed_at_display:"Today 7:35 AM Central",duration_display:"19 min",services_performed:["Entrance and exit doors cleaned","Exterior glass cleaned"],latest_employee_name:"Jordan Lee"},
+      {location_code:"CAT",location_name:"Cat Country",status_code:"overdue",latest_completed_at_display:"Yesterday 3:40 PM Central",duration_display:"27 min",services_performed:["Floors swept or vacuumed, including corners","Walls, signage, switch plates, and baseboards spot-cleaned"],latest_employee_name:"Riley Brooks"},
+      {location_code:"PRIMATE",location_name:"Primate Canyon",status_code:"okay",latest_completed_at_display:"Today 10:21 AM Central",duration_display:"21 min",services_performed:["Stairs swept, including around railings","Interior glass cleaned"],latest_employee_name:"Avery Smith"}
+    ],open_tickets:[
+      {ticket_id:"demo-guest-001",location_code:"AQUARIUM",location_name:"Aquarium Restrooms",date_submitted_display:"Today 10:14 AM Central",maintenance_issue:"Guest QR cleanliness report: paper towels empty near sinks. Guest note: dispenser by the family restroom is empty.",reported_by:"Guest QR"},
+      {ticket_id:"demo-maint-002",location_code:"TETON_RR",location_name:"Teton Trek Restrooms",date_submitted_display:"Today 9:05 AM Central",maintenance_issue:"Soap dispenser loose on wall",reported_by:"Tammy Miller"}
+    ]}; }
+    function normalizeStatus(row){
+      if(activeCleaning(row))return 'in_progress';
+      const code=String(row.status_code||'').toLowerCase(),color=String(row.status_color||'').toLowerCase();
+      let status=code==='cleaning_in_progress'?'in_progress':code||({red:'overdue',yellow:'due_soon',blue:'in_progress',green:'okay',black:'not_cleaned'}[color]||'unknown');
+      if(status==='in_progress'&&row.open_session_status==='pending_submit')status='pending_submit';
+      return ['not_cleaned','in_progress','okay','ok','due_soon','overdue','pending_submit'].includes(status)?status:'unknown';
+    }
+    function statusRank(row){ const status=normalizeStatus(row); if(status==="overdue") return 1; if(status==="due_soon") return 2; if(status==="in_progress") return 3; if(status==="okay"||status==="ok") return 4; if(status==="not_cleaned") return 5; return 9; }
+    function sortRows(rows){ return [...rows].sort((a,b)=>{ const rankDiff=statusRank(a)-statusRank(b); if(rankDiff!==0) return rankDiff; const ticketsDiff=Number(b.open_ticket_count||0)-Number(a.open_ticket_count||0); if(ticketsDiff!==0) return ticketsDiff; return String(a.location_name||a.location_code||"").localeCompare(String(b.location_name||b.location_code||"")); }); }
+    function renderTiles(data){ const restrooms=Array.isArray(data.restrooms)?data.restrooms:[]; const exhibits=Array.isArray(data.exhibits)?data.exhibits:[]; const tickets=Array.isArray(data.open_tickets)?data.open_tickets:[]; const restroomOverdue=countBy(restrooms,"overdue"); const restroomNotCleaned=countBy(restrooms,"not_cleaned"); const exhibitOverdue=countBy(exhibits,"overdue"); const exhibitNotCleaned=countBy(exhibits,"not_cleaned"); els.tiles.innerHTML=[tileComposite("Restrooms Overdue", restroomOverdue, CONFIG.ICONS.clock, CONFIG.ICONS.people, "overdue", "restroom-section"),tileSingle("Restrooms Not Cleaned", restroomNotCleaned, CONFIG.ICONS.people, "not_cleaned", "restroom-section"),tileComposite("Exhibits Overdue", exhibitOverdue, CONFIG.ICONS.clock, CONFIG.ICONS.paw, "overdue", "exhibit-section"),tileSingle("Exhibits Not Cleaned", exhibitNotCleaned, CONFIG.ICONS.paw, "not_cleaned", "exhibit-section"),tileSingle("Open Tickets", tickets.length, CONFIG.ICONS.wrench, "tickets", "tickets-section")].join(""); }
+    function renderAttendanceBox(attendance){ const value=attendance&&Number.isFinite(Number(attendance.attendance))?Number(attendance.attendance).toLocaleString():"--"; els.attendanceTime.textContent=value; }
+    function tileSingle(label,value,icon,filter='all',target=''){ const alertClass=Number(value||0)>0&&(String(label).includes('Overdue')||String(label).includes('Tickets'))?' alert':''; return `<button class="tile${alertClass}" type="button" data-filter="${escapeAttr(filter)}" data-target="${escapeAttr(target)}"><div class="tileGlyph">${icon}</div><div class="tileLabel">${escapeHtml(label)}</div><div class="tileValue">${escapeHtml(String(value))}</div><div class="tileMeta">Tap to filter</div></button>`; }
+    function tileComposite(label,value,baseIcon,badgeIcon,filter='all',target=''){ const isOverdue=String(label).includes('Overdue'); const alertClass=Number(value||0)>0&&isOverdue?' alert overdueTile':''; return `<button class="tile${alertClass}" type="button" data-filter="${escapeAttr(filter)}" data-target="${escapeAttr(target)}"><div class="tileGlyph composite"><span>${baseIcon}</span><small>${badgeIcon}</small></div><div class="tileLabel">${escapeHtml(label)}</div><div class="tileValue">${escapeHtml(String(value))}</div><div class="tileMeta">Tap to filter</div></button>`; }
+    function cleanDisplay(value){ return String(value==null?"":value).replace(/\s+Central$/i,"").trim(); }
+    function activeCleaning(row){ return row.open_session_status==='active'&&!!String(row.open_session_uuid||'').trim(); }
+    function verifiedCheckMarkup(row){
+      const checkedAt=Date.parse(row.latest_verified_check_at||'');
+      const name=String(row.latest_verified_checker_name||'').trim();
+      if(!Number.isFinite(checkedAt)||!name||!row.latest_verified_check_session_uuid||!row.latest_verified_check_completion_id)return '';
+      const when=new Date(checkedAt).toLocaleString([], {timeZone:'America/Chicago',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'});
+      return `<div class="tiny muted">Check-only: ${escapeHtml(when)} Central • ${escapeHtml(name)}</div>`;
+    }
+    function workSignalForRow(row){
+      if(!activeCleaning(row)) return null;
+      const warn=(title)=>({kind:"warn",title});
+      const canonical=(value,upper=false)=>{const text=String(value??"").trim();return upper?text.toUpperCase():text;};
+      const session=canonical(row.open_session_uuid);
+      const loc=canonical(row.location_code,true);
+      const device=canonical(row.open_session_device_identifier,true);
+      if(!session||!loc||!device) return warn("GPS unavailable: active cleaning identity is incomplete");
+      const sameIdentity=(values,expected,upper=false)=>{
+        const present=values.map(value=>canonical(value,upper)).filter(Boolean);
+        return present.length>0&&present.every(value=>value===expected);
+      };
+      const capturedAt=(item)=>{
+        const payload=item.payload_json||{};
+        // Receipt time must never make an offline-buffered reading look current.
+        const raw=payload.observed_at??payload.position?.timestamp??item.observed_at;
+        if(typeof raw==="number") return Number.isFinite(raw)&&raw>0?raw:NaN;
+        if(typeof raw!=="string"||!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(raw)) return NaN;
+        return Date.parse(raw);
+      };
+      const readings=(dashboardState.workAlerts||[]).filter(item=>{
+        if(!item||typeof item!=="object") return false;
+        const payload=item.payload_json||{};
+        return sameIdentity([item.session_uuid,payload.session_uuid],session)
+          &&sameIdentity([item.location_code,payload.location_code],loc,true)
+          &&sameIdentity([item.device_identifier,payload.device_identifier],device,true);
+      }).map(item=>({item,observed:capturedAt(item)}));
+      if(!readings.length) return warn("No GPS reading for this active cleaning session");
+      if(readings.some(reading=>!Number.isFinite(reading.observed))) return warn("GPS capture time is unavailable");
+      readings.sort((a,b)=>b.observed-a.observed);
+      const {item:match,observed}=readings[0];
+      const age=Date.now()-observed;
+      const stamp=new Date(observed).toLocaleString();
+      if(age< -30000) return warn("GPS capture time is ahead of the clock");
+      if(age>120000) return warn(`GPS is stale; last capture ${stamp}`);
+      if(match.session_status&&!["active","offline-provisional"].includes(String(match.session_status).toLowerCase()))
+        return warn("GPS reading is not from active cleaning");
+      const started=Date.parse(String(match.started_at||""));
+      if(Number.isFinite(started)&&observed<started) return warn("GPS reading predates this cleaning");
+      const result=String(match.result||"gps_unverified").toLowerCase();
+      if(readings.some(reading=>reading.observed===observed&&String(reading.item.result||"gps_unverified").toLowerCase()!==result))
+        return warn("Conflicting GPS readings; waiting for a reliable update");
+      const validUntil=observed+120000;
+      if(["away","offsite_outside_zoo_campus","outside_scanned_location"].includes(result))
+        return {kind:"away",title:`Outside the scanned cleaning area; GPS captured ${stamp}`,validUntil};
+      if(["near","inside_scanned_location"].includes(result))
+        return {kind:"near",title:`Within the scanned cleaning area; GPS captured ${stamp}`,validUntil};
+      return warn(`GPS is uncertain, unavailable, or uncalibrated; last capture ${stamp}`);
+    }
+    function workSignalMarkup(signal){
+      if(!signal) return "";
+      const expiry=Number.isFinite(signal.validUntil)?String(signal.validUntil):"";
+      return `<span class="workSignalDot workSignal-${escapeAttr(signal.kind)}" role="img" aria-label="${escapeAttr(signal.title)}" title="${escapeAttr(signal.title)}" data-gps-valid-until="${expiry}"></span>`;
+    }
+    function refreshGpsFreshness(){
+      if(!currentDashboardPublication()) return;
+      document.querySelectorAll('.workSignalDot[data-gps-valid-until]').forEach(dot=>{
+        const raw=dot.getAttribute('data-gps-valid-until');
+        const expiry=Number(raw);
+        if(!raw||!Number.isFinite(expiry)||Date.now()<=expiry) return;
+        dot.classList.remove('workSignal-near','workSignal-away');
+        dot.classList.add('workSignal-warn');
+        const message=`GPS is stale; last capture ${new Date(expiry-120000).toLocaleString()}`;
+        dot.title=message;
+        dot.setAttribute('aria-label',message);
+        dot.removeAttribute('data-gps-valid-until');
+      });
+    }
+    function renderLocationTable(target,rows){
+      if(!rows.length){target.innerHTML=`<div class="empty">No rows available.</div>`;return;}
+      target.innerHTML=`<table><thead><tr><th style="width:20%;">Location</th><th style="width:12%;">Status</th><th style="width:13%;">Time</th><th style="width:11%;">Time To Clean</th><th style="width:29%;">Services Performed</th><th style="width:15%;">Employee Name</th></tr></thead><tbody>${rows.map(row=>{
+        const statusCode=normalizeStatus(row),active=activeCleaning(row),pending=row.open_session_status==='pending_submit';
+        // An active visit shows only its current worker and elapsed time.
+        const employeeMarkup=active?`<span class="employeeInProgress">Cleaning now, ${escapeHtml(row.open_session_employee_name||'Name unavailable')}</span>`:escapeHtml(row.latest_employee_name||'—');
+        const completedTime=active?'—':cleanDisplay(row.latest_completed_at_display)||'—';
+        const duration=active?runningDurationDisplay(row.open_session_started_at)||'—':row.duration_display||'—';
+        const services=active?'—':formatServices(row.services_performed);
+        return `<tr><td data-label="Location">${workSignalMarkup(workSignalForRow(row))}${escapeHtml(row.location_name||row.location_code||'—')}${active?'':verifiedCheckMarkup(row)}</td><td data-label="Status"><span class="statusChip status-${escapeAttr(statusCode)}"><span class="statusDot"></span>${escapeHtml(formatStatus(statusCode))}</span>${pending&&statusCode!=='pending_submit'?'<div class="tiny">Completion pending</div>':''}</td><td data-label="Time" class="timestampCell">${escapeHtml(completedTime)}</td><td data-label="Clean Time">${escapeHtml(duration)}</td><td data-label="Services"><div class="servicesText" title="Tap to expand">${escapeHtml(services)}</div></td><td data-label="Employee">${employeeMarkup}</td></tr>`;
+      }).join('')}</tbody></table>`;
+    }
+    function renderTicketsTable(target,rows){ if(!rows.length){ target.innerHTML=`<div class="empty">No open tickets.</div>`; return; } target.innerHTML=`<table><thead><tr><th style="width:24%;">Location</th><th style="width:18%;">Timestamp</th><th style="width:34%;">Issue</th><th style="width:14%;">Reported By</th><th style="width:10%;">Action</th></tr></thead><tbody>${rows.map((row)=>`<tr><td data-label="Location">${escapeHtml(row.location_name||row.location_code||"—")}</td><td data-label="Timestamp" class="timestampCell">${escapeHtml(cleanDisplay(row.date_submitted_display||row.created_at_display)||"—")}</td><td data-label="Issue"><div>${escapeHtml(row.maintenance_issue||"—")}</div>${row.out_of_order?`<div class="tiny muted">Out of order${row.fixture_identifier?` • ${escapeHtml(row.fixture_identifier)}`:""}</div>`:""}</td><td data-label="Reported By">${escapeHtml(row.reported_by||"—")}</td><td data-label="Action">${ticketActions.status(row.ticket_id)?.can_close===true?`<button class="closeBtn" data-ticket-id="${escapeAttr(row.ticket_id||'')}">Close</button>`:`<span class="tiny muted">${ticketActions.status(row.ticket_id)?'Read only':'Closure access unverified'}</span>`}</td></tr>`).join("")}</tbody></table>`; }
+    function handleFilterClick(event){ const btn=event.target.closest('.filterBtn'); if(!btn) return; setDashboardFilter(btn.dataset.filter||'all'); }
+    function handleTileClick(event){ const tile=event.target.closest('.tile'); if(!tile) return; const filter=tile.dataset.filter||'all'; setDashboardFilter(filter); const targetId=tile.dataset.target||''; if(targetId){ const node=document.getElementById(targetId); if(node) setTimeout(()=>node.scrollIntoView({behavior:'smooth',block:'start'}),50); } }
+    function handleExpandableServices(event){ const node=event.target.closest('.servicesText'); if(!node) return; node.classList.toggle('expanded'); }
+    function applyHashFilter(){ const hash=String(window.location.hash||'').slice(1).toLowerCase(); const filterByHash={overdue:'overdue','due-soon':'due_soon','being-cleaned':'in_progress','tickets-section':'tickets'}; const filter=filterByHash[hash]; if(filter) setDashboardFilter(filter); }
+    function setDashboardFilter(filter='all'){ dashboardState.filter=filter; els.filterBar.querySelectorAll('.filterBtn').forEach((btn)=>btn.classList.toggle('active',btn.dataset.filter===filter)); renderDashboardViews(); wireCloseButtons(); }
+    function rowMatchesFilter(row,filter){ const status=normalizeStatus(row); if(filter==='all') return true; if(filter==='in_progress') return activeCleaning(row)||status==='in_progress'; if(filter==='okay') return status==='okay'||status==='ok'; return status===filter; }
+    function filteredRows(rows,filter){ return (Array.isArray(rows)?rows:[]).filter((row)=>rowMatchesFilter(row,filter)); }
+    function renderDashboardViews(){ if(!currentDashboardPublication())return;const filter=dashboardState.filter||'all'; const ticketMode=filter==='tickets'; const showTickets=filter==='all'||ticketMode; const restroomRows=ticketMode?[]:filteredRows(dashboardState.restrooms,filter); const exhibitRows=ticketMode?[]:filteredRows(dashboardState.exhibits,filter); els.restroomSection.classList.toggle('hidden',ticketMode); els.exhibitSection.classList.toggle('hidden',ticketMode); els.ticketsSection.classList.toggle('hidden',!showTickets); renderLocationTable(els.restroomWrap,restroomRows); renderLocationTable(els.exhibitWrap,exhibitRows); renderTicketsTable(els.ticketsWrap,showTickets?dashboardState.tickets:[]); updateMobileStatus(); }
+    function updateMobileStatus(){ const allRows=[...dashboardState.restrooms,...dashboardState.exhibits]; const overdue=countBy(allRows,'overdue'); const dueSoon=countBy(allRows,'due_soon'); const progress=countBy(allRows,'in_progress'); const notCleaned=countBy(allRows,'not_cleaned'); const tickets=dashboardState.tickets.length; els.mobileStatus.textContent=`${overdue} overdue • ${dueSoon} due soon • ${progress} in progress • ${notCleaned} not cleaned • ${tickets} tickets`; }
+    function countBy(rows,status){ return rows.filter((row)=>status==='in_progress'?(activeCleaning(row)||normalizeStatus(row)===status):normalizeStatus(row)===status).length; }
+    function formatIsoTime(value){ if(!value) return ""; const date=new Date(value); if(Number.isNaN(date.getTime())) return ""; return date.toLocaleString([], { month:"2-digit", day:"2-digit", year:"numeric", hour:"numeric", minute:"2-digit" }); }
+    function formatServices(value){ if(!Array.isArray(value)||!value.length) return "—"; return value.join(", "); }
+    function formatStatus(value){ const raw=String(value||"").toLowerCase(); if(!raw) return "—"; if(raw==="unknown") return "Status unavailable"; if(raw==="pending_submit") return "Completion pending"; if(raw==="not_cleaned") return "NOT CLEANED"; if(raw==="due_soon") return "DUE SOON"; if(raw==="in_progress"||raw==="cleaning_in_progress") return "CLEANING IN PROGRESS"; if(raw==="okay"||raw==="ok") return "OKAY"; return raw.replace(/_/g," ").toUpperCase(); }
+    function safe(error){ return error&&error.message?String(error.message):String(error||"Unknown error"); }
+    function escapeHtml(value){ return String(value==null?"":value).replace(/[&<>"']/g,function(m){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]; }); }
+    function escapeAttr(value){ return escapeHtml(value).replace(/`/g,"&#96;"); }
+  </script>
+  <script src="./memphis-scan-sync.js?v=release-2026.07.19.custodial-v3.12"></script>
+</body>
+</html>

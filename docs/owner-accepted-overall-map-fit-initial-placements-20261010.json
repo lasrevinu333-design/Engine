@@ -1,0 +1,672 @@
+{
+  "cropOriginInRegisteredScreenshot": [
+    80.0,
+    240.0
+  ],
+  "kind": "same_affine_initial_decorative_projection",
+  "locations": [
+    {
+      "entityCode": "AQUX",
+      "locationId": "c09dd3a9-808b-4c41-a237-9759a91be3ab",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Aquarium",
+      "originalApprovedCanvasPoint": {
+        "x": 94.38453617144782,
+        "y": 142.68311439999232
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 166.6736630523898,
+        "y": 160.89698669987348
+      }
+    },
+    {
+      "entityCode": "BONM",
+      "locationId": "d6f8ab36-555b-4a08-8763-272ba37d2b04",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Bonobos Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 417.3717534820569,
+        "y": 170.9353735772389
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 709.5288122676228,
+        "y": 276.02063370223686
+      }
+    },
+    {
+      "entityCode": "BONW",
+      "locationId": "e975ebbf-bb10-49c7-9d37-efac51e6b4e0",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Bonobos Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 409.6887528820773,
+        "y": 170.9223547864214
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 696.473739736282,
+        "y": 274.39293793122545
+      }
+    },
+    {
+      "entityCode": "BREM",
+      "locationId": "403edde1-f4c5-4c57-8d9d-b2c2703667f4",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Breezeway Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 464.5563309718682,
+        "y": 279.09782408557345
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 766.4166459396046,
+        "y": 468.1896861956667
+      }
+    },
+    {
+      "entityCode": "BREW",
+      "locationId": "2e728747-5681-4641-a22a-15922ab22845",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Breezeway Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 457.4525306008511,
+        "y": 282.43192980529335
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 753.6247538378705,
+        "y": 472.32461065005134
+      }
+    },
+    {
+      "entityCode": "CATX",
+      "locationId": "e7b43219-6b61-4c08-aabf-9205dc16efdb",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Cat Country",
+      "originalApprovedCanvasPoint": {
+        "x": 347.4975164809531,
+        "y": 306.84358717757254
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 561.4872920667846,
+        "y": 490.4896990779007
+      }
+    },
+    {
+      "entityCode": "CATM",
+      "locationId": "9eb69196-c103-4a9f-873a-227d32c42ccd",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Cathouse Cafe Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 401.5759318564844,
+        "y": 249.26718408678113
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 665.8041052529344,
+        "y": 404.7472954381576
+      }
+    },
+    {
+      "entityCode": "CATW",
+      "locationId": "37e2746d-6116-48df-9c04-912180e614fc",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Cathouse Cafe Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 391.1749312638588,
+        "y": 252.71529738288154
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 647.3837904405061,
+        "y": 408.3852620597887
+      }
+    },
+    {
+      "entityCode": "CHIM",
+      "locationId": "ae049ef7-66d8-4ab7-94e1-48189ab03ab0",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "China Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 544.2038170075992,
+        "y": 159.57552127325135
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 927.537858111831,
+        "y": 283.38163370711527
+      }
+    },
+    {
+      "entityCode": "CHIW",
+      "locationId": "efece506-df23-42f7-837e-7df4cd0bcb06",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "China Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 550.097931374982,
+        "y": 154.41608322454718
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 938.6671024388991,
+        "y": 275.9172925860919
+      }
+    },
+    {
+      "entityCode": "CHNX",
+      "locationId": "cde94274-5631-401d-9d57-812e6b47f5ee",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "China",
+      "originalApprovedCanvasPoint": {
+        "x": 475.24868960653737,
+        "y": 163.90805013567382
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 809.4095249892205,
+        "y": 276.27242519594313
+      }
+    },
+    {
+      "entityCode": "COURM",
+      "locationId": "79edb5d2-e792-4464-9725-780123431dee",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Courtyard Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 412.4868227065283,
+        "y": 333.6986918959605
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 666.1552813315594,
+        "y": 549.3366982843953
+      }
+    },
+    {
+      "entityCode": "COURW",
+      "locationId": "fc0b970a-5c8e-46a0-aaf5-e72e131b2c3e",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Courtyard Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 406.24041419294485,
+        "y": 334.49905412603414
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 655.3665505112351,
+        "y": 549.3802022313988
+      }
+    },
+    {
+      "entityCode": "EABX",
+      "locationId": "7fdde9c1-b334-4adc-ae3e-350ff9419b2b",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "East Admin Building",
+      "originalApprovedCanvasPoint": {
+        "x": 453.7260932530056,
+        "y": 332.1790684383698
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 736.5721787045004,
+        "y": 555.394415285588
+      }
+    },
+    {
+      "entityCode": "EADM",
+      "locationId": "181a8d59-3a98-4823-8ca4-b9ecd958d90e",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "East Admin Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 448.33775557462855,
+        "y": 326.8340701014517
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 728.5659712734932,
+        "y": 545.2592723500575
+      }
+    },
+    {
+      "entityCode": "EADW",
+      "locationId": "198be106-b98d-4604-b323-a0c8d5e4fd1a",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "East Admin Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 445.7993672711733,
+        "y": 321.2239331130069
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 725.4606125076314,
+        "y": 535.2728805867245
+      }
+    },
+    {
+      "entityCode": "EENDM",
+      "locationId": "72ba55c0-6f64-42dd-a721-98d1717ae350",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "East End Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 867.0501351013952,
+        "y": 180.19530021768378
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 1471.7981357570509,
+        "y": 385.61131323727363
+      }
+    },
+    {
+      "entityCode": "EENDW",
+      "locationId": "62ff1f51-1be7-4fed-8b72-a97c942f7561",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "East End Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 864.2148451094331,
+        "y": 182.97805595696457
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 1466.3797218775437,
+        "y": 389.70906091255927
+      }
+    },
+    {
+      "entityCode": "EDUX",
+      "locationId": "5933e02f-1dca-4d19-a5c0-e40e5d2f229c",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Education",
+      "originalApprovedCanvasPoint": {
+        "x": 460.4677702288425,
+        "y": 269.52226799982276
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 761.531087502299,
+        "y": 451.19560689758805
+      }
+    },
+    {
+      "entityCode": "EVCM",
+      "locationId": "0ae9d4a9-1c0b-432d-aac1-2d9eb3fafa1e",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Event Center Left Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 358.2887552768008,
+        "y": 137.957933464157
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 616.2182703810413,
+        "y": 208.08888166009035
+      }
+    },
+    {
+      "entityCode": "EVCW",
+      "locationId": "4c54e3f9-de0b-4fe6-8116-2e32c0d3cc4d",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Event Center Right Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 363.55791369065616,
+        "y": 139.54957070855892
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 624.8306732858211,
+        "y": 211.87283870698184
+      }
+    },
+    {
+      "entityCode": "EVCX",
+      "locationId": "a6ae6887-394a-42e2-b406-8d3c99395be6",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Event Center",
+      "originalApprovedCanvasPoint": {
+        "x": 356.40128561569986,
+        "y": 154.14444106522993
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 609.5225987644845,
+        "y": 234.97670257252696
+      }
+    },
+    {
+      "entityCode": "EXOX",
+      "locationId": "81c5cf06-3808-4da9-88d3-408ecc3d9afd",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Expo",
+      "originalApprovedCanvasPoint": {
+        "x": 90.49766526944978,
+        "y": 233.93283410067903
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 140.4057076660813,
+        "y": 313.88571963095603
+      }
+    },
+    {
+      "entityCode": "EXPOM",
+      "locationId": "021b598d-dedf-4de8-8d91-df6d8617d826",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Expo Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 85.85562977450985,
+        "y": 237.88097867342873
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 131.66547389696788,
+        "y": 319.57011510776033
+      }
+    },
+    {
+      "entityCode": "EXPOW",
+      "locationId": "9e4f0ebd-7a0d-462f-aa8f-3aca2da98f14",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Expo Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 85.49724374781272,
+        "y": 231.66374747761154
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 132.39601718959588,
+        "y": 309.0160901673323
+      }
+    },
+    {
+      "entityCode": "HERX",
+      "locationId": "7a6ef424-142e-4d0b-9202-8007c3283ae7",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Herpetarium",
+      "originalApprovedCanvasPoint": {
+        "x": 322.6206313565494,
+        "y": 197.46514847234863
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 542.775189925417,
+        "y": 300.93342634656983
+      }
+    },
+    {
+      "entityCode": "KOMX",
+      "locationId": "8513ed80-a2da-4eb4-be09-156f62053a05",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Komodos",
+      "originalApprovedCanvasPoint": {
+        "x": 306.2182062786371,
+        "y": 118.20022938824965
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 531.9774460787127,
+        "y": 163.9045566003283
+      }
+    },
+    {
+      "entityCode": "MEMM",
+      "locationId": "8f158d2b-6a2b-4091-9a3a-ed5cf535f627",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "MemMex Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 158.0686475848217,
+        "y": 268.8485516867687
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 247.72461391535444,
+        "y": 386.85842652690883
+      }
+    },
+    {
+      "entityCode": "MEMW",
+      "locationId": "ef3711b2-ddce-4f8e-8749-15002a4bc0c7",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "MemMex Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 153.72316993278275,
+        "y": 248.69015568552572
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 244.68272712443513,
+        "y": 351.9733107799751
+      }
+    },
+    {
+      "entityCode": "NOCX",
+      "locationId": "22b1e8d2-e0ba-4ff8-ae4e-3cbe85df27d3",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Nocturnal",
+      "originalApprovedCanvasPoint": {
+        "x": 438.70423012339586,
+        "y": 225.11389161209826
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 734.1110325707941,
+        "y": 371.7968442467363
+      }
+    },
+    {
+      "entityCode": "NWPX",
+      "locationId": "a92ecadc-c286-47c7-aaad-2550642abedf",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "North West Passage",
+      "originalApprovedCanvasPoint": {
+        "x": 959.2775393386142,
+        "y": 218.99275965224746
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 1620.1862021695138,
+        "y": 470.27989268711076
+      }
+    },
+    {
+      "entityCode": "PRCX",
+      "locationId": "bba5732d-2851-4b19-b06c-45d57da46af0",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Primate Canyon",
+      "originalApprovedCanvasPoint": {
+        "x": 483.70584135531647,
+        "y": 227.13842074768849
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 810.1586593623862,
+        "y": 384.61455027708485
+      }
+    },
+    {
+      "entityCode": "PRPX",
+      "locationId": "b47d52a4-15aa-4498-be58-cf8a716e8510",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Primate Pavillion",
+      "originalApprovedCanvasPoint": {
+        "x": 632.6320123957461,
+        "y": 248.97801568290663
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 1058.56481435644,
+        "y": 452.55078985877174
+      }
+    },
+    {
+      "entityCode": "SPLM",
+      "locationId": "ac3c7f4c-2e77-4c4e-8867-30adef9cf202",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Splash Pad Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 417.50586915142856,
+        "y": 160.4931433700259
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 712.0067775657284,
+        "y": 258.44832052746995
+      }
+    },
+    {
+      "entityCode": "SPLW",
+      "locationId": "f3188e23-78ac-4137-baa9-dd65c656779f",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Splash Pad Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 410.5092050015942,
+        "y": 160.44946622096694
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 700.1247951246913,
+        "y": 256.9123950090875
+      }
+    },
+    {
+      "entityCode": "TETM",
+      "locationId": "a269e6f3-dbdc-481a-aa0b-fb3cdfde8606",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Teton Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 1051.587345461112,
+        "y": 341.5868247686572
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 1750.6583609904374,
+        "y": 696.2045876393587
+      }
+    },
+    {
+      "entityCode": "TETW",
+      "locationId": "7f890aeb-87df-4255-9116-9d465b4b5121",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Teton Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 1043.8984468571348,
+        "y": 346.6609672075737
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 1736.4971153868908,
+        "y": 703.1500521061314
+      }
+    },
+    {
+      "entityCode": "TETX",
+      "locationId": "e127dc20-98ea-4c21-9a8d-5274d29f8508",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Teton",
+      "originalApprovedCanvasPoint": {
+        "x": 1057.6881425393535,
+        "y": 355.8759412451035
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 1757.9482291729043,
+        "y": 721.5639157599269
+      }
+    },
+    {
+      "entityCode": "TRBX",
+      "locationId": "d7d70c17-86cd-4f77-be6b-74b4665cfb9c",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Tropical Birds",
+      "originalApprovedCanvasPoint": {
+        "x": 253.54846568619814,
+        "y": 297.22124636735873
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 403.88668097968105,
+        "y": 454.63585732623835
+      }
+    },
+    {
+      "entityCode": "WABX",
+      "locationId": "58418743-10d7-4d22-97f8-1a33d4a969d4",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "West Admin Building",
+      "originalApprovedCanvasPoint": {
+        "x": 411.2772188763089,
+        "y": 346.65881554977096
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 661.306897800961,
+        "y": 570.9281344889195
+      }
+    },
+    {
+      "entityCode": "WADM",
+      "locationId": "12c90b1e-d53e-47b6-860e-823ae0fee1a8",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "West Admin Downstairs Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 412.93868908832496,
+        "y": 362.93305797857806
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 660.6240305273001,
+        "y": 598.7055631370393
+      }
+    },
+    {
+      "entityCode": "WADW",
+      "locationId": "c51107e4-2d66-487b-9765-09489e2f84c9",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "West Admin Downstairs Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 418.2783981172148,
+        "y": 361.09038649572875
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 670.096342741417,
+        "y": 596.7157496512855
+      }
+    },
+    {
+      "entityCode": "WAUM",
+      "locationId": "a8fa8f6b-6a90-4448-a125-ea1045fbe261",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "West Admin Upstairs Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 404.9942849209791,
+        "y": 359.2212597893432
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 647.9216709088038,
+        "y": 590.7889537554347
+      }
+    },
+    {
+      "entityCode": "WAUW",
+      "locationId": "c33d6d08-95bb-40df-ad88-03482df6165d",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "West Admin Upstairs Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 407.05950623311355,
+        "y": 365.384369141322
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 650.1036933538188,
+        "y": 601.6084863129518
+      }
+    },
+    {
+      "entityCode": "ZAMM",
+      "locationId": "1886dfe1-4ba4-47dc-8bb9-c2e26df0aa31",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Zambezi Men's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 598.0502818455939,
+        "y": 349.63940982259527
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 978.1005077514806,
+        "y": 614.9876202868602
+      }
+    },
+    {
+      "entityCode": "ZAMW",
+      "locationId": "56a18f41-be6c-4bbe-a138-4a3df040b0a9",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Zambezi Women's Restroom",
+      "originalApprovedCanvasPoint": {
+        "x": 604.2981066322035,
+        "y": 349.417014168792
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 988.7671091033744,
+        "y": 615.9185730375732
+      }
+    },
+    {
+      "entityCode": "ZAMX",
+      "locationId": "ca8da3d2-57e0-40be-ae23-f06810ca835b",
+      "meaning": "Decorative initial position carried with artwork, not geographic ground control; owner may reposition later.",
+      "name": "Zambezi",
+      "originalApprovedCanvasPoint": {
+        "x": 601.4202304283207,
+        "y": 343.1807222507167
+      },
+      "sameArtworkWarpInitialDisplayPoint": {
+        "x": 985.2196831899696,
+        "y": 604.8058460581392
+      }
+    }
+  ],
+  "rasterPixels": [
+    2040,
+    890
+  ],
+  "sourceAnchorSha256": "3bf0761cb42f1e5f9b435ae3774ea3c018c749daf261de44357880ae3841ebef"
+}

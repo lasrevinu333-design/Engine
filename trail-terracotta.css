@@ -1,0 +1,111 @@
+/* Terracotta / Trail presentation only. Activated by the document attribute.
+   No route, visibility, permission, scheduling or data behavior is defined here. */
+html[data-trail-theme="terracotta"] {
+  color-scheme: light;
+  --trail-canvas: #F4E6D7;
+  --trail-surface: #FFF9F1;
+  --trail-raised: #FFFCF7;
+  --trail-ink: #49372A;
+  --trail-muted: #76614D;
+  --trail-brand: #A45434;
+  --trail-brand-hover: #8E4328;
+  --trail-on-brand: #FFF9F1;
+  --trail-olive: #72784A;
+  --trail-border: #D6C1AC;
+  --trail-control-border: #8B705C;
+  --trail-focus: #6F3D25;
+  --trail-danger: #A13232;
+  --trail-danger-soft: #FBE6E0;
+  --trail-success: #35634B;
+  --trail-success-soft: #E6EEDD;
+  --trail-warning: #8B5B00;
+  --trail-warning-soft: #F8EDCD;
+  --trail-info: #345E7A;
+  --trail-info-soft: #E1EDF2;
+  --trail-selected: #EFDDCD;
+  --trail-shadow: 0 8px 24px rgb(73 55 42 / 9%);
+  --trail-scrim: rgb(49 34 23 / 55%);
+  --trail-background: linear-gradient(rgb(244 230 215 / 84%),rgb(244 230 215 / 93%));
+  --trail-section: var(--trail-brand);
+  --trail-page-icon: url('./assets/trail-v1/dashboard.svg');
+  --mz-bg: var(--trail-canvas); --mz-panel: var(--trail-surface);
+  --mz-panel-soft: var(--trail-raised); --mz-panel-strong: var(--trail-surface);
+  --mz-text: var(--trail-ink); --mz-muted: var(--trail-muted);
+  --mz-border: var(--trail-border); --mz-shadow: var(--trail-shadow);
+  --mz-focus: 0 0 0 3px var(--trail-focus);
+  --ux-bg: var(--trail-canvas); --ux-panel: var(--trail-surface);
+  --ux-panel-soft: var(--trail-raised); --ux-panel-strong: var(--trail-surface);
+  --ux-text: var(--trail-ink); --ux-muted: var(--trail-muted);
+  --ux-line: var(--trail-border); --ux-shadow: var(--trail-shadow);
+  --shell-bg: var(--trail-canvas); --shell-panel: var(--trail-surface);
+  --shell-panel-soft: var(--trail-raised); --shell-line: var(--trail-border);
+  --shell-text: var(--trail-ink); --shell-muted: var(--trail-muted);
+  --shell-green: var(--trail-brand); --shell-green-ink: var(--trail-on-brand);
+  --shell-gold: var(--trail-focus); --shell-danger: var(--trail-danger);
+  background: var(--trail-canvas); color: var(--trail-ink);
+}
+html[data-trail-section="dashboard"]{--trail-section:#2563EB;--trail-page-icon:url('./assets/trail-v1/dashboard.svg')}
+html[data-trail-section="map"]{--trail-section:#087F5B;--trail-page-icon:url('./assets/trail-v1/map.svg')}
+html[data-trail-section="staffing"]{--trail-section:#7C3AED;--trail-page-icon:url('./assets/trail-v1/staffing.svg')}
+html[data-trail-section="insights"]{--trail-section:#087F8C;--trail-page-icon:url('./assets/trail-v1/insights.svg')}
+html[data-trail-section="notifications"]{--trail-section:#A66600;--trail-page-icon:url('./assets/trail-v1/notifications.svg')}
+html[data-trail-section="unfinished"]{--trail-section:#B6502A;--trail-page-icon:url('./assets/trail-v1/unfinished.svg')}
+html[data-trail-section="phones"]{--trail-section:#4F46E5;--trail-page-icon:url('./assets/trail-v1/phones.svg')}
+html[data-trail-section="schedule"]{--trail-section:#47647B;--trail-page-icon:url('./assets/trail-v1/schedule.svg')}
+html[data-trail-section="events"]{--trail-section:#BE185D;--trail-page-icon:url('./assets/trail-v1/events.svg')}
+html[data-trail-section="messenger"]{--trail-section:#0F766E;--trail-page-icon:url('./assets/trail-v1/messenger.svg')}
+html[data-trail-section="feedback"]{--trail-section:#637439;--trail-page-icon:url('./assets/trail-v1/feedback.svg')}
+html[data-trail-section="supplies"]{--trail-section:#8B5E3C;--trail-page-icon:url('./assets/trail-v1/supplies.svg')}
+html[data-trail-theme="terracotta"] body {background:var(--trail-background),url('./assets/trail-v1/terracotta.webp') center/cover fixed;color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] :is(.phoneLock,.kioskLock) {background-image:var(--trail-background),url('./assets/trail-v1/terracotta.webp');background-size:cover;background-position:center}
+html[data-trail-theme="terracotta"] :is(button,input,select,textarea,a,[tabindex]):focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] :is(input,textarea,select) {accent-color:var(--trail-brand)}
+html[data-trail-theme="terracotta"] ::selection {background:var(--trail-selected);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] :is(input,textarea)::placeholder {color:var(--trail-muted);opacity:1}
+html[data-trail-theme="terracotta"] .trailPageTitle::before {content:"";display:inline-block;width:1.4em;height:1.4em;margin-inline-end:.4em;vertical-align:-.32em;background:var(--trail-page-icon) center/contain no-repeat;border-radius:50%}
+html[data-trail-theme="terracotta"] .trailIcon {aspect-ratio:1;object-fit:contain;border-radius:50%;flex:none}
+html[data-trail-theme="terracotta"] .trailAppIcon {display:block;aspect-ratio:1;object-fit:contain;border-radius:50%;margin-block-end:4px}
+html[data-trail-theme="terracotta"] :is(.uxCard,.card,.feedbackCard,.feedbackInbox,.stateCard) {border-radius:18px}
+html[data-trail-theme="terracotta"] :is(.uxButton,.btn,.mz-button,.mz-back-link,.uxInput,.uxTextarea,.uxSelect) {border-radius:12px}
+html[data-trail-theme="terracotta"] .hubTile .tileIcon {border-radius:50%}
+html[data-trail-theme="terracotta"] .tileIcon.hubIllustratedIcon,
+html[data-trail-theme="terracotta"] .tileIcon.hubIllustratedIcon img,
+html[data-trail-theme="terracotta"] .homeIcon,
+html[data-trail-theme="terracotta"] .homeIcon img {border-radius:50%;background:transparent;object-fit:contain}
+html[data-trail-theme="terracotta"] .tileIcon.hubIllustratedIcon>svg {display:none}
+html[data-trail-theme="terracotta"] .feedbackIcon {background:transparent}
+html[data-trail-theme="terracotta"] .homeLabel {text-shadow:none;color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .homeButton {padding:8px 4px;background:transparent;border:0;box-shadow:none}
+html[data-trail-theme="terracotta"] .homeIcon {box-shadow:0 4px 10px rgb(73 55 42 / 12%)}
+html[data-trail-theme="terracotta"] .homeScreen .hubTitle {border-block-start:4px solid var(--trail-brand)}
+html[data-trail-theme="terracotta"] .employeeCard {padding-block:12px}
+html[data-trail-theme="terracotta"] .weatherSources {font-size:.65rem}
+html[data-trail-theme="terracotta"] .weatherSources a {color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .feedbackHeader>img {border-radius:50%;object-fit:contain}
+html[data-trail-theme="terracotta"] .feedbackHeader {border-inline-start:4px solid var(--trail-section)}
+html[data-trail-theme="terracotta"] .employeeHome a>.trailIcon {display:block;margin:0 auto 8px}
+html[data-trail-theme="terracotta"] .apps .icon,
+html[data-trail-theme="terracotta"] .apps .icon img {border-radius:50%;background:transparent;object-fit:contain}
+html[data-trail-theme="terracotta"] .apps .icon img {transform:none}
+html[data-trail-theme="terracotta"] dialog {background:var(--trail-surface);color:var(--trail-ink);border-color:var(--trail-control-border)}
+html[data-trail-theme="terracotta"] dialog::backdrop {background:var(--trail-scrim)}
+/* A focused status remains readable independently of its app identity. */
+html[data-trail-theme="terracotta"] .status.error,
+html[data-trail-theme="terracotta"] .uxStatus.error {color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .status.ok,
+html[data-trail-theme="terracotta"] .uxStatus.ok {color:var(--trail-success)}
+html[data-trail-theme="terracotta"] .status.info,
+html[data-trail-theme="terracotta"] .uxStatus.info {color:var(--trail-info)}
+@media print {
+  html[data-trail-theme="terracotta"],html[data-trail-theme="terracotta"] body {background:white!important;color:black!important}
+  html[data-trail-theme="terracotta"] :is(.phoneLock,.kioskLock) {background-image:none!important;background-color:white!important;color:black!important}
+  html[data-trail-theme="terracotta"] .trailPageTitle::before {display:none}
+}
+@media (prefers-reduced-motion:reduce) {
+  html[data-trail-theme="terracotta"] .trailIcon {animation:none;transition:none}
+}
+
+html[data-trail-theme="terracotta"] .homeScreen .weatherMeta {font-size:.95rem;line-height:1.4}
+
+/* Retain the official zoo logo without the retired mascot banner. */
+html[data-trail-theme="terracotta"] :is(.trailZooBrand,.formHeader) {width:112px;height:112px;max-width:100%;object-fit:contain;border-radius:50%}

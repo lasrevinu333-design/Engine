@@ -1,0 +1,136 @@
+/* Layout/palette adapted from Eric's approved Operations mockup, without demo data. */
+.operationsPage{color-scheme:dark;background:linear-gradient(rgba(6,10,14,.34),rgba(6,10,14,.56)),url('./dashboard-bg_optimized.webp?v=release-2026.07.19.custodial-v3.12') center/cover no-repeat fixed;color:#edf7ff}
+.commandPage.mapPage{max-width:none;padding:10px 14px;gap:8px;overflow:auto;background:transparent}
+.operationsPage button:not(.mzMapPin),.operationsPage select{font:inherit;color:inherit;border:1px solid #547185;border-radius:8px;background:#18364b;min-height:44px;padding:7px 12px;cursor:pointer}
+.operationsPage :focus-visible{outline:3px solid #98dfff;outline-offset:3px}
+.operationsPage [hidden]{display:none!important}#operations-panels{flex:none;display:grid;gap:8px}
+.telemetry{display:grid;grid-template-columns:minmax(245px,1fr) minmax(180px,.65fr) minmax(400px,1.7fr);border:1px solid #3d5868;border-radius:16px;background:linear-gradient(110deg,#162e36,#102439);overflow:hidden}
+.telemetry>section{padding:10px 20px;min-width:0}.telemetry>section+section{border-left:1px solid #3d5363}
+.eyebrow{display:flex;align-items:center;gap:8px;color:#aed0de;font-weight:750;font-size:11px;letter-spacing:.08em}.signalDot{width:7px;height:7px;background:#8fdb55;border-radius:50%;animation:opsGlow 3s ease-in-out infinite}
+.bigClock{display:block;font-size:clamp(30px,2.8vw,46px);font-weight:720;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap}.calendarDate{font-size:15px;color:#c9e0ea}.attendanceValue{font-size:clamp(24px,2.8vw,44px);font-weight:720;color:#c8f89b;line-height:1.3}
+.metricNote{font-size:12px;color:#b5d2cb;line-height:1.4}.metricNote[data-stale=true]{color:#f6d36c}.weatherCard,.weatherNow{display:flex;align-items:center;gap:12px}.weatherCard{justify-content:space-between}.weatherArt{width:70px;height:62px;flex:none}.sunRays{transform-origin:45px 32px;animation:opsSun 36s linear infinite}.weatherCloud{animation:opsCloud 8s ease-in-out infinite}#ops-weather{font-size:25px}.hourForecast{font-size:13px;line-height:1.6;max-width:48%;color:#b9dbeb}
+.activityTickers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.operationsPage .tickerBand{display:flex;align-items:center;gap:12px;min-width:0;min-height:48px;padding:0;border:1px solid #39556a;border-radius:12px;background:#102536;overflow:hidden;text-align:left}.tickerLabel{align-self:stretch;display:flex;align-items:center;padding:10px 12px;background:#16374a;color:#bdeeff;font-size:11px;font-weight:800;letter-spacing:.07em;flex:none}.tickerWindow{flex:1;min-width:0;overflow:hidden}.tickerTrack{display:block;white-space:nowrap;width:max-content;font-size:16px;padding:8px 0}.feedButton{font-size:10px;margin-right:10px;white-space:nowrap;color:#a6c6db;flex:none}.tickerBand:focus-visible .tickerTrack{animation-play-state:paused}@media(hover:hover) and (pointer:fine){.tickerBand:hover .tickerTrack{animation-play-state:paused}}
+.commandPage .commandMap.mzMapStage{grid-template-rows:auto minmax(0,1fr) auto auto auto;min-height:220px;gap:0;padding:2px 10px;background:#0d1f2f}.operationsHeading,.mapTitle,.statusCounts{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.mapTitle img{width:30px;height:30px;object-fit:contain}.mapTitle h2{margin:0;font-size:18px}.statusCounts{margin-left:auto;font-size:12px;color:#bfdab4}.statusCounts span{border:1px solid currentColor;border-radius:7px;padding:3px 7px}.statusCounts [data-status=due_soon]{color:#f6d36c}.statusCounts [data-status=overdue]{color:#ff9095}.statusCounts [data-status=in_progress]{color:#94caff}.commandPage .mzMapViewport{background:radial-gradient(ellipse,#1c3c3d 0,#102533 78%);border:1px solid #334c5a;border-radius:9px}
+.operationsPage .locationsBand{flex:none;background:#122a30;border-color:#476851}.locationsBand .tickerLabel{background:#204234;color:#d0efad}
+.operationsBoard{box-sizing:border-box;position:fixed;inset:0;width:100vw;max-width:none;height:100vh;height:100dvh;max-height:none;margin:0;padding:16px;border:0;background:radial-gradient(ellipse at top,#183b3b,#081722 65%);color:#edf7ff;overflow:hidden}.operationsBoard[open]{display:flex;flex-direction:column;gap:10px}.operationsBoard::backdrop{background:#000c}.boardHeader{display:flex;align-items:center;flex-wrap:wrap;gap:12px;flex:none;border-bottom:1px solid #416576;padding-bottom:12px}.boardHeader img{height:44px;width:44px}.boardHeader h2{font-size:clamp(22px,3vw,40px);margin:0 auto 0 0}.boardHeader label{font-size:13px}.boardNote{margin:0;font-size:14px;color:#c6dce8;flex:none;white-space:pre-line}.boardContent{min-height:0;overflow:auto;flex:1;overscroll-behavior:contain;scroll-behavior:auto;padding:3px 8px 20px 3px}.boardCard{padding:20px 24px;margin-bottom:14px;border:1px solid #436b7d;border-radius:12px;background:linear-gradient(110deg,#173946,#102439);font-size:clamp(17px,1.5vw,25px);line-height:1.55;overflow-wrap:anywhere}.boardCard h3{font-size:clamp(23px,2.2vw,36px);margin:0 0 8px}.boardCard p{margin:5px 0;white-space:pre-line}.boardCard .sourceTag{display:inline-block;text-transform:uppercase;font-size:13px;letter-spacing:.1em;border:1px solid #7c9da7;border-radius:6px;padding:2px 8px;color:#d7f3bf}.boardCard[data-state=CANCELLED],.boardCard[data-state=SUPERSEDED]{opacity:.78}.boardCard[data-state=REVIEW_REQUIRED]{border-color:#f6d36c}
+:root:fullscreen,:root.dashboard-expanded{width:100%;height:100%;overflow:auto;background:#081722}.dashboard-expanded .commandPage{max-width:none}.motionPaused *{animation-play-state:paused!important}
+@keyframes opsTicker{from{transform:translateX(0)}to{transform:translateX(calc(-1 * var(--ticker-distance,0px)))}}@keyframes opsGlow{50%{opacity:.6;box-shadow:0 0 10px #8fdb5577}}@keyframes opsSun{to{transform:rotate(360deg)}}@keyframes opsCloud{50%{transform:translateX(5px)}}
+@media(max-width:1100px){.telemetry{grid-template-columns:1fr .7fr 1.2fr}.telemetry>section{padding:8px 12px}.weatherArt{width:45px}.weatherCard{gap:8px}.hourForecast{font-size:11px}.activityTickers{gap:5px}.feedButton{display:none}.tickerLabel{padding:8px;font-size:10px}.mapHeader .hubBrand h1{font-size:18px}.mapHeader .hubBrand img{width:32px;height:32px}}
+@media(max-height:600px) and (min-width:700px){.commandPage.mapPage{padding:5px;gap:4px}.commandPage .mapHeader{padding:4px 8px}.telemetry>section{padding:4px 9px}.bigClock{font-size:25px}.calendarDate,.metricNote,.hourForecast{font-size:10px}.attendanceValue{font-size:24px}.weatherArt{height:35px}.operationsPage .tickerBand{min-height:34px}.tickerTrack{padding:4px 0;font-size:13px}.commandPage .commandMap.mzMapStage{min-height:120px}.operationsHeading{gap:5px}.mapTitle h2{font-size:14px}.mapTitle img{height:22px;width:22px}.operationsPage button:not(.mzMapPin){min-height:34px}.mapAttention{font-size:10px}}
+@media(max-width:699px){.telemetry{grid-template-columns:1fr 1fr}.telemetry .weatherCard{grid-column:1/-1;border-left:0;border-top:1px solid #3d5363}.activityTickers{grid-template-columns:1fr}.commandPage.mapPage{height:auto;min-height:100dvh;padding:6px}.commandPage .commandMap.mzMapStage{min-height:400px}.operationsHeading .statusCounts{order:3;width:100%;margin:0}.boardHeader{gap:6px}.boardHeader img{width:30px;height:30px}.boardCard{padding:14px}}
+@media(prefers-reduced-motion:reduce){.operationsPage *{animation:none!important;scroll-behavior:auto!important}}
+.operationsPage .mapTitle img{animation:memphisHello 7s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes memphisHello{0%,85%,100%{transform:translateY(0)}90%{transform:translateY(-3px)}95%{transform:translateY(0)}}
+
+/* Keep the map usable when telemetry and controls exceed a short viewport. */
+.operationsPage .commandPage.mapPage{height:auto;min-height:100dvh;overflow:visible}
+.operationsPage .commandMap:not(:fullscreen):not(.is-expanded){flex:none}
+.operationsPage .commandMap:not(:fullscreen):not(.is-expanded) .mzMapViewport{height:auto;aspect-ratio:1282 / 550;min-height:240px}
+
+.operationsPage .activityBand{width:100%}.operationsPage .activityBand .tickerLabel{padding-inline:16px}.operationsPage .activityBand .tickerTrack{font-size:16px}.operationsPage .operationsHeading>.uxButton{min-height:44px;font-size:12px}
+
+.publicViewNav{display:flex;gap:8px;margin-right:auto}.publicViewNav a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid #547185;border-radius:8px;color:#edf7ff;text-decoration:none;background:#18364b}.publicViewNav a[aria-current=page]{background:#204234;border-color:#a8e146;color:#d0efad}.operationsHeading h1{font-size:20px;margin:0}
+.publicMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.publicMetric{padding:12px;text-align:center;border:1px solid #3d5868;border-radius:12px;background:#102439}.publicMetric strong{display:block;font-size:28px;margin-top:4px}.publicMetric span{color:#c9e0ea;font-size:13px}
+.publicReport{margin-bottom:12px;border:1px solid #3d5868;border-radius:12px;overflow:hidden;background:#102439}.publicReport h2{font-size:20px;margin:0;padding:14px 16px;border-bottom:1px solid #3d5868}.publicTableWrap{overflow:auto}.publicTableWrap>p{padding:14px 16px}.publicReport table{width:100%;border-collapse:collapse}.publicReport th,.publicReport td{text-align:left;padding:12px;border-bottom:1px solid #3d5363;vertical-align:top;font-size:14px;overflow-wrap:anywhere}.publicReport th{color:#d0efad}.publicReport td p{margin:0 0 6px}.publicReport .cleaningState{display:inline-block;padding:4px 8px;border:1px solid currentColor;border-radius:7px;white-space:nowrap}.cleaningState[data-status=okay]{color:#a6f1b5}.cleaningState[data-status=in_progress]{color:#94caff}.cleaningState[data-status=due_soon]{color:#f6d36c}.cleaningState[data-status=overdue]{color:#ff9095}.cleaningState[data-status=unknown],.cleaningState[data-status=pending_submit]{color:#c9d5df;border-style:dashed}
+@media(max-width:699px){.publicMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}.publicViewNav{order:2;width:100%}.publicViewNav a{flex:1;justify-content:center}.publicReport table,.publicReport tbody,.publicReport tr,.publicReport td{display:block}.publicReport thead{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}.publicReport td{display:grid;grid-template-columns:100px 1fr;gap:10px}.publicReport td:before{content:attr(data-label);color:#d0efad;font-size:12px}.publicReport tr+tr{border-top:2px solid #547185}}
+
+/* Cleaning words remain readable without relying on colour alone. */
+.locationTickerItem{display:inline-flex;align-items:center;gap:8px;margin-right:30px;color:#edf7ff}
+.locationTickerItem::before{content:"";display:inline-block;width:14px;height:14px;border:2px solid #d8e4ed;border-radius:50%;background:#7b8794;flex:none}
+.locationTickerItem[data-status=okay]::before{background:#22c55e}
+.locationTickerItem[data-status=in_progress]::before{background:#3b82f6}
+.locationTickerItem[data-status=due_soon]::before{background:#facc15}
+.locationTickerItem[data-status=overdue]::before{background:#ef4444}
+.locationTickerItem[data-status=not_cleaned]::before{background:#050505}
+.locationTickerItem[data-status=pending_submit]::before{background:#a78bfa}
+.locationTickerItem[data-status=unknown]::before{background:#7b8794;border-style:dashed}
+
+/* Keep each record together. Real spacing and a double rule distinguish
+   record boundaries from the middle dots inside a record's details. */
+.tickerTrack{--ticker-record-space:32px;--ticker-record-rule:4px}
+.tickerRecord{display:inline-block;white-space:nowrap}
+.tickerRecord+.tickerRecord{margin-inline-start:var(--ticker-record-space);padding-inline-start:var(--ticker-record-space);border-inline-start:var(--ticker-record-rule) double var(--feed-fg,#bdeeff)}
+
+.tickerBand[data-stale=true] .tickerLabel{color:#f6d36c}.tickerBand[data-stale=true] .tickerLabel:after{content:" · delayed";font-size:10px;margin-left:5px}
+
+/* The approved 1282x550 PNG's opaque artwork is y=55..431. Retain
+   its original canvas, width, shared pin transform and scale; only the empty
+   transparent top/bottom are outside this frame. No image is resampled. */
+.operationsPage .mapArtworkFrame{position:relative;overflow:hidden;aspect-ratio:1282 / 376;min-width:0;border-radius:9px}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame .mzMapViewport{position:absolute;inset-inline:0;top:calc(-55 / 376 * 100%);width:100%;height:auto;aspect-ratio:1282 / 550;min-height:0;border:0;border-radius:0}
+.operationsPage .operationsHeading>.mapNotice,.operationsPage .mz-nav-actions>.mapNotice{font-size:12px;flex:1;min-width:180px}
+
+/* Compact surrounding information in full-page mode; the map width and
+   approved artwork scale are unchanged. Short screens retain reachable scroll. */
+:is(:root:fullscreen,:root.dashboard-expanded) .operationsPage .commandPage{padding:6px 10px;gap:4px}
+:is(:root:fullscreen,:root.dashboard-expanded) #operations-panels{grid-template-columns:minmax(0,1fr);gap:4px}
+:is(:root:fullscreen,:root.dashboard-expanded) .telemetry{grid-column:1/-1}
+:is(:root:fullscreen,:root.dashboard-expanded) .telemetry>section{padding:5px 12px}
+:is(:root:fullscreen,:root.dashboard-expanded) .bigClock{font-size:30px}
+:is(:root:fullscreen,:root.dashboard-expanded) .attendanceValue{font-size:30px}
+:is(:root:fullscreen,:root.dashboard-expanded) .weatherArt{height:42px;width:50px}
+:is(:root:fullscreen,:root.dashboard-expanded) .operationsPage .tickerBand{min-height:36px;padding:0}
+:is(:root:fullscreen,:root.dashboard-expanded) .tickerLabel{padding:6px 8px}
+:is(:root:fullscreen,:root.dashboard-expanded) .feedButton{display:none}
+:is(:root:fullscreen,:root.dashboard-expanded) .tickerTrack{font-size:14px;padding:5px 0}
+:is(:root:fullscreen,:root.dashboard-expanded) .commandPage .commandMap.mzMapStage{min-height:0;padding:4px 6px;gap:3px}
+:is(:root:fullscreen,:root.dashboard-expanded) .commandPage>p{margin-block:2px}
+@media(min-width:1000px){
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandPage .commandMap.mzMapStage{grid-template-columns:1fr 1.3fr 1fr;grid-template-rows:auto}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap>.operationsHeading,
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap>.mapArtworkFrame{grid-column:1/-1}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap>.mapAttention[open]{grid-column:1/-1}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap .mz-back-link{min-height:28px;padding:4px 8px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandMap .operationsHeading h2{margin-block:0;font-size:18px}
+}
+@media(max-width:699px){
+  :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels{grid-template-columns:minmax(0,1fr)}
+  :is(:root:fullscreen,:root.dashboard-expanded) .operationsPage .commandPage{padding:4px;gap:3px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .operationsHeading{gap:4px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .operationsHeading h1{font-size:16px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .telemetry>section{padding:4px 8px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .bigClock,:is(:root:fullscreen,:root.dashboard-expanded) .attendanceValue{font-size:24px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .telemetry .weatherCard{padding-block:3px}
+}
+
+/* Page identity and fullscreen sit above the feeds, outside the map artwork. */
+.dashboardPageHeader{display:flex;align-items:center;gap:12px;min-width:0}.dashboardPageHeader h1{margin:0;font-size:20px}.dashboardPageHeader #operations-map-fullscreen{margin-left:auto;flex:none}.dashboardTools{font-size:13px}.dashboardTools summary{cursor:pointer;padding:8px}.dashboardTools nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px}.dashboardTools a{min-height:44px}.commandPage .commandMap.mzMapStage{grid-template-rows:minmax(0,1fr);min-height:0}.operationsPage .mapNotice:empty{display:none}@media(max-width:699px){.dashboardPageHeader{gap:6px}.dashboardPageHeader h1{font-size:16px}.dashboardPageHeader .mapTitle img{width:24px;height:24px}}
+
+/* Feed categories share typography; pin/work-status colors stay independent. */
+.operationsPage .tickerBand .tickerLabel{box-sizing:border-box;width:clamp(10.5rem,19vw,15rem);font-size:14px;line-height:1.3;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:var(--feed-bg,#16374a);color:var(--feed-fg,#bdeeff)}
+.operationsPage .tickerBand[data-board="locations"]{--feed-bg:#204234;--feed-fg:#d0efad}
+.operationsPage .tickerBand[data-board="events"]{--feed-bg:#163d61;--feed-fg:#c6e5ff}
+.operationsPage .tickerBand[data-board="schools"]{--feed-bg:#3e2c5b;--feed-fg:#eddcff}
+.operationsPage .tickerBand[data-board="tickets"]{--feed-bg:#13484b;--feed-fg:#c4f5ee}
+.operationsPage .tickerBand[data-board="spiceworks"]{--feed-bg:#573416;--feed-fg:#ffdfb3}
+.operationsPage .tickerBand[data-board="city"]{--feed-bg:#494015;--feed-fg:#fff2aa}
+@media(max-width:699px){.operationsPage .tickerBand .tickerLabel{width:9rem;font-size:12px;padding:8px}.operationsPage .tickerTrack{font-size:14px}}
+
+/* Compact forecast and the current manager, in the existing telemetry family. */
+.telemetry.hasMod{grid-template-columns:minmax(210px,1.15fr) minmax(140px,.7fr) minmax(200px,1fr) minmax(160px,.8fr)}
+.telemetry .weatherCard{display:block}.telemetry .weatherNow{gap:8px}.telemetry .weatherArt{width:44px;height:42px}
+.telemetry .hourForecast{max-width:none;font-size:12px;line-height:1.4;margin-top:4px}
+.modCard{display:flex;flex-direction:column;justify-content:center;gap:8px}.modCard strong{font-size:22px;line-height:1.2;overflow-wrap:anywhere}
+@media(max-width:950px){.telemetry.hasMod{grid-template-columns:1fr 1fr}.telemetry.hasMod .weatherCard{grid-column:auto;border-left:0;border-top:1px solid #3d5363}.telemetry.hasMod .modCard{border-top:1px solid #3d5363}.modCard strong{font-size:20px}}
+
+/* Keep all 47 pins readable on narrow screens without changing map coordinates. */
+.operationsPage .commandMap[data-map-presentation="original-horizontal"]{min-width:0;overflow-x:auto;overscroll-behavior-x:contain}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame{min-width:900px}
+
+/* Frame the opaque artwork (x=55..1141, y=55..431) rather than the
+   asymmetric transparent canvas. Keep the existing viewport dimensions and
+   shared artwork/pin/GPS surface: translating that surface cannot change its
+   scale or the positions of its contents relative to one another. The wide
+   unpainted holders remain available for pins and narrow-screen panning. */
+.operationsPage .commandPage .commandMap[data-map-presentation="original-horizontal"]{background:transparent;border-color:transparent;box-shadow:none}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mapArtworkFrame .mzMapViewport{background:transparent}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mzMapSurface{
+  --map-art-left:calc(55 / 1282 * 100%);--map-art-right:calc(141 / 1282 * 100%);
+  --map-art-top:10%;--map-art-bottom:calc(119 / 550 * 100%);
+  --map-art-center-shift:calc(43 / 1282 * 100%);
+  isolation:isolate;transform:translateX(var(--map-art-center-shift));
+}
+.operationsPage .commandMap[data-map-presentation="original-horizontal"] .mzMapSurface::before{
+  content:"";position:absolute;inset:var(--map-art-top) var(--map-art-right) var(--map-art-bottom) var(--map-art-left);
+  z-index:-1;border-radius:9px;background:#0d1f2f;box-shadow:0 0 0 1px var(--ux-line);pointer-events:none;
+}

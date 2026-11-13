@@ -1,0 +1,2 @@
+const { defineConfig } = require('@playwright/test');
+module.exports=defineConfig({testDir:'./tests',testMatch:'current-owned-scheduler-lost-reply.spec.js',timeout:120000,expect:{timeout:10000},forbidOnly:true,retries:0,workers:1,reporter:'line',use:{baseURL:'https://127.0.0.1:4173',browserName:'chromium',headless:true,ignoreHTTPSErrors:true,trace:'off',video:'off',screenshot:'off'},webServer:{command:'node tests/current-qualification-static-server.mjs',url:'https://127.0.0.1:4173/start_page1.html',ignoreHTTPSErrors:true,reuseExistingServer:false,timeout:15000}});

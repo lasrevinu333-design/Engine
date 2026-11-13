@@ -1,0 +1,94 @@
+/* Terracotta presentation adapter for mobile/app-shell.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] {
+  color-scheme: light;
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] button:focus-visible {
+  outline: 3px solid var(--trail-focus);
+  outline-offset: 3px
+    }
+    html[data-trail-theme="terracotta"] a:focus-visible {
+  outline: 3px solid var(--trail-focus);
+  outline-offset: 3px
+    }
+    html[data-trail-theme="terracotta"] .shellHeader img {
+  border: 2px solid var(--trail-border);
+  box-shadow: var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .shellHeader span {
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .eyebrow {
+  color: var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .shellRoute {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  box-shadow: var(--trail-shadow);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .shellBack {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .networkState {
+  border: 1px solid var(--trail-border);
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .networkState::before {
+  background: var(--trail-success);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .networkState.offline::before {
+  background: var(--trail-danger);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .routeHero > p:last-child {
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .handoffCard {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .handoffCard p {
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .primaryAction {
+  border: 0;
+  background: var(--trail-surface);
+  color: var(--trail-ink);
+  box-shadow: var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .shellFatal button {
+  border: 0;
+  background: var(--trail-surface);
+  color: var(--trail-ink);
+  box-shadow: var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .shellFacts div {
+  background: var(--trail-surface);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .shellFacts dt {
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .identityWarning {
+  color: var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .shellNavigation {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .shellNavigation a {
+  color: var(--trail-brand)
+    }
+    html[data-trail-theme="terracotta"] .shellNavigation a.active {
+  background: var(--trail-brand);
+  color: var(--trail-on-brand);
+  box-shadow: var(--trail-shadow)
+    }
+}

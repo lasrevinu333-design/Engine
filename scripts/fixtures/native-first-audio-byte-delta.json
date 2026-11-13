@@ -1,0 +1,70 @@
+{
+  "schema": "custodial.native-first-audio-delta.v1",
+  "base": "d1484f03e543271a9206d936db308d286e85aa27",
+  "files": [
+    {
+      "name": "NativeProviderJournal.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "prior_sha256": "91ca3d96cd6b60ce98ac08a26b7b32786d3b6c138b6eb10087ed6b141a5bf663",
+      "current_sha256": "b44519d60b0ee05f16fbf8315b25ef2d31da6ab6c04055eafad483dfb17c9c81",
+      "hunks": [
+        {
+          "old_start": 576,
+          "old_count": 0,
+          "new_start": 577,
+          "new_count": 20,
+          "before": [],
+          "after": [
+            "    }",
+            "    /** First-effect acquisition, not an idempotent action replay. Exactly one",
+            "     * caller gets true after the original PENDING -> IN_PROGRESS commit/readback.",
+            "     * Rejected or uncertain writes never grant sound; persisted uncertainty is",
+            "     * never reset. Per-record fence only: runtime still owns the one audio lane. */",
+            "    boolean tryStartAudio(NativeProviderPrincipal current, Presentation expected, Observation observation) throws VaultFailure {",
+            "        return transition(() -> {",
+            "            if (observation == null) throw new VaultFailure(\"custodial_provider_action_invalid\");",
+            "            ProviderRecordStore.Snapshot snapshot = store.load(); JSONObject record = requirePresentation(snapshot, current, expected);",
+            "            String state = record.getString(\"audio_state\");",
+            "            if (\"IN_PROGRESS\".equals(state) || \"COMPLETED\".equals(state)) return false;",
+            "            if (!\"PENDING\".equals(state)) throw corrupt();",
+            "            if (record.getBoolean(\"card_dismissed\") || !record.isNull(\"acknowledged_event_id\"))",
+            "                throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "            requireLive(expected.payload, observation); // No historical navigation exception for a NEW sound.",
+            "            record.put(\"audio_state\", \"IN_PROGRESS\");",
+            "            Map<ProviderRecordStore.Key, char[]> writes = new HashMap<>();",
+            "            put(writes, recordKey(ProviderEnvelopeCrypto.Domain.INBOX, expected.payload.recordId), record);",
+            "            commit(snapshot, writes); return true;",
+            "        });"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderClaims.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderClaims.java",
+      "prior_sha256": "06867ec6f14621a22cb4c52d99a3598a9b66d2726da9c0b9a6da527fc48229f0",
+      "current_sha256": "3950971915b7294d64a0a649c0b82555ff89a1815f3045cc7de1dcc553286e71",
+      "hunks": [
+        {
+          "old_start": 125,
+          "old_count": 2,
+          "new_start": 125,
+          "new_count": 7,
+          "before": [
+            "        journal.applyPresentationAction(current, claim.presentation, action, observation);",
+            "        if (\"audio_started\".equals(action)) claim.audioStarted = true;"
+          ],
+          "after": [
+            "        if (\"audio_started\".equals(action)) {",
+            "            if (!journal.tryStartAudio(current, claim.presentation, observation)) {",
+            "                claim.audioCompleted = true; // Retire unused local offer, not the other owner's durable audio.",
+            "                throw new VaultFailure(\"custodial_provider_audio_already_owned\");",
+            "            }",
+            "            claim.audioStarted = true;",
+            "        } else journal.applyPresentationAction(current, claim.presentation, action, observation);"
+          ]
+        }
+      ]
+    }
+  ]
+}

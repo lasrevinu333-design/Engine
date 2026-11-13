@@ -1,0 +1,58 @@
+package org.memphiszoo.custodial.vault;
+
+import android.app.Activity;
+import android.location.*;
+import android.os.Build;
+import java.lang.reflect.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
+import org.json.JSONObject;
+
+public final class LifecycleHarness {
+  static int passed,failed;
+  static List<CustodialPhoneLocationService> services=new ArrayList<>();
+  interface Check {void run()throws Exception;}
+  static void test(String name,Check check){try{check.run();System.out.println("PASS "+name);passed++;}catch(Throwable e){System.out.println("FAIL "+name+": "+e);e.printStackTrace(System.out);failed++;}finally{for(var s:services)s.onDestroy();services.clear();}}
+  static void eq(Object actual,Object wanted,String message){if(!Objects.equals(actual,wanted))throw new AssertionError(message+": expected="+wanted+" actual="+actual);}
+  static Object field(Object o,String key)throws Exception{Field f=o.getClass().getDeclaredField(key);f.setAccessible(true);return f.get(o);}
+  static Object stream(CustodialPhoneLocationService s)throws Exception{return field(s,"stream");}
+  static LocationListener listener(Object stream)throws Exception{return (LocationListener)field(stream,"listener");}
+  static void send(CustodialPhoneLocationService s,Object stream)throws Exception{Method m=s.getClass().getDeclaredMethod("sendLatest",stream.getClass());m.setAccessible(true);try{m.invoke(s,stream);}catch(InvocationTargetException e){throw new RuntimeException(e.getCause());}}
+  static void quiesce(Object stream)throws Exception{if(stream!=null){ScheduledExecutorService e=(ScheduledExecutorService)field(stream,"sender");if(e!=null){e.shutdownNow();if(!e.awaitTermination(3,TimeUnit.SECONDS))throw new AssertionError("Initial scheduler did not terminate");}}}
+  static CustodialPhoneLocationService fresh(int sdk)throws Exception{Build.VERSION.SDK_INT=sdk;CustodialNativeRuntime.instance=new CustodialNativeRuntime();var s=new CustodialPhoneLocationService();services.add(s);s.onStartCommand(null,0,1);quiesce(stream(s));return s;}
+  static JSONObject payload(AuthorizedRequest r){return new JSONObject(new String(r.body,StandardCharsets.UTF_8));}
+  static Location fix(long nanos){var p=new Location("gps");p.nanos=nanos;return p;}
+  static Object replace(CustodialPhoneLocationService s,String owner,int startId)throws Exception{CustodialNativeRuntime.instance.principal=new NativeProviderPrincipal(owner);s.onStartCommand(null,0,startId);Object next=stream(s);quiesce(next);return next;}
+  static void inflight(int status)throws Exception{
+    var s=fresh(36);var runtime=CustodialNativeRuntime.instance;Object old=stream(s);Location p=fix(100);listener(old).onLocationChanged(p);
+    CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);AtomicReference<Throwable> error=new AtomicReference<>();
+    runtime.engine.hook=r->{entered.countDown();for(;;){try{if(!release.await(3,TimeUnit.SECONDS))throw new AssertionError("release timeout");break;}catch(InterruptedException ignored){}}return status==200?CustodialNativeRuntime.Engine.success(r):new AuthorizedResponse(status,new byte[0]);};
+    Thread worker=new Thread(()->{try{send(s,old);}catch(Throwable e){error.set(e);}},"blocked-old-http");worker.start();
+    if(!entered.await(3,TimeUnit.SECONDS))throw new AssertionError("HTTP did not start");
+    Object next;
+    try{next=replace(s,"B",2);eq(field(old,"closed"),true,"old stream closes");listener(old).onLocationChanged(fix(101));eq(field(next,"latest"),null,"stale callback cannot become B fix");}
+    finally{release.countDown();}
+    worker.join(3000);eq(worker.isAlive(),false,"inflight worker completes");if(error.get()!=null)throw new AssertionError(error.get());
+    next=stream(s);eq(next!=null,true,"replacement survives old completion");eq(field(next,"owner"),runtime.principal,"B still owns stream");eq(field(next,"delivered"),-1L,"old completion cannot mark B delivered");eq(s.stopIds,List.of(),"old completion cannot stop B");
+    eq(payload(runtime.engine.requests.get(0)).getString("employee_id"),"A","original in-flight body keeps A");
+    runtime.engine.hook=null;listener(next).onLocationChanged(fix(102));send(s,next);eq(payload(runtime.engine.requests.get(1)).getString("employee_id"),"B","B fix uses B owner");eq(field(next,"delivered"),102L,"B can deliver after old completion");
+  }
+  public static void main(String[] args)throws Exception{
+    System.out.println("SYNTHETIC ANDROID STUB HARNESS: actual unchanged service source; no device, production JSON, HTTP, GPS or release acceptance.");
+    for(int sdk:new int[]{26,28,29,36})test("API "+sdk+" foreground overload",()->{var s=fresh(sdk);eq(s.twoArg,sdk<29?1:0,"two argument count");eq(s.threeArg,sdk>=29?1:0,"typed count");eq(stream(s)!=null,true,"service starts");if(sdk>=29)eq(s.foregroundType,8,"location service type");});
+    test("visible start rejects unfocused/finishing/destroyed and no permission",()->{var a=new Activity();a.focus=false;CustodialPhoneLocationService.startFromVisible(a);eq(a.starts,0,"unfocused");a.focus=true;a.finishing=true;CustodialPhoneLocationService.startFromVisible(a);eq(a.starts,0,"finishing");a.finishing=false;a.destroyed=true;CustodialPhoneLocationService.startFromVisible(a);eq(a.starts,0,"destroyed");a.destroyed=false;a.fine=-1;a.coarse=-1;CustodialPhoneLocationService.startFromVisible(a);eq(a.starts,0,"no permission");a.coarse=0;CustodialPhoneLocationService.startFromVisible(a);eq(a.starts,1,"approximate permission permitted");});
+    test("same owner keeps stream and updates latest stop startId",()->{var s=fresh(36);Object old=stream(s);s.onStartCommand(null,0,2);eq(stream(s),old,"same stream");eq(s.manager.registrations,2,"no duplicate listeners");eq(field(old,"startId"),2,"new startId retained");CustodialNativeRuntime.instance.unreadable=true;send(s,old);eq(stream(s),null,"unreadable stops");eq(s.stopIds,List.of(2),"stops latest accepted start");eq(s.manager.active.size(),0,"listener removed");});
+    test("principal arrival after missing initial principal starts stream",()->{Build.VERSION.SDK_INT=36;var runtime=new CustodialNativeRuntime();runtime.principal=null;CustodialNativeRuntime.instance=runtime;var s=new CustodialPhoneLocationService();services.add(s);s.onStartCommand(null,0,1);eq(stream(s),null,"no principal no collection");eq(s.stopIds,List.of(1),"initial missing authority stop");runtime.principal=new NativeProviderPrincipal("A");s.onStartCommand(null,0,2);quiesce(stream(s));eq(stream(s)!=null,true,"later explicit start succeeds");});
+    test("reassignment replaces stream and rejects old queued listener",()->{var s=fresh(36);Object old=stream(s);listener(old).onLocationChanged(fix(10));Object next=replace(s,"B",2);eq(next!=old,true,"replacement");eq(field(old,"closed"),true,"old closed");eq(field(old,"latest"),null,"old fix cleared");eq(s.manager.active,List.of(listener(next)),"only replacement listener active");listener(old).onLocationChanged(fix(11));eq(field(next,"latest"),null,"no inheritance of old callback");send(s,old);eq(CustodialNativeRuntime.instance.engine.requests.size(),0,"old cannot send");listener(next).onLocationChanged(fix(12));send(s,next);eq(payload(CustodialNativeRuntime.instance.engine.requests.get(0)).getString("employee_id"),"B","new owner body");});
+    for(int status:new int[]{200,401,403})test("old in-flight "+status+" cannot alter/stop replacement",()->inflight(status));
+    for(String why:new String[]{"missing","reassigned","unreadable","permission"})test("fail closed on "+why,()->{var s=fresh(36);Object old=stream(s);var r=CustodialNativeRuntime.instance;switch(why){case "missing"->r.principal=null;case "reassigned"->r.principal=new NativeProviderPrincipal("B");case "unreadable"->r.unreadable=true;case "permission"->{s.fine=-1;s.coarse=-1;}}send(s,old);eq(stream(s),null,"stopped");eq(s.stopIds,List.of(1),"correct stop id");eq(s.manager.active.size(),0,"collection removed");eq(r.engine.requests.size(),0,"no HTTP");});
+    for(int status:new int[]{401,403})test("current server "+status+" stops stream",()->{var s=fresh(36);Object old=stream(s);listener(old).onLocationChanged(fix(20));CustodialNativeRuntime.instance.engine.hook=r->new AuthorizedResponse(status,new byte[0]);send(s,old);eq(stream(s),null,"stopped");eq(s.stopIds,List.of(1),"stop id");eq(s.manager.active.size(),0,"collection removed");});
+    test("offline retry retains capture time sample identity and coordinates",()->{var s=fresh(36);Object o=stream(s);var r=CustodialNativeRuntime.instance;var p=fix(30);p.time=System.currentTimeMillis()-600000;listener(o).onLocationChanged(p);r.engine.hook=req->{throw new java.io.IOException("offline");};send(s,o);eq(stream(s),o,"offline does not retire original stream");eq(field(o,"delivered"),-1L,"offline not delivered");r.engine.hook=null;send(s,o);var a=payload(r.engine.requests.get(0));var b=payload(r.engine.requests.get(1));eq(b.getString("observed_at"),a.getString("observed_at"),"capture preserved");eq(b.getString("sample_id"),a.getString("sample_id"),"sample preserved");eq(b.getString("employee_id"),"A","original owner preserved");eq(b.getDouble("latitude"),a.getDouble("latitude"),"latitude preserved");eq(b.getDouble("longitude"),a.getDouble("longitude"),"longitude preserved");eq(b.getDouble("accuracy_m"),a.getDouble("accuracy_m"),"accuracy preserved");eq(field(o,"delivered"),30L,"retry delivered");send(s,o);eq(r.engine.requests.size(),2,"delivered sample not resent");});
+    test("new fresh fix supersedes offline old fix without history upload",()->{var s=fresh(36);Object o=stream(s);var r=CustodialNativeRuntime.instance;listener(o).onLocationChanged(fix(40));r.engine.hook=req->{throw new java.io.IOException("offline");};send(s,o);var old=payload(r.engine.requests.get(0));Location newer=fix(41);newer.time+=500;listener(o).onLocationChanged(newer);r.engine.hook=null;send(s,o);var fresh=payload(r.engine.requests.get(1));eq(fresh.getString("sample_id").equals(old.getString("sample_id")),false,"new sample ID");eq(fresh.getString("observed_at").equals(old.getString("observed_at")),false,"new capture time");eq(field(o,"delivered"),41L,"new latest delivered");});
+    test("mock invalid and nonmonotonic samples rejected",()->{var s=fresh(36);Object o=stream(s);Location p=fix(50);p.mock=true;listener(o).onLocationChanged(p);send(s,o);eq(CustodialNativeRuntime.instance.engine.requests.size(),0,"mock no HTTP");p.mock=false;p.lat=Double.NaN;listener(o).onLocationChanged(p);eq(field(o,"latest"),null,"nonfinite rejected");p.lat=35;p.accuracy=0;listener(o).onLocationChanged(p);eq(field(o,"latest"),null,"zero accuracy rejected");p.accuracy=9;p.time=System.currentTimeMillis()+60000;listener(o).onLocationChanged(p);eq(field(o,"latest"),null,"future time rejected");p.time=System.currentTimeMillis()-1000;listener(o).onLocationChanged(p);String id=(String)field(o,"sampleId");listener(o).onLocationChanged(fix(49));eq(field(o,"sampleId"),id,"older elapsed fix rejected");listener(o).onLocationChanged(fix(50));eq(field(o,"sampleId"),id,"equal elapsed fix rejected");});
+    test("destroy closes listener and old stream cannot send",()->{var s=fresh(36);Object old=stream(s);s.onDestroy();listener(old).onLocationChanged(fix(60));send(s,old);eq(stream(s),null,"destroy removes stream");eq(s.manager.active.size(),0,"destroy removes listener");eq(CustodialNativeRuntime.instance.engine.requests.size(),0,"no HTTP after destroy");});
+    System.out.println("RESULT passed="+passed+" failed="+failed);if(failed!=0)System.exit(1);
+  }
+}

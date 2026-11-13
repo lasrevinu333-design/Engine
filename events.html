@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-trail-theme="terracotta" data-trail-section="events"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' data:; font-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Events · Memphis Zoo</title>
+  <link rel="icon" href="./assets/trail-v1/events.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./operations-dashboard.css">
+  <link rel="stylesheet" href="./events-view.css">
+  <link rel="stylesheet" href="./memphis-ui.css?v=2026.11.10.back-navigation">
+  <link rel="stylesheet" href="./manager-held-review.css" data-manager-held-review-asset>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/events.css">
+</head><body class="operationsPage" data-memphis-context="contextual">
+  <main class="operationsBoard eventsPage" id="shared-events-page" aria-labelledby="events-title">
+    <header class="boardHeader">
+      <button id="events-back" class="mz-back-link" type="button">Back</button>
+      <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+      <h1 id="events-title" class="trailPageTitle">Events</h1>
+      <button id="events-pause" type="button" aria-pressed="false">Pause scrolling</button>
+      <label>Scroll speed <select id="events-speed"><option value="18">Slow</option><option value="32" selected>Normal</option><option value="48">Faster</option></select></label>
+      <button id="events-fullscreen" type="button">Full screen</button>
+    </header>
+    <p class="boardNote" id="events-status" role="status" aria-live="polite">Checking access…</p>
+    <div class="boardContent" id="events-content" tabindex="0" aria-label="Scrollable event information"></div>
+    <!-- manager-held-review:start -->
+    <section id="manager-held-review-panel" hidden aria-label="Manager-only held event email review">
+      <div id="manager-held-review-content" tabindex="0"></div>
+      <p id="manager-held-review-range" class="boardNote" aria-live="polite"></p>
+      <p class="boardNote">Review status only. Corrections require explicit end time and eligible place choices, preview, and one canonical confirmation; unavailable original facts remain unknown.</p>
+      <button id="manager-held-review-refresh" type="button">Recheck manager access and reviews</button>
+      <button id="manager-held-review-next" type="button" disabled>Next review page</button>
+    </section>
+    <!-- manager-held-review:end -->
+    <p class="boardNote eventsSource">Event information only. Opening this page does not change work assignments.</p>
+  </main>
+  <script src="./memphis-auth.js"></script>
+  <script src="./operations-dashboard-data.js"></script>
+  <script src="./events-view.js"></script>
+  <script type="module" src="./manager-held-review-page.mjs" data-manager-held-review-asset></script>
+</body></html>

@@ -1,0 +1,1581 @@
+{
+  "schema": "custodial.current-bound-historical-provider-comparison.v1",
+  "runtime_admission": false,
+  "release_admission": false,
+  "native_authority": false,
+  "hardware_acceptance": false,
+  "historical_pins_rewritten": false,
+  "current_inventory_sha256": "0820783f0905972204e453d6c7b5d39d93428ffad09969b570a881c13d27e55d",
+  "current_test_java_inventory": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/android/net/Uri.java",
+      "bytes": 951,
+      "sha256": "7c10cc1023d488a6ece41bce0954f9d2c4c003063bf7474c05b311a746ccbfcc"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/android/util/Base64.java",
+      "bytes": 446,
+      "sha256": "81e6f3b1d535406c107fe0d46e5d8bb25dc020cf3ec234691e5b73ff81e17dff"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/AndroidFrozenCryptoAdmissionSourceProbe.java",
+      "bytes": 9869,
+      "sha256": "8bae6ba07a9c3aaf29253b422c693cfbec1d56ea7e3815fd7e6f814f69e8fe6b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/AndroidProtectedWorkPreferencesTest.java",
+      "bytes": 227413,
+      "sha256": "1f13cfb644024e2335c6725dd696e3386e8ad14993de67e8b2afe5e6a5ddc48e"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/AndroidProtectedWorkReadOnlyAbaTest.java",
+      "bytes": 9426,
+      "sha256": "918abba0f3f861b26eadeb1f85974ba2b750ff19870a4920cc4e1b25c80d533b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/AndroidProviderAdapterTest.java",
+      "bytes": 46294,
+      "sha256": "7d527c24a001bedbeb009608981a5994088c7d8e0963bf83078c4d2c2a72af25"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/AndroidSharedKeyRetirementSourceProbe.java",
+      "bytes": 20624,
+      "sha256": "7f9f4d66a29e5a3245684b5699776c9dddfcc24f10c1734131ada7c04002d3d6"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/BackendStatusMatrixTest.java",
+      "bytes": 7796,
+      "sha256": "4835461a7e41f28d85a725a3f361582aebf255e7e5119b06c11a1d79df54efd3"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/CleaningRuntimeConstructionTest.java",
+      "bytes": 4649,
+      "sha256": "3df99f0a6560b079931fcb3de4c701aacc556f0a0bebb30916d4b41096e31b46"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/CurrentNativeCheckOnlyAfterCleaningSqlProducer.java",
+      "bytes": 20947,
+      "sha256": "e9fa45f4558f029b8c2d55faa3621ca98c00275f390276b020ac074ca5cb6aa6"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/CurrentNativeFeedbackSqlProducer.java",
+      "bytes": 13046,
+      "sha256": "958e0a10ca894450ab759f213b28b602482042e27b78a39e7643882fb1dee934"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/CurrentNativeVisitSqlProducer.java",
+      "bytes": 32702,
+      "sha256": "7fd92293bce51937877a4a5ab266c17c0edb14ab7f9569bfccf4704100924727"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicyTest.java",
+      "bytes": 4286,
+      "sha256": "baf0699c62ce4c4f8d852802522ef54ac7e00af1b58965d4e70e5999ad7fd896"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/CustodialRecoveryDiagnosticTest.java",
+      "bytes": 7941,
+      "sha256": "2251e27887bfa499cecf7fcda1d47e95157ea26a46c6bec09bfbaea9e08527c6"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/CustodialSupplyPlaceholderNavigationTest.java",
+      "bytes": 1902,
+      "sha256": "78c3c5e1b4b94a0dec1ca09fedcdba0276572181589ac2641a3dcfb1d3ab0275"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/CustodialWebViewClientTest.java",
+      "bytes": 1770,
+      "sha256": "66f4b21362bac4a0d7283f9315646aa5548b805e3d0819cfd3e5aeb580da852b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/HostJvmCompilePlatformTest.java",
+      "bytes": 2086,
+      "sha256": "9b390a3b5e40ec32fc31fd87e6663cd518091b79ba3343906f3408cbbbb3df60"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/HttpsEnrollmentTransportTest.java",
+      "bytes": 29509,
+      "sha256": "80902e96b273b17d8b9b22d54496e101754185f10c8ca070a264f68ada6f958f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/LegacyCleanupAdapterSourceTest.java",
+      "bytes": 11960,
+      "sha256": "fcb47b9f40f059c4ee0a26a420a60f4f7bcd9b030afef35b3854752080bf12fa"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/LegacyCleanupSnapshotGuardTest.java",
+      "bytes": 5677,
+      "sha256": "78d4151d373dd6e2f9b6a52f9f70fc3227c04f5c189ee2b8ddfd51ab057b9b2b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/LegacyCustodialNfcUrlTest.java",
+      "bytes": 5757,
+      "sha256": "fbe7ece1bdc4249170018be8104f436165e849d3b2448ac7b87fefd8502cd029"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/LegacyReadBoundCleanupTest.java",
+      "bytes": 11328,
+      "sha256": "c81d3aeed2724bd5fb3a735de1406ea51e51e2d3a3e5bed8ac942f20d42d437e"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/LegacyReadIdentityEngineTest.java",
+      "bytes": 2788,
+      "sha256": "0a042df203861f50054acdf35997ed0456940becfd6ac91c32473599b5d8717b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeAssignedActivationJournalTest.java",
+      "bytes": 4573,
+      "sha256": "0e5eeee39469f4208b540f5f4c31e9f6a2d58d2f5577f49117ed571033d7c904"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeAttestationTest.java",
+      "bytes": 8552,
+      "sha256": "2b5aed8562b579e35e64a5cbfe582737b546244f4711d2d65c189f0934b8f533"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeBrowserCompletionCensusProbe.java",
+      "bytes": 3054,
+      "sha256": "0a416281e4d220073cee67bb53b5c80ba5af4eaeb12950dbd3e76edf470ddcd5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeBrowserCompletionCompositionProbe.java",
+      "bytes": 3251,
+      "sha256": "066d0979d816a9d79924114c37be7349e0950ead0f7687ba738561f0cd450782"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeCompletionArgumentStdinProbe.java",
+      "bytes": 6827,
+      "sha256": "1ee7934cb203fb737956f39ba17670a821526946aade6849c1f81b89161b8e1e"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeCompletionJournalTest.java",
+      "bytes": 32793,
+      "sha256": "f0eb7dffcebdb5a1183bfdc534dd959850762121bc2fc7d67a8ef6ec2561c888"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeCompletionOriginalValuesTest.java",
+      "bytes": 15077,
+      "sha256": "0427964b28b5430fc9485230fbc3a1e426ec3530ef78faa7e2e7e732a9185013"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeCompletionValuesFocusedRunner.java",
+      "bytes": 1066,
+      "sha256": "e653dc5b3643b81400139685a46c4dbe25b7cef19d464d2697ac3d2a6794d9dd"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeGenerationBoundBatchFocusedRunner.java",
+      "bytes": 1169,
+      "sha256": "527707660743bbb3337153ef9d7c9d932f492c9b5c55e697b6cb7aa1d7d19b9f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeGenerationBoundBatchTest.java",
+      "bytes": 42345,
+      "sha256": "2496a6f784a227e045319fb10d8a5a981b3ddea5935fee422326dfc2644d3a76"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeLegacyLineageJournalTest.java",
+      "bytes": 16202,
+      "sha256": "39d6d18bff19ae56b1f91a825190a29ef8f4249022fca0acf09cf6c1290d173f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeManagerInventoryPresentationTest.java",
+      "bytes": 46187,
+      "sha256": "85de38088a2181a9e9b0ceda0bab0bc76686b56b50d8573f412efbbea02a8425"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeManagerPreparationPresentationTest.java",
+      "bytes": 43952,
+      "sha256": "beaff4f8626bc67772736d460960834ce8f57e7f4ae6ab6d48eb3ea8c39d4487"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeNamespaceFocusedRunner.java",
+      "bytes": 1249,
+      "sha256": "bcf83e2a977c21187ec461ea70ebce005044fa06f7efe7b36d10f7757b356c88"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeNfcOriginalWriteRecoveryTest.java",
+      "bytes": 10844,
+      "sha256": "5b05754bee7dd5593096f65095674ad225c2c89a573c5f4e08bbec913cadcd02"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeNotificationKnownOriginalTest.java",
+      "bytes": 11821,
+      "sha256": "51644a529c7bc31d667bfe78633c6ed960d3216d1be07d3ef08ad5aecca65cd5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeNotificationOriginalFrameTest.java",
+      "bytes": 2801,
+      "sha256": "e4acff5e24ea0029a4ac03dd8238bd9f5b8200acee497760c879d0f1eaf99e28"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalBrowserQueuePayloadTest.java",
+      "bytes": 26686,
+      "sha256": "0e1026c30f5929a5df6e3cc5e7be6a97514c3bcca2652fa8eb6c3c17ee445847"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalBrowserSourceLifetimeTest.java",
+      "bytes": 29526,
+      "sha256": "f2432c3ec673ec3b4ed4e5232798851d9a176e801154bd7db8a8d60f5482c20f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalCompletionGroupDataTest.java",
+      "bytes": 7396,
+      "sha256": "aa17a15b5b75a307f4c250e922bda294066440d599d70c558126083820847635"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalGenerationFocusedRunner.java",
+      "bytes": 1170,
+      "sha256": "b5b9cc676bb116b3428cff43c707b63096179df631a9f759a30cbd8f63115059"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalGenerationObservationTest.java",
+      "bytes": 29523,
+      "sha256": "c023db8ecd31f99419090b9a88ba646c5dcf5b2792220e2c759a76688c3754a2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryAckIntentJournalTest.java",
+      "bytes": 4441,
+      "sha256": "24c8cb524d1410e98f0ba35aa8916c396da9abf4615990827b60c7be6761697b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryAckRegistrationWireTest.java",
+      "bytes": 19688,
+      "sha256": "7c26e8eb2b66ee16bd01fbef81a366fee05fefad4f519f3fb32a0aa755914606"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryAckStatusEnvelopeTest.java",
+      "bytes": 19202,
+      "sha256": "cd5a8a7a016be23c21f35c0289de7508754699c15390f4c7aa30109ed0841fa4"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryFinalizationExistingReadTest.java",
+      "bytes": 18482,
+      "sha256": "f812cb5b6dd065ec4257f82ca77c4a14351db7d4d2405ca6dd3128328e0a1932"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryFinalizationIntentDataTest.java",
+      "bytes": 20216,
+      "sha256": "01c3e28c9b692a851875b3fdb1bee088b1dce08c2277773530a3fec8e412bba6"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryFinalizationPersistenceTest.java",
+      "bytes": 6271,
+      "sha256": "e8c206138aaebc79d655b0cf7e1c94ae8bb9dbf1cb37621f115e6f24e353b4a9"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryManifestChunkStatusEnvelopeTest.java",
+      "bytes": 7745,
+      "sha256": "84c787f61dcdcd1d1d769a13a5c733e34371134cfad1d286bc12d775b54dd27f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryManifestChunkWireTest.java",
+      "bytes": 27672,
+      "sha256": "c34f5cdf7e0caba96b5664b8878b6c0e08581eb6f0fe46e19195b531e6e3f2af"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventoryManifestNamesTest.java",
+      "bytes": 12492,
+      "sha256": "364aaaa9abd77f5eb1b8053ace375f4a1f8652f3f3474f5dd335f7a3bff7f764"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalInventorySeparationApprovalWireTest.java",
+      "bytes": 24407,
+      "sha256": "2ff63513171af645716367ebc96bf817bcd6fc95163ab3a7787227d0c06969c4"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeOriginalRemovalAdmissionBarrierTest.java",
+      "bytes": 8475,
+      "sha256": "dbb450402cdba0c33ac02fcf480f56f68034e69f3b1a00d17e7678cfe2e99da2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePendingCheckRecoveryTest.java",
+      "bytes": 11884,
+      "sha256": "a6fd14f0ad990aaea5df57029108790603e93b481d21bac0cb1b523e55319ce2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrincipalJournalTest.java",
+      "bytes": 5238,
+      "sha256": "b5f0cd7e987572293492c74bc8a396929e0a30afb8f818f32ae6264f7b8a1d7b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCapsuleFileStoreTest.java",
+      "bytes": 29259,
+      "sha256": "561660960b8e8f2ff1e04294356e9dfb11d355f3afdcd1f5af8a8982cafe560e"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCapsuleRecordCompareConcurrencyTest.java",
+      "bytes": 2396,
+      "sha256": "2717f3e2deb3f32ae9120f00078c7961a0f634c862200bf120b3f55d84ca17ff"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyChunkIdentityPlanFixture.java",
+      "bytes": 1462,
+      "sha256": "688915b3b908ceb04f3b82eb795f908880a977eb03b4855253f33f7b7d1e94d4"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyChunkIdentityPlanTest.java",
+      "bytes": 15864,
+      "sha256": "eaf5ca2c85b63dba4edbf3a5b8fca3c9fac6ffd2dab1033f2d2cede69b6a452a"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyExchangeFixture.java",
+      "bytes": 9699,
+      "sha256": "aef23930fa81976c20e569fbdf5e76866a434a2783f7828ce49d7b62fb70cc43"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyExchangeTest.java",
+      "bytes": 91389,
+      "sha256": "89b661c57eff7f56a2fe08864889f74742c84934240072de4d1f4fef6e955a5d"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyHttpOutcomeTest.java",
+      "bytes": 465228,
+      "sha256": "3d2545355fae35acda01090fbb5a2589f03c1faa5040943c6e975c60e3f30c26"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyOperationTest.java",
+      "bytes": 185707,
+      "sha256": "648bac3f1996cb048b59a8625ad072d10306f6ce9b42dd57cec9640af49a8b0c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyOwnerProofFixture.java",
+      "bytes": 2396,
+      "sha256": "f15bc814c760bc953c67746bb77af40f85941cd1beec30eee56967b4183f7627"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyOwnerProofTest.java",
+      "bytes": 4474,
+      "sha256": "f1ca4523ca2f4288af77973a8635f8ab8f415941c939a06a1bed8da1bb4a0ef5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyOwnerTest.java",
+      "bytes": 44364,
+      "sha256": "3699c4138d31e8bd3557a96bb9696f57f1b83ee9cc4ff68bd14409fd9afc8e3b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyPendingOwnerTest.java",
+      "bytes": 8518,
+      "sha256": "785f63a5a7304390048eb7c9b1233fca2f718a0d7c8814d01484e4ded5047667"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyReadbackTest.java",
+      "bytes": 11687,
+      "sha256": "34e7d4fdfae0ef09e67cce7901ec427696258eee403a4d14f4d3f3346c00b5dd"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyRecordInteropFixture.java",
+      "bytes": 2519,
+      "sha256": "9ae3d4baf4030142c84674bcd6c80b506dd65b7410b11edb96f0ab6b890c989d"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyReplySetTest.java",
+      "bytes": 6896,
+      "sha256": "d01c3c069fc45bd29edc3341be33c0a55f3164647bbf8bc8af7cd537f0b9d345"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyReturnedFrameTest.java",
+      "bytes": 18766,
+      "sha256": "8570a84ead5270f6680d9299d591bda6db8b61d04d3e01c46b68e96f125f18e7"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyReturnedPieceSetTest.java",
+      "bytes": 159203,
+      "sha256": "a52a2b0a5a7b2207955567fbd4c7c9f4e33343ba41480b19449d7221629a6bb1"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodySavedOwnerRecoveryTest.java",
+      "bytes": 71199,
+      "sha256": "5b344c59bb8419fc5025f8e6dc6819e4bebf37c551f13f2cc91240508d2136de"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyStoredPieceConsumerTest.java",
+      "bytes": 7173,
+      "sha256": "a35a7ca1b3ee1b0705059c99b0c8e42a339eb372549a0b4e51d521616ce8fd6b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyTransportFrameFixture.java",
+      "bytes": 2727,
+      "sha256": "06408a1fbe5a87b9e4d52563962e46679f239c96fce59e4c2a9c7e75dbc902b3"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativePrivateCustodyTransportFrameTest.java",
+      "bytes": 6885,
+      "sha256": "be2f4122eef3d3e43727fc8419a166be4a9f41825cde8585ad7bb9aadd21779d"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProtectedInitialBaselineLifetimeTest.java",
+      "bytes": 10733,
+      "sha256": "a63039bc7af5c24f373bcd18acf5587d5e6d9bf975dca58af312c3e6e1b4f425"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProtectedNamespaceObservationTest.java",
+      "bytes": 61963,
+      "sha256": "ddf9c69e8c3af9f45e2cb09fb9d5d89ee3b2081662f94b7931b96859f749e364"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProtectedPreparationEntryPolicyTest.java",
+      "bytes": 2195,
+      "sha256": "34a600986111478a4f5504068bf248f34ea939cb4b6fb31d84504cd343083223"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProtectedRecoveryV2RegressionTest.java",
+      "bytes": 7539,
+      "sha256": "2af4730ce9f232c86902681743ac07b5f2755071d0e4c17c10486c7bf988e2b8"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProtectedSessionInventoryTest.java",
+      "bytes": 10569,
+      "sha256": "fec94d0e9075e0dfd7eedee19bf8ad3c7152c5811a8ad7d771dfda7f18720fa1"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProtectedWorkInventoryTest.java",
+      "bytes": 13129,
+      "sha256": "30ee4c1e99e590fda1a2bd373095a3f5870c00e14ecf0c3807185fd6e5ffce90"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProtectedWorkSnapshotTest.java",
+      "bytes": 6073,
+      "sha256": "8989404e9e5bc61eddc5192dba2c6abf3765d6d0d2fa20366d23a7086197ad9f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderActionIntentTest.java",
+      "bytes": 5011,
+      "sha256": "7c3aef3865b363b85f462a81b917af14f090c1817e79ccdabe6ab9a23ccdfa80"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderAppIdentityTest.java",
+      "bytes": 3914,
+      "sha256": "e279569c889ca072d70dc6be5bbacec4ca34dae09436af0b4ec40324a0d9c913"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderAudioOwnershipTest.java",
+      "bytes": 7938,
+      "sha256": "995f04b37a06dff5629b19dc1746f1f1c1bdff0f559f454d7e7061abb7ccc70c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderAudioRuntimeTest.java",
+      "bytes": 5405,
+      "sha256": "ed90c2d59d8181171a07c224a3445b31e8ad534467c4554f2f29dadf6bb78921"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderAudioSequenceTest.java",
+      "bytes": 6630,
+      "sha256": "5d9da241ea18911cfb57ae028108dbf9d735bb217649d388fead1fa06ff0b131"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderClockExchangeTest.java",
+      "bytes": 9774,
+      "sha256": "0ec4287becfe97f341e02994dfc19f79378d8046d017e6f11acd021c8d078d7c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderClockOwnerTest.java",
+      "bytes": 10362,
+      "sha256": "10f0c5a3b02bc3876405742e7b782f6cea9ff0d56fb28903f232440705f886b9"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderCompactionTest.java",
+      "bytes": 9459,
+      "sha256": "4e58638fefc4b5b392315312a6c047276d20477458dcfd09710a4cc570bc3a6a"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderCompositionTest.java",
+      "bytes": 36505,
+      "sha256": "802f70baeea6373372fa50c0024cdfd521c4eedd55edf6d082314c026524abb5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderDeliveryAdditionalGuardsTest.java",
+      "bytes": 4162,
+      "sha256": "1e47139913dee263052a213528e78ec51fe533dd9daf61700c56e59c52b200e5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderDeliveryCensusCompositionTest.java",
+      "bytes": 1741,
+      "sha256": "c4bcabf924e2ae439ab34296c00dc2bd5ca74c84118127e7fcc5791b58414829"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderDeliveryCensusTest.java",
+      "bytes": 14743,
+      "sha256": "bc95875f2283f2ee5e806921c5efcff0e6f1eac10de6bfe61dab4d9a674d1605"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderDisplayDriverTest.java",
+      "bytes": 10682,
+      "sha256": "1e62668d904eb220447e27111694abcfd3fc9820daa226f86cd0bcca30195a80"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderEventDecisionSqlWireTest.java",
+      "bytes": 14917,
+      "sha256": "1c015ee1d936773e47e29e05589e40574dc18b7aea76d8a20114df8d17dd367d"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderEventDecisionsTest.java",
+      "bytes": 16331,
+      "sha256": "5cc523dc22701acbaf7bdefb2f1f44e4bebd639b71a7cc0abea8e6f13160b7ff"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderEventReceiptsTest.java",
+      "bytes": 18256,
+      "sha256": "877e787d79633b4a23d32b71898caa0026a7c78082d6a3db4b5fa664d4fe9ceb"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderEventSqlWireTest.java",
+      "bytes": 6934,
+      "sha256": "4a107a825d2f3ec6e9c2cdff12e6fefef74361c52d6552bf84cac9ab24fd0d0b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderFailureDispositionTest.java",
+      "bytes": 2336,
+      "sha256": "a79de5b9ca54c53b7ea02324f966e5b9c475a2abdafba44b19993125bca829c7"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderFirebaseDispatchTest.java",
+      "bytes": 5327,
+      "sha256": "d7d813ddb0b7d19afbd64fe3195f48a7cffe2a94dd9f2d74445593e5b33b0795"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderHttpTest.java",
+      "bytes": 30322,
+      "sha256": "b6a6e131eadad845b8d5409f3e3b63be7fb2bcb44866ad4d513c479739d95dd8"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderIngressTest.java",
+      "bytes": 15823,
+      "sha256": "23734211c8b295b5fc591b9be7b509156db4a449665d1d65f206094c8060119b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderIntervalLifecycleTest.java",
+      "bytes": 6247,
+      "sha256": "e9a98003f26e452cd59c905e5b1b89f5ece0f821a5be00854b2f175c4adb30a3"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderIntervalSqlWireTest.java",
+      "bytes": 5775,
+      "sha256": "1ea69250027ee4dee8b2203dd9b9a418ea2c6c3b2aa00632f403d8c853997b4b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderInventorySqlWireTest.java",
+      "bytes": 4082,
+      "sha256": "d5936b60d58d28761c735a49ceaabae4f75bbb856a2fed77b8fa82be01f8d1c2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderInventoryTest.java",
+      "bytes": 25836,
+      "sha256": "ebcfac0ecab2199655d63c27bd0923d7dfadacb877707604729c1e3d42f99348"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderJobBudgetTest.java",
+      "bytes": 6567,
+      "sha256": "99e424074f081cd349c9659dd2c481d6cd362663acf0882df730ef154b37f0ce"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderJobLifecycleTest.java",
+      "bytes": 8765,
+      "sha256": "8ac62a23af2dd3d2166aea5ae9c62757a40c5799234bbdf2084147d88ac45510"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderJournalTest.java",
+      "bytes": 19590,
+      "sha256": "730a80abe98080a40acccf23d8ed97f6e33f1fe5e624e214e76666fcc7a007a8"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderLunchSqlWireTest.java",
+      "bytes": 13853,
+      "sha256": "05adc845871c9480fe13d7786e7f86a7caeda7ca5e10a951343f0597ed0ca5af"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderMaintenanceTest.java",
+      "bytes": 18976,
+      "sha256": "b392885ed15c487a1111fcaf3e310c19e28c68729d9b39c1a88aa4b1bbb44ea0"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderMetadataAdditionalGuardsTest.java",
+      "bytes": 3175,
+      "sha256": "528431dd9090f26055824b14d843ba03aa062ee04230c9aa3ebf5355a1536667"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderMetadataCensusCompositionTest.java",
+      "bytes": 2319,
+      "sha256": "e31543c995b596f9073c3a134d23ba7da599cf7566dd4a6c97d60c8b748ca17b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderMetadataCensusTest.java",
+      "bytes": 16333,
+      "sha256": "a481906be2e3ca080f3b5c7f5fb9c80e57b1943549b891d0cf256516bc7e470c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderMirrorTest.java",
+      "bytes": 27045,
+      "sha256": "3ceaa7432a0daf04f04a7cf887a6d12926c0df58570b4e8498c36fd39e3e02c3"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderNotificationPolicyTest.java",
+      "bytes": 3178,
+      "sha256": "67385ea7c5ef6bb0d32298fe7206b4de1e7ae8fa9ed3c69d8915639fefc72e44"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderOrdinaryOriginalJobReadTest.java",
+      "bytes": 13883,
+      "sha256": "ddd49831f57bf72f53f05d7fe521a32da50f281ca53ef8cdaf147e4f35226b9c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderPayloadTest.java",
+      "bytes": 22920,
+      "sha256": "4380dbc4035bce00558a101dc63b6dbd96951f0f1ded4234b16de9f788a85da8"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderPresentationTest.java",
+      "bytes": 36167,
+      "sha256": "df68b80d04eee07dc42b35db41a2c25e0b7f771c8bd76cf90e7b4152c29626b2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRegistrationCoordinatorTest.java",
+      "bytes": 14110,
+      "sha256": "59fceb3a09e9606cca4554ecb267b09e54e8daf8fbc9b14fc5acef50580d59d5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRegistrationReceiptTest.java",
+      "bytes": 18755,
+      "sha256": "21f8e962053ef3a27b7109e0ee7dbbd4ab8b19fba57c99175c23597876e9df47"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRequestPolicyTest.java",
+      "bytes": 3007,
+      "sha256": "f501e3bc9616ebea465e75ecca1f06e0ff434ef77d4547a499d33b2082ab0b17"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleasesTest.java",
+      "bytes": 4382,
+      "sha256": "bb68cde95ad8d33023470bdb01109510e68eefa43894be2995f8300b49dad267"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "bytes": 44162,
+      "sha256": "4b76aaa1c76bda79f9eb551c95a8f48d510d20316b52b9fe81803b128f5a5c05"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderSchedulePayloadTest.java",
+      "bytes": 5942,
+      "sha256": "66454d0534691d347b8a3ce6c10c5dbfef91d4f881fdaf99edee589480cd12ef"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderSqlWireTest.java",
+      "bytes": 2393,
+      "sha256": "859021f6f7cd12ca61485a87c11cb8871b858c326af1d1c94cd4f8b67c3a4b88"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderTimeTest.java",
+      "bytes": 7942,
+      "sha256": "e64f204582492c12b2c1ff07dc0178f0c622ca0fd66bfe6cc78020189941c6c5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderTombstoneDispositionTest.java",
+      "bytes": 8736,
+      "sha256": "1c196da388220597537a2fa181b9c40c7e3e1572f6ff7d476175ef5813f3f4ad"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeReadQueryDirectFocusedRunner.java",
+      "bytes": 1180,
+      "sha256": "582a7b6388ff9713c18c6bfd35142d0d09d3990beedc0e0050ff7a0d601a589c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeReadinessObservationTest.java",
+      "bytes": 19885,
+      "sha256": "1cfee03a15f7f6afbb99f3fbb92d8daedf2a56261a82f11bd06a186661fe588b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringIssuedTargetOwnerTest.java",
+      "bytes": 11938,
+      "sha256": "592af72374e7467bef0e7c73d4e5f88dcff292257ed74c97c7c3a442a5428316"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringLegacyOwnedDispatchFenceTest.java",
+      "bytes": 967,
+      "sha256": "47bb1cc2b85c29506cbf3d9bf9b7681daec17bbd3d3cccc391028943536e39e7"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryAttemptJournalTest.java",
+      "bytes": 19006,
+      "sha256": "d6be10700c48352db6d89f4e85a0e795146387e33077e913cdaf5d9bc967d922"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryDeliveryWireTest.java",
+      "bytes": 13883,
+      "sha256": "5842bf6482a80fdcb78b9dd82e0469e1f172259788a5e880651793682e7772c3"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryEffectProducerDataTest.java",
+      "bytes": 18964,
+      "sha256": "4164242ca5885e5c3ebe3008fec6592e7f5e35c8ace6a9b70198945e173cdd58"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryNoAudioIdleTest.java",
+      "bytes": 6749,
+      "sha256": "5be90d6fdf8cda7139fc0408cca2fe6fa818b7610d839fef8d3691557e1af595"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryOriginalJobSemanticDataTest.java",
+      "bytes": 6571,
+      "sha256": "dbd4b1c79d5a0bc83fac4e9cc6f60fcea38d2c3a28dddb5ace9525b71d84309a"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryPrincipalLifetimeTest.java",
+      "bytes": 6501,
+      "sha256": "a8f80feb479951cd608d6f2a8251d07cfde9425a8a60801c29003fb53ecd4712"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryPurposeBirthTest.java",
+      "bytes": 23477,
+      "sha256": "9e1e284c0811229a14d8b20c8d3144d30581640da04e81921b881ca750eb6f43"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryRecoverySelectionTest.java",
+      "bytes": 16242,
+      "sha256": "71b5dbf1c429cdd9dcaf8bccbcbe07abea7d49b50dd1c13f47b873e8398857d0"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryRenderDataTest.java",
+      "bytes": 18636,
+      "sha256": "9060ceded5d517fc3c2551b4772b14df28db3643b241e105ea9af3c5a0125b67"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinarySemanticPlanTest.java",
+      "bytes": 24318,
+      "sha256": "b4c1711bf8b07186605f9cb5dbe50206aacc59b3c3ca01d8b94d18dacdb27dda"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOrdinaryStoreDataTest.java",
+      "bytes": 8295,
+      "sha256": "e849ff8d831c959318ba3fe840d679d53acb240d6b5d1c9609631eef218c7414"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringOriginalViewTest.java",
+      "bytes": 11930,
+      "sha256": "3fb226c57d7fa0010c4757c87df20bda08713259d21c7d9b337ebb6a3845f77b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringReceiptGenericEntryTest.java",
+      "bytes": 4745,
+      "sha256": "58e0e120bbb20d3b0e31be88d0cf6565b403e7a5a5f39b297ce774cfff1e1ee1"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringTargetEngineDataTest.java",
+      "bytes": 9626,
+      "sha256": "dbeecd2d94bf96538e8e4609f2440640d684044d8210b5345bacfdbffd082c53"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringTargetJournalTest.java",
+      "bytes": 15507,
+      "sha256": "f44967564af972c6d1937641ad708c0d75484e29df9895724cbd48127d8862b7"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRecurringWholeWorkReadTest.java",
+      "bytes": 6949,
+      "sha256": "6bbf56e1117e8f3f4803637ec941df9ac2da036f3d9b210a694951e63695d09c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedAttemptLimitsTest.java",
+      "bytes": 3731,
+      "sha256": "fffa2a550de656d30bb124907ba056cc757ab843876d8d418f4ebb8dc313882d"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedAttemptTest.java",
+      "bytes": 39844,
+      "sha256": "ec4a63c140c7e05e19a5755edd000bee0cb19136cbd832d9a9647a1478742abb"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedBatchFocusedRunner.java",
+      "bytes": 993,
+      "sha256": "589aa242a7c14eaef34bbe64f9e58be868d60a484310562b315201169be50e6a"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedBatchOwnerTest.java",
+      "bytes": 28655,
+      "sha256": "e3cc9bade59bd62c946a43ca47b4d9da393876a2083eb093776902f1fdc116e6"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedCapturedReadInterfacesTest.java",
+      "bytes": 3990,
+      "sha256": "de3f8061385c6dc14e0c866bd96c24c923ec2e906db428f6123a8af48e380a0a"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedCompletionCensusTest.java",
+      "bytes": 47690,
+      "sha256": "d8f09b58e366494dfd681cc1ba56cf1ddddd944549fc30b0a68c3748cbd4c009"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedCompletionSemanticsTest.java",
+      "bytes": 16117,
+      "sha256": "0d2e495d2155fd614d2298e103351061aac9dcaf451cc591f487f3ef1660c89f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedEnrollmentLifecycleContractTest.java",
+      "bytes": 3435,
+      "sha256": "d98ef8973b3f789cb7c20304eb15f4852934d33708f0d74f7e75394152caae39"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedEnrollmentRealmStoreTest.java",
+      "bytes": 11246,
+      "sha256": "7d9fa682397cef9c3529ff43ad818dda0e74cfff0df02cfc3da54380b10a98c4"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespaceCensusAdditionalGuardsTest.java",
+      "bytes": 6066,
+      "sha256": "dbea54fd82f1604ab6633a8d92c910bdfb800d680e9f1eaf47988cba126f4f48"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespaceCensusTest.java",
+      "bytes": 20121,
+      "sha256": "9b6aa7967c93b2c5090f5360b43cca9c5cf59530cc5bf2e7d66a77012477c710"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespaceCompletionJoinTest.java",
+      "bytes": 50165,
+      "sha256": "bbf8d4e704a2da3017339556c6db441ff201ec23055fc8c3f079f3c442816ab2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespaceCustodyLayoutTest.java",
+      "bytes": 13514,
+      "sha256": "e4ff15aea47902c73ddeaa4f26b1d534712507591c4d0d4f859a018d85714a3c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespaceOriginalKeyCapsuleTest.java",
+      "bytes": 3284,
+      "sha256": "2b2809d3b791d221b76eb482ee476f743f5e13ae9376b110c897b8e053408c0b"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespacePrivateCapsuleTest.java",
+      "bytes": 21150,
+      "sha256": "03932e971d7c62c5ea0b18aadabb9fbceda495b8640ce02b55a83a54df66e2bb"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespaceSavedLocalRecordTest.java",
+      "bytes": 13642,
+      "sha256": "0a8992861770aa3a93286f9337568d66c58bdfb547f6a592472ff7481a5c7b81"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespaceSemanticJoinTest.java",
+      "bytes": 36003,
+      "sha256": "e13ef618d88172dcb7e6ccd25576140963d035c1e99b25ad5a3bcb1226834a2c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedNamespaceValuesTest.java",
+      "bytes": 17749,
+      "sha256": "18d8cf85454573c5617c6dc10b0e3e3d624ab71659c3d9f4ace74570e9353db2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedObservedRecoveryTest.java",
+      "bytes": 15434,
+      "sha256": "57a3dd61130fd82980ee214faf7536d951bf9d6cae3eca8eb83984df5c2f5fdd"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedOwnerTest.java",
+      "bytes": 32467,
+      "sha256": "b9fce6180bc31af055ca9a91de83d75ee4eaef523b892dbdc46a73268d425cd5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedQueryTest.java",
+      "bytes": 19864,
+      "sha256": "bd94176c1083404f86e0dde34c69d96a7445ee3b242bef4ddc0ffeb185c60919"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedReadQueryDirectTest.java",
+      "bytes": 13802,
+      "sha256": "99c46e19095b334d2ce895fe48f424b6b507bbe36def24a2bdb3245f4e500456"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedRecordValuesTest.java",
+      "bytes": 11674,
+      "sha256": "59a47767465f522d93eb018fca07f22065ee3eb632e16dcb9922668c2e41a9e0"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRootOwnerUidObservationTest.java",
+      "bytes": 4408,
+      "sha256": "1581caafc3cac55538cd5ff5886caa5945a082397ec7e2d6048916189bb973a8"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSameOriginalCompletionReadEnvelopeTest.java",
+      "bytes": 27189,
+      "sha256": "d549b13732e15c71016faae5476d75da0d82d73b4a2180fd6a3da86cc98d6c57"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSameOriginalRecoveryChallengeEnvelopeTest.java",
+      "bytes": 26554,
+      "sha256": "62c2a897472d1b2c2e5d421083e4d0c0ac3da0b63bf9b719940ea899dd2f93f7"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSameOriginalRecoveryManagerPreparationWireTest.java",
+      "bytes": 18830,
+      "sha256": "592bbedc356935fcae65f1e2478ad73d31893495fc866d1fedd878dbdc6eb9bd"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSameOriginalRecoveryPreparationWireTest.java",
+      "bytes": 221793,
+      "sha256": "d1313b7c209855c03fca2f97a13354610182feb4cc92c649a5ed3555ffbf8a21"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSavedCustodyCompletionCompositionTest.java",
+      "bytes": 11506,
+      "sha256": "d55753b677cc6daed94171486dd3e26e64cd197c16ee49778576c8af35bc81f2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSeparationContextTest.java",
+      "bytes": 14957,
+      "sha256": "8a062deb5070529b0cae32e27043bd9ed4bf7cf51d6ae0244ee50a4c6af0e665"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSeparationEvidenceTest.java",
+      "bytes": 17659,
+      "sha256": "f00fd0b47a1d153d6f76b50f612d963ca8846164693957f09135e49fc0ea37cb"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSeparationFreezeTest.java",
+      "bytes": 16839,
+      "sha256": "475e31ac00aeab79de3a394c9314345de4d9bd201db3b707cef8691637d8abc9"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeSeparationTransportTest.java",
+      "bytes": 14671,
+      "sha256": "0aff30ad60275f87583f51598e812959630be71f7c319b68bf049ec2a8fbc389"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeTaggedSessionInventorySourceProbe.java",
+      "bytes": 9161,
+      "sha256": "727ed6439bbfbf9fc409c6798202ef133faca57b7fe3486e63e81fc3bd30b47c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeUidPublicOsAdapterTest.java",
+      "bytes": 2922,
+      "sha256": "5c13adb4710fbc33fbe1f27352f6b7414a2689f25cb767688a1e2ea00893b3c6"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeUnboundNamespaceDispositionTest.java",
+      "bytes": 2074,
+      "sha256": "327b7d567c69e6b06369ce12d0d72ced601b538ed7e06e6add3cf46272eca619"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeVaultOriginalWorkAdmissionTest.java",
+      "bytes": 11009,
+      "sha256": "2bc1cc4a0445b6a9d8fdc5ee38bbc03997190bf55f201551d20a3700302e7b86"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeVaultProviderCapturedReadInterfacesTest.java",
+      "bytes": 5901,
+      "sha256": "9811703014fbf27428ae26bf1dda703ca60e9c8f330819656f7513b9da0c1db8"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeVaultProviderReferenceAdditionalGuardsTest.java",
+      "bytes": 5154,
+      "sha256": "72ebbef8d3fb32b0f725ac6243bd13e7e313b36d897b77189cbe345b6c0aef52"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeVaultProviderReferenceCensusTest.java",
+      "bytes": 15954,
+      "sha256": "dc310debaf655c3555c806940f4860323d64c0ef71372c40b7c775a13f319ebb"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NfcHandoffPersistenceTest.java",
+      "bytes": 9530,
+      "sha256": "eb38231a5a54e4bf9b1c4aae01f73d2ed7c1d82992155e9c9b8452fe3331aafb"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/OfflineAuthorityTimeTest.java",
+      "bytes": 23654,
+      "sha256": "740cc5487806d1c1ac23ee8ce0efbd4bf4aabc0ce3f2d390ea3a91c690135f3c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/OfflineSequentialCleaningRequirementTest.java",
+      "bytes": 7257,
+      "sha256": "b5208f4a02b4072b6777f85d63070f9435d17a82d567130ff102d4397274deaa"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/OwnerTestReadinessDiagnosticTest.java",
+      "bytes": 2938,
+      "sha256": "c4e15c4808dab430e9d3a35b556715c83166a39fe8b6cc62242732ef0930598f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/PhysicalTagOccurrenceTest.java",
+      "bytes": 20790,
+      "sha256": "d8a9373fa22c0da671106b56165f848c7fc5ba1929caf385c99c304cbdcbf1da"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/ProtectedIdentityStoreTest.java",
+      "bytes": 11393,
+      "sha256": "ee9c3c7bcb8a3d62f98dd91b9b13d99121d1ed320fa5a34b03e8eee22917e6db"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/ProviderEnvelopeCryptoTest.java",
+      "bytes": 7467,
+      "sha256": "8a8d512b2da4c6bea8787d85a5ab93d2965aa8695daa79248fdbcc85cd153ded"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/ProviderRecordStoreTest.java",
+      "bytes": 17724,
+      "sha256": "cfae38c18b1d9300f3ffc8e609739f7280d10fd80281bd9fc5c73dba6c1a392f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/ProviderWireJsonTest.java",
+      "bytes": 7473,
+      "sha256": "7c56e515458fd4cc017586eb427302f41cdbfe9bf8500e0962d4fb081889e1d7"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/RequestPolicyTest.java",
+      "bytes": 9660,
+      "sha256": "0781c00f63c3fa1966400c49159419b5c86df6fdab949330eb81364f21e53f4d"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/VaultEngineTest.java",
+      "bytes": 104165,
+      "sha256": "a7e398085378894fd051dec7ad0e3828e077e140f01e080674bc9c7f034ad952"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/VaultRemovalTransportTest.java",
+      "bytes": 16366,
+      "sha256": "fa23dee48232349f9e0e76f6bd33b3958e44209b9b28c4fe8ffa8c9e5596f7be"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/VaultSnapshotCodecTest.java",
+      "bytes": 2302,
+      "sha256": "e197a5b53d2dcc39e334c836fb9ef24add000c0c87f92293b7f601c1d716ef8c"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/VaultTestDoubles.java",
+      "bytes": 22439,
+      "sha256": "2faf9ce1bc36ce0cf64d12686589b29b3add13174b1b09d77d8c3ed399210c0a"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/VaultTimestampsTest.java",
+      "bytes": 1913,
+      "sha256": "93ad82de7613f15f5fb28b379bf21d866762c077e6ff5cc24b6ed1f924bfbe5e"
+    }
+  ],
+  "current_auxiliary_inventory": [
+    {
+      "path": "mobile/scripts/custodial-provider-storage-tests.mjs",
+      "bytes": 14526,
+      "sha256": "0b307d4eb18cf3e23cab59deddca950528c27788355f68838bcf390514dc5342"
+    },
+    {
+      "path": "scripts/provider-event-decisions-source-boundary.mjs",
+      "bytes": 1884,
+      "sha256": "a81d333a07bc2f9dfed69067080716809a8ceb573e93ba5ac6db343d5e42b9bf"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml",
+      "bytes": 2962,
+      "sha256": "80eaafe4705676208fe71d76af95e8ce722544d63f30a2901b5ecd5319b4c055"
+    },
+    {
+      "path": "mobile/src/custodial/bridge.js",
+      "bytes": 164999,
+      "sha256": "a2a8068fd37a8bc0526307a788fcef5eac0e806ef59b5e67898d04ccea2aea30"
+    },
+    {
+      "path": "scripts/provider-event-decision-current219-contract-tests.mjs",
+      "bytes": 9160,
+      "sha256": "76e429e3e0080e8e16966c6e7f6eca713d4645c418e20901f161ac38d23a8696",
+      "basis": "bounded actual-consumer test repair; original retained separately"
+    },
+    {
+      "path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "bytes": 65190,
+      "sha256": "522b7e3e15aa51141e5fe62f0aa8e913304b056dbd9b5c05944d876d55f7afc7"
+    },
+    {
+      "path": "mobile/src/custodial/native-security.js",
+      "bytes": 62336,
+      "sha256": "147354240f054a26f028dd02c4995663959a93aaa8edecd00c7f59595d19eefb"
+    },
+    {
+      "path": "mobile/src/custodial/provider-mirror-bridge.js",
+      "bytes": 8710,
+      "sha256": "a5d8a56394e6f5d7ea2d56e0a857325a746eefcb26e4909f944d3cdbd560f12a"
+    },
+    {
+      "path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+      "bytes": 41368,
+      "sha256": "b798b903ed6bbbe590d9543966496ce57859f0cc679deba49ba032d3a8d8e202"
+    },
+    {
+      "path": "memphis-device-reminders.js",
+      "bytes": 70932,
+      "sha256": "9046b9ee1857247c5427602dcd779bb5c37ead5290344d10d42353a55aca3313"
+    },
+    {
+      "path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+      "bytes": 63197,
+      "sha256": "525ffa19fc47383aa33842bc69ca3e4fa04ebcb7ca076f67fac52c39a45fc5f5"
+    }
+  ],
+  "historical_source_packet": "diagnostic-audit-20261004",
+  "files": [
+    {
+      "name": "VaultEngine.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/VaultEngine.java",
+      "current_sha256": "3934ed5927d433de834768299e9b57ecb84005f745443e95d7686eef9fd4c7f0",
+      "comparison_input_sha256": [
+        "3934ed5927d433de834768299e9b57ecb84005f745443e95d7686eef9fd4c7f0",
+        "d38433c92f9a3c9549da658c258a42afffaf4a9499fd05a79d9b9aa64f9be957"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/VaultEngine.java",
+      "comparison_sha256": "7e0b5bbe7c4f73f91bcf00d8348a9a80081d373aa104e97799ecd0ccb7cc2dda",
+      "historical_f6_source_sha256": "7e0b5bbe7c4f73f91bcf00d8348a9a80081d373aa104e97799ecd0ccb7cc2dda",
+      "final_reference_sha256": "7e0b5bbe7c4f73f91bcf00d8348a9a80081d373aa104e97799ecd0ccb7cc2dda",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "NativeProviderJournal.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "current_sha256": "b8097e4897db9c53594f278af430a435e626c8bfb558d1b5405abd3ebde37ae2",
+      "comparison_input_sha256": [
+        "b8097e4897db9c53594f278af430a435e626c8bfb558d1b5405abd3ebde37ae2"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeProviderJournal.java",
+      "comparison_sha256": "b44519d60b0ee05f16fbf8315b25ef2d31da6ab6c04055eafad483dfb17c9c81",
+      "historical_f6_source_sha256": "91ca3d96cd6b60ce98ac08a26b7b32786d3b6c138b6eb10087ed6b141a5bf663",
+      "final_reference_sha256": "91ca3d96cd6b60ce98ac08a26b7b32786d3b6c138b6eb10087ed6b141a5bf663",
+      "reconstruction_edges": [
+        {
+          "fixture": "native-first-audio-byte-delta.json",
+          "direction": "forward",
+          "sha256": "b44519d60b0ee05f16fbf8315b25ef2d31da6ab6c04055eafad483dfb17c9c81"
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderRuntimeOwner.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "current_sha256": "3424517c43b2e0e35ec6cfa8c00c047cb9d1351d2945880639243d26296836e2",
+      "comparison_input_sha256": [
+        "3424517c43b2e0e35ec6cfa8c00c047cb9d1351d2945880639243d26296836e2"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeProviderRuntimeOwner.java",
+      "comparison_sha256": "92ea9ae088ad337f5b46f43d8466ccfcaec6c41a73586b6fe748fbd4a7c67a75",
+      "historical_f6_source_sha256": "be74c0df2b46fe1fe48b77f11dbe7bbc34802d3bde0e7b9cb96efa6f44d0b0d9",
+      "final_reference_sha256": "be74c0df2b46fe1fe48b77f11dbe7bbc34802d3bde0e7b9cb96efa6f44d0b0d9",
+      "reconstruction_edges": [
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "92ea9ae088ad337f5b46f43d8466ccfcaec6c41a73586b6fe748fbd4a7c67a75"
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderHttpTest.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderHttpTest.java",
+      "current_sha256": "b6a6e131eadad845b8d5409f3e3b63be7fb2bcb44866ad4d513c479739d95dd8",
+      "comparison_input_sha256": [
+        "b6a6e131eadad845b8d5409f3e3b63be7fb2bcb44866ad4d513c479739d95dd8"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeProviderHttpTest.java",
+      "comparison_sha256": "0f8b7c5a4ce6b5c599cc8a3949991c3b7a06f1a132dc4a3bf609c75480f5a0b3",
+      "historical_f6_source_sha256": "0f8b7c5a4ce6b5c599cc8a3949991c3b7a06f1a132dc4a3bf609c75480f5a0b3",
+      "final_reference_sha256": "0f8b7c5a4ce6b5c599cc8a3949991c3b7a06f1a132dc4a3bf609c75480f5a0b3",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "NativeProviderRuntimeOwnerTest.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "current_sha256": "4b76aaa1c76bda79f9eb551c95a8f48d510d20316b52b9fe81803b128f5a5c05",
+      "comparison_input_sha256": [
+        "4b76aaa1c76bda79f9eb551c95a8f48d510d20316b52b9fe81803b128f5a5c05"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeProviderRuntimeOwnerTest.java",
+      "comparison_sha256": "2e1ee94048b74da8b30620e7f01d66ef1b4d0c06907c515cb5de464ec8cf22c2",
+      "historical_f6_source_sha256": "2e1ee94048b74da8b30620e7f01d66ef1b4d0c06907c515cb5de464ec8cf22c2",
+      "final_reference_sha256": "2e1ee94048b74da8b30620e7f01d66ef1b4d0c06907c515cb5de464ec8cf22c2",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "NativeProviderCompositionTest.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderCompositionTest.java",
+      "current_sha256": "802f70baeea6373372fa50c0024cdfd521c4eedd55edf6d082314c026524abb5",
+      "comparison_input_sha256": [
+        "802f70baeea6373372fa50c0024cdfd521c4eedd55edf6d082314c026524abb5"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeProviderCompositionTest.java",
+      "comparison_sha256": "6c17784f5af40c637129bfe0fbba01de6aa4ef19630482eb2f8eca3224f443f7",
+      "historical_f6_source_sha256": "03637b070e9d07ffdc18ea86277d0daa8a37e26d00bb39a004bfe9cd7d3bb758",
+      "final_reference_sha256": "03637b070e9d07ffdc18ea86277d0daa8a37e26d00bb39a004bfe9cd7d3bb758",
+      "reconstruction_edges": [
+        {
+          "fixture": "provider-release-admission-byte-deltas.json",
+          "direction": "forward",
+          "sha256": "0479a83424b45b20cc8cd786fa874fe597431697fd3359ccfff48341e973dbf6"
+        },
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "6c17784f5af40c637129bfe0fbba01de6aa4ef19630482eb2f8eca3224f443f7"
+        }
+      ]
+    },
+    {
+      "name": "OfflineAuthorityTime.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/OfflineAuthorityTime.java",
+      "current_sha256": "19976aebbcd1b889c1396d7e315e6e440591d0b58cb4329c82573ad12a7f7904",
+      "comparison_input_sha256": [
+        "19976aebbcd1b889c1396d7e315e6e440591d0b58cb4329c82573ad12a7f7904"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/OfflineAuthorityTime.java",
+      "comparison_sha256": "0ae5be7fa6c106a900a81bcf75c30c8ae87332da248fb6dd9bc9dc36b534f407",
+      "historical_f6_source_sha256": "0ae5be7fa6c106a900a81bcf75c30c8ae87332da248fb6dd9bc9dc36b534f407",
+      "final_reference_sha256": "0ae5be7fa6c106a900a81bcf75c30c8ae87332da248fb6dd9bc9dc36b534f407",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "AndroidProtectedWorkPreferences.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/AndroidProtectedWorkPreferences.java",
+      "current_sha256": "1cad30c1390e48116b43367d731849ba80574a188d691944b6fdcb69635a4fbf",
+      "comparison_input_sha256": [
+        "1cad30c1390e48116b43367d731849ba80574a188d691944b6fdcb69635a4fbf"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/AndroidProtectedWorkPreferences.java",
+      "comparison_sha256": "9ef56ff29dfe135df5c1b1f9728b7177ab5be288cf49444a400eede5c8df72b4",
+      "historical_f6_source_sha256": "9ef56ff29dfe135df5c1b1f9728b7177ab5be288cf49444a400eede5c8df72b4",
+      "final_reference_sha256": "9ef56ff29dfe135df5c1b1f9728b7177ab5be288cf49444a400eede5c8df72b4",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "AndroidOfflineAuthorityTimeStore.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/AndroidOfflineAuthorityTimeStore.java",
+      "current_sha256": "544493f9fd58c4c92f6348b02d97c933c649a86ccb4599e933efef010255f9b0",
+      "comparison_input_sha256": [
+        "544493f9fd58c4c92f6348b02d97c933c649a86ccb4599e933efef010255f9b0"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/AndroidOfflineAuthorityTimeStore.java",
+      "comparison_sha256": "f4e00ddde14304307bff0374b9a4c5be44eb692828295c53fb9748a8a05f1d3c",
+      "historical_f6_source_sha256": "f4e00ddde14304307bff0374b9a4c5be44eb692828295c53fb9748a8a05f1d3c",
+      "final_reference_sha256": "f4e00ddde14304307bff0374b9a4c5be44eb692828295c53fb9748a8a05f1d3c",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "CustodialNativeVaultPlugin.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java",
+      "current_sha256": "4f84946e73de86d8a98c47aecb81e1d4f288f2fd498b2495ec3385ad74319aa9",
+      "comparison_input_sha256": [
+        "4f84946e73de86d8a98c47aecb81e1d4f288f2fd498b2495ec3385ad74319aa9"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/CustodialNativeVaultPlugin.java",
+      "comparison_sha256": "2d15293fd5ce8b058c279d32c7a6a24951e1a75e1db266658ac4a4fce8f62490",
+      "historical_f6_source_sha256": "2d15293fd5ce8b058c279d32c7a6a24951e1a75e1db266658ac4a4fce8f62490",
+      "final_reference_sha256": "2d15293fd5ce8b058c279d32c7a6a24951e1a75e1db266658ac4a4fce8f62490",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "CustodialNativeRuntime.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java",
+      "current_sha256": "0c64e1a7c2d4471c5a8a3c41372afb76a8b7117212646f59b2c481b2dd96727c",
+      "comparison_input_sha256": [
+        "0c64e1a7c2d4471c5a8a3c41372afb76a8b7117212646f59b2c481b2dd96727c",
+        "427d02225cf17ba460971c50f01c53d7f6673351d269dbf0af90e236fb00d0b1"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/CustodialNativeRuntime.java",
+      "comparison_sha256": "c72301d887374150b14afafc810d4b779a22280ca3843b0dc537352f3f12b139",
+      "historical_f6_source_sha256": "c78871f54e2a85f06f90fa89685c0e7c11f88510e50e2ffd5af05fc2c117686c",
+      "final_reference_sha256": "c78871f54e2a85f06f90fa89685c0e7c11f88510e50e2ffd5af05fc2c117686c",
+      "reconstruction_edges": [
+        {
+          "fixture": "provider-release-admission-byte-deltas.json",
+          "direction": "forward",
+          "sha256": "8d9e8b657a3375ff30d0c414b04e6ae17896bbc0bebfe54339c13d714cb88fd1"
+        },
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "c72301d887374150b14afafc810d4b779a22280ca3843b0dc537352f3f12b139"
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderClaims.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderClaims.java",
+      "current_sha256": "1e6957c84fb72c77440eff5fcc90de5370ece59bddcbbe11c21c751b7954fe19",
+      "comparison_input_sha256": [
+        "1e6957c84fb72c77440eff5fcc90de5370ece59bddcbbe11c21c751b7954fe19"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeProviderClaims.java",
+      "comparison_sha256": "d0c3d7fafa8047bdf335d278782faa8031e7c648f7b299a096d66c133b2f7ea4",
+      "historical_f6_source_sha256": "06867ec6f14621a22cb4c52d99a3598a9b66d2726da9c0b9a6da527fc48229f0",
+      "final_reference_sha256": "06867ec6f14621a22cb4c52d99a3598a9b66d2726da9c0b9a6da527fc48229f0",
+      "reconstruction_edges": [
+        {
+          "fixture": "native-first-audio-byte-delta.json",
+          "direction": "forward",
+          "sha256": "3950971915b7294d64a0a649c0b82555ff89a1815f3045cc7de1dcc553286e71"
+        },
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "d0c3d7fafa8047bdf335d278782faa8031e7c648f7b299a096d66c133b2f7ea4"
+        }
+      ]
+    },
+    {
+      "name": "RemovalCoordinator.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/RemovalCoordinator.java",
+      "current_sha256": "2aff2285901b9f67d59f8e3e897fd938220fa2c26a525fa63c4ff48c947dfcf0",
+      "comparison_input_sha256": [
+        "2aff2285901b9f67d59f8e3e897fd938220fa2c26a525fa63c4ff48c947dfcf0"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/RemovalCoordinator.java",
+      "comparison_sha256": "352706285839ea95fac59bbe37b9cf1aabfb42d87d93782ad7b65a883dc7eb80",
+      "historical_f6_source_sha256": "352706285839ea95fac59bbe37b9cf1aabfb42d87d93782ad7b65a883dc7eb80",
+      "final_reference_sha256": "352706285839ea95fac59bbe37b9cf1aabfb42d87d93782ad7b65a883dc7eb80",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "NativeNfcScanHandoff.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeNfcScanHandoff.java",
+      "current_sha256": "d332de701f8fec309deb29af8091993c155b42ddcb3291180379d65da3c31705",
+      "comparison_input_sha256": [
+        "d332de701f8fec309deb29af8091993c155b42ddcb3291180379d65da3c31705"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeNfcScanHandoff.java",
+      "comparison_sha256": "674d7abe36779a7341e16f63588b6452596db23348397287a991f1138991aa77",
+      "historical_f6_source_sha256": "674d7abe36779a7341e16f63588b6452596db23348397287a991f1138991aa77",
+      "final_reference_sha256": "674d7abe36779a7341e16f63588b6452596db23348397287a991f1138991aa77",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "custodial-provider-storage-tests.mjs",
+      "current_path": "mobile/scripts/custodial-provider-storage-tests.mjs",
+      "current_sha256": "0b307d4eb18cf3e23cab59deddca950528c27788355f68838bcf390514dc5342",
+      "comparison_input_sha256": [
+        "0b307d4eb18cf3e23cab59deddca950528c27788355f68838bcf390514dc5342"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/custodial-provider-storage-tests.mjs",
+      "comparison_sha256": "e9fef56361232f0185b7507993cb07b8e06df485f98efdf0e988ca1ac1ccae35",
+      "historical_f6_source_sha256": "e9fef56361232f0185b7507993cb07b8e06df485f98efdf0e988ca1ac1ccae35",
+      "final_reference_sha256": "bbbc0947510c17bdc07ea39040e08afd63f0181d590103042541af70320b8764",
+      "reconstruction_edges": [
+        {
+          "fixture": "provider-event-decision-current219-byte-deltas.json",
+          "direction": "reverse",
+          "sha256": "3b9c9f6e8ad88bd686f65d830f9ff6cbddbd29b4a18da913553827fc783eca9e"
+        },
+        {
+          "fixture": "provider-event-decision-wire-byte-deltas.json",
+          "direction": "reverse",
+          "sha256": "bbbc0947510c17bdc07ea39040e08afd63f0181d590103042541af70320b8764"
+        }
+      ]
+    },
+    {
+      "name": "provider-event-decisions-source-boundary.mjs",
+      "current_path": "scripts/provider-event-decisions-source-boundary.mjs",
+      "current_sha256": "a81d333a07bc2f9dfed69067080716809a8ceb573e93ba5ac6db343d5e42b9bf",
+      "comparison_input_sha256": [
+        "a81d333a07bc2f9dfed69067080716809a8ceb573e93ba5ac6db343d5e42b9bf"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/provider-event-decisions-source-boundary.mjs",
+      "comparison_sha256": "d55e4bf5ee7c760150aba952be38d1b7e00d38cfb3e91ff89940d09e6145eda3",
+      "historical_f6_source_sha256": "d55e4bf5ee7c760150aba952be38d1b7e00d38cfb3e91ff89940d09e6145eda3",
+      "final_reference_sha256": "d55e4bf5ee7c760150aba952be38d1b7e00d38cfb3e91ff89940d09e6145eda3",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "AndroidManifest.xml",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml",
+      "current_sha256": "80eaafe4705676208fe71d76af95e8ce722544d63f30a2901b5ecd5319b4c055",
+      "comparison_input_sha256": [
+        "80eaafe4705676208fe71d76af95e8ce722544d63f30a2901b5ecd5319b4c055"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/AndroidManifest.xml",
+      "comparison_sha256": "da680d0375c0936d64c9e1cf529881b5fe65dd96fabfab2a4698bd4c0bbe16fe",
+      "historical_f6_source_sha256": "5714fc43190e46dfe043749b8a5b9bf2903bed60cd2bc86ef2077875248c854a",
+      "final_reference_sha256": "5714fc43190e46dfe043749b8a5b9bf2903bed60cd2bc86ef2077875248c854a",
+      "reconstruction_edges": [
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "da680d0375c0936d64c9e1cf529881b5fe65dd96fabfab2a4698bd4c0bbe16fe"
+        }
+      ]
+    },
+    {
+      "name": "native-security.js",
+      "current_path": "mobile/src/custodial/native-security.js",
+      "current_sha256": "147354240f054a26f028dd02c4995663959a93aaa8edecd00c7f59595d19eefb",
+      "comparison_input_sha256": [
+        "ad24f811f464e9cdee70f7820b7040ec54efbc86c13e8feddf282599a4122e64",
+        "147354240f054a26f028dd02c4995663959a93aaa8edecd00c7f59595d19eefb"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/native-security.js",
+      "comparison_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",
+      "historical_f6_source_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",
+      "final_reference_sha256": "2dd6e833a70dd25944d6b430e9192bdb0662b67fd35565ead7c3bf3ad8fa09fe",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "verify-custodial-dex-semantics.mjs",
+      "current_path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+      "current_sha256": "b798b903ed6bbbe590d9543966496ce57859f0cc679deba49ba032d3a8d8e202",
+      "comparison_input_sha256": [
+        "b798b903ed6bbbe590d9543966496ce57859f0cc679deba49ba032d3a8d8e202"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/verify-custodial-dex-semantics.mjs",
+      "comparison_sha256": "f260e6c67a153bf3878f4e6b94506322baa6f4b76091e5b0646e298122e74ad6",
+      "historical_f6_source_sha256": "f260e6c67a153bf3878f4e6b94506322baa6f4b76091e5b0646e298122e74ad6",
+      "final_reference_sha256": "f260e6c67a153bf3878f4e6b94506322baa6f4b76091e5b0646e298122e74ad6",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "memphis-device-reminders.js",
+      "current_path": "memphis-device-reminders.js",
+      "current_sha256": "9046b9ee1857247c5427602dcd779bb5c37ead5290344d10d42353a55aca3313",
+      "comparison_input_sha256": [
+        "9046b9ee1857247c5427602dcd779bb5c37ead5290344d10d42353a55aca3313"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/memphis-device-reminders.js",
+      "comparison_sha256": "31429725ea97d9e4628c3dc0f28f9c2ff06fbae7c3b1531a548af2cdab367918",
+      "historical_f6_source_sha256": "4f12d3a7cc7e158fe10dad5364c6d447c0f333ffd5d770b079dcf884531fe1df",
+      "final_reference_sha256": "4f12d3a7cc7e158fe10dad5364c6d447c0f333ffd5d770b079dcf884531fe1df",
+      "reconstruction_edges": [
+        {
+          "fixture": "provider-required-kind-byte-deltas.json",
+          "direction": "forward",
+          "sha256": "b782d86c472b720bce028beeff6b3cdf845ab5a47cbafadd492f575d14591d5c"
+        },
+        {
+          "fixture": "provider-no-wake-byte-delta.json",
+          "direction": "forward",
+          "sha256": "24edd4dc7ad983ec21d8761dc319bba2c007b887da20cb6589c439fa010c8c78"
+        },
+        {
+          "fixture": "native-schedule-wire-byte-delta.json",
+          "direction": "forward",
+          "sha256": "31429725ea97d9e4628c3dc0f28f9c2ff06fbae7c3b1531a548af2cdab367918"
+        }
+      ]
+    },
+    {
+      "name": "custodial-android-release-acceptance.schema.json",
+      "current_path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+      "current_sha256": "525ffa19fc47383aa33842bc69ca3e4fa04ebcb7ca076f67fac52c39a45fc5f5",
+      "comparison_input_sha256": [
+        "525ffa19fc47383aa33842bc69ca3e4fa04ebcb7ca076f67fac52c39a45fc5f5"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/custodial-android-release-acceptance.schema.json",
+      "comparison_sha256": "09868fbf07fc37b7c8cf09e8402470f7f396e2f3b2c298f79a405cc67c96560d",
+      "historical_f6_source_sha256": "03eec86c1d2a746567a77a9b4d59574b3a152bf8a4bbaf425ff8e845cdaff428",
+      "final_reference_sha256": "03eec86c1d2a746567a77a9b4d59574b3a152bf8a4bbaf425ff8e845cdaff428",
+      "reconstruction_edges": [
+        {
+          "fixture": "qualified-provider-schema-byte-delta.json",
+          "direction": "forward",
+          "sha256": "44fe431c3ed16fd5d5a31d613e85f4cda498b8915266e4e7f529e223fbe87933"
+        },
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "09868fbf07fc37b7c8cf09e8402470f7f396e2f3b2c298f79a405cc67c96560d"
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderEventDecisionSqlWireTest.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderEventDecisionSqlWireTest.java",
+      "current_sha256": "1c015ee1d936773e47e29e05589e40574dc18b7aea76d8a20114df8d17dd367d",
+      "comparison_input_sha256": [
+        "1c015ee1d936773e47e29e05589e40574dc18b7aea76d8a20114df8d17dd367d"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeProviderEventDecisionSqlWireTest.java",
+      "comparison_sha256": "798f5affbc5bfb4de1971da072d91893c5e9958eccde2d2bb164f29acc7c9494",
+      "historical_f6_source_sha256": "798f5affbc5bfb4de1971da072d91893c5e9958eccde2d2bb164f29acc7c9494",
+      "final_reference_sha256": "798f5affbc5bfb4de1971da072d91893c5e9958eccde2d2bb164f29acc7c9494",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "native-notification-arrival-boundary-tests.mjs",
+      "current_path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "current_sha256": "522b7e3e15aa51141e5fe62f0aa8e913304b056dbd9b5c05944d876d55f7afc7",
+      "comparison_input_sha256": [
+        "522b7e3e15aa51141e5fe62f0aa8e913304b056dbd9b5c05944d876d55f7afc7"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/native-notification-arrival-boundary-tests.mjs",
+      "comparison_sha256": "20cb1d753f65768955884b4b6ecfe9a1ee01dae5a824dc287924abd551f00933",
+      "historical_f6_source_sha256": "fa3efe4598cc4327d0ae82110f9cacadb311b9880d96da342f58e5c14047a90c",
+      "final_reference_sha256": "fa3efe4598cc4327d0ae82110f9cacadb311b9880d96da342f58e5c14047a90c",
+      "reconstruction_edges": [
+        {
+          "fixture": "native-audio-sequence-byte-delta.json",
+          "direction": "forward",
+          "sha256": "20cb1d753f65768955884b4b6ecfe9a1ee01dae5a824dc287924abd551f00933"
+        }
+      ]
+    },
+    {
+      "name": "NativeAttestation.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeAttestation.java",
+      "current_sha256": "059d74346a6f6d68f051b626830b6bd927cc794b262e9012071e8d2a388cb3b8",
+      "comparison_input_sha256": [
+        "059d74346a6f6d68f051b626830b6bd927cc794b262e9012071e8d2a388cb3b8",
+        "67878656f3d64e1b6a109093f895d0a7f30cc67a7cf7f1e23fd579090a0d0530"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeAttestation.java",
+      "comparison_sha256": "792dad91d7542f82847ccf2c195990b9a6632d1c18a0dc18cd73c34e2a647fa6",
+      "historical_f6_source_sha256": "792dad91d7542f82847ccf2c195990b9a6632d1c18a0dc18cd73c34e2a647fa6",
+      "final_reference_sha256": "792dad91d7542f82847ccf2c195990b9a6632d1c18a0dc18cd73c34e2a647fa6",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "bridge.js",
+      "current_path": "mobile/src/custodial/bridge.js",
+      "current_sha256": "a2a8068fd37a8bc0526307a788fcef5eac0e806ef59b5e67898d04ccea2aea30",
+      "comparison_input_sha256": [
+        "a2a8068fd37a8bc0526307a788fcef5eac0e806ef59b5e67898d04ccea2aea30"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/bridge.js",
+      "comparison_sha256": "9fd4404231a2b45464cd6b21ae0cd9bda05e0b2a07c0853b3eac9e19920fb393",
+      "historical_f6_source_sha256": "f19bef25304276cb3872b1340cd96f6188d119bb89f8171225896f8d23893175",
+      "final_reference_sha256": "f19bef25304276cb3872b1340cd96f6188d119bb89f8171225896f8d23893175",
+      "reconstruction_edges": [
+        {
+          "fixture": "retained-native-bridge-byte-delta.json",
+          "direction": "forward",
+          "sha256": "9fd4404231a2b45464cd6b21ae0cd9bda05e0b2a07c0853b3eac9e19920fb393"
+        }
+      ]
+    },
+    {
+      "name": "provider-event-decision-current219-contract-tests.mjs",
+      "current_path": "scripts/provider-event-decision-current219-contract-tests.mjs",
+      "current_sha256": "76e429e3e0080e8e16966c6e7f6eca713d4645c418e20901f161ac38d23a8696",
+      "comparison_input_sha256": [
+        "76e429e3e0080e8e16966c6e7f6eca713d4645c418e20901f161ac38d23a8696"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/provider-event-decision-current219-contract-tests.mjs",
+      "comparison_sha256": "ddcf15771ca413317e21766b8677eac83c3cd796a02ce2ec38fb64b2b1525962",
+      "historical_f6_source_sha256": "ddcf15771ca413317e21766b8677eac83c3cd796a02ce2ec38fb64b2b1525962",
+      "final_reference_sha256": "ddcf15771ca413317e21766b8677eac83c3cd796a02ce2ec38fb64b2b1525962",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "NativeCompletionJournal.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeCompletionJournal.java",
+      "current_sha256": "29b05d9a3207b3a2c46a7473d8dbb7b667b7aad737c359ace9224c6c69e9ab04",
+      "comparison_input_sha256": [
+        "29b05d9a3207b3a2c46a7473d8dbb7b667b7aad737c359ace9224c6c69e9ab04"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/NativeCompletionJournal.java",
+      "comparison_sha256": "446198b40ab7dd9240d4ac39da13113aab1b2ef34aae0b99df26426643ab4fbd",
+      "historical_f6_source_sha256": "446198b40ab7dd9240d4ac39da13113aab1b2ef34aae0b99df26426643ab4fbd",
+      "final_reference_sha256": "446198b40ab7dd9240d4ac39da13113aab1b2ef34aae0b99df26426643ab4fbd",
+      "reconstruction_edges": []
+    },
+    {
+      "name": "RequestPolicy.java",
+      "current_path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/RequestPolicy.java",
+      "current_sha256": "26926d30e746762fd882ad3a3348d590d4e6e7f98df0d245967eff7607f959bf",
+      "comparison_input_sha256": [
+        "26926d30e746762fd882ad3a3348d590d4e6e7f98df0d245967eff7607f959bf"
+      ],
+      "comparison_path": "scripts/fixtures/historical-provider-comparison/RequestPolicy.java",
+      "comparison_sha256": "49feb27a4f614d25f90c65e26dc157f766c0c1cc14c07ba65ab0e483ca075dd4",
+      "historical_f6_source_sha256": "49feb27a4f614d25f90c65e26dc157f766c0c1cc14c07ba65ab0e483ca075dd4",
+      "final_reference_sha256": "49feb27a4f614d25f90c65e26dc157f766c0c1cc14c07ba65ab0e483ca075dd4",
+      "reconstruction_edges": []
+    }
+  ]
+}

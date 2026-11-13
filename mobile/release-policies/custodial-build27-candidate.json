@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "status": "staged_physical_candidate_nfc_pending",
+  "package_name": "org.memphiszoo.custodial",
+  "version_name": "1.0.0",
+  "version_code": 27,
+  "source": {
+    "repository": "lasrevinu333-design/Engine",
+    "ref": "refs/heads/main",
+    "commit": "71fc3f8861c88a9f455b6e3cd44cfc615ebb714f",
+    "tree": "4da0e408f541445b077b0388c924d945742a71e3",
+    "commit_exact": true
+  },
+  "backend_pair": {
+    "repository": "lasrevinu333-design/memphis-zoo-mcp",
+    "commit": "bf1ea15ff501aa4eb51bfd5257a0a16b4a6d7f85",
+    "tree": "f18e906ff520f2a03e8bb6bc762182324dce44b2",
+    "canonical_schema_sha256": "c8b6c811c52a3275290c6b8944f3692121c40e92c9efd84c5eb92baff91bc5ac"
+  },
+  "build": {
+    "authority": "codemagic",
+    "workflow": "custodial-android",
+    "build_id": "6a80bd84bfdeb9f936680ab7",
+    "build_number": 27,
+    "finished_at": "2026-08-15T19:29:48.344Z",
+    "first_attempt_passed": true,
+    "accepted": true
+  },
+  "signing": {
+    "certificate_sha256": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf",
+    "public_key_sha256": "5bbf30c71444534f189f75cfa3e65779285a4e8e25ff3fd7cbfa1cbc86de1d4c",
+    "signer_count": 1,
+    "apk_signature_v2": true
+  },
+  "artifact": {
+    "authority": "private_draft_github_release_asset",
+    "repository": "lasrevinu333-design/memphis-zoo-kiosk-control",
+    "release_id": 371143308,
+    "release_tag": "custodial-build27-production-candidate-20260815",
+    "release_is_draft": true,
+    "release_page_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/tag/untagged-06f4e896e65f8dff9662",
+    "asset_id": 516023264,
+    "asset_name": "memphis-zoo-custodial-build27.apk",
+    "asset_size_bytes": 6442769,
+    "asset_sha256": "3c23de0d39ddb59a62ccad41ca2f4eb15d7541bda416076afb0fd8fd2e8181f9",
+    "asset_digest_api": "sha256:3c23de0d39ddb59a62ccad41ca2f4eb15d7541bda416076afb0fd8fd2e8181f9",
+    "asset_api_url": "https://api.github.com/repos/lasrevinu333-design/memphis-zoo-kiosk-control/releases/assets/516023264",
+    "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-06f4e896e65f8dff9662/memphis-zoo-custodial-build27.apk"
+  },
+  "provenance_artifact": {
+    "asset_id": 516023266,
+    "asset_name": "Engine_27_artifacts.zip",
+    "asset_size_bytes": 13284,
+    "asset_sha256": "710ea1889b259f22bb62a202db0e483b4df1d5d50198db78e2b5e0cc3b6d24a7",
+    "asset_digest_api": "sha256:710ea1889b259f22bb62a202db0e483b4df1d5d50198db78e2b5e0cc3b6d24a7",
+    "asset_api_url": "https://api.github.com/repos/lasrevinu333-design/memphis-zoo-kiosk-control/releases/assets/516023266",
+    "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-06f4e896e65f8dff9662/Engine_27_artifacts.zip"
+  },
+  "physical_canary": {
+    "device_identifier": "KIOSK_08",
+    "device_model": "moto_g_2025",
+    "completed_at": "2026-08-15T19:53:57Z",
+    "in_place_upgrade_passed": true,
+    "first_install_time_preserved": true,
+    "enrollment_preserved": true,
+    "employee_identity_preserved": true,
+    "fixed_employee_navigation_passed": true,
+    "employee_admin_control_absent": true,
+    "messages_module_loaded": true,
+    "events_module_loaded": true,
+    "feedback_module_loaded": true,
+    "process_recreation_passed": true,
+    "screen_off_on_passed": true,
+    "home_escape_controlled": true,
+    "offline_cached_schedule_passed": true,
+    "reconnect_passed": true,
+    "device_reboot_passed": true,
+    "device_owner_preserved": true,
+    "forward_rollback_drill_passed": true,
+    "restored_after_rollback": true,
+    "real_nfc_workflow_passed": false,
+    "evidence_privacy": "screenshots retained locally; only non-identifying SHA-256 digests committed"
+  },
+  "rollback": {
+    "manifest": "custodial-build25-rollback.json",
+    "strategy": "forward_versioned_recovery_apk",
+    "recovery_version_code": 28,
+    "recovery_apk_sha256": "678c786e56e5f26098f799155b2fe990e4dae3d8fb38cc38f498ab3ebe221116",
+    "physical_drill_complete": true
+  },
+  "release_contract_supersession": {
+    "artifact_source_policy_is_build_time_evidence": true,
+    "superseding_operational_policy": "custodial-android.json schema_version 3 plus custodial-build25-rollback.json schema_version 6",
+    "reason": "The physical canary proved that Android rejects direct downgrade of a non-debuggable production APK; the signed Build 28 forward recovery package and retain-data rollback drill replace that impossible procedure without changing Build 27 runtime bytes."
+  },
+  "final_gate": {
+    "software_candidate_ready": true,
+    "real_nfc_workflow_complete": false,
+    "one_phone_canary_complete": false,
+    "fleet_authorized": false,
+    "blocker": "A real approved NFC tag and the resulting start/active-work/completion/manager-truth receipts are still required."
+  },
+  "prohibited_shortcuts": [
+    "Do not publish the private draft release as a public release before the real NFC gate passes.",
+    "Do not treat this one-phone bounded pass as fleet authorization.",
+    "Do not replace the real NFC interaction with ADB intent injection or a browser simulation.",
+    "Do not install a candidate above versionCode 27 until a higher forward recovery APK is staged."
+  ]
+}

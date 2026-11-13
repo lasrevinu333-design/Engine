@@ -1,0 +1,253 @@
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  HashRouter,
+  MemoryRouter,
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router';
+import type { EditionDefinition, RuntimePorts, ShellRoute } from './core/types';
+import {
+  bindHardwareBackLifecycle,
+  handoffToLegacy,
+} from './core/legacy-handoff';
+import { ShellProviders } from './providers/shell-providers';
+import { useAuth } from './providers/auth';
+import { useDeepLinks } from './providers/deep-links';
+import { useDeviceIdentity } from './providers/device';
+import { useNetwork } from './providers/network';
+import { useRelease } from './providers/release';
+
+interface ShellAppProps {
+  definition: EditionDefinition;
+  runtime: RuntimePorts;
+}
+
+const initialShellRequest = (() => {
+  const search = new URLSearchParams(window.location.search);
+  return search.get('shell') === 'stay'
+    || search.get('shell') === 'proof'
+    || window.location.hash.startsWith('#/');
+})();
+
+function shouldRemainInShell(): boolean {
+  return initialShellRequest;
+}
+
+function selectedRoute(definition: EditionDefinition, pathname: string): ShellRoute {
+  return definition.routes.find((route) => route.path === pathname)
+    ?? definition.routes.find((route) => route.id === definition.homeRouteId)
+    ?? definition.routes[0];
+}
+
+function RouteView({
+  definition,
+  route,
+  onBack,
+}: {
+  definition: EditionDefinition;
+  route: ShellRoute;
+  onBack: () => void;
+}) {
+  const device = useDeviceIdentity();
+  const auth = useAuth();
+  const network = useNetwork();
+  const release = useRelease();
+  const home = route.id === definition.homeRouteId;
+  const custodialSetupRequired = definition.edition === 'custodial' && auth.state !== 'enrolled';
+  const handoffTarget = custodialSetupRequired
+    ? (definition.routes.find((candidate) => candidate.id === definition.homeRouteId)?.legacyTarget ?? './index.html')
+    : route.legacyTarget;
+
+  return (
+    <section className="shellRoute" aria-labelledby="route-title">
+      <div className="routeToolbar">
+        {!home && (
+          <button className="shellBack" type="button" onClick={onBack}>
+            Back
+          </button>
+        )}
+        <span className={`networkState ${network.connected ? 'online' : 'offline'}`} role="status">
+          {network.connected ? 'Connected' : 'Offline'}
+        </span>
+      </div>
+      <div className="routeHero">
+        <p className="eyebrow">Employee workspace</p>
+        <h1 id="route-title">{route.label}</h1>
+        <p>{route.description}</p>
+      </div>
+      <div className="handoffCard">
+        <div>
+          <strong>{custodialSetupRequired ? 'Phone setup required' : 'Ready to continue'}</strong>
+          <p>
+            {custodialSetupRequired
+              ? 'Enroll this phone to access custodial assignments and reporting.'
+              : 'Open the selected workspace to continue your shift.'}
+          </p>
+        </div>
+        <button
+          className="primaryAction"
+          type="button"
+          data-testid="legacy-handoff"
+          onClick={() => handoffToLegacy(
+            handoffTarget,
+            definition.edition,
+            custodialSetupRequired ? '' : device.canonicalId,
+          )}
+        >
+          {custodialSetupRequired ? 'Open phone setup' : `Open ${route.shortLabel}`}
+        </button>
+      </div>
+      <dl className="shellFacts" aria-label="Shell status">
+        <div><dt>Edition</dt><dd>{definition.edition}</dd></div>
+        <div><dt>Access</dt><dd>{auth.state}</dd></div>
+        <div><dt>Device</dt><dd>{device.configured ? device.canonicalId : 'Not configured'}</dd></div>
+        <div><dt>Build</dt><dd>{release.buildId}</dd></div>
+      </dl>
+      {device.conflicts.length > 0 && (
+        <p className="identityWarning" role="status">
+          Device identity conflict detected. The enrolled or stored assignment remains authoritative.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ShellRouterContent({
+  definition,
+  runtime,
+}: ShellAppProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const auth = useAuth();
+  const device = useDeviceIdentity();
+  const deepLinks = useDeepLinks();
+  const handledSequence = useRef(0);
+  const current = selectedRoute(definition, location.pathname);
+  const homePath = selectedRoute(definition, '/').path;
+  const navigationRoutes = useMemo(
+    () => definition.routes.filter((route) => route.navigation),
+    [definition],
+  );
+  const returnFromDetail = useCallback(() => {
+    const browserHistoryIndex = Number(window.history.state?.idx ?? 0);
+    if (runtime.platform === 'capacitor' || browserHistoryIndex > 0) navigate(-1);
+    else navigate(homePath, { replace: true });
+  }, [homePath, navigate, runtime.platform]);
+
+  useEffect(() => {
+    if (!deepLinks.ready || handledSequence.current === deepLinks.sequence) return;
+    handledSequence.current = deepLinks.sequence;
+    if (deepLinks.resolution?.kind === 'shell') {
+      navigate(deepLinks.resolution.path);
+    } else if (deepLinks.resolution?.kind === 'legacy') {
+      const setupRequired = definition.edition === 'custodial' && auth.state !== 'enrolled';
+      const target = setupRequired
+        ? (definition.routes.find((route) => route.id === definition.homeRouteId)?.legacyTarget ?? './index.html')
+        : deepLinks.resolution.target;
+      handoffToLegacy(
+        target,
+        definition.edition,
+        setupRequired ? '' : device.canonicalId,
+        true,
+      );
+    }
+  }, [auth.state, deepLinks, definition, device.canonicalId, navigate]);
+
+  useEffect(() => {
+    if (!deepLinks.ready || deepLinks.sequence > 0 || shouldRemainInShell()) return;
+    const home = definition.routes.find((route) => route.id === definition.homeRouteId);
+    if (home) handoffToLegacy(home.legacyTarget, definition.edition, device.canonicalId, true);
+  }, [deepLinks.ready, deepLinks.sequence, definition, device.canonicalId]);
+
+  const backScope = useMemo(() => ({}), [
+    current.id, definition.edition, definition.homeRouteId, returnFromDetail, runtime,
+  ]);
+  const latestBackScope = useRef<object | null>(null);
+  const [backFailure, setBackFailure] = useState<{
+    scope: object;
+    owner: { active: boolean };
+    error: Error;
+  } | null>(null);
+
+  // Only a committed replacement/unmount retires the previous Back scope.
+  useLayoutEffect(() => {
+    latestBackScope.current = backScope;
+    return () => {
+      if (latestBackScope.current === backScope) latestBackScope.current = null;
+    };
+  }, [backScope]);
+
+  useEffect(() => {
+    const owner = { active: true };
+    const close = bindHardwareBackLifecycle({
+      deepLinks: runtime.deepLinks,
+      currentRouteId: current.id,
+      homeRouteId: definition.homeRouteId,
+      edition: definition.edition,
+      onBack: returnFromDetail,
+      isCurrent: () => latestBackScope.current === backScope,
+      reportFailure: (error) => setBackFailure({ scope: backScope, owner, error }),
+    });
+    return () => {
+      owner.active = false;
+      close();
+    };
+  }, [backScope, current.id, definition.edition, definition.homeRouteId, returnFromDetail, runtime]);
+
+  if (backFailure?.scope === backScope && backFailure.owner.active) throw backFailure.error;
+
+  return (
+    <div
+      className={`shellFrame edition-${definition.edition}`}
+      data-edition={definition.edition}
+      data-role-marker={definition.roleMarker}
+    >
+      <header className="shellHeader">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo" width="64" height="64" />
+        <div>
+          <p className="eyebrow">Memphis Zoo operations</p>
+          <strong>{definition.title}</strong>
+          <span>{definition.subtitle}</span>
+        </div>
+      </header>
+      <main className="shellMain">
+        <Routes>
+          {definition.routes.map((route) => (
+            <Route
+              key={route.id}
+              path={route.path}
+              element={<RouteView definition={definition} route={route} onBack={returnFromDetail} />}
+            />
+          ))}
+          <Route
+            path="*"
+            element={<Navigate replace to={selectedRoute(definition, '/').path} />}
+          />
+        </Routes>
+      </main>
+      <nav className="shellNavigation" aria-label={`${definition.title} navigation`}>
+        {navigationRoutes.map((route) => (
+          <NavLink key={route.id} to={route.path}>
+            <span>{route.shortLabel}</span>
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+export function ShellApp({ definition, runtime }: ShellAppProps) {
+  const homePath = definition.routes.find((route) => route.id === definition.homeRouteId)?.path ?? '/';
+  const content = (
+    <ShellProviders definition={definition} runtime={runtime}>
+      <ShellRouterContent definition={definition} runtime={runtime} />
+    </ShellProviders>
+  );
+  return runtime.platform === 'capacitor'
+    ? <MemoryRouter initialEntries={[homePath]}>{content}</MemoryRouter>
+    : <HashRouter>{content}</HashRouter>;
+}

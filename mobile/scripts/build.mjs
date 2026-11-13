@@ -1,0 +1,666 @@
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { cp, lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
+import { build as esbuildBuild } from 'esbuild';
+import { build as viteBuild } from 'vite';
+import {
+  discoverRuntimeFiles,
+  resolveAppEdition,
+  resolveBuildIdentity,
+  verifyFrontendReleaseManifest,
+  writeRuntimeAssetManifest,
+} from '../../scripts/refresh-frontend-release-manifest.mjs';
+import { custodialNativeVaultSourceDigest } from './custodial-native-vault-source.mjs';
+import { assertCustodialNavigationAssets } from './custodial-navigation-assets.mjs';
+import { trailSourcePresentationFiles } from './trail-theme-assets.mjs';
+import { custodialInitialReleaseHome, containCustodialPackagedHtml, deferCleaningFirstPackagedPages } from './custodial-initial-release-pages.mjs';
+import { removeManagerHeldReviewSurface } from './manager-held-review-edition-boundary.mjs';
+import {readCustodialBuildScope,isCleaningScope,scopeModule,scopeBuildRecord,SCOPE_ASSET} from './custodial-new-producer-scope-policy.mjs';
+
+const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
+const repoRoot = resolve(mobileRoot, '..');
+async function buildJavascript(options) {
+  return esbuildBuild({
+    ...options,
+    absWorkingDir: mobileRoot,
+  });
+}
+const edition = resolveAppEdition(process.env.MZ_APP_EDITION);
+let nativeOriginalBrowserBootstrap = null;
+let nativeRecurringApplicationBootstrap = null;
+const proofDist = `build/batch-0b-shell-browser/${edition}`;
+const configuredDist = process.env.MZ_MOBILE_DIST?.replaceAll('\\', '/');
+const browserTestFlag = process.env.MZ_CUSTODIAL_BROWSER_TEST;
+if (browserTestFlag !== undefined && browserTestFlag !== '1') {
+  throw new Error('MZ_CUSTODIAL_BROWSER_TEST, when set, must be exactly 1');
+}
+const custodialBrowserTestBuild = browserTestFlag === '1';
+const ownerTestSupportFlag = process.env.MZ_CUSTODIAL_OWNER_TEST_SUPPORT;
+if (ownerTestSupportFlag !== undefined && (ownerTestSupportFlag !== '1' || edition !== 'custodial' || custodialBrowserTestBuild)) {
+  throw new Error('Owner-test readiness support requires the explicit native Custodial owner-test build');
+}
+const ownerTestReadinessSupport = ownerTestSupportFlag === '1';
+const admissionDistPattern = /^build\/custodial-codemagic-admission\/\.pending-[a-f0-9]{24}-[A-Za-z0-9]{6}\/mobile-dist$/;
+
+async function assertPrivateAdmissionDist(relativePath) {
+  const admissionParent = resolve(repoRoot, 'build', 'custodial-codemagic-admission');
+  const pendingDirectory = dirname(resolve(repoRoot, relativePath));
+  if (dirname(pendingDirectory) !== admissionParent) {
+    throw new Error('Custodial admission runtime must be a direct pending admission child');
+  }
+  for (const [path, label] of [
+    [admissionParent, 'admission parent'],
+    [pendingDirectory, 'pending admission directory'],
+  ]) {
+    let stat;
+    try {
+      stat = await lstat(path);
+    } catch {
+      throw new Error(`Custodial ${label} must already exist as a real directory`);
+    }
+    if (!stat.isDirectory() || stat.isSymbolicLink() || await realpath(path) !== path) {
+      throw new Error(`Custodial ${label} must be a real non-symlink directory`);
+    }
+    if ((stat.mode & 0o077) !== 0) {
+      throw new Error(`Custodial ${label} must be private to its owner`);
+    }
+  }
+  try {
+    const outputStat = await lstat(resolve(repoRoot, relativePath));
+    if (!outputStat.isDirectory() || outputStat.isSymbolicLink()) {
+      throw new Error('Custodial admission runtime output must be absent or a real directory');
+    }
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+}
+
+let dist;
+if (!configuredDist) {
+  if (custodialBrowserTestBuild) {
+    throw new Error('MZ_CUSTODIAL_BROWSER_TEST=1 requires the edition browser-fixture output path');
+  }
+  dist = join(mobileRoot, 'mobile-dist');
+} else if (configuredDist === proofDist) {
+  if (!custodialBrowserTestBuild) {
+    throw new Error('The edition browser-fixture output path requires MZ_CUSTODIAL_BROWSER_TEST=1');
+  }
+  dist = resolve(repoRoot, configuredDist);
+} else if (admissionDistPattern.test(configuredDist)) {
+  if (edition !== 'custodial' || custodialBrowserTestBuild) {
+    throw new Error('The private Codemagic admission runtime is allowed only for a non-test Custodial build');
+  }
+  await assertPrivateAdmissionDist(configuredDist);
+  dist = resolve(repoRoot, configuredDist);
+} else {
+  throw new Error(`MZ_MOBILE_DIST may only target ${proofDist} or a private Custodial Codemagic admission runtime`);
+}
+const source = join(mobileRoot, 'src', edition);
+const newProducerScope=edition==='custodial'?readCustodialBuildScope(mobileRoot):null;
+let cleaningFirstScopeRecord=null;
+const sourceBuildIdentity = resolveBuildIdentity({ rootDirectory: repoRoot, edition });
+
+function parseSourceTreeEntries(records) {
+  const entries = [];
+  for (const record of records.toString('utf8').split('\0').filter(Boolean)) {
+    const match = record.match(/^([0-7]{6})\s+blob\s+([a-f0-9]{40,64})\t(.+)$/);
+    if (!match) throw new Error(`Exact source tree contains an unsupported entry: ${record}`);
+    const [, mode, objectId, path] = match;
+    if (!['100644', '100755'].includes(mode) || path.includes('\n')) {
+      throw new Error(`Exact source tree contains an unsupported path or mode: ${path}`);
+    }
+    entries.push({ mode, objectId, path });
+  }
+  return entries;
+}
+
+async function assertExactBuildSource(identity) {
+  if (
+    identity.source_commit_exact !== true
+    || !/^[a-f0-9]{40,64}$/.test(String(identity.source_commit || ''))
+    || !/^[a-f0-9]{40,64}$/.test(String(identity.source_tree || ''))
+    || String(identity.build_id || '').endsWith('.dirty')
+  ) {
+    throw new Error(`Refusing ${edition} build without exact source commit, tree, runtime bytes, modes, and index flags`);
+  }
+
+  const indexFlags = execFileSync('git', ['ls-files', '-v', '-z'], {
+    cwd: repoRoot,
+    encoding: null,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  for (const record of indexFlags.toString('utf8').split('\0').filter(Boolean)) {
+    const marker = record.slice(0, 1);
+    const path = record.slice(2);
+    if (record.slice(1, 2) !== ' ' || marker === 'S' || /[a-z]/.test(marker)) {
+      throw new Error(`Refusing ${edition} build with unproven git index flags: ${path || record}`);
+    }
+  }
+
+  const entries = parseSourceTreeEntries(execFileSync('git', ['ls-tree', '-r', '-z', identity.source_tree], {
+    cwd: repoRoot,
+    encoding: null,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }));
+  // Keep each synchronous request below the small pipe buffers used by the
+  // Linux desktop sandbox. Sending the full inventory can deadlock when git's
+  // hash output fills its pipe before Node finishes writing every input path.
+  const hashes = [];
+  const hashBatchSize = 64;
+  for (let start = 0; start < entries.length; start += hashBatchSize) {
+    const batch = entries.slice(start, start + hashBatchSize);
+    hashes.push(...execFileSync('git', [
+      'hash-object',
+      '--no-filters',
+      '--',
+      ...batch.map(({ path }) => path),
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim().split(/\r?\n/).filter(Boolean));
+  }
+  if (hashes.length !== entries.length) {
+    throw new Error(`Refusing ${edition} build: exact source tree hash inventory is incomplete`);
+  }
+  for (const [index, entry] of entries.entries()) {
+    const metadata = await lstat(join(repoRoot, entry.path));
+    const mode = (metadata.mode & 0o111) === 0 ? '100644' : '100755';
+    if (metadata.isSymbolicLink() || !metadata.isFile() || mode !== entry.mode || hashes[index] !== entry.objectId) {
+      throw new Error(`Refusing ${edition} build: source bytes or mode differ from ${identity.source_tree}: ${entry.path}`);
+    }
+  }
+}
+
+await assertExactBuildSource(sourceBuildIdentity);
+const buildIdentity = {
+  ...sourceBuildIdentity,
+  custodial_native_vault_source_sha256: edition === 'custodial'
+    ? custodialNativeVaultSourceDigest(join(mobileRoot, 'plugins', 'custodial-native-vault'))
+    : null,
+};
+const nativeBuildNumber = (() => {
+  const raw = process.env.PROJECT_BUILD_NUMBER || process.env.BUILD_NUMBER || process.env.MZ_BUILD_NUMBER || '';
+  const value = String(raw).trim();
+  if (!value) return null;
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) > 2_100_000_000) {
+    throw new Error('Native build number must be a positive safe integer no greater than 2100000000');
+  }
+  return value;
+})();
+const rootPackage = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
+const custodialCompatibilityFiles = new Set([
+  // Terracotta / Trail presentation assets; no new navigation or data capability.
+  "trail-terracotta.css",
+  "trail-pages/index.css",
+  "trail-pages/employee-feedback.css",
+  "trail-pages/employee-hub.css",
+  "trail-pages/employee-schedule.css",
+  "trail-pages/events.css",
+  "trail-pages/messages.css",
+  "trail-pages/supply-coming-soon.css",
+  "trail-pages/system-feedback.css",
+  "assets/trail-v1/dashboard-320.webp",
+  "assets/trail-v1/dashboard.svg",
+  "assets/trail-v1/map-320.webp",
+  "assets/trail-v1/map.svg",
+  "assets/trail-v1/messenger-320.webp",
+  "assets/trail-v1/messenger.svg",
+  "assets/trail-v1/schedule-320.webp",
+  "assets/trail-v1/schedule.svg",
+  "assets/trail-v1/staffing-320.webp",
+  "assets/trail-v1/staffing.svg",
+  "assets/trail-v1/insights-320.webp",
+  "assets/trail-v1/insights.svg",
+  "assets/trail-v1/events-320.webp",
+  "assets/trail-v1/events.svg",
+  "assets/trail-v1/feedback-320.webp",
+  "assets/trail-v1/feedback.svg",
+  "assets/trail-v1/notifications-320.webp",
+  "assets/trail-v1/notifications.svg",
+  "assets/trail-v1/unfinished-320.webp",
+  "assets/trail-v1/unfinished.svg",
+  "assets/trail-v1/phones-320.webp",
+  "assets/trail-v1/phones.svg",
+  "assets/trail-v1/supplies-320.webp",
+  "assets/trail-v1/supplies.svg",
+  "assets/trail-v1/terracotta.webp",
+
+  'Background1_optimized.webp',
+  'Zoo_Logo_ui.webp',
+  'chatscope-messenger.css',
+  'chatscope-messenger.js',
+  'chatscope-mobile-overrides.css',
+  'dashboard-bg_optimized.webp',
+  'employee-feedback.html',
+  'employee-hub.html',
+  'employee-schedule.html',
+  'events.html',
+  'events-view.js',
+  'events-view.css',
+  'operations-dashboard-data.js',
+  'operations-dashboard.css',
+  'manager-ux.css',
+  'memphis-alert-tone.wav',
+  'memphis-completion-taxonomy.js',
+  'memphis-recurring-schedule-target.js',
+  'memphis-device-identity.js',
+  'memphis-device-reminders.js',
+  'memphis-gps.js',
+  'memphis-scan-sync.js',
+  'memphis-ui.css',
+  'memphis-ui.js',
+  'memphis_avatar_ui.webp',
+  'messages-chatscope.html',
+  'messages.html',
+  'supply-coming-soon.html',
+  'system-feedback.html',
+  'thread.html',
+]);
+const custodialProhibitedFiles = [
+  'admin.html',
+  'device-security.html',
+  'events-admin.html',
+  'gemini-admin.html',
+  'guest-issues.html',
+  'manager-access.html',
+  'memphis-auth.js',
+  'notifications.html',
+  'operational-insights.html',
+  'ops-manager-hub.html',
+  'phone-assignments.html',
+  'schedule-simple.html',
+  'schedule-weekly.html',
+  'schedule-weekly.js',
+  'memphis-approved-schedule.js',
+  'memphis-scheduler-actions.js',
+  'staffing-management.html',
+  'manager-staffing-actions.mjs',
+  'manager-staffing-page.mjs',
+  'manager-staffing-runtime.mjs',
+  'memphis-ticket-actions.js',
+  'schedule.html',
+];
+
+await rm(dist, { recursive: true, force: true });
+await mkdir(dist, { recursive: true });
+async function copyRuntimeGraph() {
+  const verification = verifyFrontendReleaseManifest(repoRoot);
+  if (!verification.ok) {
+    const { missing, unexpected, hash_mismatches: hashMismatches, sorted } = verification.difference;
+    const details = [
+      missing.length ? `missing ${missing.join(', ')}` : '',
+      unexpected.length ? `unexpected ${unexpected.join(', ')}` : '',
+      hashMismatches.length ? `hash mismatches ${hashMismatches.map(({ file }) => file).join(', ')}` : '',
+      sorted ? '' : 'asset keys are not sorted',
+    ].filter(Boolean).join('; ');
+    throw new Error(`frontend-release-manifest.json is stale: ${details}`);
+  }
+  const runtimeFiles = discoverRuntimeFiles(repoRoot);
+  const selectedFiles = edition === 'custodial'
+    ? runtimeFiles.filter((runtimePath) => custodialCompatibilityFiles.has(runtimePath))
+    : runtimeFiles;
+  if (edition === 'custodial') {
+    const missingCompatibilityFiles = [...custodialCompatibilityFiles]
+      .filter((runtimePath) => !runtimeFiles.includes(runtimePath));
+    if (missingCompatibilityFiles.length) {
+      throw new Error(`Custodial compatibility assets are missing: ${missingCompatibilityFiles.join(', ')}`);
+    }
+  }
+  for (const runtimePath of selectedFiles) {
+    const target = join(dist, runtimePath);
+    await mkdir(dirname(target), { recursive: true });
+    await cp(join(repoRoot, runtimePath), target);
+  }
+}
+async function injectNativeScripts(bridgeFile) {
+  for (const entry of await readdir(dist, { withFileTypes: true })) {
+    if (!entry.isFile() || extname(entry.name).toLowerCase() !== '.html') continue;
+    const path = join(dist, entry.name);
+    let html = await readFile(path, 'utf8');
+    if (bridgeFile === 'memphis-custodial-bridge.js' && entry.name === 'events.html') {
+      html = removeManagerHeldReviewSurface(html);
+    }
+    const authScript = /<script[^>]+src=["'][^"']*memphis-auth\.js[^"']*["'][^>]*><\/script>/i;
+    if (bridgeFile === 'memphis-custodial-bridge.js' && authScript.test(html)) {
+      html = html.replace(authScript, `<script src="./${bridgeFile}"></script>`);
+    } else if (authScript.test(html) && !new RegExp(bridgeFile.replace('.', '\\.')).test(html)) {
+      html = html.replace(authScript, `$&\n<script src="./${bridgeFile}"></script>`);
+    }
+    if (bridgeFile === 'memphis-custodial-bridge.js' && entry.name === 'employee-schedule.html') {
+      const source = await readFile(join(repoRoot, 'employee-schedule.html'), 'utf8');
+      const begin = source.indexOf("  (()=>{'use strict';");
+      const end = source.indexOf('\n  </script>', begin);
+      if (begin < 0 || end < begin) throw new Error('Exact employee owner source unavailable.');
+      const owner = source.slice(begin, end);
+      if (!owner.endsWith('})();') || html.split(owner).length !== 2) throw new Error('Duplicate or changed employee owner.');
+      html = html.replace(owner, '  // The bundled normal bridge owns this native document.');
+    }
+    // Shared Events is also a custodial destination. Keep the existing
+    // protected scan outbox running there without starting it on the web Map.
+    if (bridgeFile === 'memphis-custodial-bridge.js' && entry.name === 'events.html'
+        && !/src=["'][^"']*memphis-scan-sync\.js/.test(html)) {
+      html = html.replace(`<script src="./${bridgeFile}"></script>`,
+        `$&\n<script src="./memphis-scan-sync.js"></script>`);
+    }
+    if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
+    if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
+    await writeFile(path, html);
+  }
+}
+async function buildSharedNativeFiles() {
+  await buildJavascript({ entryPoints: [join(mobileRoot, 'src/shared/native-layout.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-native-layout.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(mobileRoot, 'src/shared/interaction-feedback.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-interaction-feedback.js'), target: ['es2022'] });
+}
+async function installWebAppFiles() {
+  if (edition === 'custodial') return;
+  const webInstallSource = join(mobileRoot, 'src', 'web-install', edition);
+  for (const name of ['manifest.webmanifest', 'offline.html']) {
+    await cp(join(webInstallSource, name), join(dist, name));
+  }
+  const workerTemplate = await readFile(join(webInstallSource, 'service-worker.js'), 'utf8');
+  const cacheIdentity = `${edition}-${buildIdentity.source_tree.slice(0, 20)}`;
+  if ((workerTemplate.match(/__MZ_EXACT_CACHE_ID__/g) || []).length !== 1) {
+    throw new Error(`${edition} web service worker must contain one exact cache identity placeholder`);
+  }
+  await writeFile(
+    join(dist, 'service-worker.js'),
+    workerTemplate.replace('__MZ_EXACT_CACHE_ID__', cacheIdentity),
+  );
+  await cp(join(mobileRoot, 'src', 'shared', 'pwa-register.js'), join(dist, 'pwa-register.js'));
+  await cp(join(webInstallSource, 'icons'), join(dist, 'icons'), { recursive: true });
+}
+async function distributionHashes(directory) {
+  const hashes = new Map();
+  async function walk(current, prefix = '') {
+    for (const entry of await readdir(current, { withFileTypes: true })) {
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const absolutePath = join(current, entry.name);
+      if (entry.isDirectory()) await walk(absolutePath, relativePath);
+      else if (entry.isFile()) {
+        hashes.set(
+          relativePath,
+          createHash('sha256').update(await readFile(absolutePath)).digest('hex'),
+        );
+      }
+    }
+  }
+  await walk(directory);
+  return hashes;
+}
+async function verifyDistributionReferences(directory) {
+  const files = await distributionHashes(directory);
+  const cssUrlPattern = /url\(\s*["']?([^"'()]+)["']?\s*\)/gi;
+  const htmlReferences = (source) => {
+    const references = [];
+    const structuralSource = source.replace(
+      /(<script\b[^>]*>)[\s\S]*?<\/script>/gi,
+      '$1</script>',
+    );
+    for (const tag of structuralSource.matchAll(/<[^>]+>/g)) {
+      for (const attribute of tag[0].matchAll(/(?:src|href)\s*=\s*["']([^"'<>]+)["']/gi)) {
+        references.push(attribute[1]);
+      }
+    }
+    for (const style of source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+      for (const match of style[1].matchAll(cssUrlPattern)) references.push(match[1]);
+    }
+    for (const tag of source.matchAll(/<[^>]+\sstyle\s*=\s*["']([^"'<>]+)["'][^>]*>/gi)) {
+      for (const match of tag[1].matchAll(cssUrlPattern)) references.push(match[1]);
+    }
+    return references;
+  };
+  for (const path of files.keys()) {
+    const extension = extname(path).toLowerCase();
+    if (extension !== '.html' && extension !== '.css') continue;
+    const sourceBytes = await readFile(join(directory, path), 'utf8');
+    const references = extension === '.html'
+      ? htmlReferences(sourceBytes)
+      : Array.from(sourceBytes.matchAll(cssUrlPattern), (match) => match[1]);
+    for (const candidate of references) {
+        const reference = String(candidate || '').trim();
+        if (
+          !reference
+          || reference.startsWith('#')
+          || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(reference)
+        ) continue;
+        const encodedPath = reference.split(/[?#]/, 1)[0];
+        let decodedPath;
+        try {
+          decodedPath = decodeURIComponent(encodedPath);
+        } catch {
+          throw new Error(`${path} contains an invalid encoded local reference: ${reference}`);
+        }
+        const target = decodedPath.startsWith('/Engine/')
+          ? resolve(directory, decodedPath.slice('/Engine/'.length))
+          : decodedPath.startsWith('/')
+            ? resolve(directory, decodedPath.slice(1))
+            : resolve(dirname(join(directory, path)), decodedPath);
+        const targetPath = relative(directory, target).replaceAll('\\', '/');
+        if (isAbsolute(targetPath) || targetPath === '..' || targetPath.startsWith('../')) {
+          throw new Error(`${path} contains an escaping local reference: ${reference}`);
+        }
+        if (!files.has(targetPath)) {
+          throw new Error(`${path} references a missing distribution asset: ${targetPath}`);
+        }
+    }
+  }
+}
+async function buildRoleShell() {
+  const legacyHashes = await distributionHashes(dist);
+  await viteBuild({
+    configFile: join(mobileRoot, 'vite.config.ts'),
+    mode: 'production',
+    build: {
+      outDir: dist,
+      emptyOutDir: false,
+    },
+  });
+  const after = await distributionHashes(dist);
+  for (const [path, digest] of legacyHashes) {
+    if (after.get(path) !== digest) {
+      throw new Error(`Vite shell build changed legacy runtime bytes: ${path}`);
+    }
+  }
+  if (edition === 'custodial') {
+    assertCustodialNavigationAssets(after, await readFile(join(mobileRoot, 'plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNavigationPolicy.java'),'utf8'));
+    for (const path of custodialProhibitedFiles) {
+      if (after.has(path)) throw new Error(`Custodial distribution contains prohibited manager file: ${path}`);
+    }
+  }
+  const graph = JSON.parse(await readFile(join(dist, 'shell-edition-module-graph.json'), 'utf8'));
+  if (graph.edition !== edition || !Array.isArray(graph.modules)) {
+    throw new Error(`Invalid ${edition} shell module graph`);
+  }
+  const expectedShellProof = /^(1|true|yes)$/i.test(String(process.env.MZ_SHELL_START || ''));
+  if (graph.shell_proof !== expectedShellProof) {
+    throw new Error(`${edition} shell proof identity does not match MZ_SHELL_START`);
+  }
+  if (
+    graph.runtime?.react?.version !== rootPackage.dependencies.react
+    || graph.runtime?.react_dom?.version !== rootPackage.dependencies['react-dom']
+    || graph.runtime?.react?.package_root !== 'node_modules/react'
+    || graph.runtime?.react_dom?.package_root !== 'node_modules/react-dom'
+  ) {
+    throw new Error(`${edition} shell did not resolve the pinned root React runtime`);
+  }
+  if (graph.modules.some((module) => /^mobile\/node_modules\/react(?:-dom)?\//.test(module))) {
+    throw new Error(`${edition} shell contains the legacy React 18 runtime`);
+  }
+  const forbidden = {
+    manager: ['mobile/src/shell/roles/custodial/', 'mobile/src/shell/roles/viewer/'],
+    custodial: [
+      'mobile/src/shell/roles/manager/',
+      'mobile/src/shell/roles/viewer/',
+      'mobile/src/shell/runtime/manager-notifications',
+      'node_modules/@capacitor-firebase/messaging/',
+      'node_modules/firebase/',
+    ],
+    viewer: [
+      'mobile/src/shell/roles/manager/',
+      'mobile/src/shell/roles/custodial/',
+      'mobile/src/shell/runtime/capacitor',
+      'node_modules/@aparajita/capacitor-secure-storage/',
+      'node_modules/@capacitor-firebase/messaging/',
+      'node_modules/firebase/',
+    ],
+  }[edition];
+  for (const needle of forbidden) {
+    if (graph.modules.some((module) => module.includes(needle))) {
+      throw new Error(`${edition} shell contains prohibited module: ${needle}`);
+    }
+  }
+  const javascript = (await Promise.all(
+    [...after.keys()]
+      .filter((path) => /^shell-assets\/.*\.js$/.test(path))
+      .map((path) => readFile(join(dist, path), 'utf8')),
+  )).join('\n');
+  const expectedMarker = `MZ_ROLE_${edition.toUpperCase()}_ONLY`;
+  if (!javascript.includes(expectedMarker)) throw new Error(`${edition} shell marker is missing`);
+  for (const other of ['MANAGER', 'CUSTODIAL', 'VIEWER'].filter((name) => name !== edition.toUpperCase())) {
+    if (javascript.includes(`MZ_ROLE_${other}_ONLY`)) {
+      throw new Error(`${edition} shell contains prohibited ${other.toLowerCase()} code`);
+    }
+  }
+  await verifyDistributionReferences(dist);
+}
+
+if (edition === 'manager') {
+  await copyRuntimeGraph();
+  await buildJavascript({ entryPoints: [join(mobileRoot, 'src/shared/mobile-bridge.js')], bundle: true, format: 'iife', outfile: join(dist, 'memphis-mobile-bridge.js'), target: ['es2022'] });
+  await buildSharedNativeFiles();
+  await injectNativeScripts('memphis-mobile-bridge.js');
+  await cp(join(source, 'index.html'), join(dist, 'index.html'));
+  await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
+  await cp(join(source, 'manager-access.html'), join(dist, 'manager-access.html'));
+  await cp(join(source, 'notifications.html'), join(dist, 'notifications.html'));
+  await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-manager.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'manager-access.js')], bundle: true, format: 'iife', outfile: join(dist, 'manager-access-mobile.js'), target: ['es2022'] });
+  await buildJavascript({ entryPoints: [join(source, 'notifications.js')], bundle: true, format: 'iife', outfile: join(dist, 'notifications-mobile.js'), target: ['es2022'] });
+  for (const name of ['index.html', 'start_page1.html', 'manager-access.html', 'notifications.html']) {
+    const path = join(dist, name); let html = await readFile(path, 'utf8');
+    if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
+    if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
+    await writeFile(path, html);
+  }
+} else if (edition === 'custodial') {
+  await copyRuntimeGraph();
+  await cp(join(repoRoot, 'index.html'), join(dist, 'scan.html'));
+  await buildJavascript({
+    entryPoints: [join(source, 'bridge.js')],
+    bundle: true,
+    format: 'iife',
+    outfile: join(dist, 'memphis-custodial-bridge.js'),
+    target: ['es2022'],
+    minify: !custodialBrowserTestBuild,
+    define: {
+      __MZ_CUSTODIAL_BROWSER_TEST__: JSON.stringify(custodialBrowserTestBuild),
+    },
+    dropLabels: custodialBrowserTestBuild ? [] : ['MZ_CUSTODIAL_BROWSER_TEST'],
+  });
+  // Native injects this CJS asset inside its own document-start IIFE, with a
+  // local module object and transient private source stamps. Never add it as
+  // an HTML script/global factory or accept caller-supplied bootstrap bytes.
+  const originalBrowserAsset = 'memphis-custodial-original-browser.js';
+  await buildJavascript({
+    entryPoints: [join(source, 'native-original-browser-preparation.js')],
+    bundle: true, format: 'cjs', platform: 'browser',
+    outfile: join(dist, originalBrowserAsset), target: ['es2022'],
+    minify: !custodialBrowserTestBuild,
+  });
+  nativeOriginalBrowserBootstrap = {
+    schema: 'custodial.native-original-browser-bootstrap-asset.v1',
+    asset: originalBrowserAsset,
+    sha256: createHash('sha256').update(await readFile(join(dist, originalBrowserAsset))).digest('hex'),
+  };
+  const recurringApplicationAsset = 'memphis-custodial-recurring-application.js';
+  await buildJavascript({
+    entryPoints: [join(source, 'native-recurring-application.js')],
+    bundle: true, format: 'cjs', platform: 'browser',
+    outfile: join(dist, recurringApplicationAsset), target: ['es2022'],
+    minify: !custodialBrowserTestBuild,
+    define: { __MZ_CUSTODIAL_BROWSER_TEST__: JSON.stringify(custodialBrowserTestBuild) },
+    dropLabels: custodialBrowserTestBuild ? [] : ['MZ_CUSTODIAL_BROWSER_TEST'],
+  });
+  nativeRecurringApplicationBootstrap = {
+    schema: 'custodial.native-recurring-application-asset.v1',
+    asset: recurringApplicationAsset,
+    sha256: createHash('sha256').update(await readFile(join(dist, recurringApplicationAsset))).digest('hex'),
+  };
+  await buildSharedNativeFiles();
+  await injectNativeScripts('memphis-custodial-bridge.js');
+  await cp(join(source, 'index.html'), join(dist, 'index.html'));
+  await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
+  await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-custodial.js'), target: ['es2022'],
+    define: { __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__: JSON.stringify(ownerTestReadinessSupport) } });
+  for (const name of ['index.html', 'start_page1.html']) {
+    const path = join(dist, name); let html = await readFile(path, 'utf8');
+    html = custodialInitialReleaseHome(html,{cleaningFirst:isCleaningScope(newProducerScope)});
+    if (!/memphis-native-layout\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-native-layout.js"></script>\n</body>');
+    if (!/memphis-interaction-feedback\.js/i.test(html)) html = html.replace(/<\/body>/i, '<script src="./memphis-interaction-feedback.js"></script>\n</body>');
+    await writeFile(path, html);
+  }
+  // Every old employee entry point must land on the same intentionally simple
+  // employee experience. Keep the filenames because deployed notifications and
+  // bookmarks can still contain them, but do not package the generic manager UI.
+  await cp(join(dist, 'index.html'), join(dist, 'employee-hub.html'));
+  await cp(join(dist, 'employee-feedback.html'), join(dist, 'system-feedback.html'));
+} else {
+  await cp(join(repoRoot, 'Zoo_Logo_ui.webp'), join(dist, 'Zoo_Logo_ui.webp'));
+  await cp(join(repoRoot, 'dashboard-bg_optimized.webp'), join(dist, 'dashboard-bg_optimized.webp'));
+  await cp(join(source, 'index.html'), join(dist, 'index.html'));
+  await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-viewer.js'), target: ['es2022'] });
+}
+
+if(edition==='custodial'&&isCleaningScope(newProducerScope)){
+  cleaningFirstScopeRecord=scopeBuildRecord(newProducerScope,await readFile(join(dist,'memphis-custodial-bridge.js')));
+  await writeFile(join(dist,SCOPE_ASSET),JSON.stringify(cleaningFirstScopeRecord)+'\n');
+  await writeFile(join(dist,'custodial-new-producer-scope-source.txt'),scopeModule(newProducerScope.profile));
+}
+await writeFile(join(dist, 'memphis-build-identity.js'), `globalThis.MemphisMobileBuild=${JSON.stringify(nativeBuildNumber || '')};globalThis.MemphisMobileBuildIdentity=${JSON.stringify({
+  edition,
+  ...buildIdentity,
+  native_build_number: nativeBuildNumber ? Number(nativeBuildNumber) : null,
+  ...(cleaningFirstScopeRecord?{cleaning_first_scope:cleaningFirstScopeRecord}:{}),
+})};\n`);
+for (const entry of await readdir(dist, { withFileTypes: true })) {
+  if (!entry.isFile() || extname(entry.name).toLowerCase() !== '.html') continue;
+  const path = join(dist, entry.name);
+  let html = await readFile(path, 'utf8');
+  if (!/memphis-build-identity\.js/i.test(html)) {
+    html = html.replace(/<\/head>/i, '  <script src="./memphis-build-identity.js"></script>\n</head>');
+    await writeFile(path, html);
+  }
+}
+
+await cp(join(mobileRoot, 'src/shared/mobile.css'), join(dist, 'mobile.css'));
+await cp(join(mobileRoot, 'src/shared/field-guide.css'), join(dist, 'field-guide.css'));
+// Native-only presentation files are covered by exact-source admission, then
+// included in the existing runtime asset manifest. No new executable routes.
+for (const runtimePath of trailSourcePresentationFiles(edition)) {
+  const target = join(dist, runtimePath);
+  await mkdir(dirname(target), { recursive: true });
+  await cp(join(repoRoot, runtimePath), target);
+}
+
+await installWebAppFiles();
+await buildRoleShell();
+if(edition==='custodial'&&isCleaningScope(newProducerScope))await deferCleaningFirstPackagedPages(dist);
+if (edition === 'custodial') await containCustodialPackagedHtml(dist);
+await writeFile(join(dist, 'build.json'), `${JSON.stringify({
+  edition,
+  ...buildIdentity,
+  native_build_number: nativeBuildNumber ? Number(nativeBuildNumber) : null,
+  native_original_browser_bootstrap: nativeOriginalBrowserBootstrap,
+  native_recurring_application_bootstrap: nativeRecurringApplicationBootstrap,
+  ...(cleaningFirstScopeRecord?{cleaning_first_scope:cleaningFirstScopeRecord}:{}),
+  messenger: edition === 'viewer' ? null : 'chatscope',
+}, null, 2)}\n`);
+const runtimeManifest = writeRuntimeAssetManifest({
+  directory: dist,
+  edition,
+  identity: buildIdentity,
+});
+console.log(`Built Memphis Zoo ${edition} edition in ${dist}`);
+console.log(`Runtime asset manifest contains ${runtimeManifest.asset_count} files for ${runtimeManifest.build_id}`);

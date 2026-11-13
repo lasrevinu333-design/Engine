@@ -1,0 +1,75 @@
+{
+  "state": "FRONTEND_SCHEDULE_IMPLEMENTATION_TESTED_NOT_COMMITTED_OR_DEPLOYED",
+  "whole_pairs": [
+    {
+      "logical_path": "schedule-weekly.js",
+      "before": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/before/schedule-weekly.js",
+        "sha256": "3508cf3159da991e340e7b31cf10ed81bacedae1b87f4c9d21fedafe0f2a7e53",
+        "bytes": 121023
+      },
+      "after": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/schedule-final-before-main-commit/schedule-weekly.js",
+        "sha256": "cedd2c94efef984589a18eefcb00b103fede1fa4ee463401676ee70f80a302da",
+        "bytes": 123053
+      },
+      "full_inverse": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/schedule-weekly.js.FINAL.whole.ndiff",
+        "sha256": "26f3950d1747d5bdf90c5b8d715a5cca741d670d8e87776c32caea5fc9e3d668",
+        "bytes": 132769
+      }
+    },
+    {
+      "logical_path": "memphis-scheduler-actions.js",
+      "before": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/before/memphis-scheduler-actions.js",
+        "sha256": "356ec7d6b2e4fdd6a556c0598e9305046a1fcf3a017bafd0b95e6580e960b5b2",
+        "bytes": 51102
+      },
+      "after": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/schedule-final-before-main-commit/memphis-scheduler-actions.js",
+        "sha256": "31f555737b6555490de40a61d716d7e130a638bc564819c93cf9e53e1898f79e",
+        "bytes": 52599
+      },
+      "full_inverse": {
+        "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/memphis-scheduler-actions.js.FINAL.whole.ndiff",
+        "sha256": "0d2b7c0a1158fce7c3bdeab2453e6902d4886ad2b6a0a38f4a4cfe3be4734776",
+        "bytes": 55270
+      }
+    }
+  ],
+  "browser_fixture": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/browser-actual07/RESULT.json",
+    "sha256": "8a486a462da36804676c9b4dd5d57b927695ad4ee0f707e26ead626622a41619",
+    "bytes": 10885
+  },
+  "browser_checks": 26,
+  "compact_control_checks": 8,
+  "compact_control_output": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/compact-control.stdout",
+    "sha256": "23d92d22b29f5dc60611a2eb2a34d0f9e857dd4fa780fb2b7c748223090d7b29",
+    "bytes": 225
+  },
+  "existing_contract_output": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/schedule-contract03.stdout",
+    "sha256": "f6e58230cc19b7411f5e5a5dccb0a3855ceb6b534f8011cf6b5d19f4050253bb",
+    "bytes": 276
+  },
+  "test_source": {
+    "path": "/mnt/ai_models/codex-preserved-custodial/current-source-staging-20261024/root-manager-recovery-20261027/FULL_PROGRAM_FIRST_TEST_IMPLEMENTATION_20261028/frontend-schedule-correction/release/worker3-manager-test-20261030/manager-native-fixture-browser.cjs",
+    "sha256": "9d34b57c01ab8a02f9b3e0c554d2d94dce666996d3b5794eabc73c02224672b0",
+    "bytes": 14647
+  },
+  "original_failures_preserved": [
+    "browser-actual01",
+    "browser-actual02",
+    "browser-actual03",
+    "browser-actual04",
+    "browser-actual05",
+    "schedule-contract.stderr"
+  ],
+  "genuine_manager_SQL_device": false,
+  "auth_changes": false,
+  "release_identity_edited": false,
+  "next": "Main commits exact two product paths plus its maintained identity refresh; then approved existing manager-only browser build/ZIP."
+}

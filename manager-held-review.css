@@ -1,0 +1,20 @@
+.mz-held-review{color:#102106;background:#f8fafc;border:1px solid #cbd5e1;border-radius:16px;padding:20px;font:16px/1.5 system-ui,sans-serif}
+.mz-held-review h2{margin:0 0 8px;font-size:1.25rem}
+.mz-held-review-intro{margin:0 0 16px;color:#334155}
+.mz-held-review-list{display:grid;gap:12px}
+.mz-held-review-card{border:1px solid #cbd5e1;border-radius:12px;padding:16px;background:#fff}
+.mz-held-review-card header{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.mz-held-review-status{font-weight:700;letter-spacing:.04em;color:#7c2d12}
+.mz-held-review-reason{font-weight:600}
+.mz-held-review-card dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:0}
+.mz-held-review-card dt{font-size:.8rem;color:#475569}
+.mz-held-review-card dd{margin:2px 0 0;overflow-wrap:anywhere}
+.mz-held-review-card code{font-size:.75rem}
+.mz-held-review[data-state="loading"],.mz-held-review[data-state="empty"],.mz-held-review[data-state="unavailable"],.mz-held-review[data-state="malformed"],.mz-held-review[data-state="authwithdrawn"]{min-height:80px}
+.mz-held-correction{margin-top:16px;padding-top:14px;border-top:1px solid #cbd5e1}
+.mz-held-correction form{display:grid;gap:10px;max-width:34rem}
+.mz-held-correction label{display:grid;gap:4px;font-weight:600}
+.mz-held-correction input,.mz-held-correction select{min-height:2.25rem;padding:5px}
+.mz-held-correction button{width:max-content;min-height:2.25rem}
+.mz-held-correction button+button{margin-left:8px}
+.mz-held-correction [data-correction-status],.mz-held-correction-missing{color:#475569}

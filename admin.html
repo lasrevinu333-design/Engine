@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en" data-trail-theme="terracotta" data-trail-section="phones">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>Memphis Zoo Custodial Admin</title>
+  <style>
+    :root {
+      --bg: #08111d;
+      --panel: rgba(8, 17, 29, 0.88);
+      --panel-strong: rgba(8, 17, 29, 0.94);
+      --line: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --muted: #c7d3e0;
+      --good: #22c55e;
+      --warn: #facc15;
+      --bad: #ef4444;
+      --info: #38bdf8;
+      --dark: #111827;
+      --chip: rgba(255, 255, 255, 0.08);
+      --radius: 22px;
+      --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html { font-size: 18px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(rgba(4, 10, 20, 0.7), rgba(4, 10, 20, 0.7)),
+        url("./Background1_optimized.webp") center / cover no-repeat fixed;
+    }
+
+    .page {
+      width: min(1600px, 100%);
+      margin: 0 auto;
+      padding: max(18px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+    }
+
+    .hero,
+    .section,
+    .metricCard,
+    .modalCard {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 20px;
+      margin-bottom: 18px;
+      backdrop-filter: blur(6px);
+    }
+
+    .heroTop {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .headerImg {
+      width: min(440px, 100%);
+      border-radius: 16px;
+      display: block;
+      margin-bottom: 14px;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 2.2rem;
+      line-height: 1.05;
+    }
+
+    .subtext {
+      color: var(--muted);
+      line-height: 1.45;
+      max-width: 68ch;
+    }
+
+    .heroControls {
+      display: grid;
+      gap: 12px;
+      min-width: min(100%, 520px);
+      flex: 1 1 520px;
+    }
+
+    .controlGrid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .controlGrid > * { min-width: 0; }
+
+    .actionRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .input,
+    .select,
+    .button,
+    .textarea {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 14px 14px;
+      font-size: 0.98rem;
+      background: rgba(255, 255, 255, 0.97);
+      color: #0f172a;
+      font-family: inherit;
+    }
+
+    .textarea {
+      min-height: 112px;
+      resize: vertical;
+    }
+
+    .button {
+      cursor: pointer;
+      font-weight: 800;
+      background: #d9f99d;
+    }
+
+    .button.secondary { background: #bae6fd; }
+    .button.warning { background: #fde68a; }
+    .button.danger { background: #fecaca; }
+    .button.dark { background: #e5e7eb; }
+
+    .statusLine {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .badge,
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: var(--chip);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .pill.good { background: rgba(34, 197, 94, 0.18); color: #bbf7d0; }
+    .pill.warn { background: rgba(250, 204, 21, 0.18); color: #fde68a; }
+    .pill.bad { background: rgba(239, 68, 68, 0.18); color: #fecaca; }
+    .pill.info { background: rgba(56, 189, 248, 0.18); color: #bae6fd; }
+    .pill.dark { background: rgba(17, 24, 39, 0.5); color: #e5e7eb; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metricCard {
+      padding: 16px;
+      min-height: 122px;
+    }
+
+    .metricLabel {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+
+    .metricValue {
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .metricNote {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.3;
+    }
+
+    .releaseControlPanel {
+      margin-bottom: 18px;
+      border-color: rgba(250, 204, 21, 0.34);
+    }
+
+    .releaseControlPanel[hidden] { display: none; }
+
+    .releaseControlBody {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 0.65fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .releaseControlActions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .releaseControlStatus {
+      margin-top: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 18px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .section {
+      padding: 16px;
+      overflow: hidden;
+      backdrop-filter: blur(6px);
+    }
+
+    .sectionHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .sectionTitle {
+      margin: 0;
+      font-size: 1.35rem;
+      line-height: 1.1;
+    }
+
+    .sectionMeta {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .sectionTools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .emptyState {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .cardList {
+      display: grid;
+      gap: 12px;
+    }
+
+    .itemCard {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      padding: 14px;
+    }
+
+    .itemTop {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .itemTitle {
+      font-size: 1.05rem;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .itemSub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .itemMetaGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 14px;
+      margin-top: 10px;
+      font-size: 0.92rem;
+    }
+
+    .itemActions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .inlineCode {
+      font-family: Consolas, monospace;
+      font-size: 0.88rem;
+      word-break: break-word;
+    }
+
+    .tableWrap {
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    th,
+    td {
+      padding: 12px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      vertical-align: top;
+      font-size: 0.92rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(8, 17, 29, 0.98);
+      z-index: 1;
+      color: var(--muted);
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .statusDot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: middle;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #facc15; }
+    .dot-blue { background: #38bdf8; }
+    .dot-green { background: #22c55e; }
+    .dot-black { background: #111827; }
+    .dot-gray { background: #94a3b8; }
+
+    .helpText {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .footerNote {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .modalOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.58);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 1000;
+    }
+
+    .modalOverlay.show { display: flex; }
+
+    .modalCard {
+      width: min(560px, 100%);
+      padding: 18px;
+      backdrop-filter: blur(8px);
+      display: grid;
+      gap: 12px;
+    }
+
+    .modalTitle {
+      margin: 0;
+      font-size: 1.25rem;
+      line-height: 1.1;
+    }
+
+    .modalSub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .modalActions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .modalActions > * { flex: 1 1 160px; }
+
+    @media (max-width: 1200px) {
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 840px) {
+      html { font-size: 17px; }
+      .controlGrid { grid-template-columns: 1fr 1fr 1fr; }
+      .metrics { grid-template-columns: 1fr; }
+      .itemMetaGrid { grid-template-columns: 1fr; }
+      .releaseControlBody { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .page { padding-left: 12px; padding-right: 12px; }
+      .hero, .section, .metricCard, .modalCard { border-radius: 18px; }
+      .controlGrid { grid-template-columns: 1fr; }
+      .releaseControlActions { grid-template-columns: 1fr; }
+      h1 { font-size: 1.8rem; }
+    }
+  </style>
+  <link rel="icon" href="./assets/trail-v1/phones.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/admin.css">
+</head>
+<body data-memphis-context="manager">
+  <div class="page">
+    <nav class="mz-page-header" aria-label="Application navigation">
+      <a class="mz-back-link" data-mz-back href="./start_page1.html">Back</a>
+    </nav>
+    <section class="hero">
+      <div class="heroTop">
+        <div>
+          <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo header" class="headerImg trailZooBrand" width="512" height="512" decoding="async" />
+          <div class="eyebrow">Memphis Zoo Custodial Admin</div>
+          <h1 class="trailPageTitle">Operations and Recovery Console</h1>
+          <div class="subtext">
+            This page is for boring, important things: seeing what is broken, closing tickets, forcing stuck sessions
+            shut, and checking whether the system is quietly bleeding in a corner.
+          </div>
+        </div>
+
+        <div class="heroControls">
+          <div class="controlGrid">
+            <input id="actor-input" class="input" type="text" placeholder="Action as" aria-label="Action as" />
+            <input id="location-search" class="input" type="text" placeholder="Search location" aria-label="Search location" />
+            <select id="location-filter" class="select" aria-label="Location filter">
+              <option value="all">All locations</option>
+              <option value="attention">Needs attention</option>
+              <option value="not_cleaned">Not cleaned</option>
+              <option value="due_soon">Due soon</option>
+              <option value="overdue">Overdue</option>
+              <option value="in_progress">In progress</option>
+              <option value="tickets">Has open tickets</option>
+            </select>
+            <button id="refresh-btn" class="button secondary" type="button">Refresh Now</button>
+          </div>
+          <div class="actionRow">
+            <button id="unlock-btn" class="button" type="button">Reconnect Manager Hub</button>
+            <button id="forget-key-btn" class="button dark" type="button">Clear Console Access</button>
+          </div>
+          <div class="statusLine">
+            <span id="connection-pill" class="pill info">Connecting...</span>
+            <span id="device-pill" class="pill dark">Device: unknown</span>
+            <span id="auth-pill" class="pill good">Open</span>
+            <span id="last-refresh-pill" class="pill dark">Last refresh: never</span>
+            <span id="message-pill" class="pill dark">Starting admin console</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="metrics" class="metrics"></section>
+
+    <section id="release-canary-controls" class="section releaseControlPanel" aria-labelledby="release-canary-title" hidden>
+      <div class="sectionHeader">
+        <div>
+          <h2 id="release-canary-title" class="sectionTitle">Physical Release Canary</h2>
+          <div class="sectionMeta">Restricted to an enrolled Director or Security Admin. Every action is recorded against the signed-in manager.</div>
+        </div>
+        <span class="badge">Named manager only</span>
+      </div>
+      <div class="releaseControlBody">
+        <div>
+          Pause stops the configured one-phone canary before recovery work. Resume succeeds only after the backend verifies current database authority and a fresh exact-phone transport receipt.
+          <div id="release-canary-status" class="releaseControlStatus" role="status" aria-live="polite">No release-canary action has been taken from this console.</div>
+        </div>
+        <div class="releaseControlActions" aria-describedby="release-canary-status">
+          <button id="pause-release-canary-btn" class="button danger" type="button" data-action="pause-release-canary">Pause Canary</button>
+          <button id="resume-release-canary-btn" class="button" type="button" data-action="resume-release-canary">Resume Canary</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <div class="stack">
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Exception Queue</h2>
+              <div class="sectionMeta">Open tickets, stale devices, and anything else waving a red flag.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="exceptions-count" class="badge">0 items</span>
+            </div>
+          </div>
+          <div id="exceptions-panel"></div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Open Sessions</h2>
+              <div class="sectionMeta">Anything active or pending submit. Force-close exists for when reality gets sticky.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="sessions-count" class="badge">0 sessions</span>
+            </div>
+          </div>
+          <div id="sessions-panel"></div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Open Maintenance Tickets</h2>
+              <div class="sectionMeta">Close tickets here after the issue has been passed along or resolved.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="tickets-count" class="badge">0 tickets</span>
+            </div>
+          </div>
+          <div id="tickets-panel"></div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Location Dashboard</h2>
+              <div class="sectionMeta">Current operational-day status by location. Search and filter from the header controls.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="dashboard-count" class="badge">0 locations</span>
+            </div>
+          </div>
+          <div id="dashboard-panel"></div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Device Health</h2>
+              <div class="sectionMeta">Heartbeat and status by approved device. Useful for spotting dead kiosks and identity drift.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="devices-count" class="badge">0 devices</span>
+            </div>
+          </div>
+          <div id="devices-panel"></div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Recent Scan Activity</h2>
+              <div class="sectionMeta">Latest completed activity and session history pulled straight from the backend views.</div>
+            </div>
+            <div class="sectionTools">
+              <span id="activity-count" class="badge">0 rows</span>
+            </div>
+          </div>
+          <div id="activity-panel"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="footerNote">
+      Separate admin page by design. The scan flow stays isolated instead of getting crossbred with operator controls.
+    </div>
+  </div>
+
+  <div id="action-modal" class="modalOverlay" aria-hidden="true">
+    <div class="modalCard">
+      <h3 id="modal-title" class="modalTitle">Action</h3>
+      <div id="modal-sub" class="modalSub">Review the details below.</div>
+      <div id="modal-ticket-id" class="helpText inlineCode"></div>
+      <textarea id="modal-textarea" class="textarea" placeholder="Enter notes or reason" aria-label="Enter notes or reason"></textarea>
+      <div class="modalActions">
+        <button id="modal-cancel-btn" class="button dark" type="button">Cancel</button>
+        <button id="modal-confirm-btn" class="button warning" type="button">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+<script>
+    const CONFIG = {
+      ADMIN_API_BASE_URL: "https://memphis-zoo-mcp.onrender.com/admin-api",
+      DEVICE_STORAGE_KEY: "mz_scan_device_id",
+      ADMIN_ACTOR_KEY: "mz_admin_actor",
+      AUTO_REFRESH_MS: 30000,
+      BUNDLE_LIMITS: {
+        p_location_limit: 60,
+        p_activity_limit: 20,
+        p_ticket_limit: 100,
+        p_exception_limit: 25,
+        p_device_limit: 100
+      }
+    };
+
+    const state = {
+      bundle: null,
+      lastRefreshedAt: null,
+      isLoading: false,
+      refreshTimer: null,
+      managerSession: window.MemphisAuth?.readSession?.() || null,
+      managerSessionVerified: false,
+      modalAction: null,
+      releaseActionPending: false,
+      lastReleaseCanaryResult: null
+    };
+
+    const els = {
+      metrics: document.getElementById("metrics"),
+      exceptionsPanel: document.getElementById("exceptions-panel"),
+      sessionsPanel: document.getElementById("sessions-panel"),
+      ticketsPanel: document.getElementById("tickets-panel"),
+      dashboardPanel: document.getElementById("dashboard-panel"),
+      devicesPanel: document.getElementById("devices-panel"),
+      activityPanel: document.getElementById("activity-panel"),
+      actorInput: document.getElementById("actor-input"),
+      locationSearch: document.getElementById("location-search"),
+      locationFilter: document.getElementById("location-filter"),
+      refreshBtn: document.getElementById("refresh-btn"),
+      unlockBtn: document.getElementById("unlock-btn"),
+      forgetKeyBtn: document.getElementById("forget-key-btn"),
+      connectionPill: document.getElementById("connection-pill"),
+      devicePill: document.getElementById("device-pill"),
+      authPill: document.getElementById("auth-pill"),
+      lastRefreshPill: document.getElementById("last-refresh-pill"),
+      messagePill: document.getElementById("message-pill"),
+      exceptionsCount: document.getElementById("exceptions-count"),
+      sessionsCount: document.getElementById("sessions-count"),
+      ticketsCount: document.getElementById("tickets-count"),
+      dashboardCount: document.getElementById("dashboard-count"),
+      devicesCount: document.getElementById("devices-count"),
+      activityCount: document.getElementById("activity-count"),
+      releaseCanaryControls: document.getElementById("release-canary-controls"),
+      releaseCanaryStatus: document.getElementById("release-canary-status"),
+      pauseReleaseCanaryBtn: document.getElementById("pause-release-canary-btn"),
+      resumeReleaseCanaryBtn: document.getElementById("resume-release-canary-btn"),
+      actionModal: document.getElementById("action-modal"),
+      modalTitle: document.getElementById("modal-title"),
+      modalSub: document.getElementById("modal-sub"),
+      modalTicketId: document.getElementById("modal-ticket-id"),
+      modalTextarea: document.getElementById("modal-textarea"),
+      modalCancelBtn: document.getElementById("modal-cancel-btn"),
+      modalConfirmBtn: document.getElementById("modal-confirm-btn")
+    };
+
+    init().catch((err) => {
+      console.error(err);
+      setMessage(`Startup error: ${safeError(err)}`, "bad");
+    });
+
+    async function init() {
+      const deviceId = detectDeviceId();
+      els.devicePill.textContent = `Device: ${deviceId || "unknown"}`;
+      els.actorInput.value = getStoredActor(deviceId);
+      bindEvents();
+      setAuthState(false);
+      renderReleaseCanaryControls();
+      setConnection("Connecting", "info");
+      setMessage("Starting admin console", "info");
+      startAutoRefresh();
+      await authenticateAndRefresh(false);
+    }
+
+    function bindEvents() {
+      els.refreshBtn.addEventListener("click", () => refreshAdmin("Manual refresh", true));
+      els.locationSearch.addEventListener("input", () => renderAll());
+      els.locationFilter.addEventListener("change", () => renderDashboard());
+      els.actorInput.addEventListener("change", persistActor);
+      els.actorInput.addEventListener("blur", persistActor);
+      els.unlockBtn.addEventListener("click", () => authenticateAndRefresh(true));
+      els.forgetKeyBtn.addEventListener("click", () => {
+        clearManagerSession();
+        setConnection(navigator.onLine ? "Ready" : "Offline", navigator.onLine ? "good" : "warn");
+        setMessage("Console access cleared. Browser enrollment is unchanged.", "info");
+      });
+      els.modalCancelBtn.addEventListener("click", () => {
+        if (!state.releaseActionPending) closeActionModal();
+      });
+      els.actionModal.addEventListener("click", (event) => {
+        if (event.target === els.actionModal && !state.releaseActionPending) closeActionModal();
+      });
+      els.modalConfirmBtn.addEventListener("click", confirmActionModal);
+      window.addEventListener("online", () => setConnection("Online", "good"));
+      window.addEventListener("offline", () => setConnection("Offline", "warn"));
+
+      document.body.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-action]");
+        if (!button) return;
+        const action = button.getAttribute("data-action");
+        if (action === "close-ticket") {
+          openActionModal({
+            type: "close-ticket",
+            id: button.getAttribute("data-ticket-id"),
+            title: "Close Maintenance Ticket",
+            subtitle: "Add optional close notes, then confirm.",
+            placeholder: "Close notes. Leave blank if you just need it gone.",
+            confirmText: "Close Ticket",
+            buttonClass: "warning"
+          });
+        }
+        if (action === "force-close-session") {
+          openActionModal({
+            type: "force-close-session",
+            id: button.getAttribute("data-session-uuid"),
+            title: "Force Close Session",
+            subtitle: "Enter a reason for the forced session recovery.",
+            placeholder: "Reason for force close",
+            defaultValue: "Manual admin recovery",
+            confirmText: "Force Close",
+            buttonClass: "danger"
+          });
+        }
+        if (action === "pause-release-canary") {
+          openReleaseCanaryModal("pause_canary");
+        }
+        if (action === "resume-release-canary") {
+          openReleaseCanaryModal("resume_canary");
+        }
+      });
+    }
+
+    function startAutoRefresh() {
+      if (state.refreshTimer) clearInterval(state.refreshTimer);
+      state.refreshTimer = setInterval(() => {
+        if (state.managerSession) refreshAdmin("Auto refresh", false).catch(console.warn);
+      }, CONFIG.AUTO_REFRESH_MS);
+    }
+
+    async function authenticateAndRefresh(interactive) {
+      const ready = await ensureManagerAccess(interactive);
+      if (!ready) {
+        renderLockedState("Manager Hub access is currently unavailable.");
+        return;
+      }
+      try {
+        setConnection("Authenticating", "info");
+        setMessage("Checking admin access...", "info");
+        await apiFetch("/health", { method: "GET" });
+        state.managerSessionVerified = true;
+        setAuthState(true);
+        renderReleaseCanaryControls();
+        const returnPath = new URLSearchParams(window.location.search).get('return');
+        if (returnPath) {
+          try {
+            const resolved = new URL(returnPath, window.location.href);
+            if (resolved.origin === window.location.origin && !resolved.pathname.includes('..')) {
+              window.location.replace(resolved.toString());
+            }
+          } catch (e) {}
+          return;
+        }
+        await refreshAdmin("Manager Hub connected", false);
+      } catch (err) {
+        clearManagerSession();
+        renderLockedState(`Admin access could not be verified: ${safeError(err)}`);
+      }
+    }
+
+    async function refreshAdmin(message = "Refreshing", interactive = false) {
+      if (!state.managerSession) {
+        if (interactive) await authenticateAndRefresh(true);
+        else renderLockedState("Manager Hub access unavailable.");
+        return;
+      }
+      if (state.isLoading) return;
+
+      state.isLoading = true;
+      els.refreshBtn.disabled = true;
+      setConnection(navigator.onLine ? "Refreshing" : "Offline", navigator.onLine ? "info" : "warn");
+      setMessage(message, "info");
+
+      try {
+        state.bundle = normalizeBundle(await getAdminBundle());
+        state.lastRefreshedAt = new Date();
+        renderAll();
+        setConnection(navigator.onLine ? "Connected" : "Offline", navigator.onLine ? "good" : "warn");
+        setMessage("Dashboard updated", "good");
+      } catch (err) {
+        console.error(err);
+        if (/401|Unauthorized/i.test(safeError(err))) {
+          clearManagerSession();
+          renderLockedState("Manager Hub session rejected. Refresh and try again.");
+        } else {
+          setConnection("Error", "bad");
+          setMessage(`Refresh failed: ${safeError(err)}`, "bad");
+        }
+      } finally {
+        state.isLoading = false;
+        els.refreshBtn.disabled = false;
+        els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
+      }
+    }
+
+    async function getAdminBundle() {
+      const response = await apiFetch("/bundle", {
+        method: "POST",
+        body: CONFIG.BUNDLE_LIMITS
+      });
+      return response.data;
+    }
+
+    function openActionModal(config) {
+      if (!config?.id) return;
+      const actor = getActor();
+      if (config.requiresActor !== false && !actor) {
+        setMessage("Enter who is performing the action first.", "warn");
+        els.actorInput.focus();
+        return;
+      }
+      state.modalAction = config;
+      els.modalTitle.textContent = config.title || "Action";
+      els.modalSub.textContent = config.subtitle || "Review the details below.";
+      els.modalTicketId.textContent = config.id || "";
+      els.modalTextarea.placeholder = config.placeholder || "Notes";
+      els.modalTextarea.value = config.defaultValue || "";
+      els.modalConfirmBtn.textContent = config.confirmText || "Confirm";
+      els.modalConfirmBtn.className = `button ${config.buttonClass || 'warning'}`;
+      els.actionModal.classList.add('show');
+      els.actionModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => els.modalTextarea.focus(), 0);
+    }
+
+    function openReleaseCanaryModal(releaseAction) {
+      if (!["pause_canary", "resume_canary"].includes(releaseAction)) {
+        setMessage("Unsupported release-canary action.", "bad");
+        return;
+      }
+      if (!hasReleaseCanaryAuthority()) {
+        setMessage("Release-canary control requires an enrolled Director or Security Admin.", "warn");
+        renderReleaseCanaryControls();
+        return;
+      }
+      if (state.releaseActionPending) return;
+      let operationId;
+      try {
+        operationId = createOperationId();
+      } catch (err) {
+        setMessage(`Release action unavailable: ${safeError(err)}`, "bad");
+        return;
+      }
+      const pausing = releaseAction === "pause_canary";
+      openActionModal({
+        type: "release-canary",
+        id: "Configured physical release canary",
+        releaseAction,
+        operationId,
+        requiresActor: false,
+        title: pausing ? "Pause Physical Release Canary" : "Resume Physical Release Canary",
+        subtitle: pausing
+          ? "Enter the required reason. This stops the configured one-phone canary until an authorized resume succeeds."
+          : "Enter the required reason. Resume will fail closed unless database authority and the fresh exact-phone transport receipt are green.",
+        placeholder: "Required reason",
+        confirmText: pausing ? "Pause Canary" : "Resume Canary",
+        buttonClass: pausing ? "danger" : "warning"
+      });
+    }
+
+    function closeActionModal() {
+      state.modalAction = null;
+      els.actionModal.classList.remove('show');
+      els.actionModal.setAttribute('aria-hidden', 'true');
+      els.modalTextarea.value = '';
+    }
+
+    async function confirmActionModal() {
+      if (!state.modalAction) return;
+      const action = state.modalAction;
+      const actor = getActor();
+      const notes = els.modalTextarea.value.trim();
+      try {
+        if (action.type === 'release-canary') {
+          if (state.releaseActionPending) return;
+          if (!hasReleaseCanaryAuthority()) throw new Error("Release-canary authority is no longer available. Reconnect Manager Hub.");
+          if (!notes) {
+            setMessage("A reason is required for every release-canary action.", "warn");
+            els.modalTextarea.focus();
+            return;
+          }
+          state.releaseActionPending = true;
+          els.modalConfirmBtn.disabled = true;
+          els.modalCancelBtn.disabled = true;
+          renderReleaseCanaryControls();
+          setMessage(action.releaseAction === "pause_canary" ? "Pausing physical release canary..." : "Checking authority and resuming physical release canary...", "info");
+          const response = await apiFetch("/release-canary-rollback", {
+            method: "POST",
+            headers: { "Idempotency-Key": action.operationId },
+            body: {
+              action: action.releaseAction,
+              reason: notes,
+              operation_id: action.operationId
+            }
+          });
+          state.lastReleaseCanaryResult = response;
+          closeActionModal();
+          renderReleaseCanaryControls();
+          setMessage(response.canary_paused === true ? "Physical release canary paused." : "Physical release canary resumed after authority checks passed.", "good");
+          return;
+        }
+        if (action.type === 'close-ticket') {
+          setMessage("Closing ticket...", "info");
+          await apiFetch("/close-ticket", {
+            method: "POST",
+            body: {
+              ticket_id: action.id,
+              close_notes: notes || null
+            }
+          });
+          closeActionModal();
+          await refreshAdmin("Ticket closed", false);
+          return;
+        }
+        if (action.type === 'force-close-session') {
+          setMessage("Force-closing session...", "info");
+          await apiFetch("/force-close-session", {
+            method: "POST",
+            body: {
+              session_uuid: action.id,
+              closed_by: actor,
+              reason: notes || "Manual admin recovery"
+            }
+          });
+          closeActionModal();
+          await refreshAdmin("Session force-closed", false);
+        }
+      } catch (err) {
+        setMessage(`${action.confirmText || 'Action'} failed: ${safeError(err)}`, "bad");
+      } finally {
+        if (action.type === 'release-canary') {
+          state.releaseActionPending = false;
+          els.modalConfirmBtn.disabled = false;
+          els.modalCancelBtn.disabled = false;
+          renderReleaseCanaryControls();
+        }
+      }
+    }
+
+    async function ensureManagerAccess(interactive = true) {
+      state.managerSession = await window.MemphisAuth.requireOpsManagerSession({ interactive: false, redirect: true });
+      if (state.managerSession) {
+        setAuthState(true);
+        renderReleaseCanaryControls();
+        return true;
+      }
+      if (!interactive) return false;
+      setMessage("Manager Hub access is currently unavailable.", "warn");
+      return false;
+    }
+
+    function clearManagerSession() {
+      state.managerSession = null;
+      state.managerSessionVerified = false;
+      // Reset this console only. A failed read must never revoke browser enrollment.
+      setAuthState(false);
+      renderReleaseCanaryControls();
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = {
+        "Content-Type": "application/json",
+        ...(await window.MemphisAuth.opsManagerAuthHeaders()),
+        ...(options.headers || {})
+      };
+      const response = await fetch(`${CONFIG.ADMIN_API_BASE_URL}${path}`, {
+        method: options.method || "GET",
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
+      const text = await response.text();
+      let payload = null;
+      try { payload = text ? JSON.parse(text) : null; } catch { payload = null; }
+      if (!response.ok) {
+        const message = payload?.error || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+      return payload || { ok: true };
+    }
+
+    function renderLockedState(message) {
+      setAuthState(false);
+      setConnection(navigator.onLine ? "Waiting" : "Offline", navigator.onLine ? "warn" : "warn");
+      setMessage(message, "warn");
+      state.bundle = null;
+      renderReleaseCanaryControls();
+      els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
+      renderMetrics();
+      const locked = emptyState("Manager data is unavailable. Refresh to retry the console.");
+      els.exceptionsPanel.innerHTML = locked;
+      els.sessionsPanel.innerHTML = locked;
+      els.ticketsPanel.innerHTML = locked;
+      els.dashboardPanel.innerHTML = locked;
+      els.devicesPanel.innerHTML = locked;
+      els.activityPanel.innerHTML = locked;
+      els.exceptionsCount.textContent = "0 items";
+      els.sessionsCount.textContent = "0 sessions";
+      els.ticketsCount.textContent = "0 tickets";
+      els.dashboardCount.textContent = "0 locations";
+      els.devicesCount.textContent = "0 devices";
+      els.activityCount.textContent = "0 rows";
+    }
+
+    function renderAll() {
+      renderMetrics();
+      renderReleaseCanaryControls();
+      renderExceptions();
+      renderSessions();
+      renderTickets();
+      renderDashboard();
+      renderDevices();
+      renderActivity();
+      els.lastRefreshPill.textContent = `Last refresh: ${state.lastRefreshedAt ? state.lastRefreshedAt.toLocaleString() : "never"}`;
+    }
+
+    function renderMetrics() {
+      const snapshot = state.bundle?.snapshot || {};
+      const storage = snapshot.storage_summary || {};
+      const cards = [
+        metricCard("Open Tickets", snapshot.open_ticket_count ?? 0, `${snapshot.overdue_locations || 0} overdue locations`),
+        metricCard("Open Sessions", ((snapshot.active_sessions || 0) + (snapshot.pending_submit_sessions || 0)), `${snapshot.active_sessions || 0} active, ${snapshot.pending_submit_sessions || 0} pending`),
+        metricCard("Devices Missing Heartbeat", snapshot.devices_missing_recent_heartbeat ?? 0, `${snapshot.devices_seen_last_24h || 0} seen in last 24h`),
+        metricCard("Closed Today", snapshot.closed_sessions_today ?? 0, `${snapshot.in_progress_locations || 0} in progress now`),
+        metricCard("Due Soon", snapshot.due_soon_locations ?? 0, `${snapshot.overdue_locations || 0} overdue`),
+        metricCard("Stale Open Sessions", snapshot.stale_open_sessions ?? 0, `Timeout ${snapshot.stale_timeout_minutes || 0} min`),
+        metricCard("Storage MB", storage.total_mb ?? "0.00", `Warning at ${storage.warning_mb ?? 0} MB`),
+        metricCard("Operational Day Start", "4 AM", snapshot.operational_day_start ? formatMaybeDate(snapshot.operational_day_start) : "Boundary loaded")
+      ];
+      els.metrics.innerHTML = cards.join("");
+    }
+
+    function hasReleaseCanaryAuthority(session = state.managerSession) {
+      return Boolean(
+        session
+        && state.managerSessionVerified
+        && window.MemphisAuth?.canMutateOpsManagerSurface?.(session)
+        && (
+          window.MemphisAuth?.hasRole?.("DIRECTOR", session)
+          || window.MemphisAuth?.hasRole?.("SECURITY_ADMIN", session)
+        )
+      );
+    }
+
+    function renderReleaseCanaryControls() {
+      const authorized = hasReleaseCanaryAuthority();
+      els.releaseCanaryControls.hidden = !authorized;
+      els.pauseReleaseCanaryBtn.disabled = !authorized || state.releaseActionPending;
+      els.resumeReleaseCanaryBtn.disabled = !authorized || state.releaseActionPending;
+      if (!authorized) {
+        els.releaseCanaryStatus.textContent = "Release-canary controls require an enrolled Director or Security Admin.";
+        return;
+      }
+      const result = state.lastReleaseCanaryResult;
+      if (!result) {
+        els.releaseCanaryStatus.textContent = "No release-canary action has been taken from this console.";
+        return;
+      }
+      const device = String(result.device_identifier || "Configured canary");
+      const stateLabel = result.canary_paused === true ? "paused" : "active";
+      const replayLabel = result.replayed === true ? " Existing audit record confirmed." : " New audit record created.";
+      els.releaseCanaryStatus.textContent = `${device} is ${stateLabel}.${replayLabel}`;
+    }
+
+    function createOperationId() {
+      const cryptoApi = window.crypto;
+      if (typeof cryptoApi?.randomUUID === "function") return cryptoApi.randomUUID();
+      if (typeof cryptoApi?.getRandomValues !== "function") throw new Error("Secure operation identity is unavailable in this browser.");
+      const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+
+    function renderExceptions() {
+      const items = asArray(state.bundle?.exceptions);
+      els.exceptionsCount.textContent = `${items.length} items`;
+      if (!items.length) {
+        els.exceptionsPanel.innerHTML = emptyState("No exceptions are currently queued.");
+        return;
+      }
+      els.exceptionsPanel.innerHTML = `<div class="cardList">${items.map((item) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(item.summary || item.exception_type || "Exception")}</div><div class="itemSub">${escapeHtml(item.location_name || item.location_code || "No location")} • ${escapeHtml(item.event_at_display || "No timestamp")}</div></div>${renderPill(item.exception_type, exceptionPillClass(item.exception_type))}</div><div class="itemMetaGrid"><div><strong>Actor:</strong> ${escapeHtml(item.actor || "Unknown")}</div><div><strong>Code:</strong> ${escapeHtml(item.location_code || "—")}</div></div></article>`).join("")}</div>`;
+    }
+
+    function renderSessions() {
+      const sessions = asArray(state.bundle?.open_sessions);
+      els.sessionsCount.textContent = `${sessions.length} sessions`;
+      if (!sessions.length) {
+        els.sessionsPanel.innerHTML = emptyState("No open sessions. For once, the ghosts are quiet.");
+        return;
+      }
+      els.sessionsPanel.innerHTML = `<div class="cardList">${sessions.map((session) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(session.location_name || session.location_code || "Unknown location")}</div><div class="itemSub">${escapeHtml(session.employee_name || "Unknown employee")} • ${escapeHtml(session.status || "unknown")} • ${escapeHtml(formatMaybeDate(session.started_at) || "No start time")}</div></div>${renderPill(session.status, session.status === "pending_submit" ? "warn" : "info")}</div><div class="itemMetaGrid"><div><strong>Session:</strong> <span class="inlineCode">${escapeHtml(session.session_uuid || "")}</span></div><div><strong>Device:</strong> ${escapeHtml(session.device_id || "—")}</div><div><strong>Duration:</strong> ${escapeHtml(session.duration_display || "—")}</div><div><strong>Ended:</strong> ${escapeHtml(formatMaybeDate(session.ended_at) || "—")}</div></div><div class="itemActions"><button class="button danger" type="button" data-action="force-close-session" data-session-uuid="${escapeHtml(session.session_uuid || "")}">Force Close Session</button></div></article>`).join("")}</div>`;
+    }
+
+    function renderTickets() {
+      const tickets = asArray(state.bundle?.tickets);
+      els.ticketsCount.textContent = `${tickets.length} tickets`;
+      if (!tickets.length) {
+        els.ticketsPanel.innerHTML = emptyState("No open maintenance tickets.");
+        return;
+      }
+      els.ticketsPanel.innerHTML = `<div class="cardList">${tickets.map((ticket) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(ticket.maintenance_issue || "Ticket")}</div><div class="itemSub">${escapeHtml(ticket.location_name || ticket.location_code || "Unknown location")} • ${escapeHtml(ticket.date_submitted_display || "No submission time")}</div></div>${renderPill(ticket.out_of_order ? "Out of order" : "Open", ticket.out_of_order ? "bad" : "warn")}</div><div class="itemMetaGrid"><div><strong>Reported by:</strong> ${escapeHtml(ticket.reported_by || "Unknown")}</div><div><strong>Location code:</strong> ${escapeHtml(ticket.location_code || "—")}</div><div><strong>Fixture:</strong> ${escapeHtml(ticket.fixture_type || "—")}</div><div><strong>Identifier:</strong> ${escapeHtml(ticket.fixture_identifier || "—")}</div><div><strong>Created:</strong> ${escapeHtml(ticket.created_at_display || "—")}</div><div><strong>Ticket ID:</strong> <span class="inlineCode">${escapeHtml(ticket.ticket_id || "")}</span></div></div><div class="itemActions"><button class="button warning" type="button" data-action="close-ticket" data-ticket-id="${escapeHtml(ticket.ticket_id || "")}">Close Ticket</button></div></article>`).join("")}</div>`;
+    }
+
+    function renderDashboard() {
+      const raw = asArray(state.bundle?.dashboard);
+      const search = normalize(els.locationSearch.value);
+      const filter = els.locationFilter.value || "all";
+      const rows = raw.filter((row) => {
+        if (search) {
+          const hay = normalize(`${row.location_code || ""} ${row.location_name || ""} ${row.latest_employee_name || ""}`);
+          if (!hay.includes(search)) return false;
+        }
+        if (filter === "attention") return row.status_code !== "okay" || Number(row.open_ticket_count || 0) > 0;
+        if (filter === "tickets") return Number(row.open_ticket_count || 0) > 0;
+        if (filter !== "all") return row.status_code === filter;
+        return true;
+      });
+      els.dashboardCount.textContent = `${rows.length} locations`;
+      if (!rows.length) {
+        els.dashboardPanel.innerHTML = emptyState("No locations matched the current search or filter.");
+        return;
+      }
+      els.dashboardPanel.innerHTML = `<div class="tableWrap"><table><thead><tr><th>Status</th><th>Location</th><th>Cleaner</th><th>Completed</th><th>Open Tickets</th><th>Current Session</th><th>Services</th></tr></thead><tbody>${rows.map((row) => `<tr><td><span class="statusDot ${dotClass(row.status_color)}"></span>${escapeHtml(row.status_code || row.status_color || "unknown")}</td><td><strong>${escapeHtml(row.location_name || "Unknown")}</strong><br /><span class="helpText">${escapeHtml(row.location_code || "—")} • ${escapeHtml(row.location_type || row.form_type || "—")}</span></td><td>${escapeHtml(row.latest_employee_name || "—")}</td><td>${escapeHtml(row.latest_completed_at_display || "—")}</td><td>${escapeHtml(String(row.open_ticket_count ?? 0))}</td><td>${escapeHtml(row.open_session_status || "—")}</td><td>${escapeHtml(joinList(row.services_performed, 3) || "—")}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+
+    function renderDevices() {
+      const rows = asArray(state.bundle?.devices);
+      els.devicesCount.textContent = `${rows.length} devices`;
+      if (!rows.length) {
+        els.devicesPanel.innerHTML = emptyState("No device rows returned.");
+        return;
+      }
+      els.devicesPanel.innerHTML = `<div class="tableWrap"><table><thead><tr><th>Health</th><th>Device</th><th>Last Seen</th><th>Age</th><th>Assigned Employee</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${renderPillInline(row.health_status || "unknown", healthPillClass(row.health_status))}</td><td><strong>${escapeHtml(row.device_name || row.device_id || "Unknown")}</strong><br /><span class="helpText inlineCode">${escapeHtml(row.device_id || "—")}</span></td><td>${escapeHtml(row.last_seen_at_display || formatMaybeDate(row.last_seen_at) || "Never seen")}</td><td>${escapeHtml(row.last_seen_age || "—")}</td><td>${escapeHtml(row.assigned_employee_name || "—")}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+
+    function renderActivity() {
+      const rows = asArray(state.bundle?.recent_activity);
+      els.activityCount.textContent = `${rows.length} rows`;
+      if (!rows.length) {
+        els.activityPanel.innerHTML = emptyState("No recent activity rows returned.");
+        return;
+      }
+      els.activityPanel.innerHTML = `<div class="cardList">${rows.map((row) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(row.location_name || row.location_code || "Unknown location")}</div><div class="itemSub">${escapeHtml(row.employee_name || "Unknown employee")} • ${escapeHtml(row.status || "unknown")} • ${escapeHtml(row.submitted_at_display || row.ended_at_display || row.started_at_display || "No time")}</div></div>${renderPill(row.form_type || "scan", row.form_type === "restroom" ? "info" : "dark")}</div><div class="itemMetaGrid"><div><strong>Device:</strong> ${escapeHtml(row.device_name || row.device_identifier || "—")}</div><div><strong>Duration:</strong> ${escapeHtml(row.duration_display || "—")}</div><div><strong>Submitted:</strong> ${escapeHtml(row.submitted_at_display || "—")}</div><div><strong>Open tickets:</strong> ${escapeHtml(String(row.open_ticket_count ?? 0))}</div><div><strong>Services:</strong> ${escapeHtml(joinList(row.services_performed, 4) || "—")}</div><div><strong>Session:</strong> <span class="inlineCode">${escapeHtml(row.session_uuid || "")}</span></div></div></article>`).join("")}</div>`;
+    }
+
+    function persistActor() {
+      const actor = getActor();
+      if (actor) localStorage.setItem(CONFIG.ADMIN_ACTOR_KEY, actor);
+    }
+
+    function getActor() {
+      return String(els.actorInput.value || "").trim();
+    }
+
+    function getStoredActor(deviceId) {
+      return String(localStorage.getItem(CONFIG.ADMIN_ACTOR_KEY) || "").trim() || String(deviceId || "").trim() || "Admin Console";
+    }
+
+    function detectDeviceId() {
+      try {
+        if (window.fully) {
+          if (typeof fully.getDeviceId === "function") {
+            const id = String(fully.getDeviceId() || "").trim();
+            if (id) return id;
+          }
+          if (typeof fully.getSerialNumber === "function") {
+            const serial = String(fully.getSerialNumber() || "").trim();
+            if (serial) return serial;
+          }
+          if (typeof fully.getMacAddress === "function") {
+            const mac = String(fully.getMacAddress() || "").trim();
+            if (mac) return mac;
+          }
+        }
+      } catch (err) {
+        console.warn("Fully device detection failed", err);
+      }
+      return String(localStorage.getItem(CONFIG.DEVICE_STORAGE_KEY) || "").trim();
+    }
+
+    function normalizeBundle(bundle) {
+      const safe = bundle && typeof bundle === "object" ? bundle : {};
+      return {
+        snapshot: safe.snapshot || {},
+        exceptions: asArray(safe.exceptions),
+        open_sessions: asArray(safe.open_sessions),
+        devices: asArray(safe.devices),
+        tickets: asArray(safe.tickets),
+        recent_activity: asArray(safe.recent_activity),
+        dashboard: asArray(safe.dashboard)
+      };
+    }
+
+    function asArray(value) { return Array.isArray(value) ? value : []; }
+    function metricCard(label, value, note) { return `<article class="metricCard"><div class="metricLabel">${escapeHtml(label)}</div><div class="metricValue">${escapeHtml(String(value ?? "0"))}</div><div class="metricNote">${escapeHtml(note || "")}</div></article>`; }
+    function renderPill(text, tone = "dark") { return `<span class="pill ${escapeHtml(tone)}">${escapeHtml(text || "—")}</span>`; }
+    function renderPillInline(text, tone = "dark") { return `<span class="pill ${escapeHtml(tone)}">${escapeHtml(text || "—")}</span>`; }
+    function setConnection(text, tone = "dark") { els.connectionPill.className = `pill ${tone}`; els.connectionPill.textContent = text; }
+    function setAuthState(isUnlocked) { els.authPill.className = `pill ${isUnlocked ? "good" : "warn"}`; els.authPill.textContent = isUnlocked ? "Open" : "Unavailable"; }
+    function setMessage(text, tone = "dark") { els.messagePill.className = `pill ${tone}`; els.messagePill.textContent = text; }
+    function emptyState(message) { return `<div class="emptyState">${escapeHtml(message)}</div>`; }
+    function joinList(value, maxItems = 4) { const items = asArray(value).filter(Boolean); if (!items.length) return ""; const shown = items.slice(0, maxItems).join(", "); return items.length > maxItems ? `${shown} +${items.length - maxItems} more` : shown; }
+    function normalize(value) { return String(value || "").trim().toUpperCase(); }
+    function formatMaybeDate(value) { if (!value) return ""; const date = new Date(value); if (Number.isNaN(date.getTime())) return String(value); return date.toLocaleString(); }
+    function healthPillClass(status) { const value = String(status || "").toLowerCase(); if (value === "healthy") return "good"; if (value === "stale" || value === "never_seen") return "warn"; if (value === "offline") return "bad"; return "dark"; }
+    function exceptionPillClass(type) { const value = String(type || "").toLowerCase(); if (value.includes("ticket")) return "warn"; if (value.includes("device")) return "bad"; if (value.includes("stale")) return "bad"; return "dark"; }
+    function dotClass(color) { const value = String(color || "").toLowerCase(); if (value === "red") return "dot-red"; if (value === "yellow") return "dot-yellow"; if (value === "blue") return "dot-blue"; if (value === "green") return "dot-green"; if (value === "black") return "dot-black"; return "dot-gray"; }
+    function safeError(err) { return err?.message ? String(err.message) : String(err || "Unknown error"); }
+    function escapeHtml(value) { return String(value==null?"":value).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+  </script>
+</body>
+</html>

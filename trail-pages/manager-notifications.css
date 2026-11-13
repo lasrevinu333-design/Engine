@@ -1,0 +1,214 @@
+/* Terracotta presentation adapter for mobile/src/manager/notifications.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] {
+  color-scheme:light
+    }
+    html[data-trail-theme="terracotta"] body {
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] body::before {
+  background:transparent
+    }
+    html[data-trail-theme="terracotta"] button:focus-visible {
+  outline:3px solid var(--trail-focus);
+  outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] a:focus-visible {
+  outline:3px solid var(--trail-focus);
+  outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] input:focus-visible {
+  outline:3px solid var(--trail-focus);
+  outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] textarea:focus-visible {
+  outline:3px solid var(--trail-focus);
+  outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] select:focus-visible {
+  outline:3px solid var(--trail-focus);
+  outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] .hero {
+  background:var(--trail-surface);
+  border:1px solid var(--trail-border);
+  box-shadow:var(--trail-shadow);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .card {
+  background:var(--trail-surface);
+  border:1px solid var(--trail-border);
+  box-shadow:var(--trail-shadow);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .brand p {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .muted {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .eyebrow {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .identity {
+  background:var(--trail-selected);
+  border:1px solid var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .sectionLead {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .tile {
+  background:var(--trail-surface);
+  border:1px solid var(--trail-border);
+  color:var(--trail-ink);
+  box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .tile:hover {border-color:var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .tile small {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .tile.primaryTile {background:var(--trail-surface);border-color:var(--trail-border);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .input {
+  border:1px solid var(--trail-control-border);
+  background:var(--trail-raised);
+  color:var(--trail-ink);
+  box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .textarea {
+  border:1px solid var(--trail-control-border);
+  background:var(--trail-raised);
+  color:var(--trail-ink);
+  box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .select {
+  border:1px solid var(--trail-control-border);
+  background:var(--trail-raised);
+  color:var(--trail-ink);
+  box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .select option {background:var(--trail-raised);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .btn {
+  border:1px solid var(--trail-control-border);
+  background:var(--trail-surface);
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .btn.primary {background:var(--trail-brand);color:var(--trail-on-brand);border-color:var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .btn.danger {background:var(--trail-danger-soft);color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .btn.secondary {background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .status {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .status.error {color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .status.ok {color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .status.info {color:var(--trail-info)
+    }
+    html[data-trail-theme="terracotta"] .statusBox {
+  border:1px solid var(--trail-border);
+  background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .statusBox.ok {border-color:var(--trail-success);background:var(--trail-success-soft);
+        color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .statusBox.error {border-color:var(--trail-danger);background:var(--trail-danger-soft);
+        color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .tabs {
+  border:1px solid var(--trail-border);
+  background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .tab {
+  border:0;
+  background:transparent;
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .tab.active {background:var(--trail-brand);color:var(--trail-on-brand);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .tab[aria-selected="true"] {background:var(--trail-brand);color:var(--trail-on-brand);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .metric {background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .event {border-bottom:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .event:last-child {border-bottom:0
+    }
+    html[data-trail-theme="terracotta"] .message {
+  background:var(--trail-surface);
+  box-shadow:var(--trail-shadow);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .message.user {background:var(--trail-selected);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .composer {
+  border:1px solid var(--trail-border);
+  background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .emptyState {
+  border:1px dashed var(--trail-border);
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .listRow {
+  border-bottom:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .listRow:last-child {border-bottom:0
+    }
+    html[data-trail-theme="terracotta"] .listRowMeta {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .iconBtn {
+  border:1px solid var(--trail-control-border);
+  background:var(--trail-surface);
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .settingRow {border-bottom:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .settingRow:last-child {border-bottom:0
+    }
+    html[data-trail-theme="terracotta"] .options {border:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .weekdayGrid label {background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .notice {
+  border:1px solid var(--trail-border);
+  background:var(--trail-surface);
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .appNav {
+  border-top:1px solid var(--trail-border);
+  background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .appNav a {
+  color:var(--trail-brand)
+    }
+    html[data-trail-theme="terracotta"] .appNav a[aria-current="page"] {background:var(--trail-brand);color:var(--trail-on-brand)
+    }
+    html[data-trail-theme="terracotta"] .offline {
+  background:var(--trail-surface);
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .toast {
+  border:1px solid var(--trail-border);
+  background:var(--trail-surface);
+  color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .settingRow small {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .optionGroup {border:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .saveBar {background:var(--trail-surface);
+        color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .appNav a.active {background:var(--trail-brand);color:var(--trail-on-brand)
+    }
+    html[data-trail-theme="terracotta"] .appNav a[aria-current="page"] {background:var(--trail-brand);color:var(--trail-on-brand)
+    }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "custodial.quiet-offline-current-input-controls.v1",
+  "archive_bytes": 186755686,
+  "archive_sha256": "6dfbef995d35b73751591828d14c49e305abada448d20902eeac0f159dc63bde",
+  "scope": "These two current controls are already different from old bf805 historical context, but exactly equal the immutable supplied candidate input. No current repair changed them.",
+  "files": [
+    {
+      "path": "memphis-scan-sync.js",
+      "bytes": 233977,
+      "sha256": "7af3817294d6a2d2d05e5dfc18d91609b6ee808cfe8fbaae6b02e6d5835938d0",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/memphis-scan-sync.js"
+    },
+    {
+      "path": "mobile/src/chatscope/app.jsx",
+      "bytes": 151323,
+      "sha256": "523f076238a9bb209defa07be0641664cbdcba5b881e4b3c6678590a88c1c415",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/chatscope/app.jsx"
+    }
+  ],
+  "production": false,
+  "release_admission": false
+}

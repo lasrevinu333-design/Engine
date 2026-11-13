@@ -1,0 +1,1008 @@
+definitions:
+  scripts:
+    protected_main: &protected_main
+      name: Verify protected Build 29 recovery source
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # Reviewed forward inputs are externally provisioned job variables/files;
+        # never inferred from an APK, acceptance JSON, branch or build number.
+        # BEGIN custodial_forward_input_transport
+        # The two existing official inputs select an independently hash-pinned
+        # metadata-only Git ref. No new credential, workflow input or Source checkout.
+        if [ -n "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}" ] \
+            && [ -n "${MZ_CUSTODIAL_FORWARD_ROLE:-}" ] \
+            && ! declare -p MZ_CUSTODIAL_FORWARD_SOURCE_INPUT >/dev/null 2>&1 \
+            && ! declare -p MZ_CUSTODIAL_FORWARD_TRUSTED_PINS >/dev/null 2>&1; then
+          custodial_transport_paths="$(node mobile/scripts/provision-custodial-forward-build-inputs.mjs \
+            --root "$CM_BUILD_DIR" \
+            --pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" \
+            --role "$MZ_CUSTODIAL_FORWARD_ROLE" \
+            --environment-output "$CM_ENV")"
+          custodial_transport_source_seen=0
+          custodial_transport_pins_seen=0
+          while IFS= read -r custodial_transport_line; do
+            case "$custodial_transport_line" in
+              MZ_CUSTODIAL_FORWARD_SOURCE_INPUT=/*)
+                test "$custodial_transport_source_seen" -eq 0
+                export MZ_CUSTODIAL_FORWARD_SOURCE_INPUT="${custodial_transport_line#*=}"
+                custodial_transport_source_seen=1
+                ;;
+              MZ_CUSTODIAL_FORWARD_TRUSTED_PINS=/*)
+                test "$custodial_transport_pins_seen" -eq 0
+                export MZ_CUSTODIAL_FORWARD_TRUSTED_PINS="${custodial_transport_line#*=}"
+                custodial_transport_pins_seen=1
+                ;;
+              *) printf 'Unexpected forward input transport output\n' >&2; exit 1 ;;
+            esac
+          done <<< "$custodial_transport_paths"
+          test "$custodial_transport_source_seen" -eq 1
+          test "$custodial_transport_pins_seen" -eq 1
+        fi
+        # END custodial_forward_input_transport
+        # BEGIN custodial_forward_arguments
+        custodial_forward_args=()
+        custodial_forward_count=0
+        custodial_forward_pair_count=0
+        for custodial_forward_name in MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+          if declare -p "$custodial_forward_name" >/dev/null 2>&1; then
+            custodial_forward_pair_count=$((custodial_forward_pair_count + 1))
+          fi
+        done
+        test "$custodial_forward_pair_count" -eq 0 || test "$custodial_forward_pair_count" -eq 2
+        if [ -z "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}" ] \
+            && [ -z "${MZ_CUSTODIAL_FORWARD_ROLE:-}" ]; then
+          # Absent/both-empty DECLARED inputs are legacy, never a review.
+          # Provisioned forward file paths without that pair are incomplete.
+          if declare -p MZ_CUSTODIAL_FORWARD_SOURCE_INPUT >/dev/null 2>&1 \
+              || declare -p MZ_CUSTODIAL_FORWARD_TRUSTED_PINS >/dev/null 2>&1; then
+            printf 'Forward file paths require nonempty declared review inputs\n' >&2; exit 1
+          fi
+        else
+          test "${MZ_APP_EDITION:-}" = custodial
+          for custodial_forward_name in \
+            MZ_CUSTODIAL_FORWARD_SOURCE_INPUT MZ_CUSTODIAL_FORWARD_TRUSTED_PINS \
+            MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+            declare -p "$custodial_forward_name" >/dev/null 2>&1
+            test -n "${!custodial_forward_name}" || { printf 'Empty reviewed forward input: %s\n' "$custodial_forward_name" >&2; exit 1; }
+            custodial_forward_count=$((custodial_forward_count + 1))
+          done
+          test "$custodial_forward_count" -eq 4
+          [[ "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_ROLE" = candidate || "$MZ_CUSTODIAL_FORWARD_ROLE" = recovery ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" = /* && "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS" = /* ]]
+          test "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" != "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+          custodial_forward_args=(
+            --forward-source-input "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT"
+            --forward-trusted-pins "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+            --forward-trusted-pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256"
+            --forward-role "$MZ_CUSTODIAL_FORWARD_ROLE"
+          )
+        fi
+        readonly -a custodial_forward_args
+        # END custodial_forward_arguments
+        if [ "$custodial_forward_count" -ne 0 ]; then
+          # BEGIN custodial_reviewed_forward_build_number
+          # Select DATA only from the existing externally pinned role reader.
+          # The unchanged private source admission below must still succeed.
+          custodial_reviewed_build_number="$(node --input-type=module - "${custodial_forward_args[@]}" <<'NODE'
+        import { parseForwardBuildArguments, readReviewedForwardBuildSourceSelection }
+          from './mobile/scripts/configure-native-release.mjs';
+        const selection = await readReviewedForwardBuildSourceSelection(parseForwardBuildArguments(process.argv.slice(2)));
+        if (selection === null) throw new Error('Reviewed forward build role selection is required');
+        process.stdout.write(String(selection.version_code));
+        NODE
+          )"
+          [[ "$custodial_reviewed_build_number" =~ ^[1-9][0-9]*$ ]]
+          export PROJECT_BUILD_NUMBER="$custodial_reviewed_build_number"
+          # END custodial_reviewed_forward_build_number
+          # Observe genuine named clean source/review/private brand before effects.
+          # No checkout/reset/symbolic-ref substitute for the actual CI source.
+          node --input-type=module - "${custodial_forward_args[@]}" <<'NODE'
+        import {
+          assertReviewedForwardBuild, loadReviewedForwardBuild,
+          parseForwardBuildArguments, resolveBuildNumber,
+        } from './mobile/scripts/configure-native-release.mjs';
+        const flags = parseForwardBuildArguments(process.argv.slice(2));
+        const build = resolveBuildNumber(process.env);
+        const context = await loadReviewedForwardBuild(flags, { buildNumber: build.numeric });
+        const descriptor = assertReviewedForwardBuild(context, {
+          buildNumber: build.numeric, sourceCommit: process.env.CM_COMMIT,
+          sourceRef: 'refs/heads/' + process.env.CM_BRANCH,
+        });
+        if (process.env.CM_COMMIT !== descriptor.source.commit
+            || process.env.CM_BRANCH !== descriptor.source.ref.slice('refs/heads/'.length)) {
+          throw new Error('Codemagic source identity differs from the owner-reviewed forward role');
+        }
+        NODE
+          git check-ref-format "refs/heads/$CM_BRANCH"
+          git fetch --no-tags --depth=1 origin \
+            "+refs/heads/$CM_BRANCH:refs/remotes/origin/$CM_BRANCH"
+          test "$(git rev-parse "refs/remotes/origin/$CM_BRANCH")" = "$CM_COMMIT"
+          # BEGIN custodial_reviewed_forward_build_number_export
+          # Later normal configure/provenance/verifier steps consume this value.
+          : "${CM_ENV:?Codemagic environment output path is required}"
+          printf 'PROJECT_BUILD_NUMBER=%s\n' "$PROJECT_BUILD_NUMBER" >> "$CM_ENV"
+          # END custodial_reviewed_forward_build_number_export
+        else
+          recovery_branch='release/custodial-build29-recovery-v53-implementation-20260918'
+          test "${CM_BRANCH:-}" = "$recovery_branch"
+          test "${CM_COMMIT:-}" = "$(git rev-parse HEAD)"
+          git fetch --no-tags --depth=1 origin \
+            "+refs/heads/$recovery_branch:refs/remotes/origin/$recovery_branch"
+          test "$(git rev-parse "refs/remotes/origin/$recovery_branch")" = "$CM_COMMIT"
+          printf 'Protected Build 29 recovery source verified: %s at %s\n' \
+            "$recovery_branch" \
+            "$CM_COMMIT"
+        fi
+    custodial_android_toolchain: &custodial_android_toolchain
+      name: Verify reviewed Custodial Android toolchain
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        test "$(node --version)" = 'v22.23.4'
+        BUILD_TOOLS_DIRECTORY="$ANDROID_SDK_ROOT/build-tools/35.0.1" node --input-type=module <<'NODE'
+        import { createHash } from 'node:crypto';
+        import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+        import {
+          CUSTODIAL_ANDROID_TOOLCHAIN_POLICY,
+          resolveCustodialAndroidTools,
+        } from './mobile/scripts/verify-custodial-android-release.mjs';
+        const sha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
+        const tools = resolveCustodialAndroidTools(process.env.BUILD_TOOLS_DIRECTORY);
+        const record = {
+          schema_version: 1,
+          codemagic_xcode_image: '26.2',
+          android_build_tools_version: tools.version,
+          toolchain_policy_sha256: CUSTODIAL_ANDROID_TOOLCHAIN_POLICY.sha256,
+          files_sha256: {
+            aapt2: sha256(tools.aapt2),
+            apksigner: sha256(tools.apksigner),
+            'lib/apksigner.jar': sha256(tools.apksignerJar),
+            'source.properties': sha256(tools.sourceProperties),
+            zipalign: sha256(tools.zipalign),
+          },
+        };
+        mkdirSync('build/provenance', { recursive: true });
+        writeFileSync(
+          'build/provenance/custodial-android-toolchain.json',
+          `${JSON.stringify(record, null, 2)}\n`,
+          { flag: 'wx' },
+        );
+        NODE
+    install: &install
+      name: Install and verify root workspace
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+        test "$(node --version)" = "v22.23.4"
+        test "$(npm --version)" = "11.17.0"
+        npm ci --ignore-scripts --no-audit --no-fund
+        npx --no-install playwright install chromium
+        npm run --silent build:chatscope
+        git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
+        node scripts/custodial-android-manifest-security-contract-tests.mjs
+        node scripts/custodial-android-manifest-security-contract-tests.mjs --protected-preparation-only
+        node scripts/current-provider-comparison-source-tests.mjs
+        node scripts/build-batch-0b-browser-fixtures.mjs
+        node scripts/prepare-core-native-fixture.mjs
+        node scripts/custodial-core-release-gate-tests.mjs
+        node scripts/custodial-core-release-gate.mjs
+        npm run --silent test:mobile
+        npm run --silent test:batch-0a
+        node scripts/native-mobile-build-contract-tests.mjs
+        npm run --silent test:immutable-snapshot-failure-ownership
+        npm run --silent test:custodial-protected-queue-schema
+        node scripts/runtime-manifest-contract-tests.mjs
+        node scripts/ci-toolchain-contract-tests.mjs
+        npm run --silent release:manifest:check
+    add_ios: &add_ios
+      name: Create, lock, and configure iOS project
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        test "$MZ_APP_EDITION" != "custodial"
+        cd mobile
+        rm -rf ios
+        npx --no-install cap add ios --packagemanager SPM
+        npx --no-install cap sync ios
+        test -f ios/App/App.xcodeproj/project.pbxproj
+        if [ "$MZ_APP_EDITION" = "manager" ]; then
+          node scripts/configure-firebase.mjs ios
+        fi
+        node scripts/configure-native-links.mjs ios
+        node scripts/configure-native-release.mjs ios
+        lock="$CM_BUILD_DIR/mobile/native-locks/ios/$MZ_APP_EDITION/Package.resolved"
+        resolved="$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+        packages="$CM_BUILD_DIR/build/spm/$MZ_APP_EDITION"
+        test -f "$lock"
+        test -f "$resolved"
+        mkdir -p "$packages"
+        xcodebuild -resolvePackageDependencies \
+          -project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+          -scheme App \
+          -clonedSourcePackagesDirPath "$packages" \
+          -disableAutomaticPackageResolution \
+          -onlyUsePackageVersionsFromResolvedFile
+        cmp "$lock" "$resolved"
+        settings="$(
+          xcodebuild \
+            -project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            -scheme App \
+            -configuration Release \
+            -clonedSourcePackagesDirPath "$packages" \
+            -disableAutomaticPackageResolution \
+            -onlyUsePackageVersionsFromResolvedFile \
+            -showBuildSettings
+        )"
+        actual_build_number="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*CURRENT_PROJECT_VERSION = / { print $2; exit }')"
+        actual_release_version="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*MARKETING_VERSION = / { print $2; exit }')"
+        actual_identifier="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER = / { print $2; exit }')"
+        case "$MZ_APP_EDITION" in
+          manager) expected_identifier='org.memphiszoo.ops' ;;
+          viewer) expected_identifier='org.memphiszoo.viewer' ;;
+          *) exit 1 ;;
+        esac
+        test "$actual_build_number" = "$PROJECT_BUILD_NUMBER"
+        test "$actual_release_version" = "$MZ_RELEASE_VERSION"
+        test "$actual_identifier" = "$expected_identifier"
+        shasum -a 256 \
+          "$resolved" \
+          "$CM_BUILD_DIR/mobile/ios/App/CapApp-SPM/Package.swift" \
+          > "$CM_BUILD_DIR/build/provenance/$MZ_APP_EDITION-ios-dependencies.sha256"
+    add_android: &add_android
+      name: Create and configure signed Android project
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # Reviewed forward inputs are externally provisioned job variables/files;
+        # never inferred from an APK, acceptance JSON, branch or build number.
+        # BEGIN custodial_forward_arguments
+        custodial_forward_args=()
+        custodial_forward_count=0
+        custodial_forward_pair_count=0
+        for custodial_forward_name in MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+          if declare -p "$custodial_forward_name" >/dev/null 2>&1; then
+            custodial_forward_pair_count=$((custodial_forward_pair_count + 1))
+          fi
+        done
+        test "$custodial_forward_pair_count" -eq 0 || test "$custodial_forward_pair_count" -eq 2
+        if [ -z "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}" ] \
+            && [ -z "${MZ_CUSTODIAL_FORWARD_ROLE:-}" ]; then
+          # Absent/both-empty DECLARED inputs are legacy, never a review.
+          # Provisioned forward file paths without that pair are incomplete.
+          if declare -p MZ_CUSTODIAL_FORWARD_SOURCE_INPUT >/dev/null 2>&1 \
+              || declare -p MZ_CUSTODIAL_FORWARD_TRUSTED_PINS >/dev/null 2>&1; then
+            printf 'Forward file paths require nonempty declared review inputs\n' >&2; exit 1
+          fi
+        else
+          test "${MZ_APP_EDITION:-}" = custodial
+          for custodial_forward_name in \
+            MZ_CUSTODIAL_FORWARD_SOURCE_INPUT MZ_CUSTODIAL_FORWARD_TRUSTED_PINS \
+            MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+            declare -p "$custodial_forward_name" >/dev/null 2>&1
+            test -n "${!custodial_forward_name}" || { printf 'Empty reviewed forward input: %s\n' "$custodial_forward_name" >&2; exit 1; }
+            custodial_forward_count=$((custodial_forward_count + 1))
+          done
+          test "$custodial_forward_count" -eq 4
+          [[ "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_ROLE" = candidate || "$MZ_CUSTODIAL_FORWARD_ROLE" = recovery ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" = /* && "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS" = /* ]]
+          test "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" != "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+          custodial_forward_args=(
+            --forward-source-input "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT"
+            --forward-trusted-pins "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+            --forward-trusted-pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256"
+            --forward-role "$MZ_CUSTODIAL_FORWARD_ROLE"
+          )
+        fi
+        readonly -a custodial_forward_args
+        # END custodial_forward_arguments
+        cd mobile
+        rm -rf android
+        npx --no-install cap add android
+        npx --no-install cap sync android
+        case "$MZ_APP_EDITION" in
+          manager)
+            expected_firebase_package='org.memphiszoo.ops'
+            node scripts/configure-firebase.mjs android
+            ;;
+          custodial)
+            expected_firebase_package='org.memphiszoo.custodial'
+            node scripts/configure-firebase.mjs android
+            ;;
+          viewer)
+            expected_firebase_package=''
+            ;;
+          *) exit 1 ;;
+        esac
+        if [ -n "$expected_firebase_package" ]; then
+          test -s android/app/google-services.json
+          EXPECTED_FIREBASE_PACKAGE="$expected_firebase_package" node --input-type=module <<'NODE'
+        import { readFileSync } from 'node:fs';
+        const config = JSON.parse(readFileSync('android/app/google-services.json', 'utf8'));
+        const packages = (config.client || [])
+          .map((client) => client?.client_info?.android_client_info?.package_name)
+          .filter(Boolean);
+        if (!packages.includes(process.env.EXPECTED_FIREBASE_PACKAGE)) process.exit(1);
+        NODE
+        else
+          test ! -e android/app/google-services.json
+        fi
+        node scripts/configure-branding.mjs
+        node scripts/configure-native-links.mjs android
+        node scripts/configure-android-backup.mjs
+        node scripts/configure-native-release.mjs android ${custodial_forward_args[@]+"${custodial_forward_args[@]}"}
+        grep -Fxq \
+          "apply from: rootProject.file('../scripts/native-version.gradle')" \
+          android/app/build.gradle
+        grep -Fxq \
+          "apply from: rootProject.file('../scripts/codemagic-release.gradle')" \
+          android/app/build.gradle
+        grep -Fxq \
+          'distributionSha256Sum=ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c' \
+          android/gradle/wrapper/gradle-wrapper.properties
+        test "$(shasum -a 256 android/gradle/wrapper/gradle-wrapper.jar | awk '{print $1}')" = \
+          '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
+        cmp \
+          "native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+          android/gradle/verification-metadata.xml
+    source_attestation: &source_attestation
+      name: Attest exact tracked source after native build
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        actual_commit="$(git rev-parse HEAD)"
+        expected_tree="$(git rev-parse "$CM_COMMIT^{tree}")"
+        index_tree="$(git write-tree)"
+        source_status="$(git status --porcelain=v1 --untracked-files=all)"
+        if [ "$actual_commit" != "$CM_COMMIT" ] || \
+          [ "$expected_tree" != "$index_tree" ] || \
+          [ -n "$source_status" ]; then
+          printf \
+            'Source attestation failed: expected commit %s, actual commit %s.\n' \
+            "$CM_COMMIT" \
+            "$actual_commit" \
+            >&2
+          if [ -n "$source_status" ]; then
+            printf 'Dirty source paths (status only):\n%s\n' "$source_status" >&2
+          fi
+          exit 1
+        fi
+        SOURCE_TREE="$expected_tree" node --input-type=module <<'NODE'
+        import { writeFileSync } from 'node:fs';
+        writeFileSync(
+          `build/provenance/${process.env.MZ_APP_EDITION}-source-attestation.json`,
+          `${JSON.stringify({
+            schema_version: 1,
+            source_commit: process.env.CM_COMMIT,
+            source_tree: process.env.SOURCE_TREE,
+            source_ref: process.env.CM_BRANCH,
+            tracked_worktree_clean: true,
+            untracked_nonignored_files_absent: true,
+          }, null, 2)}\n`,
+          { flag: 'wx' },
+        );
+        NODE
+    web_provenance: &web_provenance
+      name: Verify web payload and record provenance
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        node --input-type=module <<'NODE'
+        import { createHash } from 'node:crypto';
+        import { lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+        import { join, relative } from 'node:path';
+        import { createRuntimeAssetManifest } from './scripts/refresh-frontend-release-manifest.mjs';
+        const directory = 'mobile/mobile-dist';
+        const stored = JSON.parse(readFileSync(`${directory}/runtime-asset-manifest.json`, 'utf8'));
+        const build = JSON.parse(readFileSync(`${directory}/build.json`, 'utf8'));
+        const firebaseUtilPostinstallSha256 = createHash('sha256')
+          .update(readFileSync('node_modules/@firebase/util/dist/postinstall.mjs'))
+          .digest('hex');
+        if (firebaseUtilPostinstallSha256 !== '56e40adf04426e6b07df5d1ca7d4142a5b2c91ea9df5800589e357f9a2433252') {
+          throw new Error('Dependency install policy probe differs from the reviewed lifecycle-free package source');
+        }
+        const actual = createRuntimeAssetManifest({ directory, edition: stored.edition, identity: stored });
+        if (JSON.stringify(stored) !== JSON.stringify(actual)) throw new Error('Runtime asset manifest does not match built bytes');
+        if (stored.edition !== process.env.MZ_APP_EDITION || build.edition !== process.env.MZ_APP_EDITION) throw new Error('Edition provenance mismatch');
+        if (process.env.CM_COMMIT && stored.source_commit !== process.env.CM_COMMIT.toLowerCase()) throw new Error('Codemagic source commit mismatch');
+        const files = [];
+        const walk = (path) => {
+          for (const name of readdirSync(path).sort()) {
+            const file = join(path, name);
+            const stat = lstatSync(file);
+            if (stat.isSymbolicLink()) throw new Error(`Unexpected symlink: ${file}`);
+            if (stat.isDirectory()) walk(file);
+            else if (stat.isFile()) files.push(file);
+          }
+        };
+        walk(directory);
+        mkdirSync('build/provenance', { recursive: true });
+        const checksums = files.map((file) => `${createHash('sha256').update(readFileSync(file)).digest('hex')}  ${relative(directory, file).replaceAll('\\', '/')}`).join('\n');
+        writeFileSync(`build/provenance/${process.env.MZ_APP_EDITION}-web.sha256`, `${checksums}\n`);
+        writeFileSync(`build/provenance/${process.env.MZ_APP_EDITION}-build.json`, `${JSON.stringify({
+          ...build,
+          node: process.version,
+          npm: '11.17.0',
+          dependency_install_policy: 'npm-ci-ignore-scripts-v1',
+          firebase_util_postinstall_sha256: firebaseUtilPostinstallSha256,
+          codemagic_build_id: process.env.CM_BUILD_ID || null,
+        }, null, 2)}\n`);
+        NODE
+    native_provenance: &native_provenance
+      name: Verify signatures and checksum native artifacts
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        # Reviewed forward inputs are externally provisioned job variables/files;
+        # never inferred from an APK, acceptance JSON, branch or build number.
+        # BEGIN custodial_forward_arguments
+        custodial_forward_args=()
+        custodial_forward_count=0
+        custodial_forward_pair_count=0
+        for custodial_forward_name in MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+          if declare -p "$custodial_forward_name" >/dev/null 2>&1; then
+            custodial_forward_pair_count=$((custodial_forward_pair_count + 1))
+          fi
+        done
+        test "$custodial_forward_pair_count" -eq 0 || test "$custodial_forward_pair_count" -eq 2
+        if [ -z "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}" ] \
+            && [ -z "${MZ_CUSTODIAL_FORWARD_ROLE:-}" ]; then
+          # Absent/both-empty DECLARED inputs are legacy, never a review.
+          # Provisioned forward file paths without that pair are incomplete.
+          if declare -p MZ_CUSTODIAL_FORWARD_SOURCE_INPUT >/dev/null 2>&1 \
+              || declare -p MZ_CUSTODIAL_FORWARD_TRUSTED_PINS >/dev/null 2>&1; then
+            printf 'Forward file paths require nonempty declared review inputs\n' >&2; exit 1
+          fi
+        else
+          test "${MZ_APP_EDITION:-}" = custodial
+          for custodial_forward_name in \
+            MZ_CUSTODIAL_FORWARD_SOURCE_INPUT MZ_CUSTODIAL_FORWARD_TRUSTED_PINS \
+            MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256 MZ_CUSTODIAL_FORWARD_ROLE; do
+            declare -p "$custodial_forward_name" >/dev/null 2>&1
+            test -n "${!custodial_forward_name}" || { printf 'Empty reviewed forward input: %s\n' "$custodial_forward_name" >&2; exit 1; }
+            custodial_forward_count=$((custodial_forward_count + 1))
+          done
+          test "$custodial_forward_count" -eq 4
+          [[ "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_ROLE" = candidate || "$MZ_CUSTODIAL_FORWARD_ROLE" = recovery ]]
+          [[ "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" = /* && "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS" = /* ]]
+          test "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" != "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+          custodial_forward_args=(
+            --forward-source-input "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT"
+            --forward-trusted-pins "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS"
+            --forward-trusted-pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256"
+            --forward-role "$MZ_CUSTODIAL_FORWARD_ROLE"
+          )
+        fi
+        readonly -a custodial_forward_args
+        # END custodial_forward_arguments
+        if [ "$MZ_APP_EDITION" = "custodial" ]; then
+          test -n "${ANDROID_SDK_ROOT:-}"
+          custodial_apk=''
+          custodial_apk_count=0
+          while IFS= read -r -d '' candidate; do
+            custodial_apk="$candidate"
+            custodial_apk_count=$((custodial_apk_count + 1))
+          done < <(find mobile/android/app/build/outputs -type f -name '*.apk' -print0)
+          test "$custodial_apk_count" -eq 1
+          test "$custodial_apk" = 'mobile/android/app/build/outputs/apk/release/app-release.apk'
+          test -f "$custodial_apk"
+          test ! -L "$custodial_apk"
+          custodial_callback_args=()
+          custodial_source_scope="$(node --input-type=module -e "import {readCustodialBuildScope} from './mobile/scripts/custodial-new-producer-scope-policy.mjs'; console.log(readCustodialBuildScope(process.cwd()+'/mobile').profile);")"
+          case "$custodial_source_scope" in
+            cleaning-first-retained-continuity-v1)
+              [[ "${MZ_CUSTODIAL_CALLBACK_REFERENCE_BUILD_ID:-}" =~ ^[a-f0-9]{24}$ ]]
+              test -n "${CODEMAGIC_API_TOKEN:-}"
+              custodial_callback_args=(--callback-reference-build-id "$MZ_CUSTODIAL_CALLBACK_REFERENCE_BUILD_ID")
+              ;;
+            full-system)
+              test -z "${MZ_CUSTODIAL_CALLBACK_REFERENCE_BUILD_ID:-}"
+              ;;
+            *) printf 'Unknown actual Source release scope\n' >&2; exit 1 ;;
+          esac
+          readonly -a custodial_callback_args
+          node mobile/scripts/verify-custodial-android-release.mjs \
+            --apk "$custodial_apk" \
+            --build-number "$PROJECT_BUILD_NUMBER" \
+            --source-commit "$CM_COMMIT" \
+            --source-ref "$(if [ "$custodial_forward_count" -ne 0 ]; then printf 'refs/heads/%s' "$CM_BRANCH"; else printf '%s' "$CM_BRANCH"; fi)" \
+            --build-run "$CM_BUILD_ID" \
+            --build-workflow custodial-android \
+            --build-tools-directory "$ANDROID_SDK_ROOT/build-tools/35.0.1" \
+            --runtime-directory mobile/mobile-dist \
+            --output build/provenance/custodial-android-release-acceptance.json \
+            ${custodial_forward_args[@]+"${custodial_forward_args[@]}"} \
+            ${custodial_callback_args[@]+"${custodial_callback_args[@]}"}
+        else
+          while IFS= read -r -d '' apk; do
+            sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+            test -n "$sdk_root"
+            apksigner="$(find "$sdk_root/build-tools" -type f -name apksigner | sort -V | tail -1)"
+            test -x "$apksigner"
+            "$apksigner" verify --verbose --print-certs "$apk"
+            node mobile/scripts/verify-android-apk-backup.mjs "$apk"
+          done < <(find mobile/android/app/build/outputs -type f -name '*.apk' -print0 2>/dev/null || true)
+        fi
+        while IFS= read -r -d '' bundle; do
+          verification="$(jarsigner -verify "$bundle" 2>&1)"
+          printf '%s\n' "$verification"
+          grep -Fq 'jar verified.' <<< "$verification"
+        done < <(find mobile/android/app/build/outputs -type f -name '*.aab' -print0 2>/dev/null || true)
+        verification_root="$(mktemp -d)"
+        cleanup_verification_directories() {
+          rm -rf -- "$verification_root"
+        }
+        trap cleanup_verification_directories EXIT
+        while IFS= read -r -d '' ipa; do
+          verification_directory="$(mktemp -d "$verification_root/ipa.XXXXXX")"
+          unzip -q "$ipa" -d "$verification_directory"
+          application=''
+          application_count=0
+          while IFS= read -r -d '' candidate; do
+            application="$candidate"
+            application_count=$((application_count + 1))
+          done < <(find "$verification_directory/Payload" -maxdepth 1 -type d -name '*.app' -print0)
+          test "$application_count" -eq 1
+          codesign --verify --deep --strict "$application"
+        done < <(find build/ios/ipa -type f -name '*.ipa' -print0 2>/dev/null || true)
+        node <<'NODE'
+        const { createHash } = require('node:crypto');
+        const { execFileSync } = require('node:child_process');
+        const { existsSync, lstatSync, readFileSync, readdirSync, writeFileSync } = require('node:fs');
+        const { extname, join, relative } = require('node:path');
+        const roots = ['build/ios/ipa', 'mobile/android/app/build/outputs'];
+        const artifacts = [];
+        const walkArtifacts = (root, path = root) => {
+          if (!existsSync(path)) return;
+          for (const name of readdirSync(path).sort()) {
+            const file = join(path, name);
+            const stat = lstatSync(file);
+            if (stat.isSymbolicLink()) throw new Error(`Unexpected symlink: ${file}`);
+            if (stat.isDirectory()) walkArtifacts(root, file);
+            else if (['.aab', '.apk', '.ipa'].includes(extname(file).toLowerCase())) artifacts.push(file);
+          }
+        };
+        for (const root of roots) walkArtifacts(root);
+        if (!artifacts.length) throw new Error('No signed native artifact was produced');
+        for (const artifact of artifacts) execFileSync('unzip', ['-t', artifact], { stdio: 'ignore' });
+        const custodialAcceptance = 'build/provenance/custodial-android-release-acceptance.json';
+        if (process.env.MZ_APP_EDITION === 'custodial') {
+          if (!existsSync(custodialAcceptance) || lstatSync(custodialAcceptance).isSymbolicLink()) {
+            throw new Error('Custodial signed release acceptance is missing');
+          }
+        } else if (existsSync(custodialAcceptance)) {
+          throw new Error('Custodial release acceptance leaked into another edition');
+        }
+        const ledger = `build/provenance/${process.env.MZ_APP_EDITION}-native.sha256`;
+        if (existsSync(ledger)) throw new Error(`Final native evidence ledger already exists: ${ledger}`);
+        const evidence = [];
+        const walkEvidence = (path) => {
+          for (const name of readdirSync(path).sort()) {
+            const file = join(path, name);
+            if (file === ledger) continue;
+            const stat = lstatSync(file);
+            if (stat.isSymbolicLink()) throw new Error(`Unexpected provenance symlink: ${file}`);
+            if (stat.isDirectory()) walkEvidence(file);
+            else if (stat.isFile()) evidence.push(file);
+            else throw new Error(`Unexpected provenance entry: ${file}`);
+          }
+        };
+        walkEvidence('build/provenance');
+        if (!evidence.length) throw new Error('No release provenance was produced');
+        const inputs = [...new Set([...artifacts, ...evidence])].sort();
+        const checksums = inputs.map((file) => `${createHash('sha256').update(readFileSync(file)).digest('hex')}  ${relative('.', file).replaceAll('\\', '/')}`).join('\n');
+        writeFileSync(ledger, `${checksums}\n`, { flag: 'wx' });
+        NODE
+
+workflows:
+  manager-ios:
+    name: Memphis Zoo Ops - iOS
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: memphis_zoo_app_store_connect
+    environment:
+      node: '22.23.4'
+      xcode: '26.4'
+      groups:
+        - app_store_credentials
+        - firebase_client_config
+      vars:
+        MZ_APP_EDITION: manager
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.memphiszoo.ops
+    scripts:
+      - *protected_main
+      - *install
+      - name: Build manager web app
+        script: npm run --silent build:manager
+      - *web_provenance
+      - *add_ios
+      - name: Apply signing profiles
+        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            --scheme App \
+            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
+      - *native_provenance
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/provenance/**
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  viewer-ios:
+    name: Memphis Zoo Viewer - iOS
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: memphis_zoo_app_store_connect
+    environment:
+      node: '22.23.4'
+      xcode: '26.4'
+      groups:
+        - app_store_credentials
+      vars:
+        MZ_APP_EDITION: viewer
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.memphiszoo.viewer
+    scripts:
+      - *protected_main
+      - *install
+      - name: Build viewer web app
+        script: npm run --silent build:viewer
+      - *web_provenance
+      - *add_ios
+      - name: Apply signing profiles
+        script: xcode-project use-profiles --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj"
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/mobile/ios/App/App.xcodeproj" \
+            --scheme App \
+            --archive-flags "-clonedSourcePackagesDirPath $CM_BUILD_DIR/build/spm/$MZ_APP_EDITION -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile"
+      - *native_provenance
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/provenance/**
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  manager-android:
+    name: Memphis Zoo Ops - Android
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: '26.2'
+      node: '22.23.4'
+      java: 21
+      groups:
+        - google_play_credentials
+        - android_signing_credentials
+        - firebase_client_config
+      vars:
+        MZ_APP_EDITION: manager
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'
+      android_signing:
+        - memphis_zoo_ops_keystore
+    scripts:
+      - *protected_main
+      - *install
+      - name: Build manager web app
+        script: npm run --silent build:manager
+      - *web_provenance
+      - *add_android
+      - name: Build APK and app bundle
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          checkout_root="$(cd "$CM_BUILD_DIR" && pwd -P)"
+          umask 077
+          gradle_temp_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
+          readonly gradle_temp_root
+          gradle_temp_home="$(mktemp -d "$gradle_temp_root/memphis-zoo-gradle.XXXXXX")"
+          readonly gradle_temp_home
+          cleanup_gradle_user_home() {
+            rm -rf -- "$gradle_temp_home"
+          }
+          trap cleanup_gradle_user_home EXIT
+          gradle_user_home="$(cd "$gradle_temp_home" && pwd -P)"
+          case "$gradle_user_home/" in
+            "$checkout_root/"*)
+              printf 'Refusing Gradle cache inside the source checkout: %s\n' "$gradle_user_home" >&2
+              exit 1
+              ;;
+          esac
+          chmod 700 "$gradle_user_home"
+          test -d "$gradle_user_home"
+          cd mobile/android
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+              --no-build-cache --rerun-tasks
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
+      - *source_attestation
+      - *native_provenance
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.apk
+      - mobile/android/app/build/outputs/**/*.aab
+      - build/provenance/**
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+
+  custodial-android:
+    name: Memphis Zoo Custodial - Private Android APK
+    inputs:
+      custodial_forward_review_pins_sha256:
+        description: Independently reviewed forward recipe SHA256; empty retains legacy
+        type: string
+        default: ''
+      custodial_forward_review_role:
+        description: Reviewed forward role candidate or recovery; empty retains legacy
+        type: string
+        default: ''
+      custodial_callback_reference_build_id:
+        description: Exact independently finished Source-bound callback evidence build; empty only for full-system
+        type: string
+        default: ''
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: '26.2'
+      node: '22.23.4'
+      java: 21
+      vars:
+        MZ_APP_EDITION: custodial
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_SHELL_START: '1'
+        PROJECT_BUILD_NUMBER: '53'
+        # Official workflow inputs, not inferred environment echoes or approval.
+        MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: ${{ inputs.custodial_forward_review_pins_sha256 }}
+        MZ_CUSTODIAL_FORWARD_ROLE: ${{ inputs.custodial_forward_review_role }}
+        MZ_CUSTODIAL_CALLBACK_REFERENCE_BUILD_ID: ${{ inputs.custodial_callback_reference_build_id }}
+      android_signing:
+        # External Codemagic configuration must provide this distinct Custodial key.
+        - memphis_zoo_custodial_keystore
+    scripts:
+      - *protected_main
+      - *install
+      - *custodial_android_toolchain
+      - name: Build custodial web app
+        script: npm run --silent build:custodial
+      - *web_provenance
+      - *add_android
+      - name: Build private signed APK
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          checkout_root="$(cd "$CM_BUILD_DIR" && pwd -P)"
+          umask 077
+          gradle_temp_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
+          readonly gradle_temp_root
+          gradle_temp_home="$(mktemp -d "$gradle_temp_root/memphis-zoo-gradle.XXXXXX")"
+          readonly gradle_temp_home
+          cleanup_gradle_user_home() {
+            rm -rf -- "$gradle_temp_home"
+          }
+          trap cleanup_gradle_user_home EXIT
+          gradle_user_home="$(cd "$gradle_temp_home" && pwd -P)"
+          case "$gradle_user_home/" in
+            "$checkout_root/"*)
+              printf 'Refusing Gradle cache inside the source checkout: %s\n' "$gradle_user_home" >&2
+              exit 1
+              ;;
+          esac
+          chmod 700 "$gradle_user_home"
+          test -d "$gradle_user_home"
+          cd mobile/android
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease \
+              --no-build-cache --rerun-tasks
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
+      - *source_attestation
+      - *native_provenance
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.apk
+      - build/provenance/**
+
+  custodial-callback-reference:
+    name: Custodial callback reference - evidence only
+    inputs:
+      custodial_forward_review_pins_sha256:
+        description: Independently reviewed exact Source role; reference is never release approval
+        type: string
+        default: ''
+      custodial_forward_review_role:
+        description: Existing reviewed candidate or recovery role
+        type: string
+        default: ''
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: '26.2'
+      node: '22.23.4'
+      java: 21
+      vars:
+        MZ_APP_EDITION: custodial
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_SHELL_START: '1'
+        PROJECT_BUILD_NUMBER: '53'
+        MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256: ${{ inputs.custodial_forward_review_pins_sha256 }}
+        MZ_CUSTODIAL_FORWARD_ROLE: ${{ inputs.custodial_forward_review_role }}
+      android_signing:
+        - memphis_zoo_custodial_keystore
+    scripts:
+      - *protected_main
+      - *install
+      - *custodial_android_toolchain
+      - name: Build exact candidate web Source for reference compilation only
+        script: npm run --silent build:custodial
+      - *web_provenance
+      - *add_android
+      - name: Compile frozen guarded callbacks as evidence only
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          umask 077
+          test "${CM_WORKFLOW_ID:-}" = custodial-callback-reference
+          test -n "${MZ_CUSTODIAL_FORWARD_SOURCE_INPUT:-}"
+          test -n "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS:-}"
+          test -n "${MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256:-}"
+          test -n "${MZ_CUSTODIAL_FORWARD_ROLE:-}"
+          node mobile/scripts/produce-custodial-callback-reference.mjs \
+            --forward-source-input "$MZ_CUSTODIAL_FORWARD_SOURCE_INPUT" \
+            --forward-trusted-pins "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS" \
+            --forward-trusted-pins-sha256 "$MZ_CUSTODIAL_FORWARD_TRUSTED_PINS_SHA256" \
+            --forward-role "$MZ_CUSTODIAL_FORWARD_ROLE"
+      - *source_attestation
+    # No native_provenance/release acceptance, store publisher or install step.
+    artifacts:
+      - build/callback-reference/app-release.apk
+      - build/provenance/**
+
+  viewer-android:
+    name: Memphis Zoo Viewer - Android
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: '26.2'
+      node: '22.23.4'
+      java: 21
+      groups:
+        - google_play_credentials
+        - android_signing_credentials
+      vars:
+        MZ_APP_EDITION: viewer
+        MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+        MZ_RELEASE_VERSION: 1.0.0
+      android_signing:
+        - memphis_zoo_viewer_keystore
+    scripts:
+      - *protected_main
+      - *install
+      - name: Build viewer web app
+        script: npm run --silent build:viewer
+      - *web_provenance
+      - *add_android
+      - name: Build APK and app bundle
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          checkout_root="$(cd "$CM_BUILD_DIR" && pwd -P)"
+          umask 077
+          gradle_temp_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
+          readonly gradle_temp_root
+          gradle_temp_home="$(mktemp -d "$gradle_temp_root/memphis-zoo-gradle.XXXXXX")"
+          readonly gradle_temp_home
+          cleanup_gradle_user_home() {
+            rm -rf -- "$gradle_temp_home"
+          }
+          trap cleanup_gradle_user_home EXIT
+          gradle_user_home="$(cd "$gradle_temp_home" && pwd -P)"
+          case "$gradle_user_home/" in
+            "$checkout_root/"*)
+              printf 'Refusing Gradle cache inside the source checkout: %s\n' "$gradle_user_home" >&2
+              exit 1
+              ;;
+          esac
+          chmod 700 "$gradle_user_home"
+          test -d "$gradle_user_home"
+          cd mobile/android
+          rm -rf .gradle app/build build
+          GRADLE_USER_HOME="$gradle_user_home" \
+            ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+              --no-build-cache --rerun-tasks
+          cmp \
+            "../native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            gradle/verification-metadata.xml
+      - *source_attestation
+      - *native_provenance
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.apk
+      - mobile/android/app/build/outputs/**/*.aab
+      - build/provenance/**
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+
+  custodial-first-test:
+    name: Memphis Zoo Custodial - Owner TEST APK (manual only)
+    # No triggering or publishing block: explicit single build dispatch only.
+    inputs:
+      test_source_commit:
+        description: Exact committed implementation source selected for this owner test
+        type: string
+        default: ''
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: '26.2'
+      node: '22.23.4'
+      java: 21
+      vars:
+        MZ_APP_EDITION: custodial
+        MZ_RELEASE_VERSION: 1.0.0
+        MZ_BUILD_NUMBER: '79'
+        MZ_SHELL_START: '1'
+        MZ_TEST_SOURCE_COMMIT: ${{ inputs.test_source_commit }}
+      android_signing:
+        - memphis_zoo_custodial_keystore
+    scripts:
+      - name: Verify exact manual TEST source and install locked dependencies
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          [[ "$MZ_TEST_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$MZ_TEST_SOURCE_COMMIT"
+          test -z "$(git status --porcelain --untracked-files=normal)"
+      - *install
+      - *custodial_android_toolchain
+      - name: Verify generated messenger behavior
+        script: node scripts/messenger-bundle-browser-tests.mjs
+      - name: Verify active scan startup and pending setup recovery
+        script: node scripts/custodial-scan-startup-race-tests.mjs
+      - name: Build and sign full-workflow TEST APK with retained fleet identity
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          # Codemagic job counters are not this explicitly allocated test version.
+          unset PROJECT_BUILD_NUMBER BUILD_NUMBER
+          test -n "$CM_KEYSTORE_PATH"
+          test -n "$CM_KEYSTORE_PASSWORD"
+          test -n "$CM_KEY_ALIAS"
+          test -n "$CM_KEY_PASSWORD"
+          node mobile/scripts/build-custodial-first-test.mjs
+    artifacts:
+      - build/first-test/**
+      - build/provenance/**

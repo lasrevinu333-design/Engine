@@ -1,0 +1,60 @@
+{
+  "schema_version": 4,
+  "status": "preserved_incompatible_not_rollback_eligible",
+  "package_name": "org.memphiszoo.custodial",
+  "version_name": "1.0.0",
+  "version_code": 22,
+  "signer_certificate_sha256": "dd2e0b44abee02b4d9e1be74edaa05587a93f5e4c502716df99639bc96e7a0bf",
+  "artifact": {
+    "authority": "private_draft_github_release_asset",
+    "repository": "lasrevinu333-design/memphis-zoo-kiosk-control",
+    "release_id": 370354304,
+    "release_tag": "custodial-build22-rollback-baseline-20260813",
+    "release_is_draft": true,
+    "release_page_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/tag/untagged-a3e968e0029423b213b7",
+    "asset_id": 513927837,
+    "asset_name": "Custodial_Build_22_Rollback.apk",
+    "asset_size_bytes": 34931313,
+    "asset_sha256": "297becf5e6ee197a8534e8878536f2e4ded6d4de98b0a3a378899a4b46172ec5",
+    "asset_digest_api": "sha256:297becf5e6ee197a8534e8878536f2e4ded6d4de98b0a3a378899a4b46172ec5",
+    "asset_api_url": "https://api.github.com/repos/lasrevinu333-design/memphis-zoo-kiosk-control/releases/assets/513927837",
+    "asset_url": "https://github.com/lasrevinu333-design/memphis-zoo-kiosk-control/releases/download/untagged-a3e968e0029423b213b7/Custodial_Build_22_Rollback.apk"
+  },
+  "compatibility_evidence": {
+    "artifact_scan_contract": "scan.v2",
+    "required_scan_contract": "scan.v4.snapshot-bound-authority",
+    "artifact_start_rpc": "tool_start_session_v2",
+    "required_start_rpc": "tool_start_offline_occurrence",
+    "backend_allows_artifact_start_rpc": false,
+    "artifact_has_native_offline_authority": false,
+    "artifact_has_durable_rollback_fence": false,
+    "embedded_worker_fixture": "tests/fixtures/build22-memphis-scan-sync.js",
+    "embedded_worker_sha256": "b9465949796be0e84d6c4236a6c01974fd74534792f8ca30b2304c8969ffe4fa",
+    "canary_release_eligible": false
+  },
+  "replacement_requirement": {
+    "artifact_type": "production-signed recovery APK",
+    "minimum_version_code": 23,
+    "required_scan_contract": "scan.v4.snapshot-bound-authority",
+    "required_native_capabilities": [
+      "getOfflineAuthorityState",
+      "beginRollbackFence",
+      "clearRollbackFence",
+      "authorizeOfflineNewWork",
+      "attestOfflineStart"
+    ],
+    "required_evidence": [
+      "exact APK SHA-256 and signer identity",
+      "embedded runtime and API contract verification",
+      "renderer-death and reboot recovery",
+      "physical rollback drill on the designated canary"
+    ]
+  },
+  "rollback_commands": [],
+  "prohibited_shortcuts": [
+    "Do not install Build 22 as a rollback target for a scan.v4 canary.",
+    "Do not treat queue replay fencing as new-work admission fencing.",
+    "Do not restore tool_start_session_v2 or another retired writer to make this artifact appear compatible.",
+    "Do not authorize canary installation until a compatible signed recovery APK passes the physical rollback drill."
+  ]
+}

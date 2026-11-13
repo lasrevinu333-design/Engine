@@ -1,0 +1,248 @@
+{
+  "schema": "custodial.provider-event-decisions-byte-deltas.v1",
+  "base": "6b013c48f1d430f4a229cf5d812fb6926c095111",
+  "scope": "exact original accepted readback only; no permanent disposition or activation",
+  "files": [
+    {
+      "name": "NativeProviderEventReceipts.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderEventReceipts.java",
+      "prior_sha256": "8f15b357ece3292f18b86fba5387130e71d65815857e5e176ccad3a04529616b",
+      "current_sha256": "caecf57bcd59d2597c5debbd334c53a733eabbdd4b8722899335c2ceff8b42a6",
+      "hunks": [
+        {
+          "old_start": 64,
+          "old_count": 0,
+          "new_start": 65,
+          "new_count": 12,
+          "before": [],
+          "after": [
+            "    /** Only already-validated decision positives enter the existing settlement",
+            "     * type. Recheck each ORIGINAL receipt; never manufacture a server envelope. */",
+            "    static NativeProviderEventReceipts originalAcceptances(NativeProviderJournal.EventBatch batch, Map<String, JSONObject> originals) throws VaultFailure {",
+            "        if (batch == null || originals == null || originals.size() > 16) throw invalid();",
+            "        Map<String, String> admitted = new HashMap<>();",
+            "        for (Map.Entry<String, JSONObject> entry : originals.entrySet()) {",
+            "            NativeProviderJournal.PendingEvent expected = batch.events.get(entry.getKey()); JSONObject receipt = entry.getValue();",
+            "            if (expected == null || receipt == null || !Boolean.TRUE.equals(receipt.opt(\"replayed\")) || !matches(expected, receipt)) throw invalid();",
+            "            admitted.put(entry.getKey(), receipt.toString());",
+            "        }",
+            "        return new NativeProviderEventReceipts(batch, admitted);",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderHttp.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderHttp.java",
+      "prior_sha256": "622ad61ef62f985d3a0237ec1e8bd1ac95fda92d7b2e2ad8a7961fd682a44ac5",
+      "current_sha256": "9d0abba822c96c5dbc594aeb46566bf41cae04a52d08ae530e3e1d4ebefc525a",
+      "hunks": [
+        {
+          "old_start": 75,
+          "old_count": 0,
+          "new_start": 76,
+          "new_count": 12,
+          "before": [],
+          "after": [
+            "    NativeProviderEventDecisions.Exchange eventDecisions(NativeProviderEventDecisions.Query query, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {",
+            "        if (query == null || attempt == null) throw new VaultFailure(\"custodial_provider_request_invalid\");",
+            "        WireExchange wire = executeWire(query.request(), deviceId, credential, attempt);",
+            "        return new NativeProviderEventDecisions.Exchange(wire.response, wire.requestId, wire.path, wire.bodySha256);",
+            "    }",
+            "    private static final class WireExchange {",
+            "        final AuthorizedResponse response; final String requestId, path, bodySha256;",
+            "        final NativeProviderClockExchange.Point before, after;",
+            "        WireExchange(AuthorizedResponse response, String requestId, String path, String bodySha256, NativeProviderClockExchange.Point before, NativeProviderClockExchange.Point after) {",
+            "            this.response=response;this.requestId=requestId;this.path=path;this.bodySha256=bodySha256;this.before=before;this.after=after;",
+            "        }",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 76,
+          "old_count": 0,
+          "new_start": 89,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        WireExchange wire = executeWire(request, deviceId, credential, attempt);",
+            "        return new NativeProviderClockExchange(wire.response, wire.requestId, wire.path, wire.bodySha256, wire.before, wire.after);",
+            "    }",
+            "    private WireExchange executeWire(AuthorizedRequest request, String deviceId, char[] credential, Attempt attempt) throws VaultFailure {"
+          ]
+        },
+        {
+          "old_start": 82,
+          "old_count": 0,
+          "new_start": 99,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "                || request.path.equals(NativeProviderEventDecisions.PATH)"
+          ]
+        },
+        {
+          "old_start": 117,
+          "old_count": 1,
+          "new_start": 134,
+          "new_count": 1,
+          "before": [
+            "            return new NativeProviderClockExchange(new AuthorizedResponse(status, responseHeaders, received), requestId, request.path, bodySha256, before, after);"
+          ],
+          "after": [
+            "            return new WireExchange(new AuthorizedResponse(status, responseHeaders, received), requestId, request.path, bodySha256, before, after);"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderJournal.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "prior_sha256": "8e5b6bb867c2521e6ecb5ec231a20ecb3bd0400a0b609edc852b6add83467b9d",
+      "current_sha256": "91ca3d96cd6b60ce98ac08a26b7b32786d3b6c138b6eb10087ed6b141a5bf663",
+      "hunks": [
+        {
+          "old_start": 282,
+          "old_count": 0,
+          "new_start": 283,
+          "new_count": 41,
+          "before": [],
+          "after": [
+            "    void requireDecisionNetworkUnlocked() throws VaultFailure {",
+            "        if (Thread.holdsLock(lock)) throw new VaultFailure(\"custodial_provider_network_lock_held\");",
+            "    }",
+            "    NativeProviderEventDecisions.Query prepareEventDecisions(NativeProviderPrincipal current, EventBatch batch) throws VaultFailure {",
+            "        return transition(() -> {",
+            "            requireEventBatchCurrent(current, batch);",
+            "            ProviderRecordStore.Snapshot snapshot = store.load(); JSONObject meta = metadata(snapshot); requireAvailable(meta, current);",
+            "            if (meta.isNull(\"current_generation\") || !meta.isNull(\"pending_generation\")) throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "            Prepared prepared = new Prepared(required(snapshot, generationKey(meta.getString(\"current_generation\"))));",
+            "            requireConfirmedStatus(snapshot, meta, current, prepared);",
+            "            return NativeProviderEventDecisions.Query.fromJournal(batch, prepared);",
+            "        });",
+            "    }",
+            "    EventBatch settleEventDecisions(NativeProviderPrincipal current, NativeProviderEventDecisions.Query query, NativeProviderEventReceipts receipts) throws VaultFailure {",
+            "        return transition(() -> {",
+            "            if (query == null) throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "            ProviderRecordStore.Snapshot snapshot = store.load(); JSONObject meta = metadata(snapshot); requireAvailable(meta, current);",
+            "            if (!current.same(query.batch.principal) || query.batch.invalidationEpoch != number(meta, \"invalidation_epoch\")) throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "            requireConfirmedStatus(snapshot, meta, current, query.current);",
+            "            decisionRemaining(snapshot, current, query.batch); // Validate every original BEFORE any write.",
+            "            // Existing settlement permits only exact original positives, including",
+            "            // lost durable-return reconciliation. This whole block holds coordinator.",
+            "            settleEvents(current, query.batch, receipts);",
+            "            Map<String, PendingEvent> remaining = decisionRemaining(store.load(), current, query.batch);",
+            "            // Do not admit new arrivals into the retry batch: only this query's",
+            "            // still-pending immutable originals may proceed to existing /events.",
+            "            return new EventBatch(query.batch.invalidationEpoch, current, remaining);",
+            "        });",
+            "    }",
+            "    private Map<String, PendingEvent> decisionRemaining(ProviderRecordStore.Snapshot snapshot, NativeProviderPrincipal current, EventBatch batch) throws Exception {",
+            "            Map<String, PendingEvent> remaining = new java.util.LinkedHashMap<>();",
+            "            for (PendingEvent expected : batch.events.values()) {",
+            "                JSONObject event = required(snapshot, recordKey(ProviderEnvelopeCrypto.Domain.EVENT, expected.id)); requireEventGeneration(snapshot, current, event);",
+            "                if (!\"CURRENT\".equals(event.getString(\"authority_state\"))) throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "                if (\"SETTLED\".equals(event.getString(\"state\"))) { event.put(\"state\", \"PENDING\"); event.remove(\"admission\"); }",
+            "                else if (\"PENDING\".equals(event.getString(\"state\"))) remaining.put(expected.id, expected);",
+            "                else throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "                if (!NativeLegacyLineageJournal.same(event, expected.original())) throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "            }",
+            "            return remaining;",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderRuntimeOwner.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "prior_sha256": "f1bf536871077e0f3040956f649fc76a1225ffee714f9e5245a00a7ba739c284",
+      "current_sha256": "be74c0df2b46fe1fe48b77f11dbe7bbc34802d3bde0e7b9cb96efa6f44d0b0d9",
+      "hunks": [
+        {
+          "old_start": 235,
+          "old_count": 0,
+          "new_start": 236,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            if(!batch.events.isEmpty()){requireDelivery();batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);}"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VaultEngine.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/VaultEngine.java",
+      "prior_sha256": "4b9c70608bcbd98fd5c26668f1202cf7fd8014c96c5319bba00f7c1cca8c72d5",
+      "current_sha256": "7e0b5bbe7c4f73f91bcf00d8348a9a80081d373aa104e97799ecd0ccb7cc2dda",
+      "hunks": [
+        {
+          "old_start": 540,
+          "old_count": 0,
+          "new_start": 541,
+          "new_count": 29,
+          "before": [],
+          "after": [
+            "    NativeProviderJournal.EventBatch lookupNativeProviderEventDecisions(NativeProviderJournal.EventBatch batch, NativePrincipalJournal principalJournal,",
+            "        NativeLegacyLineageJournal legacyJournal, NativeProviderJournal providerJournal, NativeProviderHttp http,",
+            "        NativeProviderHttp.Attempt attempt) throws VaultFailure {",
+            "        if (Thread.holdsLock(this)) throw new VaultFailure(\"custodial_provider_network_lock_held\");",
+            "        providerJournal.requireDecisionNetworkUnlocked();",
+            "        VaultSnapshot before; NativeProviderPrincipal principal; char[] credential = null; NativeProviderEventDecisions.Query query = null;",
+            "        try {",
+            "            synchronized (this) {",
+            "                before = recoverExpiry(recoverLegacy());",
+            "                if (before.phase != VaultPhase.ACTIVE || !before.hasCredential()) throw new VaultFailure(\"custodial_native_pending_state_refused\");",
+            "                principal = providerPrincipal(before, principalJournal, legacyJournal);",
+            "                if (principal == null) throw new VaultFailure(\"custodial_provider_waiting_native_principal\");",
+            "                providerJournal.requireEventBatchCurrent(principal, batch);",
+            "                if (batch.events.isEmpty()) return batch;",
+            "                query = providerJournal.prepareEventDecisions(principal, batch);",
+            "                if (!sameRevisionAndPhase(persistence.load(), before)) throw concurrent();",
+            "                credential = cipher.decrypt(before.secret); NativeAttestation.requireStoredCredentialId(credential, principal.json().getString(\"credential_id\"));",
+            "            }",
+            "            NativeProviderEventDecisions.Exchange response = http.eventDecisions(query, before.deviceId, credential, attempt);",
+            "            synchronized (this) {",
+            "                attempt.check(); VaultSnapshot after = persistence.load(); if (!sameRevisionAndPhase(after, before)) throw concurrent();",
+            "                NativeProviderPrincipal current = providerPrincipal(after, principalJournal, legacyJournal);",
+            "                if (!principal.same(current)) throw new VaultFailure(\"custodial_provider_operation_stale\");",
+            "                return providerJournal.settleEventDecisions(current, query, NativeProviderEventDecisions.validate(query, response));",
+            "            }",
+            "        } catch (VaultFailure error) { throw error; }",
+            "        catch (Exception error) { throw new VaultFailure(\"custodial_provider_event_decision_failed\", error); }",
+            "        finally { VaultValidation.wipe(credential); if (query != null) query.close(); }",
+            "    }"
+          ]
+        }
+      ]
+    }
+  ],
+  "pinned": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderEventDecisions.java",
+      "sha256": "013e949e930a707af2ed210e0178d3a07118bffd23ec9ee8b6dd0cc54d91e405"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderEventDecisionsTest.java",
+      "sha256": "5cc523dc22701acbaf7bdefb2f1f44e4bebd639b71a7cc0abea8e6f13160b7ff"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderHttpTest.java",
+      "sha256": "0f8b7c5a4ce6b5c599cc8a3949991c3b7a06f1a132dc4a3bf609c75480f5a0b3"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "sha256": "2e1ee94048b74da8b30620e7f01d66ef1b4d0c06907c515cb5de464ec8cf22c2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderCompositionTest.java",
+      "sha256": "03637b070e9d07ffdc18ea86277d0daa8a37e26d00bb39a004bfe9cd7d3bb758"
+    },
+    {
+      "path": "mobile/scripts/custodial-provider-storage-tests.mjs",
+      "sha256": "bbbc0947510c17bdc07ea39040e08afd63f0181d590103042541af70320b8764"
+    }
+  ]
+}

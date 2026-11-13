@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-trail-theme="terracotta" data-trail-section="dashboard">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#A45434">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Zoo Viewer">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <title>Memphis Zoo Viewer</title>
+  <link rel="stylesheet" href="./mobile.css">
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/viewer-index.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="brand">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+        <div>
+          <h1 class="trailPageTitle">Memphis Zoo Viewer</h1>
+          <p>Dashboard and events</p>
+        </div>
+      </div>
+    </section>
+    <nav class="tabs" aria-label="Viewer pages">
+      <button class="btn tab primary" data-tab="dashboard" type="button">Dashboard</button>
+      <button class="btn tab" data-tab="events" type="button">Events</button>
+    </nav>
+    <section id="dashboard" class="panel active card">
+      <h2>Custodial dashboard</h2>
+      <p class="muted">Public operational totals. Employee names, devices, notes, and internal records are not included.</p>
+      <div id="metrics" class="metrics"></div>
+      <div id="dashboard-status" class="status"></div>
+    </section>
+    <section id="events" class="panel card">
+      <h2>Upcoming events</h2>
+      <div id="event-list"></div>
+      <div id="events-status" class="status"></div>
+    </section>
+  </main>
+  <script src="./pwa-register.js"></script>
+  <script src="./mobile-viewer.js"></script>
+</body>
+</html>

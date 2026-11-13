@@ -1,0 +1,7 @@
+# Explicit native custody host adapter
+
+The existing NativePrivateCustodyOwnerTest declares a separate synthetic key-adapter class directory. The generator supplies that missing fixture. It pins the unchanged shipping AndroidKeystoreCipher source, compiles shipping main/tests normally, and prepends the synthetic adapter only for an explicit host Test profile. It never edits shipping code, enables removal, retires keys, builds/installs an APK, or qualifies Android hardware.
+
+The model uses real JCE AES-GCM and unchanged capsule/frozen-WORK credential checks. An exact synthetic opaque-original mapping bridges the existing FakeCipher fixture to a synthetic AES original. Missing/replaced-key and owner-mutation checks remain active. The generated class has explicit test setup/fault methods absent from shipping code. These methods never enter shipping source sets or normal app compilation.
+
+Use create-custodial-custody-host-fixture.py with a new owned secondary-disk workspace and an owned npm fixture containing @capacitor/android8.4.3, @capacitor/core8.4.3 and @capacitor-firebase/messaging8.3.0. Its generated host.init.gradle is used explicitly with the existing offline Gradle library testDebugUnitTest task. Generated files/caches must stay outside the candidate and be removed after receipts are saved. Keep test XML, source/class hashes and exact invocation. No Android hardware/storage acceptance follows from a host pass.

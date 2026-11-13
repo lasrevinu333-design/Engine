@@ -1,0 +1,33 @@
+// Current secure-link contract. The historical inline schedule generator was
+// replaced by the locked weekly schedule and external print controller.
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const read=name=>fs.readFileSync(name,'utf8');
+const page=read('coverall-print.html'),controller=read('coverall-print.js');
+const oldEntry=read('schedule-simple.html');
+const manifest=JSON.parse(read('frontend-release-manifest.json'));
+const source=JSON.parse(read('scripts/fixtures/current304-schema-source-binding.json'));
+assert.match(page,/src="\.\/coverall-print\.js"/);
+assert.match(page,/<meta name="referrer" content="no-referrer">/);
+assert.match(controller,/await auth\.requireOpsManagerSession\(\{interactive:false,redirect:true,throwOnFailure:true\}\)/);
+assert.match(controller,/!actions\.same\(owner,actions\.principal\(auth\)\)/);
+assert.match(controller,/!actions\.permissions\(auth\)\.coverall/);
+assert.match(controller,/await auth\.opsManagerAuthHeaders\(\)/);
+assert.match(controller,/postLink\('\/static-weekly\/coverall-links',/);
+assert.match(controller,/postLink\('\/static-weekly\/coverall-links\/revoke',\{link_id:original\.requestId\}\)/);
+assert.match(controller,/ttl_hours:ttlHours/);
+assert.match(controller,/!Number\.isInteger\(ttlHours\)\|\|ttlHours<1\|\|ttlHours>168/);
+assert.match(controller,/saveLinkPending\(original\)/);
+assert.match(controller,/linkPending!==original/);
+assert.match(controller,/acknowledged\.revoked!==true/);
+assert.match(controller,/\^#access_token=/);
+assert.match(controller,/referrerPolicy='no-referrer'/);
+assert.doesNotMatch(page+controller,/function assignmentUrl|schedule-api\/coverall\/assignment['"]/);
+assert.match(oldEntry,/schedule-weekly\.html/);
+assert.match(oldEntry,/This older entry no longer generates or changes schedules/);
+assert.doesNotMatch(oldEntry,/data-coverall-link-action|assignment_url_en|\/coverall\/assignment\?service_date=/);
+assert.equal(source.canonical_source_count,304);
+assert.equal(source.retained_source304_successor.expected_fingerprint_authority,null);
+assert.equal(manifest.schema_fingerprint,source.schema_fingerprint);
+assert.equal(manifest.api_contract_versions.coverall_assignments,'coverall-assignments.v2.secure-links');
+console.log(JSON.stringify({ok:true,coverallCurrentShippingSecurityContract:'PASS',scope:'Source wiring only; full link/read/revoke/tombstone SQL and browser workflows require their owning qualification'}));

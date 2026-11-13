@@ -1,0 +1,254 @@
+(function(root){
+  'use strict';
+  const API='https://memphis-zoo-mcp.onrender.com/dashboard-api/summary';
+  const REFRESH_MS=30000;
+  const named=session=>session?.role==='ops_manager'&&typeof session.token==='string'&&session.token
+    &&typeof session.manager_id==='string'&&session.manager_id
+    &&typeof session.credential_id==='string'&&session.credential_id;
+  const dashboardData=data=>data?.meta?.contracts?.dashboard==='dashboard.v1'
+    &&Number.isFinite(Date.parse(data?.meta?.generated_at||''))
+    &&Array.isArray(data.restrooms)&&Array.isArray(data.exhibits);
+
+  function create({auth,renderer,section,status,operations=null,gpsSource=root.MemphisCustodialGpsPathSource,
+    fetchImpl=root.fetch?.bind(root),window=root,
+    setIntervalImpl=root.setInterval?.bind(root),clearIntervalImpl=root.clearInterval?.bind(root)}={}){
+    if(!auth?.requireOpsManagerSession||!auth?.opsManagerAuthHeaders||!auth?.readSession||!auth?.hasPermission
+      ||!renderer?.create||!section||!status||!fetchImpl||!setIntervalImpl||!clearIntervalImpl)
+      throw new Error('Dashboard Map requires existing manager authentication and renderer');
+    let owner=null,map=null,refreshTimer=null,sessionTimer=null,state='new',generation=0;
+    let ownerBinding=null;
+    let readEpoch=0,readController=null;
+    const readTimers=new Set();
+    function cancelReads(){readController?.abort();readController=null;
+      for(const timer of readTimers)root.clearTimeout(timer);readTimers.clear();}
+    async function bounded(read,signal){
+      let timer,abort;const controller=new AbortController();
+      const cancelled=new Promise((_,reject)=>{
+        abort=()=>{controller.abort();reject(new Error('Map read cancelled'));};
+        if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true});
+        timer=root.setTimeout(()=>{controller.abort();reject(new Error('Map read timed out'));},10000);readTimers.add(timer);
+      });
+      try{return await Promise.race([cancelled,Promise.resolve().then(()=>{
+        if(signal.aborted)throw new Error('Map read cancelled');return read(controller.signal);
+      })]);}finally{root.clearTimeout(timer);readTimers.delete(timer);signal.removeEventListener('abort',abort);}
+    }
+    let activeListeners=false,lifecycleListeners=false;
+    function currentSession(){try{return auth.readSession();}catch{return null;}}
+    function sessionBinding(session){
+      if(!named(session)||session.permissions?.schema!=='custodial.manager-permissions.v1'
+        ||auth.hasPermission('read',session)!==true)return null;
+      const typed=value=>[typeof value,value===undefined?'':value];
+      let permissions,roles,fingerprint;
+      try{
+        permissions=Object.entries(session.permissions).sort(([a],[b])=>a.localeCompare(b))
+          .map(([key,value])=>[key,...typed(value)]);
+        roles=Array.isArray(session.roles)?['array',session.roles.map(typed)]:typed(session.roles);
+        fingerprint=JSON.stringify([session.role,session.manager_id,session.credential_id,session.token,
+          session.device_id,typed(session.expires_at),typed(session.access_level),typed(session.read_only),roles,permissions]);
+      }catch{return null;}
+      return Object.freeze({session,manager_id:session.manager_id,credential_id:session.credential_id,
+        device_id:session.device_id,token:session.token,fingerprint});
+    }
+    function sameBinding(original,current){
+      const next=sessionBinding(current);
+      return !!original&&!!next&&original.session===next.session&&original.fingerprint===next.fingerprint;
+    }
+    function updateNavigation(){
+      if(!window.location?.href||!window.document?.getElementById)return;
+      const current=new URL(window.location.href);
+      let fromAnnie=String(current.searchParams.get('origin')||'').trim().toLowerCase()==='annie';
+      try{fromAnnie=fromAnnie||window.sessionStorage?.getItem('mz_annie_origin_session')==='1';}catch{}
+      // Use the accepted session's canonical device, not an obsolete incoming
+      // device hint. These remain fixed same-origin routes, never return URLs.
+      let device=String(owner?.device_id||'').trim();
+      if(!device){try{device=String(auth.getDeviceId?.()||'').trim();}catch{}}
+      for(const [id,path]of [['map-hub-link','./start_page1.html'],['map-dashboard-link','./dashboard.html']]){
+        const link=window.document.getElementById(id);if(!link)continue;
+        const target=new URL(path,current);
+        target.searchParams.set('hub','manager');
+        if(device)target.searchParams.set('device',device);
+        if(fromAnnie)target.searchParams.set('origin','annie');
+        link.href=target.toString();
+      }
+    }
+    function invalidate(message){readEpoch++;cancelReads();map?.invalidate();operations?.unavailable();status.textContent=message;}
+    function checkPrincipal(){
+      if(state!=='active')return false;
+      if(!sameBinding(ownerBinding,currentSession())||!map?.checkSession()){
+        state='suspended';generation++;cancelReads();detachActive();section.hidden=true;
+        invalidate('Manager access changed. Reopen the Dashboard Map from your signed-in manager session.');
+        map?.suspend?.();operations?.suspend();
+        return false;
+      }
+      return true;
+    }
+    function authorityLost(){
+      if(state!=='active')return;
+      state='suspended';generation++;cancelReads();detachActive();section.hidden=true;
+      map?.clearGps?.();map?.suspend?.();operations?.suspend();
+      status.textContent='Manager access unavailable. Reopen the Dashboard Map from your signed-in manager session.';
+    }
+    async function refresh(){
+      if(!checkPrincipal())return false;
+      cancelReads();readController=new AbortController();const signal=readController.signal;
+      const ticket=map.beginRefresh();
+      if(!ticket)return false;
+      const requestGeneration=generation;
+      const requestEpoch=++readEpoch;
+      const currentRead=()=>requestGeneration===generation&&requestEpoch===readEpoch&&checkPrincipal()
+        &&requestGeneration===generation&&requestEpoch===readEpoch;
+      // Cancel old reads while retaining the same manager's displayed facts
+      // during the replacement request. Source failures still invalidate them.
+      operations?.beginRefresh?.({isCurrent:currentRead});
+      let phoneStarted=false;
+      try{
+        const headers=await bounded(()=>auth.opsManagerAuthHeaders({expectedManagerId:owner.manager_id}),signal);
+        if(!currentRead())return false;
+        void operations?.refresh({headers,fetchImpl,preserveSummary:true,
+          isCurrent:currentRead}).catch(()=>{});
+        // Phone location is independent of cleaning summary and optional work history.
+        let gpsOpen=true,gpsVersion=-1;
+        const receiveGps=context=>{const version=context?.historyVersion||0;
+          if(gpsOpen&&version>=gpsVersion&&currentRead()){gpsVersion=version;map?.acceptGps?.(ticket,context);}};
+        const gpsFailure=error=>{gpsOpen=false;if(!currentRead())return;
+          if(error?.authority)authorityLost();else map?.unavailableGps?.(ticket);};
+        phoneStarted=true;
+        if(gpsSource?.read){
+          void bounded(()=>gpsSource.read({headers,fetchImpl,signal,
+            onUpdate:receiveGps,
+            onAuthorityError:gpsFailure}),signal).then(receiveGps).catch(gpsFailure);
+        }else map.unavailableGps?.(ticket);
+        const {response,payload}=await bounded(async summarySignal=>{
+          const response=await fetchImpl(API,{method:'GET',cache:'no-store',headers,signal:summarySignal});
+          if(summarySignal.aborted)throw new Error('Map read cancelled');
+          if(response.status===401||response.status===403){
+            if(currentRead())authorityLost();throw new Error('Manager access unavailable');
+          }
+          return {response,payload:await response.json().catch(()=>null)};
+        },signal);
+        if(!currentRead())return false;
+        if(!response.ok||payload?.ok!==true||!dashboardData(payload.data))
+          throw new Error('The authenticated Dashboard summary is unavailable or changed');
+        if(!map.accept(ticket,payload.data))return false;
+        status.textContent='';
+        operations?.updateSummary?.({summary:payload.data,isCurrent:currentRead});
+        return true;
+      }catch{
+        if(requestGeneration!==generation||requestEpoch!==readEpoch)return false;
+        if(!phoneStarted)map.unavailableGps?.(ticket);
+        map.fail(ticket);operations?.summaryUnavailable?.();
+        if(checkPrincipal())status.textContent='Cleaning status unavailable. Please try again.';
+        return false;
+      }
+    }
+    function onOffline(){invalidate('Offline. Current cleaning status unavailable.');}
+    function onOnline(){void refresh();}
+    function onFocus(){if(checkPrincipal())void refresh();}
+    function onVisibility(){if(window.document?.hidden)invalidate('Map status paused while hidden.');else onFocus();}
+    function detachActive(){
+      if(refreshTimer!==null)clearIntervalImpl(refreshTimer);
+      if(sessionTimer!==null)clearIntervalImpl(sessionTimer);
+      refreshTimer=null;sessionTimer=null;
+      if(!activeListeners)return;activeListeners=false;
+      window.removeEventListener?.('offline',onOffline);window.removeEventListener?.('online',onOnline);
+      window.removeEventListener?.('focus',onFocus);
+      window.document?.removeEventListener?.('visibilitychange',onVisibility);
+    }
+    function attachActive(){
+      if(activeListeners)return;activeListeners=true;
+      window.addEventListener?.('offline',onOffline);window.addEventListener?.('online',onOnline);
+      window.addEventListener?.('focus',onFocus);window.document?.addEventListener?.('visibilitychange',onVisibility);
+      refreshTimer=setIntervalImpl(()=>{void refresh();},REFRESH_MS);
+      sessionTimer=setIntervalImpl(()=>{if(checkPrincipal())operations?.tick();},1000);
+    }
+    function suspend(){
+      if(state==='closed'||state==='suspended')return;
+      state='suspended';generation++;cancelReads();detachActive();section.hidden=true;
+      map?.suspend?.();operations?.suspend();status.textContent='Map status paused. Rechecking manager access on return.';
+    }
+    function stop(){
+      if(state==='closed')return;
+      state='closed';generation++;cancelReads();detachActive();section.hidden=true;
+      if(lifecycleListeners){lifecycleListeners=false;
+        window.removeEventListener?.('pagehide',onPageHide);window.removeEventListener?.('pageshow',onPageShow);}
+      map?.stop?.();operations?.stop();map=null;owner=null;ownerBinding=null;
+      status.textContent='Dashboard Map closed.';
+    }
+    function onPageHide(event){if(event?.persisted)suspend();else stop();}
+    function onPageShow(event){if(event?.persisted&&state==='suspended')void resume();}
+    function bindLifecycle(){if(lifecycleListeners)return;lifecycleListeners=true;
+      window.addEventListener?.('pagehide',onPageHide);window.addEventListener?.('pageshow',onPageShow);}
+    async function validatedSession(){
+      let session;
+      try{session=await auth.requireOpsManagerSession({interactive:false,redirect:true});}
+      catch{return null;}
+      return named(session)&&sameBinding(sessionBinding(session),currentSession())?session:null;
+    }
+    function failedResume(expected,attemptMap,message,{preserveMap=false}={}){
+      // Only the still-current restoration may discard its renderer. A late
+      // rejection from an older attempt cannot close the newly restored map.
+      if(state!=='resuming'||expected!==generation)return false;
+      generation++;state='suspended';detachActive();section.hidden=true;
+      if(!preserveMap){attemptMap?.stop?.();if(map===attemptMap)map=null;}
+      status.textContent=message;return false;
+    }
+    async function resume(){
+      if(state!=='suspended')return false;
+      state='resuming';const expected=generation;
+      const session=await validatedSession();
+      if(state!=='resuming'||expected!==generation)return false;
+      if(!session||(ownerBinding&&!sameBinding(ownerBinding,session))){
+        return failedResume(expected,map,'Manager access changed. Reopen the Dashboard Map from your signed-in manager session.');
+      }
+      if(!ownerBinding)ownerBinding=sessionBinding(session);
+      owner=session;updateNavigation();
+      let attemptMap=map;
+      const reusedMap=!!attemptMap;
+      try{
+        if(!attemptMap){attemptMap=renderer.create({section,auth});map=attemptMap;
+          if(!await attemptMap.init())return failedResume(expected,attemptMap,'Approved map assets unavailable; no cleaning status shown.');}
+        else if(!await attemptMap.resume())
+          return failedResume(expected,attemptMap,'Approved map assets unavailable; no cleaning status shown.',{preserveMap:true});
+        if(state!=='resuming'||expected!==generation)return false;
+        if(!sameBinding(ownerBinding,currentSession())||!attemptMap.checkSession())
+          return failedResume(expected,attemptMap,'Manager access changed. Reopen the Dashboard Map from your signed-in manager session.');
+        state='active';section.hidden=false;operations?.activate(attemptMap);attachActive();void refresh();return true;
+      }catch{
+        return failedResume(expected,attemptMap,'Approved map assets unavailable; no cleaning status shown.',
+          {preserveMap:reusedMap});
+      }
+    }
+    async function init(){
+      if(state==='suspended')return resume();
+      if(state!=='new')return false;
+      state='initializing';bindLifecycle();const expected=generation;
+      const session=await validatedSession();
+      if(state!=='initializing'||expected!==generation)return false;
+      if(!session){state='new';section.hidden=true;status.textContent='Manager sign-in required for Dashboard Map.';return false;}
+      owner=session;ownerBinding=sessionBinding(session);updateNavigation();
+      try{
+        map=renderer.create({section,auth});
+        if(!await map.init()){
+          if(state==='initializing'&&expected===generation){state='new';map.stop?.();map=null;}
+          return false;
+        }
+        if(state!=='initializing'||expected!==generation||!sameBinding(ownerBinding,currentSession())||!map.checkSession())return false;
+        state='active';section.hidden=false;operations?.activate(map);attachActive();void refresh();return true;
+      }catch{
+        if(state==='initializing'&&expected===generation){state='new';section.hidden=true;
+          map?.stop?.();map=null;status.textContent='Approved map assets unavailable; no cleaning status shown.';}
+        return false;
+      }
+    }
+    return Object.freeze({init,refresh,resume,suspend,stop,checkPrincipal});
+  }
+  const api=Object.freeze({create,dashboardData});
+  root.MemphisDashboardMapPage=api;
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;
+  if(root.document?.getElementById&&root.document.getElementById('dashboard-map')){
+    const section=root.document.getElementById('dashboard-map');
+    const status=root.document.getElementById('map-page-status');
+    const operations=root.MemphisOperationsDashboard?.create();
+    void create({auth:root.MemphisAuth,renderer:root.MemphisDashboardMapRenderer,section,status,operations}).init();
+  }
+})(typeof globalThis!=='undefined'?globalThis:this);

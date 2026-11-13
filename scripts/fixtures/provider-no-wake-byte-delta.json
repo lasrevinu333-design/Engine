@@ -1,0 +1,32 @@
+{
+  "schema": "custodial.notification-no-wake-delta.v1",
+  "base": "793aa7e831b0acb477c076edb6a5c649f8873b32",
+  "path": "memphis-device-reminders.js",
+  "name": "memphis-device-reminders.js",
+  "prior_sha256": "b782d86c472b720bce028beeff6b3cdf845ab5a47cbafadd492f575d14591d5c",
+  "current_sha256": "24edd4dc7ad983ec21d8761dc319bba2c007b887da20cb6589c439fa010c8c78",
+  "hunks": [
+    {
+      "start": 449,
+      "before": [
+        "    try { if (window.fully?.turnScreenOn) window.fully.turnScreenOn(); } catch (_err) {}",
+        "    try { if (window.fully?.bringToForeground) window.fully.bringToForeground(); } catch (_err) {}"
+      ],
+      "after": [
+        "    // Notification audio never changes display sleep or launches a surface.",
+        "    // The existing pending card remains for the owner's later manual wake."
+      ]
+    },
+    {
+      "start": 480,
+      "before": [
+        "      try{window.fully?.turnScreenOn?.();}catch{}",
+        "      try{window.fully?.bringToForeground?.();}catch{}"
+      ],
+      "after": [
+        "      // Exact native audio admission is not permission to wake the display.",
+        "      // Keep its current sleep state; manual wake must not replay this episode."
+      ]
+    }
+  ]
+}

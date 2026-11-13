@@ -1,0 +1,241 @@
+{
+  "schema": "custodial.provider-release-admission-byte-deltas.v1",
+  "base": "dffd34ca2691a0a6fc7d2fa6bda8387c55328beb",
+  "production_profile": false,
+  "files": [
+    {
+      "name": "CustodialNativeRuntime.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java",
+      "prior_sha256": "c78871f54e2a85f06f90fa89685c0e7c11f88510e50e2ffd5af05fc2c117686c",
+      "current_sha256": "8d9e8b657a3375ff30d0c414b04e6ae17896bbc0bebfe54339c13d714cb88fd1",
+      "hunks": [
+        {
+          "old_start": 65,
+          "old_count": 0,
+          "new_start": 66,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        NativeProviderReleaseAdmission.Selected admitted = qualifiedRelease(application);",
+            "        return localOwner(admitted == null ? NativeProviderTime.Profiles.NONE : admitted.profiles(), admitted != null);",
+            "    }",
+            "    private NativeProviderRuntimeOwner localOwner(NativeProviderTime.Profiles profiles, boolean admitted) {"
+          ]
+        },
+        {
+          "old_start": 67,
+          "old_count": 1,
+          "new_start": 71,
+          "new_count": 1,
+          "before": [
+            "        if (localProviderOwner == null && AndroidProviderStore.hasRetainedState(application)) {"
+          ],
+          "after": [
+            "        if (localProviderOwner == null && (admitted || AndroidProviderStore.hasRetainedState(application))) {"
+          ]
+        },
+        {
+          "old_start": 73,
+          "old_count": 1,
+          "new_start": 77,
+          "new_count": 1,
+          "before": [
+            "                delivery = new NativeProviderRuntimeOwner.Delivery(NativeProviderTime.Profiles.NONE, AndroidProviderPlatform.read(), readings,"
+          ],
+          "after": [
+            "                delivery = new NativeProviderRuntimeOwner.Delivery(profiles, AndroidProviderPlatform.read(), readings,"
+          ]
+        },
+        {
+          "old_start": 140,
+          "old_count": 3,
+          "new_start": 144,
+          "new_count": 19,
+          "before": [
+            "    /** Component startup must not instantiate the vault/provider stores before admission.",
+            "     * This is deliberately hard suspended, not a JS/env/preference feature flag. Replace only",
+            "     * when the qualified clock, removal fence, transport and presentation owners are complete. */"
+          ],
+          "after": [
+            "    /** Read compiled inputs and immutable packaged identity before constructing",
+            "     * any vault/provider namespace. Empty release inputs remain suspended. */",
+            "    private static NativeProviderReleaseAdmission.Selected qualifiedRelease(Context context) {",
+            "        if (!NativeProviderReleaseAdmission.hasCompiledInputs()) return null;",
+            "        try {",
+            "            return NativeProviderReleaseAdmission.compiled(AndroidProviderPlatform.read(), AndroidProviderAppIdentity.read(context));",
+            "        } catch (VaultFailure | RuntimeException unavailable) { return null; }",
+            "    }",
+            "    private static NativeProviderRuntimeOwner qualifiedOwner(Context context) {",
+            "        NativeProviderReleaseAdmission.Selected admitted = qualifiedRelease(context);",
+            "        try {",
+            "            return NativeProviderReleaseAdmission.open(admitted, profiles -> {",
+            "                CustodialNativeRuntime runtime = get(context);",
+            "                synchronized (runtime.engine) { synchronized (runtime.providerCoordinator) {",
+            "                    return runtime.localOwner(profiles, true);",
+            "                } }",
+            "            });",
+            "        } catch (VaultFailure | RuntimeException unavailable) { return null; }",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 144,
+          "old_count": 1,
+          "new_start": 164,
+          "new_count": 2,
+          "before": [
+            "        return NativeProviderComponentRuntime.SUSPENDED;"
+          ],
+          "after": [
+            "        NativeProviderRuntimeOwner owner = qualifiedOwner(context);",
+            "        return owner == null ? NativeProviderComponentRuntime.SUSPENDED : owner;"
+          ]
+        },
+        {
+          "old_start": 147,
+          "old_count": 1,
+          "new_start": 168,
+          "new_count": 2,
+          "before": [
+            "        return NativeProviderIngressRuntime.SUSPENDED;"
+          ],
+          "after": [
+            "        NativeProviderRuntimeOwner owner = qualifiedOwner(context);",
+            "        return owner == null ? NativeProviderIngressRuntime.SUSPENDED : owner;"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderCompositionTest.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderCompositionTest.java",
+      "prior_sha256": "03637b070e9d07ffdc18ea86277d0daa8a37e26d00bb39a004bfe9cd7d3bb758",
+      "current_sha256": "0479a83424b45b20cc8cd786fa874fe597431697fd3359ccfff48341e973dbf6",
+      "hunks": [
+        {
+          "old_start": 100,
+          "old_count": 0,
+          "new_start": 101,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "            return reconstruct(actual->profile);",
+            "        }",
+            "        NativeProviderRuntimeOwner reconstruct(NativeProviderTime.Profiles profiles)throws Exception{"
+          ]
+        },
+        {
+          "old_start": 140,
+          "old_count": 1,
+          "new_start": 143,
+          "new_count": 1,
+          "before": [
+            "                new NativeProviderRuntimeOwner.Delivery(actual->profile,NativeProviderTimeTest.platform(),readings,()->app,http,jobs,(registration,attempt)->{"
+          ],
+          "after": [
+            "                new NativeProviderRuntimeOwner.Delivery(profiles,NativeProviderTimeTest.platform(),readings,()->app,http,jobs,(registration,attempt)->{"
+          ]
+        },
+        {
+          "old_start": 287,
+          "old_count": 0,
+          "new_start": 291,
+          "new_count": 83,
+          "before": [],
+          "after": [
+            "    static NativeProviderReleaseAdmission.Release release(NativeProviderTime.Profile profile) throws Exception {",
+            "        NativeProviderAppIdentity app = NativeProviderJournalTest.app();",
+            "        return new NativeProviderReleaseAdmission.Release(app.versionCode, app.versionName, profile, \"b\".repeat(64), \"c\".repeat(64));",
+            "    }",
+            "    static NativeProviderReleaseAdmission.Selected selected(NativeProviderTime.Profile profile) throws Exception {",
+            "        return NativeProviderReleaseAdmission.select(new NativeProviderReleaseAdmission.Release[]{release(profile)},",
+            "            NativeProviderTimeTest.platform(), NativeProviderJournalTest.app());",
+            "    }",
+            "    @Test public void missingWrongAmbiguousOrUnpackagedInputsNeverConstructOwner() throws Exception {",
+            "        NativeProviderTime.Profile profile = NativeProviderTimeTest.profile(0,0,900_000_000_000L);",
+            "        NativeProviderReleaseAdmission.Release r = release(profile);",
+            "        NativeProviderReleaseAdmission.Release[][] rows = {null, new NativeProviderReleaseAdmission.Release[0],",
+            "            new NativeProviderReleaseAdmission.Release[]{null}, new NativeProviderReleaseAdmission.Release[]{r,r}};",
+            "        int[] created={0};",
+            "        for(NativeProviderReleaseAdmission.Release[] input:rows) {",
+            "            NativeProviderReleaseAdmission.Selected s=NativeProviderReleaseAdmission.select(input,NativeProviderTimeTest.platform(),NativeProviderJournalTest.app());",
+            "            assertNull(NativeProviderReleaseAdmission.open(s, ignored->{created[0]++;throw new AssertionError(\"must not construct\");}));",
+            "        }",
+            "        for(NativeProviderTime.Platform platform:new NativeProviderTime.Platform[]{null,",
+            "            new NativeProviderTime.Platform(\"wrong\",profile.platform.build,profile.platform.device),",
+            "            new NativeProviderTime.Platform(profile.platform.api,\"wrong\",profile.platform.device),",
+            "            new NativeProviderTime.Platform(profile.platform.api,profile.platform.build,\"wrong\")})",
+            "            assertNull(NativeProviderReleaseAdmission.select(new NativeProviderReleaseAdmission.Release[]{r},platform,NativeProviderJournalTest.app()));",
+            "        assertNull(NativeProviderReleaseAdmission.select(new NativeProviderReleaseAdmission.Release[]{r},profile.platform,null));",
+            "        assertNull(NativeProviderReleaseAdmission.select(new NativeProviderReleaseAdmission.Release[]{r},profile.platform,NativeProviderAppIdentityTest.identity(54)));",
+            "        NativeProviderAppIdentity wrongName=NativeProviderAppIdentity.fromPackaged(NativeProviderAppIdentity.PACKAGE,\"different\",53,NativeProviderAppIdentityTest.packaged(53));",
+            "        assertNull(NativeProviderReleaseAdmission.select(new NativeProviderReleaseAdmission.Release[]{r},profile.platform,wrongName));",
+            "        assertEquals(0,created[0]);assertFalse(NativeProviderReleaseAdmission.hasCompiledInputs());",
+            "        assertNull(NativeProviderReleaseAdmission.compiled(profile.platform,NativeProviderJournalTest.app()));",
+            "    }",
+            "    @Test public void immutableSelectedProfileDoesNotFollowCallerArrayAndStillChecksActualPlatform() throws Exception {",
+            "        NativeProviderTime.Profile p=NativeProviderTimeTest.profile(0,0,900_000_000_000L);",
+            "        NativeProviderReleaseAdmission.Release[] input={release(p)};",
+            "        NativeProviderReleaseAdmission.Selected s=NativeProviderReleaseAdmission.select(input,p.platform,NativeProviderJournalTest.app());",
+            "        input[0]=null;assertSame(p,s.profiles().select(p.platform));",
+            "        assertNull(s.profiles().select(new NativeProviderTime.Platform(p.platform.api,p.platform.build,\"foreign\")));",
+            "        for(String invalid:new String[]{null,\"\",\"A\".repeat(64),\"b\".repeat(63)}) {",
+            "            ProviderRecordStoreTest.failure(\"custodial_provider_release_not_admitted\",()->new NativeProviderReleaseAdmission.Release(53,\"1\",p,invalid,\"c\".repeat(64)));",
+            "            ProviderRecordStoreTest.failure(\"custodial_provider_release_not_admitted\",()->new NativeProviderReleaseAdmission.Release(53,\"1\",p,\"b\".repeat(64),invalid));",
+            "        }",
+            "        ProviderRecordStoreTest.failure(\"custodial_provider_release_not_admitted\",()->NativeProviderReleaseAdmission.open(s,null));",
+            "    }",
+            "    static NativeProviderPayload payload(NativeProviderCompositionTest.Composition x, boolean event) throws Exception {",
+            "        Map<String,String> data=new TreeMap<>(NativeProviderPayloadTest.requiredKind(event));",
+            "        Map<String,String> bound=NativeProviderPayloadTest.lunch(x.f.prepared);",
+            "        for(String field:new String[]{\"generation_id\",\"principal_digest\",\"token_digest\",\"receipt_credential_id\",\"receipt_employee_id\",\"receipt_device_id\",\"receipt_assignment_epoch\"})data.put(field,bound.get(field));",
+            "        if(event)data.put(\"notification_key\",\"event:\"+data.get(\"event_id\")+\":\"+data.get(\"event_revision\")+\":\"+data.get(\"service_date\")+\":\"+data.get(\"receipt_employee_id\")+\":\"+data.get(\"recipient_device_uuid\")+\":\"+data.get(\"receipt_assignment_epoch\")+\":\"+data.get(\"notification_kind\"));",
+            "        return NativeProviderPayloadTest.accept(NativeProviderPayloadTest.signed(data));",
+            "    }",
+            "    @Test public void selectedFixtureOwnsActualIngressInventoryMirrorAndOriginalOpenAckForBothRequiredKinds() throws Exception {",
+            "        for(boolean legacy:new boolean[]{false,true})for(boolean event:new boolean[]{false,true}) {",
+            "            NativeProviderCompositionTest.Composition x=new NativeProviderCompositionTest.Composition(legacy);",
+            "            x.owner=NativeProviderReleaseAdmission.open(selected(x.profile),profiles->{",
+            "                try{return x.reconstruct(profiles);}catch(Exception e){throw new VaultFailure(\"synthetic_fixture_failed\",e);}",
+            "            });",
+            "            NativeProviderPayload p=payload(x,event);x.inventoryRows=new NativeProviderPayload[]{p};",
+            "            int[] compatibility={0};NativeProviderFirebaseDispatch.message(x.owner,NativeProviderPayloadTest.PROJECT,",
+            "                NativeProviderPayloadTest.PROJECT,false,p.data(),()->compatibility[0]++);",
+            "            assertEquals(0,compatibility[0]);assertEquals(0,x.surface.shows);",
+            "            x.sync();assertEquals(1,x.surface.shows);",
+            "            Object plugin=new Object();Map<String,Object> attachment=x.owner.mirrorAttach(plugin,(incarnation,revision)->{});",
+            "            String id=(String)attachment.get(\"attachment_id\");x.owner.mirrorStopped(plugin,id);",
+            "            JSONObject claim=x.owner.mirrorClaimNext(plugin,id);assertNotNull(claim);",
+            "            assertEquals(p.data(),NativeProviderPayload.fromInventory(claim.getJSONObject(\"payload\")).data());assertTrue(claim.getBoolean(\"play_audio\"));",
+            "            String claimId=claim.getString(\"claim_id\");x.owner.mirrorApply(plugin,id,claimId,\"displayed\");",
+            "            x.owner.mirrorApply(plugin,id,claimId,\"audio_started\");x.owner.mirrorApply(plugin,id,claimId,\"audio_completed\");",
+            "            x.owner.mirrorApply(plugin,id,claimId,\"opened\");String original=x.inbox(p.recordId).getString(\"opened_event_id\");",
+            "            assertFalse(original.isEmpty());assertTrue(x.inbox(p.recordId).isNull(\"acknowledged_event_id\"));",
+            "            x.owner.mirrorApply(plugin,id,claimId,\"acknowledged\");assertEquals(original,x.inbox(p.recordId).getString(\"opened_event_id\"));",
+            "            assertFalse(x.inbox(p.recordId).isNull(\"acknowledged_event_id\"));",
+            "            x.owner.mirrorDetach(plugin,id);assertEquals(0,compatibility[0]);",
+            "        }",
+            "    }",
+            "    @Test public void absentProfileOwnerRefusesRequiredIngressWithoutStoreNetworkOrEffects() throws Exception {",
+            "        for(boolean event:new boolean[]{false,true}) {",
+            "            NativeProviderCompositionTest.Composition x=new NativeProviderCompositionTest.Composition(false);",
+            "            x.owner=x.reconstruct(NativeProviderTime.Profiles.NONE);NativeProviderPayload p=payload(x,event);",
+            "            Map<String,Object> before=new HashMap<>(x.f.provider.storage.memory.raw);int[] compatibility={0};",
+            "            ProviderRecordStoreTest.failure(\"custodial_provider_clock_unqualified\",()->NativeProviderFirebaseDispatch.message(x.owner,",
+            "                NativeProviderPayloadTest.PROJECT,NativeProviderPayloadTest.PROJECT,false,p.data(),()->compatibility[0]++));",
+            "            assertEquals(before,x.f.provider.storage.memory.raw);assertTrue(x.paths.isEmpty());assertEquals(0,x.surface.shows);assertEquals(0,compatibility[0]);",
+            "        }",
+            "    }"
+          ]
+        }
+      ]
+    }
+  ],
+  "pinned": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReleaseAdmission.java",
+      "sha256": "e4813fe5c6a4b42ec52dae0fa9e24163dfeebd8504c041f7bfa133d4f0ddf91e"
+    }
+  ]
+}
+

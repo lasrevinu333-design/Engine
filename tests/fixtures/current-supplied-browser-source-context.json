@@ -1,0 +1,64 @@
+{
+  "schema": "custodial.synthetic-browser-supplied-source-context.v1",
+  "archive_sha256": "6dfbef995d35b73751591828d14c49e305abada448d20902eeac0f159dc63bde",
+  "production": false,
+  "release_admission": false,
+  "files": [
+    {
+      "name": "credential-store.js",
+      "path": "mobile/src/custodial/credential-store.js",
+      "bytes": 118788,
+      "sha256": "aba6df70ff6a37f90f005be9802a47e27b4b047bec31191015cc805d4e123f2e",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/credential-store.js"
+    },
+    {
+      "name": "native-original-browser-preparation.js",
+      "path": "mobile/src/custodial/native-original-browser-preparation.js",
+      "bytes": 28875,
+      "sha256": "569dc540d206d19ae1274ed066edf4008c00a84c025bda3a3752c87cb7f75773",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/native-original-browser-preparation.js"
+    },
+    {
+      "name": "protected-browser-admission.js",
+      "path": "mobile/src/custodial/protected-browser-admission.js",
+      "bytes": 25504,
+      "sha256": "023c548b2500098ce4bffe49096da349bfa8dd61d9c1ac9046f582999bf619b0",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/protected-browser-admission.js"
+    },
+    {
+      "name": "protected-browser-inventory.js",
+      "path": "mobile/src/custodial/protected-browser-inventory.js",
+      "bytes": 62075,
+      "sha256": "56d4917ee6e04b96dcf891f7c4d1c42d3cbeed17d060ac31471af35984fde826",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/protected-browser-inventory.js"
+    },
+    {
+      "name": "protected-principal.js",
+      "path": "mobile/src/custodial/protected-principal.js",
+      "bytes": 5902,
+      "sha256": "bf17128f92a9104d4febe8e2431c60f93dcdcc57b5e788dc7fdbd3905e0a6d37",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/protected-principal.js"
+    },
+    {
+      "name": "security-keys.js",
+      "path": "mobile/src/custodial/security-keys.js",
+      "bytes": 941,
+      "sha256": "24883edc7a15e242f6a528990f944204151b56622c60db9b90ac46c41f7fc0b2",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/security-keys.js"
+    },
+    {
+      "name": "security-runtime.js",
+      "path": "mobile/src/custodial/security-runtime.js",
+      "bytes": 7172,
+      "sha256": "571312ddd2a68cf6d837b47a4862888b1d582938b6e922a14a0a3260df43c0e7",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/security-runtime.js"
+    },
+    {
+      "name": "storage-firewall.js",
+      "path": "mobile/src/custodial/storage-firewall.js",
+      "bytes": 16854,
+      "sha256": "283cee9a24a2b92fcf26fc43d03c476a531c470e7fc704c32e0f0554099a8c73",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/storage-firewall.js"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+/* Terracotta presentation adapter for mobile/src/web-install/manager/offline.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] body {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] p {color:var(--trail-ink)
+    }
+}

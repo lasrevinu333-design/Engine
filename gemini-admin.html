@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-trail-theme="terracotta" data-trail-section="insights">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
+  <title>Gemini Console</title>
+  <link rel="stylesheet" href="./gemini-console.css?v=release-2026.07.19.custodial-v3.12">
+  <link rel="icon" href="./assets/trail-v1/insights.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/gemini-admin.css">
+</head>
+<body data-memphis-context="manager">
+  <a class="gemini-global-back mz-back-link" data-mz-back href="./start_page1.html">Back</a>
+  <section id="auth-gate" class="auth-gate" aria-live="polite">
+    <div class="auth-card">
+      <h1 class="trailPageTitle">Gemini Console</h1>
+      <p id="auth-status">Verifying this trusted Ops Manager device…</p>
+    </div>
+  </section>
+
+  <div id="app" class="app" hidden>
+    <aside id="sidebar" class="sidebar" aria-label="Conversation history">
+      <div class="sidebar-head">
+        <h1>Gemini Console</h1>
+        <button id="sidebar-close" class="icon-button mobile-only" type="button" aria-label="Close conversation history">×</button>
+      </div>
+      <button id="new-chat" class="button primary full" type="button">New Chat</button>
+      <label class="search-label" for="search-input">Search conversations</label>
+      <div class="search-row">
+        <input id="search-input" type="search" maxlength="200" autocomplete="off" placeholder="Search">
+        <button id="search-button" class="icon-button" type="button" aria-label="Search">⌕</button>
+      </div>
+      <div id="conversation-list" class="conversation-list" role="list"></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button id="sidebar-open" class="icon-button mobile-only" type="button" aria-label="Open conversation history">☰</button>
+        <div class="title-block">
+          <h2 id="conversation-title">New chat</h2>
+          <div id="status" class="status" aria-live="polite">Ready</div>
+        </div>
+        <div class="top-actions">
+          <button id="rename-chat" class="icon-button" type="button" aria-label="Rename conversation">✎</button>
+          <button id="delete-chat" class="icon-button danger" type="button" aria-label="Delete conversation">⌫</button>
+        </div>
+      </header>
+
+      <section id="transcript" class="transcript" aria-label="Conversation transcript" aria-live="polite">
+        <div id="welcome" class="welcome">
+          <div class="gemini-mark" aria-hidden="true">✦</div>
+          <h2>How can I help?</h2>
+          <p>Ask a question, attach evidence, request an audit, or continue a previous conversation.</p>
+        </div>
+      </section>
+
+      <section class="composer-wrap" aria-label="Message composer">
+        <div id="drop-zone" class="composer">
+          <div id="attachment-list" class="attachment-list" aria-live="polite"></div>
+          <textarea id="message-input" rows="2" maxlength="30000" placeholder="Message Gemini Console" aria-label="Message Gemini Console"></textarea>
+          <div class="composer-actions">
+            <div class="left-actions">
+              <button id="attach-button" class="icon-button" type="button" aria-label="Attach files">＋</button>
+              <span class="attachment-hint">Attach files, drag them here, or paste an image</span>
+            </div>
+            <div class="right-actions">
+              <button id="stop-button" class="button secondary" type="button" hidden>Stop Response</button>
+              <button id="send-button" class="button primary" type="button">Send</button>
+            </div>
+          </div>
+        </div>
+        <p class="footnote">Attachments are treated as untrusted evidence. Only Eric's direct authenticated message can authorize a proposed production repair.</p>
+      </section>
+    </main>
+  </div>
+
+  <input id="file-input" type="file" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,text/csv,application/json,.log,.docx">
+  <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./gemini-console.js?v=release-2026.07.19.custodial-v3.12"></script>
+</body>
+</html>

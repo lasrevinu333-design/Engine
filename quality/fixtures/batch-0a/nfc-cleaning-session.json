@@ -1,0 +1,46 @@
+{
+  "fixture_version": "scan.nfc-cleaning-session.v1",
+  "contract": "scan.v2",
+  "scan": {
+    "source": "ambient-nfc",
+    "raw_hardware_device_id": "f6cd1bb6-80852ca3",
+    "canonical_device_id": "KIOSK_04",
+    "location_code": "TETM",
+    "location_id": "40000000-0000-4000-8000-000000000001",
+    "assigned_employee_id": "40000000-0000-4000-8000-000000000002",
+    "assignment_epoch": 7,
+    "scanned_at": "2026-07-23T08:00:00-05:00"
+  },
+  "operations": [
+    {
+      "type": "record_scan_event",
+      "operation_id": "40000000-0000-4000-8000-000000000003",
+      "event_type": "scan_received"
+    },
+    {
+      "type": "start_session",
+      "operation_id": "40000000-0000-4000-8000-000000000004",
+      "client_session_id": "40000000-0000-4000-8000-000000000004"
+    },
+    {
+      "type": "finish_session",
+      "operation_id": "40000000-0000-4000-8000-000000000005",
+      "client_session_id": "40000000-0000-4000-8000-000000000004"
+    },
+    {
+      "type": "commit_workflow",
+      "operation_id": "40000000-0000-4000-8000-000000000006",
+      "client_session_id": "40000000-0000-4000-8000-000000000004",
+      "client_completion_id": "40000000-0000-4000-8000-000000000006"
+    }
+  ],
+  "expected": {
+    "session_uuid": "40000000-0000-4000-8000-000000000004",
+    "session_status": "closed",
+    "session_rows": 1,
+    "completion_rows": 1,
+    "uses_canonical_device_id": true,
+    "employee_selection_required": false,
+    "duplicate_scan_does_not_create_second_session": true
+  }
+}

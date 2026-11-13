@@ -1,0 +1,31 @@
+{
+  "schema": "custodial.frontend-source311-binding.v1",
+  "scope": "AUDITED_FRESH311_AND_POPULATED_ROLLBACK_EVIDENCE_COMPATIBILITY_ONLY",
+  "backend_evidence_commit": "11e273afcb588c46bb37a9ef8c96b0ce8b72ec0e",
+  "canonical_source_count": 311,
+  "schema_fingerprint": "fea262d4eb49204e7c920662cef476c36015c28330435cafd238a358defd79dc",
+  "schema_transition": {
+    "transition_id": "custodial-existing235-to-current311-20261104",
+    "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "to_fingerprint": "fea262d4eb49204e7c920662cef476c36015c28330435cafd238a358defd79dc",
+    "expires_at": "2026-11-05T01:00:00Z"
+  },
+  "fresh_catalog_evidence": {
+    "path": "release/schema-evidence/SOURCE311_AUDITED_FRESH_CATALOG.json",
+    "sha256": "927f3e36d8ad4b75082162c2f772bc297625fa99c55994201bf647ace8016125",
+    "bytes": 8314658,
+    "scope": "OWNED_FRESH_NO_AUTO_CANDIDATE_METADATA_NOT_PRODUCTION_OR_RELEASE_ADMISSION"
+  },
+  "populated_capture": {
+    "run_id": 41749829802,
+    "source_migrations_applied": 177,
+    "original_tables_preserved": 219,
+    "rollback_verified": true,
+    "sha256": "5bf45d00f624f35fb01eb2af77a1b2955ce8421201e61bc4b95bf382901ffd3c"
+  },
+  "preserved_source304_binding_sha256": "7dff142e97c38f786b733f95a600838d72637da2d407b44f49e59043c55dd928",
+  "production": false,
+  "release_admission": false,
+  "frontend_pair_admission": false,
+  "full_program_or_physical_acceptance": false
+}

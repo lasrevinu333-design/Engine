@@ -1,0 +1,1301 @@
+{
+  "snapshot_version": "batch-0a.backend-http-api-baseline.v1",
+  "captured_at": "2026-07-23T19:46:00Z",
+  "purpose": "Read-only HTTP route and contract-version baseline from the exact deployed backend source. Contains no request bodies, response bodies, credentials, or production row data.",
+  "source": {
+    "repository": "lasrevinu333-design/memphis-zoo-mcp",
+    "commit": "ac70f68c78cfcaff11cf9834620e0b2775a339dd",
+    "files": [
+      {
+        "path": "docs/routes.md",
+        "bytes": 7455
+      },
+      {
+        "path": "src/index.js",
+        "bytes": 120538
+      },
+      {
+        "path": "src/events-api.js",
+        "bytes": 56894
+      },
+      {
+        "path": "src/messaging-api.js",
+        "bytes": 102172
+      },
+      {
+        "path": "src/schedule-api.js",
+        "bytes": 225698
+      },
+      {
+        "path": "src/manager-notifications.js",
+        "bytes": 23954
+      },
+      {
+        "path": "src/operational-analytics-api.js",
+        "bytes": 14537
+      },
+      {
+        "path": "src/gemini-console-api.js",
+        "bytes": 40224
+      },
+      {
+        "path": "src/custodial-employee-admin.js",
+        "bytes": 21482
+      },
+      {
+        "path": "src/routes/index.js",
+        "bytes": 322
+      },
+      {
+        "path": "src/routes/moxie.js",
+        "bytes": 90449
+      }
+    ]
+  },
+  "contract_versions": {
+    "scan": "scan.v2",
+    "dashboard": "dashboard.v1",
+    "messaging": "messaging.v5",
+    "schedule": "schedule.v2",
+    "operational_analytics": "operational-analytics.v1",
+    "guest_reports": "guest-reports.v1",
+    "feedback": "feedback.v1",
+    "ops_manager_auth": "ops-manager-auth.v5.named-leadership",
+    "gemini_console": "gemini-console.v2"
+  },
+  "documented_routes": [
+    {
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "method": "POST",
+      "path": "/admin-api/attendance-update"
+    },
+    {
+      "method": "POST",
+      "path": "/admin-api/bundle"
+    },
+    {
+      "method": "POST",
+      "path": "/admin-api/close-ticket"
+    },
+    {
+      "method": "POST",
+      "path": "/admin-api/force-close-session"
+    },
+    {
+      "method": "GET",
+      "path": "/admin-api/health"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard-api/canary"
+    },
+    {
+      "method": "POST",
+      "path": "/dashboard-api/close-ticket"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard-api/current-attendance"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard-api/guest-cleanliness-issues"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard-api/health"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard-api/summary"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard-api/system-feedback"
+    },
+    {
+      "method": "GET",
+      "path": "/feedback-api/health"
+    },
+    {
+      "method": "POST",
+      "path": "/feedback-api/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/guest-api/health"
+    },
+    {
+      "method": "GET",
+      "path": "/guest-api/locations/:locationCode"
+    },
+    {
+      "method": "POST",
+      "path": "/guest-api/report-cleanliness"
+    },
+    {
+      "method": "GET",
+      "path": "/mcp"
+    },
+    {
+      "method": "POST",
+      "path": "/mcp"
+    },
+    {
+      "method": "GET",
+      "path": "/mcp-tools.json"
+    },
+    {
+      "method": "POST",
+      "path": "/messages"
+    },
+    {
+      "method": "POST",
+      "path": "/messaging-api/broadcast"
+    },
+    {
+      "method": "GET",
+      "path": "/messaging-api/health"
+    },
+    {
+      "method": "GET",
+      "path": "/messaging-api/me/by-device"
+    },
+    {
+      "method": "POST",
+      "path": "/messaging-api/memphis/message"
+    },
+    {
+      "method": "POST",
+      "path": "/messaging-api/memphis/thread"
+    },
+    {
+      "method": "POST",
+      "path": "/messaging-api/thread/:threadId/delete"
+    },
+    {
+      "method": "POST",
+      "path": "/messaging-api/thread/:threadId/message"
+    },
+    {
+      "method": "GET",
+      "path": "/messaging-api/thread/:threadId/messages"
+    },
+    {
+      "method": "POST",
+      "path": "/messaging-api/thread/:threadId/read"
+    },
+    {
+      "method": "POST",
+      "path": "/messaging-api/thread/direct"
+    },
+    {
+      "method": "POST",
+      "path": "/messaging-api/thread/group"
+    },
+    {
+      "method": "GET",
+      "path": "/messaging-api/threads"
+    },
+    {
+      "method": "GET",
+      "path": "/messaging-api/users"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/chat"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/chat/state"
+    },
+    {
+      "method": "PUT",
+      "path": "/moxie/chat/state"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/contacts"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/contacts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/moxie/contacts/:id"
+    },
+    {
+      "method": "PUT",
+      "path": "/moxie/contacts/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/contacts/suggested/:id/confirm"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/contacts/suggested/:id/dismiss"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/health"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/log"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/log/note"
+    },
+    {
+      "method": "DELETE",
+      "path": "/moxie/log/note/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/log/reminder"
+    },
+    {
+      "method": "DELETE",
+      "path": "/moxie/log/reminder/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/log/reminder/:id/complete"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/log/suggested/:id/confirm"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/log/suggested/:id/dismiss"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/login"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/login"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/password"
+    },
+    {
+      "method": "POST",
+      "path": "/moxie/password"
+    },
+    {
+      "method": "GET",
+      "path": "/moxie/reminders"
+    },
+    {
+      "method": "GET",
+      "path": "/scan-api/health"
+    },
+    {
+      "method": "POST",
+      "path": "/scan-api/rpc"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/absence-preview"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/absence-publish"
+    },
+    {
+      "method": "GET",
+      "path": "/schedule-api/current-owner"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/generate-daily"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/generate-range"
+    },
+    {
+      "method": "GET",
+      "path": "/schedule-api/generation-window"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/locations/:locationId/workload-settings"
+    },
+    {
+      "method": "GET",
+      "path": "/schedule-api/locations/workload-settings"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/restroom-rebalance/run"
+    },
+    {
+      "method": "GET",
+      "path": "/schedule-api/restroom-rebalance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/schedule-api/sch2/explain"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/sch2/preview"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/sch2/publish"
+    },
+    {
+      "method": "POST",
+      "path": "/schedule-api/sch2/rollback"
+    },
+    {
+      "method": "GET",
+      "path": "/schedule-api/sch2/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/sse"
+    },
+    {
+      "method": "GET",
+      "path": "/status/deep"
+    },
+    {
+      "method": "GET",
+      "path": "/version"
+    }
+  ],
+  "source_route_declarations": [
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "PUT",
+      "declared_path": "/custodial-admin-api/devices/:deviceId/assignment"
+    },
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "POST",
+      "declared_path": "/custodial-admin-api/devices/:deviceId/enrollment-code"
+    },
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "GET",
+      "declared_path": "/custodial-admin-api/employee-phones"
+    },
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "POST",
+      "declared_path": "/custodial-admin-api/employees"
+    },
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "PATCH",
+      "declared_path": "/custodial-admin-api/employees/:employeeId/status"
+    },
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "POST",
+      "declared_path": "/custodial-device-auth/enroll"
+    },
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "GET",
+      "declared_path": "/leadership-api/phone-assignments"
+    },
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "POST",
+      "declared_path": "/leadership-api/phone-assignments/:deviceId"
+    },
+    {
+      "file": "src/custodial-employee-admin.js",
+      "method": "POST",
+      "declared_path": "/leadership-api/phone-assignments/:deviceId/enrollment-code"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "POST",
+      "declared_path": "/"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "DELETE",
+      "declared_path": "/:eventId"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "PUT",
+      "declared_path": "/:eventId"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/coverage-locations"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/coverage-locations"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/event-venues"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/event-venues"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/health"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/health"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/location-groups"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "GET",
+      "declared_path": "/location-groups"
+    },
+    {
+      "file": "src/events-api.js",
+      "method": "POST",
+      "declared_path": "/parse-ai"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "DELETE",
+      "declared_path": "/attachments/:attachmentId"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "GET",
+      "declared_path": "/attachments/:attachmentId"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "GET",
+      "declared_path": "/conversations"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "POST",
+      "declared_path": "/conversations"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "DELETE",
+      "declared_path": "/conversations/:conversationId"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "PATCH",
+      "declared_path": "/conversations/:conversationId"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "POST",
+      "declared_path": "/conversations/:conversationId/attachments"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "GET",
+      "declared_path": "/conversations/:conversationId/messages"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "POST",
+      "declared_path": "/conversations/:conversationId/messages/stream"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "GET",
+      "declared_path": "/conversations/:conversationId/repair-state"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "GET",
+      "declared_path": "/health"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "POST",
+      "declared_path": "/messages/:messageId/cancel"
+    },
+    {
+      "file": "src/gemini-console-api.js",
+      "method": "GET",
+      "declared_path": "/search"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/admin-api/attendance-update"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/admin-api/bundle"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/admin-api/close-ticket"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/admin-api/force-close-session"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/admin-api/health"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/dashboard-api/canary"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/dashboard-api/close-ticket"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/dashboard-api/current-attendance"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/dashboard-api/guest-cleanliness-issues"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/dashboard-api/health"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/dashboard-api/summary"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/dashboard-api/system-feedback"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/dashboard-api/work-session-alerts"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/feedback-api/acknowledge/:feedbackId"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/feedback-api/acknowledge/:feedbackId"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/feedback-api/health"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/feedback-api/image/:feedbackId"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/feedback-api/reminders/run"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/feedback-api/submit"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/guest-api/health"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/guest-api/locations/:locationCode"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/guest-api/locations/:locationCode/issues"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/guest-api/report-cleanliness"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/health/dependencies"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/mcp"
+    },
+    {
+      "file": "src/index.js",
+      "method": "OPTIONS",
+      "declared_path": "/mcp"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/mcp"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/messages"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/release-manifest"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/scan-api/health"
+    },
+    {
+      "file": "src/index.js",
+      "method": "POST",
+      "declared_path": "/scan-api/rpc"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/schedule-api/health"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/sse"
+    },
+    {
+      "file": "src/index.js",
+      "method": "GET",
+      "declared_path": "/version"
+    },
+    {
+      "file": "src/manager-notifications.js",
+      "method": "GET",
+      "declared_path": "/manager-notifications-api/client-config/:platform"
+    },
+    {
+      "file": "src/manager-notifications.js",
+      "method": "GET",
+      "declared_path": "/manager-notifications-api/health"
+    },
+    {
+      "file": "src/manager-notifications.js",
+      "method": "GET",
+      "declared_path": "/manager-notifications-api/preferences"
+    },
+    {
+      "file": "src/manager-notifications.js",
+      "method": "PUT",
+      "declared_path": "/manager-notifications-api/preferences"
+    },
+    {
+      "file": "src/manager-notifications.js",
+      "method": "DELETE",
+      "declared_path": "/manager-notifications-api/register"
+    },
+    {
+      "file": "src/manager-notifications.js",
+      "method": "POST",
+      "declared_path": "/manager-notifications-api/register"
+    },
+    {
+      "file": "src/manager-notifications.js",
+      "method": "POST",
+      "declared_path": "/manager-notifications-api/test"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/broadcast"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/device-event-reminders"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/device-location-status-reminders"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/device-notifications/ack"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/health"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/me/by-device"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/memphis/admin/audit"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/memphis/admin/diagnose"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/memphis/admin/run"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/memphis/admin/runtime"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/memphis/diagnose"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/memphis/message"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/memphis/thread"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/thread/:threadId/delete"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/thread/:threadId/message"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/thread/:threadId/message/:messageId/delete"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/thread/:threadId/messages"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/thread/:threadId/read"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/thread/:threadId/updates"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/thread/direct"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/thread/group"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "POST",
+      "declared_path": "/thread/team"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/threads"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/threads/updates"
+    },
+    {
+      "file": "src/messaging-api.js",
+      "method": "GET",
+      "declared_path": "/users"
+    },
+    {
+      "file": "src/operational-analytics-api.js",
+      "method": "GET",
+      "declared_path": "/analytics-api/cleaning-performance"
+    },
+    {
+      "file": "src/operational-analytics-api.js",
+      "method": "GET",
+      "declared_path": "/analytics-api/health"
+    },
+    {
+      "file": "src/operational-analytics-api.js",
+      "method": "GET",
+      "declared_path": "/analytics-api/inspections"
+    },
+    {
+      "file": "src/operational-analytics-api.js",
+      "method": "POST",
+      "declared_path": "/analytics-api/inspections"
+    },
+    {
+      "file": "src/operational-analytics-api.js",
+      "method": "GET",
+      "declared_path": "/analytics-api/session-facts"
+    },
+    {
+      "file": "src/operational-analytics-api.js",
+      "method": "GET",
+      "declared_path": "/analytics-api/ticket-trends"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/chat"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/chat/state"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "PUT",
+      "declared_path": "/chat/state"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/contacts"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/contacts"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "DELETE",
+      "declared_path": "/contacts/:id"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "PUT",
+      "declared_path": "/contacts/:id"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/contacts/suggested/:id/confirm"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/contacts/suggested/:id/dismiss"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/health"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/health"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/log"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/log/intake"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/log/note"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "DELETE",
+      "declared_path": "/log/note/:id"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/log/reminder"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "DELETE",
+      "declared_path": "/log/reminder/:id"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/log/reminder/:id/complete"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/log/suggested/:id/confirm"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/log/suggested/:id/dismiss"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/login"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/login"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/logout"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/password"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/reminders"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "GET",
+      "declared_path": "/settings"
+    },
+    {
+      "file": "src/routes/moxie.js",
+      "method": "POST",
+      "declared_path": "/settings/password"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/absence-preview"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/absence-publish"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/ai/audit"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/ai/recommendations"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/audit"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/audit/day"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/coverage-templates/export.csv"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/coverall/assignment"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/coverall/slots"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/coverall/slots"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/current-owner"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/day"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/employee-aliases"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/employee-aliases"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "PATCH",
+      "declared_path": "/employee-aliases/:aliasId"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/employees"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/generate-daily"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/generate-range"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/generation-window"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/health"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/location-groups"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/locations/:locationId/workload-settings"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/locations/workload-settings"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/manual-absences/publish"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/manual-absences/return"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/my-day"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/my-day-summary"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/my-schedule"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/pto"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/pto/import"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/pto/import-report"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/pto/parse-report"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/restroom-rebalance/run"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/restroom-rebalance/status"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/sch2/explain"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/sch2/preview"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/sch2/publish"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/sch2/rollback"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/sch2/runs"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/settings/close-time"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "POST",
+      "declared_path": "/settings/close-time"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/shift-templates"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "PATCH",
+      "declared_path": "/shift-templates/metadata"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/today"
+    },
+    {
+      "file": "src/schedule-api.js",
+      "method": "GET",
+      "declared_path": "/work-status"
+    }
+  ],
+  "caveat": "Source declarations in mounted routers are relative to their mount paths. docs/routes.md supplies the full public path inventory and is retained beside source declarations so drift can be detected."
+}

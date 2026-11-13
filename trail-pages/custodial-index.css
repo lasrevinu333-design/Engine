@@ -1,0 +1,109 @@
+/* Terracotta presentation adapter for mobile/src/custodial/index.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] {color-scheme:light
+    }
+    html[data-trail-theme="terracotta"] {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] body {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .hubTitle {border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .weatherCard {border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .attendanceCard {border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .employeeCard {border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .hubTitleSub {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .factLabel {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .employeeLabel {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .weatherMeta {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .attendanceDetails {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] #employee-role {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .activeCleaning {border:2px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .activeCleaning p {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .homeButton {color:inherit
+    }
+    html[data-trail-theme="terracotta"] .homeIcon {background:transparent;border:0;box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .homeLabel {text-shadow:none
+    }
+    html[data-trail-theme="terracotta"] .messengerIcon {border-color:var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .scheduleIcon {border-color:var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .eventsIcon {border-color:var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .feedbackIcon {background:var(--trail-surface);border-color:var(--trail-border);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .homeButton:focus-visible {outline:4px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] .action:focus-visible {outline:4px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] .phoneLock {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .phoneLockPanel {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .phoneLockBrand {color:var(--trail-ink);text-shadow:none
+    }
+    html[data-trail-theme="terracotta"] .phoneLockClock {text-shadow:none
+    }
+    html[data-trail-theme="terracotta"] .phoneLockDate {text-shadow:none
+    }
+    html[data-trail-theme="terracotta"] .phoneLockName {border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink);text-shadow:none
+    }
+    html[data-trail-theme="terracotta"] .phoneUnlock {border:none;background:var(--trail-brand);color:var(--trail-on-brand);box-shadow:var(--trail-shadow)
+    }
+    html[data-trail-theme="terracotta"] .stateCard {border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .stateCard p {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .field select {border:2px solid var(--trail-control-border);background:var(--trail-raised);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .field input {border:2px solid var(--trail-control-border);background:var(--trail-raised);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .action {border:0;background:var(--trail-brand);color:var(--trail-on-brand)
+    }
+    html[data-trail-theme="terracotta"] .action.secondary {background:var(--trail-surface);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .action.danger {background:var(--trail-danger-soft);color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .status.error {color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .status.ok {color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .status.info {color:var(--trail-info)
+    }
+    html[data-trail-theme="terracotta"] .factNote {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .infoGrid [data-stale="true"] {color:var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .phoneReadiness {border:2px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .phoneReadiness.ready {border-color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .phoneReadiness.do_not_use {border-color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .phoneReadiness.needs_manager {border-color:var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .hourlyFacts:focus-visible {outline:3px solid var(--trail-focus);outline-offset:3px
+    }
+    html[data-trail-theme="terracotta"] .hourlyFacts li {border:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .weatherWarnings li {border:1px solid var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .weatherWarnings [data-urgent="true"] {border-width:2px
+    }
+    html[data-trail-theme="terracotta"] .weatherSources {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .weatherSources a {color:var(--trail-muted)
+    }
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Supply request</title><desc id="desc">A lime rounded square with a supply box and plus sign</desc>
+  <rect width="128" height="128" rx="29" fill="#102018"/>
+  <rect x="7" y="7" width="114" height="114" rx="24" fill="#173b2a" stroke="#b7e66a" stroke-width="4"/>
+  <path d="M30 49.5 64 32l34 17.5v39L64 106 30 88.5z" fill="#f7ffd9" stroke="#102018" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M30 49.5 64 67l34-17.5M64 67v39" fill="none" stroke="#102018" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M64 42v18M55 51h18" fill="none" stroke="#6e9f35" stroke-width="5" stroke-linecap="round"/>
+</svg>

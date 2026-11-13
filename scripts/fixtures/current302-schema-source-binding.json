@@ -1,0 +1,87 @@
+{
+  "schema": "custodial.frontend-retained-source302-binding.v1",
+  "scope": "RETAINED_SOURCE_METADATA_AND_COMPATIBILITY_DECLARATIONS_ONLY",
+  "backend_baseline_commit": "89d76f10cec4b92ed3a212b433549c56d4495a4a",
+  "canonical_source_count": 302,
+  "schema_fingerprint": "04e4c3d7abaa71cdf36a164a483ee1fa5efef77ab1711b07a201f515b85248d6",
+  "schema_transition": {
+    "transition_id": "custodial-full-hour-test-20261029",
+    "from_fingerprint": "0096e7c488aca86f1d38b061561696b2d4ac409036f063ffc9f196625b9ee9c2",
+    "to_fingerprint": "04e4c3d7abaa71cdf36a164a483ee1fa5efef77ab1711b07a201f515b85248d6",
+    "expires_at": "2026-11-01T15:12:05Z"
+  },
+  "backend_source_files": [
+    {
+      "path": "supabase/canonical/schema-fingerprint.txt",
+      "bytes": 65,
+      "sha256": "51776a391ef0ce39615de0a11f5c04db2242dcab6c2f60d14ca8832cf13535d8"
+    },
+    {
+      "path": "supabase/canonical/schema-fingerprint-input.json",
+      "bytes": 7832432,
+      "sha256": "ab8f96d2178c74d21ed406b798f6f4be226f11569471b1d62d78bc5fc40cb541"
+    },
+    {
+      "path": "supabase/canonical/migration-replay-order.json",
+      "bytes": 57303,
+      "sha256": "af4d8f471f1e5e6276f3232e396d3511a1ae1767edde093f12fe145f461930a9"
+    },
+    {
+      "path": "release/fresh-only-replay/SOURCE302_SUCCESSOR.json",
+      "bytes": 1882,
+      "sha256": "e4ebb172dbcdfa58690742b9ff09973d33bf35e93ab53d1ebdc41b5a554bcf69"
+    }
+  ],
+  "retained_source302_successor": {
+    "schema": "custodial.ci-fresh-only-exact-source-successor.v1",
+    "scope": "DISPOSABLE_CONSTRUCTION_ONLY_NOT_VENDOR_NORMAL_OR_PRODUCTION_ADMISSION",
+    "predecessor_manifest": {
+      "path": "release/fresh-only-replay/MANIFEST.json",
+      "sha256": "5094a272dcc9f01ccbf043f3de7012e12bdb542606089a0a818629c1ecf86b26",
+      "migrations": 297,
+      "overrides": 22
+    },
+    "predecessor_successor": {
+      "path": "release/fresh-only-replay/SOURCE301_SUCCESSOR.json",
+      "sha256": "dacdeccb363fd648660f5a47cac7ae96d5f5d8793a37ed449c2ec312c7f3ba0e",
+      "bytes": 2169,
+      "source_migrations": 301
+    },
+    "preserved_predecessor_replay": {
+      "path": "release/fresh-only-replay/SOURCE301_REPLAY_ORDER.json",
+      "sha256": "aa3225489f809029f362f9bb2a5ff30f1442a85eb5dda468663b3f0800a9e83b",
+      "bytes": 57121
+    },
+    "source_migrations": 302,
+    "replay_manifest": {
+      "path": "supabase/canonical/migration-replay-order.json",
+      "sha256": "af4d8f471f1e5e6276f3232e396d3511a1ae1767edde093f12fe145f461930a9",
+      "bytes": 57303
+    },
+    "append": {
+      "name": "20261031125902_approved_manual_native_operations.sql",
+      "original": {
+        "path": "supabase/migrations/20261031125902_approved_manual_native_operations.sql",
+        "sha256": "10238c293dda15a52321fa670f3763dd772ab6d976665cf306f737c613696b6d",
+        "bytes": 865020
+      },
+      "selected": {
+        "path": "supabase/migrations/20261031125902_approved_manual_native_operations.sql",
+        "sha256": "10238c293dda15a52321fa670f3763dd772ab6d976665cf306f737c613696b6d",
+        "bytes": 865020
+      },
+      "atomic_mode": "exact-Source-BEGIN-COMMIT"
+    },
+    "observed_empty_source_fingerprint": "04e4c3d7abaa71cdf36a164a483ee1fa5efef77ab1711b07a201f515b85248d6",
+    "source_capture_scope": "ACTUAL_FRESH302_EIGHT_ACTIVE_NORMAL_CONSTRUCTION_AND_READ_ONLY_CATALOG",
+    "full_vendor_NORMAL": false,
+    "expected_fingerprint_authority": null
+  },
+  "new_catalog_observation": false,
+  "production": false,
+  "production_applicability": false,
+  "independent_review": false,
+  "release_admission": false,
+  "frontend_pair_admission": false,
+  "full_program_or_physical_acceptance": false
+}

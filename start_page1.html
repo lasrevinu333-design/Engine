@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-trail-theme="terracotta" data-trail-section="dashboard">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com https://api.weather.gov; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#A45434">
+  <title>Memphis Zoo Operations Hub</title>
+  <link rel="icon" href="./assets/trail-v1/dashboard.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./manager-ux.css">
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12">
+  <link rel="stylesheet" href="./ops-hub.css?v=2026.11.11.hub-weather-details">
+  <link rel="stylesheet" href="./manager-home-weather.css">
+  <link rel="stylesheet" href="./trail-terracotta.css">
+  <link rel="stylesheet" href="./trail-pages/start_page1.css">
+</head>
+<body data-memphis-context="manager">
+  <main class="hubPage">
+    <header class="hubHero uxCard">
+      <div class="hubBrand">
+        <img src="./Zoo_Logo_ui.webp" alt="Memphis Zoo">
+        <div><div class="uxEyebrow">Operations Leadership</div><h1>Memphis Zoo Ops</h1><p>Cleaning, schedules, events, and team communication.</p></div>
+      </div>
+      <div class="managerIdentity">
+        <span id="access-mode" class="accessMode">Restoring manager access…</span>
+        <strong id="manager-name">Operations Leadership</strong>
+        <span id="manager-title" class="uxMuted"></span>
+      </div>
+    </header>
+
+    <section class="snapshotGrid" aria-label="Current operational snapshot">
+      <article class="snapshotCard uxCard">
+        <span class="snapshotLabel">Local time</span><strong id="clock">--:--</strong><small id="date">--</small>
+      </article>
+      <article class="snapshotCard uxCard">
+        <span class="snapshotLabel">Today’s weather</span><strong id="weather-value">--</strong><small id="weather-meta">Loading Memphis weather…</small>
+      </article>
+      <article class="snapshotCard uxCard">
+        <span class="snapshotLabel">Guest entries</span><strong id="attendance-value">--</strong><small id="attendance-meta">Loading gate count…</small>
+      </article>
+    </section>
+
+    <section class="uxCard" id="manager-weather" aria-label="Zoo date, time and weather" style="margin-top:14px"><h2>Weather for the next few hours</h2><p id="manager-weather-freshness">Weather source not loaded.</p><ul id="manager-weather-hours" aria-label="Next hours at the Zoo"></ul><ul id="manager-weather-alerts" class="managerWeatherAlerts" aria-label="Source weather warnings" aria-live="polite"></ul><details class="weatherSourceDetails"><summary>Weather source details</summary><p id="manager-weather-observed">Current conditions observation time unavailable.</p><p id="manager-alerts-freshness">Weather warnings not loaded.</p></details></section>
+
+    <section class="hubSection uxCard">
+      <div class="sectionHeading sectionHeadingCentered"><h2>Start Here</h2></div>
+      <div class="apps hubGrid coreGrid">
+        <a id="dashboard-link" class="hubTile primary" href="./dashboard.html" data-trail-app="dashboard"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/dashboard-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span><strong>Dashboard</strong><small>Live cleaning status, due-soon areas, overdue areas, and tickets</small></span></a>
+        <a id="dashboard-map-link" class="hubTile primary" href="./operations-dashboard.html" data-trail-app="map"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/map-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><path d="m2 5 7-3 6 3 7-3v17l-7 3-6-3-7 3Z"/><path d="M9 2v17m6-14v17"/></svg></span><span><strong>Dashboard Map</strong><small>Operations, tickets and live cleaning status</small></span></a>
+        <a id="messages-link" class="hubTile primary" href="./messages.html" data-trail-app="messenger"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/messenger-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 11a8 8 0 0 1-8 8H7l-5 3 1-7a8 8 0 1 1 18-4Z"/><path d="M7 10h10m-10 4h6"/></svg></span><span><strong>Messenger</strong><small>Memphis AI, employees, and ordinary manager conversations</small></span></a>
+        <a id="schedule-link" class="hubTile" href="./schedule-weekly.html" data-trail-app="schedule"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/schedule-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18m-13 4h2m4 0h2m-8 3h2"/></svg></span><span><strong>Schedule</strong><small>Area ownership, absences, CoverAll, and coverage</small></span></a>
+        <a id="staffing-link" class="hubTile" href="./staffing-management.html?hub=manager" data-trail-app="staffing"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/staffing-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><circle cx="9" cy="8" r="3"/><path d="M2 21v-3a7 7 0 0 1 14 0v3m1-16a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v2"/></svg></span><span><strong>Staffing positions</strong><small>Current roster and open positions</small></span></a>
+        <a id="insights-link" class="hubTile insightTile" href="./operational-insights.html" data-trail-app="insights"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/insights-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 3v18h19M7 17v-5m5 5V8m5 9V4"/></svg></span><span><strong>Operational Insights</strong><small>Cleaning history, historical inspection results, and recurring ticket patterns</small></span></a>
+      </div>
+    </section>
+
+    <section id="more" class="hubSection uxCard">
+      <div class="sectionHeading sectionHeadingCentered"><h2>Operations Tools</h2></div>
+      <div class="hubGrid">
+        <a id="events-link" class="hubTile" href="./events.html?hub=manager" data-trail-app="events"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/events-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 10h18m-9 3 1 2 3 .3-2 2 .5 3-2.5-1.5-2.5 1.5.5-3-2-2 3-.3Z"/></svg></span><span><strong>Events input and review</strong><small>Review source notices and correct event details</small></span></a>
+        <a id="guest-issues-link" class="hubTile" href="./guest-issues.html" hidden><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img src="./assets/trail-v1/feedback-320.webp" alt="" width="64" height="64"><svg viewBox="0 0 24 24" focusable="false"><path d="m3 9 14-6v18L3 15Zm3 7 2 6h4l-2-5m10-9 3-2m-3 9 3 2"/></svg></span><span><strong>Guest Issues</strong><small>Marketing review, dispatch, and closure after zoo approval</small></span></a>
+        <a id="feedback-link" class="hubTile" href="./system-feedback.html" data-trail-app="feedback"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/feedback-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 3h18v14H8l-5 4Z"/><path d="M12 7v4m0 3h.01"/></svg></span><span><strong>Feedback</strong><small>Report a problem or improvement idea</small></span></a>
+        <a id="notifications-link" class="hubTile" href="./notifications.html" data-trail-app="notifications"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/notifications-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 17h16l-2-3V9a6 6 0 0 0-12 0v5Zm5 3a3 3 0 0 0 6 0"/></svg></span><span><strong>Notifications</strong><small>Messages, event reminders, and location alerts</small></span></a>
+        <a id="unfinished-work-link" class="hubTile" href="./unfinished-work.html" data-trail-app="unfinished"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/unfinished-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="4" width="13" height="17" rx="2"/><path d="M7 2h5v4H7Zm0 8h5m-5 4h3"/><circle cx="17" cy="16" r="5"/><path d="M17 13v3l2 1"/></svg></span><span><strong>Unfinished work</strong><small>Eric: review timed-out work and explicitly clear it</small></span></a>
+        <a id="phone-assignments-link" class="hubTile" href="./phone-assignments.html" data-trail-app="phones"><span class="tileIcon hubIllustratedIcon" aria-hidden="true"><img class="trailIcon" src="./assets/trail-v1/phones-320.webp" width="64" height="64" alt="" decoding="async"><svg viewBox="0 0 24 24" focusable="false"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 5h4m-3 14h2"/></svg></span><span><strong>Phone Assignments</strong><small>Move kiosk phones to new or existing employees</small></span></a>
+      </div>
+    </section>
+
+    <section class="hubSection uxCard accessSection">
+      <details>
+        <summary>Access, security, and diagnostics</summary>
+        <div class="hubGrid">
+          <a id="device-security-link" class="hubTile" href="./device-security.html"><span class="tileIcon" aria-hidden="true">⬡</span><span><strong>Device Security</strong><small>Review and revoke enrolled phones</small></span></a>
+          <a id="release-canary-link" class="hubTile" href="./admin.html#release-canary-controls" hidden><span class="tileIcon" aria-hidden="true">◈</span><span><strong>Release Canary</strong><small>Pause or resume the one-phone physical acceptance window</small></span></a>
+          <a id="gemini-console-link" class="hubTile" href="./gemini-admin.html"><span class="tileIcon" aria-hidden="true">✧</span><span><strong>Gemini Console</strong><small>Read-only diagnostics and system audit</small></span></a>
+        </div>
+      </details>
+    </section>
+
+    <footer class="hubFooter"><a class="weatherAttribution" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Weather data</a><span id="hub-status" class="uxStatus" aria-live="polite"></span><span id="build-stamp">Checking release…</span></footer>
+  </main>
+
+  <nav class="hubNav" aria-label="Operations Hub">
+    <a href="./start_page1.html" class="active" aria-current="page"><span aria-hidden="true">⌂</span><small>Home</small></a>
+    <a href="./messages.html?hub=manager"><span aria-hidden="true">◫</span><small>Messages</small></a>
+    <a href="./schedule-weekly.html"><span aria-hidden="true">▦</span><small>Schedule</small></a>
+    <a href="./dashboard.html"><span aria-hidden="true">●</span><small>Status</small></a>
+    <a href="#more"><span aria-hidden="true">•••</span><small>More</small></a>
+  </nav>
+
+  <script src="./memphis-auth.js?v=owner-access-20261006"></script>
+  <script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script type="module" src="./ops-hub.js?v=2026.11.11.hub-weather-details"></script>
+</body>
+</html>

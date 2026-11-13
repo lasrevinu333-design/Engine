@@ -1,0 +1,697 @@
+name: Android Test APKs
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'scripts/**'
+      - '**.html'
+      - '**.js'
+      - '**.mjs'
+      - '**.ts'
+      - '**.tsx'
+      - '**.css'
+      - '**.svg'
+      - '**.webp'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.json'
+      - '**.ico'
+      - '**.ttf'
+      - '**.wav'
+      - '**.woff'
+      - '**.woff2'
+      - '**.txt'
+      - '.node-version'
+      - '.nvmrc'
+      - '.npmrc'
+      - 'codemagic.yaml'
+      - '.github/workflows/android-test-apks.yml'
+      - 'scripts/canonical-temporary-fixture.mjs'
+      - 'scripts/test-support/canonical-temporary-fixture-fd-inner.mjs'
+      - 'scripts/test-support/canonical-temporary-fixture-umask-inner.mjs'
+      - 'scripts/canonical-temporary-fixture-tests.mjs'
+      - 'scripts/custodial-android-manifest-security-contract-tests.mjs'
+      - 'scripts/custodial-dex-semantic-verifier-tests.mjs'
+      - 'scripts/custodial-runtime-source-verifier-tests.mjs'
+      - 'scripts/immutable-file-snapshot-tests.mjs'
+      - 'scripts/native-mobile-build-contract-tests.mjs'
+      - 'scripts/refresh-frontend-release-manifest.mjs'
+      - 'scripts/runtime-manifest-contract-tests.mjs'
+      - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/batch-0b-shell-contract-tests.mjs'
+      - 'scripts/ci-toolchain-contract-tests.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - 'scripts/**'
+      - '**.html'
+      - '**.js'
+      - '**.mjs'
+      - '**.ts'
+      - '**.tsx'
+      - '**.css'
+      - '**.svg'
+      - '**.webp'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.json'
+      - '**.ico'
+      - '**.ttf'
+      - '**.wav'
+      - '**.woff'
+      - '**.woff2'
+      - '**.txt'
+      - '.node-version'
+      - '.nvmrc'
+      - '.npmrc'
+      - 'codemagic.yaml'
+      - '.github/workflows/android-test-apks.yml'
+      - 'scripts/canonical-temporary-fixture.mjs'
+      - 'scripts/test-support/canonical-temporary-fixture-fd-inner.mjs'
+      - 'scripts/test-support/canonical-temporary-fixture-umask-inner.mjs'
+      - 'scripts/canonical-temporary-fixture-tests.mjs'
+      - 'scripts/custodial-android-manifest-security-contract-tests.mjs'
+      - 'scripts/custodial-dex-semantic-verifier-tests.mjs'
+      - 'scripts/custodial-runtime-source-verifier-tests.mjs'
+      - 'scripts/immutable-file-snapshot-tests.mjs'
+      - 'scripts/native-mobile-build-contract-tests.mjs'
+      - 'scripts/refresh-frontend-release-manifest.mjs'
+      - 'scripts/runtime-manifest-contract-tests.mjs'
+      - 'scripts/batch-0a-baseline-contract-tests.mjs'
+      - 'scripts/batch-0b-shell-contract-tests.mjs'
+      - 'scripts/ci-toolchain-contract-tests.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-test-apks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prebuild-source:
+    name: Source and dependency checks without app compilation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.4'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install exact dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+      - name: Verify source contracts without building an app
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci-toolchain-contract-tests.mjs
+          node scripts/batch-0a-baseline-contract-tests.mjs
+          node mobile/scripts/custodial-generated-app-test-contracts.mjs
+          node scripts/refresh-frontend-release-manifest.mjs --check
+
+  build:
+    needs: prebuild-source
+    environment: custodial-prebuild-final-audit
+    name: ${{ matrix.label }} debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: manager
+            label: Memphis Zoo Ops
+            artifact: memphis-zoo-ops-debug
+            app_id: org.memphiszoo.ops
+          - edition: custodial
+            label: Memphis Zoo Custodial
+            artifact: memphis-zoo-custodial-debug
+            app_id: org.memphiszoo.custodial
+          - edition: viewer
+            label: Memphis Zoo Viewer
+            artifact: memphis-zoo-viewer-debug
+            app_id: org.memphiszoo.viewer
+    env:
+      MZ_APP_EDITION: ${{ matrix.edition }}
+      MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+      MZ_SOURCE_COMMIT: ${{ github.sha }}
+      MZ_BUILD_NUMBER: ${{ github.run_number }}
+      MZ_RELEASE_VERSION: 1.0.0
+      MZ_SHELL_START: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+      - name: Install exact Android SDK compilation packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager --install 'build-tools;35.0.1' 'platforms;android-36'
+          grep -Fxq 'Pkg.Revision=35.0.1' "$ANDROID_SDK_ROOT/build-tools/35.0.1/source.properties"
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.4'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install root workspace without dependency lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install pinned Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Verify committed ChatScope bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --silent build:chatscope
+          git diff --exit-code -- chatscope-messenger.js chatscope-messenger.css
+      - name: Run mobile source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/custodial-core-release-gate-tests.mjs
+          node scripts/custodial-core-release-gate.mjs
+          npm run --silent test:mobile
+          npm run --silent test:batch-0a
+          npm run --silent test:batch-1-notifications
+          npm run --silent test:native-custodial-navigation
+          node scripts/native-mobile-build-contract-tests.mjs
+          npm run --silent test:immutable-snapshot-failure-ownership
+          npm run --silent test:custodial-protected-queue-schema
+          node scripts/runtime-manifest-contract-tests.mjs
+          node scripts/ci-toolchain-contract-tests.mjs
+          npm run --silent release:manifest:check
+      - name: Build ${{ matrix.label }} web application
+        run: npm run --silent build:${{ matrix.edition }}
+      - name: Generate Android project
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf android
+          npx --no-install cap add android
+          npx --no-install cap sync android
+          node scripts/configure-firebase.mjs android
+          node scripts/configure-branding.mjs
+          node scripts/configure-native-links.mjs android
+          node scripts/configure-android-backup.mjs
+          node scripts/configure-native-release.mjs android-version
+          grep -Fxq \
+            "apply from: rootProject.file('../scripts/native-version.gradle')" \
+            android/app/build.gradle
+          test -f android/app/build.gradle
+          grep -Fxq \
+            'distributionSha256Sum=ed1a8d686605fd7c23bdf62c7fc7add1c5b23b2bbc3721e661934ef4a4911d7c' \
+            android/gradle/wrapper/gradle-wrapper.properties
+          test "$(sha256sum android/gradle/wrapper/gradle-wrapper.jar | cut -d' ' -f1)" = \
+            '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
+          cmp \
+            "native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            android/gradle/verification-metadata.xml
+          grep -Fq '${{ matrix.app_id }}' android/app/build.gradle
+          if [ "$MZ_APP_EDITION" = manager ] || [ "$MZ_APP_EDITION" = custodial ]; then
+            test -s android/app/google-services.json
+            node -e "const c=require('./android/app/google-services.json'); const p=(c.client||[]).map(x=>x?.client_info?.android_client_info?.package_name); if(!p.includes('${{ matrix.app_id }}')) process.exit(1)"
+          else
+            test ! -e android/app/google-services.json
+          fi
+          node - <<'NODE'
+          const { readFileSync } = require('node:fs');
+          const config = require('./android/app/src/main/assets/capacitor.config.json');
+          if (config.server?.appStartPath !== '/app-shell.html') {
+            throw new Error(`Native shell start path mismatch: ${config.server?.appStartPath}`);
+          }
+          const graph = require('./android/app/src/main/assets/public/shell-edition-module-graph.json');
+          if (graph.shell_proof !== true) throw new Error('Native APK shell proof flag is not enabled');
+          const manifest = readFileSync('./android/app/src/main/AndroidManifest.xml', 'utf8');
+          const requiredHosts = {
+            manager: ['route', 'event'],
+            custodial: ['route', 'event', 'scan'],
+            viewer: ['route'],
+          }[process.env.MZ_APP_EDITION];
+          const editionScheme = `memphiszoo-${process.env.MZ_APP_EDITION}`;
+          for (const host of requiredHosts) {
+            if (!manifest.includes(`android:scheme="${editionScheme}" android:host="${host}"`)) {
+              throw new Error(`Missing native ${process.env.MZ_APP_EDITION} deep-link host: ${host}`);
+            }
+          }
+          if (manifest.includes('memphiszoo.custodial.NFC_SCAN')) {
+            throw new Error('Retired forgeable Custodial NFC compatibility action is present');
+          }
+          if ((process.env.MZ_APP_EDITION === 'custodial') !== manifest.includes('android.nfc.action.NDEF_DISCOVERED')) {
+            throw new Error('Custodial physical NDEF action isolation mismatch');
+          }
+          if ((process.env.MZ_APP_EDITION === 'custodial') !== manifest.includes('android:autoVerify="true"')) {
+            throw new Error('Custodial verified HTTPS link ownership isolation mismatch');
+          }
+          NODE
+          test -s android/app/src/main/assets/public/app-shell.html
+      - name: Build debug APK from an isolated Gradle cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle_user_home="$RUNNER_TEMP/gradle-strict-debug-$MZ_APP_EDITION"
+          test ! -e "$gradle_user_home"
+          rm -rf \
+            mobile/android/.gradle \
+            mobile/android/app/build \
+            mobile/android/build
+          (
+            cd mobile/android
+            GRADLE_USER_HOME="$gradle_user_home" \
+              ./gradlew --no-daemon --dependency-verification strict assembleDebug \
+                --no-build-cache --rerun-tasks --stacktrace
+          )
+          cmp \
+            "mobile/native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            mobile/android/gradle/verification-metadata.xml
+      - name: Verify and stage APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_apk='mobile/android/app/build/outputs/apk/debug/app-debug.apk'
+          test -s "$source_apk"
+          node mobile/scripts/verify-android-apk-backup.mjs "$source_apk"
+          if [ "$MZ_APP_EDITION" = custodial ]; then
+            node mobile/scripts/verify-custodial-native-boundary-apk.mjs "$source_apk"
+          fi
+          aapt2="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name aapt2 | sort -V | tail -1)"
+          test -x "$aapt2"
+          mkdir -p out
+          cp "$source_apk" "out/${{ matrix.artifact }}.apk"
+          (
+            cd out
+            sha256sum "${{ matrix.artifact }}.apk"
+          ) | tee "out/${{ matrix.artifact }}.sha256"
+          unzip -t "out/${{ matrix.artifact }}.apk" >/dev/null
+          cp mobile/mobile-dist/build.json "out/${{ matrix.artifact }}-build.json"
+          cp mobile/mobile-dist/runtime-asset-manifest.json "out/${{ matrix.artifact }}-runtime-assets.json"
+          cp \
+            "build/provenance/${{ matrix.edition }}-android-backup-security.json" \
+            "out/${{ matrix.artifact }}-android-backup-security.json"
+          cp \
+            "build/provenance/${{ matrix.edition }}-android-configuration.json" \
+            "out/${{ matrix.artifact }}-android-debug-configuration.json"
+          RELEASE_APK="$source_apk" AAPT2="$aapt2" node --input-type=module \
+            > "out/${{ matrix.artifact }}-compiled-debug.json" <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { parseAaptBadgingPackage } from './mobile/scripts/verify-custodial-android-release.mjs';
+          const badging = execFileSync(process.env.AAPT2, ['dump', 'badging', process.env.RELEASE_APK], {
+            encoding: 'utf8',
+            env: { ...process.env, LANG: 'C', LC_ALL: 'C' },
+            maxBuffer: 32 * 1024 * 1024,
+            timeout: 120_000,
+          });
+          const application = parseAaptBadgingPackage(badging);
+          if (application.package_name !== '${{ matrix.app_id }}') throw new Error('Debug APK package mismatch');
+          if (application.version_code !== Number(process.env.GITHUB_RUN_NUMBER)) throw new Error('Debug APK compiled versionCode mismatch');
+          if (application.version_name !== process.env.MZ_RELEASE_VERSION) throw new Error('Debug APK compiled versionName mismatch');
+          if (application.debuggable !== true || application.test_only !== false) throw new Error('Debug APK flags are inconsistent');
+          process.stdout.write(`${JSON.stringify({
+            accepted_for_debug_test_only: true,
+            production_signer_accepted: false,
+            source_commit: process.env.GITHUB_SHA,
+            application,
+          }, null, 2)}\n`);
+          NODE
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { createRuntimeAssetManifest } from './scripts/refresh-frontend-release-manifest.mjs';
+          const directory = 'mobile/mobile-dist';
+          const stored = JSON.parse(readFileSync(`${directory}/runtime-asset-manifest.json`, 'utf8'));
+          const actual = createRuntimeAssetManifest({ directory, edition: stored.edition, identity: stored });
+          if (JSON.stringify(stored) !== JSON.stringify(actual)) throw new Error('Runtime asset manifest does not match the APK web payload');
+          if (stored.source_commit !== process.env.MZ_SOURCE_COMMIT) throw new Error('APK web payload source commit mismatch');
+          NODE
+          node <<'NODE' > "out/${{ matrix.artifact }}-provenance.json"
+          const { execFileSync } = require('node:child_process');
+          const build = require('./mobile/mobile-dist/build.json');
+          if (build.edition !== process.env.MZ_APP_EDITION) throw new Error('APK edition mismatch');
+          const command = (file, args) => execFileSync(file, args, { encoding: 'utf8', stderr: 'pipe' }).trim();
+          process.stdout.write(`${JSON.stringify({
+            ...build,
+            app_id: '${{ matrix.app_id }}',
+            node: process.version,
+            npm: '11.17.0',
+            java: command('java', ['--version']).split('\n')[0],
+            gradle: command('./mobile/android/gradlew', ['--version']).split('\n').find((line) => line.startsWith('Gradle ')),
+            workflow: process.env.GITHUB_WORKFLOW,
+            run_id: process.env.GITHUB_RUN_ID,
+          }, null, 2)}\n`);
+          NODE
+      - name: Verify ephemeral test-signed release path
+        shell: bash
+        run: |
+          set -euo pipefail
+          signing_directory="$RUNNER_TEMP/native-release-${{ matrix.edition }}"
+          signing_password="$(openssl rand -hex 16)"
+          mkdir -p "$signing_directory"
+          keytool -genkeypair \
+            -noprompt \
+            -storetype PKCS12 \
+            -keystore "$signing_directory/release.p12" \
+            -storepass "$signing_password" \
+            -keypass "$signing_password" \
+            -alias batch0a \
+            -dname 'CN=Batch 0A Test Only,O=Memphis Zoo,C=US' \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 2
+          export MZ_RELEASE_VERSION='1.0.0'
+          test "$MZ_BUILD_NUMBER" = "$GITHUB_RUN_NUMBER"
+          export CM_KEYSTORE_PATH="$signing_directory/release.p12"
+          export CM_KEYSTORE_PASSWORD="$signing_password"
+          export CM_KEY_ALIAS='batch0a'
+          export CM_KEY_PASSWORD="$signing_password"
+          node mobile/scripts/configure-native-release.mjs android
+          gradle_user_home="$RUNNER_TEMP/gradle-strict-release-$MZ_APP_EDITION"
+          test ! -e "$gradle_user_home"
+          rm -rf \
+            mobile/android/.gradle \
+            mobile/android/app/build \
+            mobile/android/build
+          (
+            cd mobile/android
+            GRADLE_USER_HOME="$gradle_user_home" \
+              ./gradlew --no-daemon --dependency-verification strict assembleRelease bundleRelease \
+                --no-build-cache --rerun-tasks --stacktrace
+          )
+          cmp \
+            "mobile/native-locks/android/$MZ_APP_EDITION/verification-metadata.xml" \
+            mobile/android/gradle/verification-metadata.xml
+          release_apk='mobile/android/app/build/outputs/apk/release/app-release.apk'
+          release_bundle='mobile/android/app/build/outputs/bundle/release/app-release.aab'
+          test -s "$release_apk"
+          test -s "$release_bundle"
+          apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          aapt2="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name aapt2 | sort -V | tail -1)"
+          test -x "$apksigner"
+          test -x "$aapt2"
+          "$apksigner" verify --verbose --print-certs "$release_apk"
+          node mobile/scripts/verify-android-apk-backup.mjs "$release_apk"
+          if [ "$MZ_APP_EDITION" = custodial ]; then
+            RELEASE_APK="$release_apk" \
+            AAPT2="$aapt2" \
+            node --input-type=module \
+              > "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-compiled-proof.json" <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { assertCustodialReleaseManifest } from './mobile/scripts/verify-custodial-android-release.mjs';
+          const command = (args) => execFileSync(process.env.AAPT2, args, {
+            encoding: 'utf8',
+            env: { ...process.env, LANG: 'C', LC_ALL: 'C' },
+            maxBuffer: 32 * 1024 * 1024,
+            timeout: 120_000,
+          });
+          const application = assertCustodialReleaseManifest({
+            manifestDump: command(['dump', 'xmltree', process.env.RELEASE_APK, '--file', 'AndroidManifest.xml']),
+            badgingDump: command(['dump', 'badging', process.env.RELEASE_APK]),
+            expectedBuildNumber: process.env.GITHUB_RUN_NUMBER,
+            enforceStagedRecoveryCeiling: false,
+          });
+          process.stdout.write(`${JSON.stringify({
+            accepted_for_ephemeral_test_only: true,
+            production_signer_accepted: false,
+            source_commit: process.env.GITHUB_SHA,
+            application,
+          }, null, 2)}\n`);
+          NODE
+          fi
+          jarsigner_output="$(jarsigner -verify "$release_bundle" 2>&1)"
+          printf '%s\n' "$jarsigner_output"
+          grep -Fq 'jar verified.' <<< "$jarsigner_output"
+          node <<'NODE'
+          const provenance = require('./build/provenance/' + process.env.MZ_APP_EDITION + '-android-configuration.json');
+          if (provenance.build_number !== Number(process.env.GITHUB_RUN_NUMBER)) throw new Error('Release versionCode provenance mismatch');
+          if (provenance.release_version !== '1.0.0') throw new Error('Release versionName provenance mismatch');
+          if (!provenance.signing_configured) throw new Error('Release signing was not configured');
+          if (!provenance.gradle_wrapper_jar_sha256) throw new Error('Gradle wrapper JAR provenance is missing');
+          if (!provenance.gradle_verification_metadata_sha256) throw new Error('Gradle dependency verification provenance is missing');
+          NODE
+          cp \
+            "build/provenance/${{ matrix.edition }}-android-configuration.json" \
+            "out/${{ matrix.artifact }}-test-signed-release-path.json"
+          cp "$release_apk" "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.apk"
+          cp "$release_bundle" "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.aab"
+          sha256sum \
+            "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.apk" \
+            "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.aab" \
+            > "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.sha256"
+          if [ -f "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-compiled-proof.json" ]; then
+            sha256sum "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-compiled-proof.json" \
+              >> "out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.sha256"
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            out/${{ matrix.artifact }}.apk
+            out/${{ matrix.artifact }}.sha256
+            out/${{ matrix.artifact }}-build.json
+            out/${{ matrix.artifact }}-runtime-assets.json
+            out/${{ matrix.artifact }}-android-backup-security.json
+            out/${{ matrix.artifact }}-android-debug-configuration.json
+            out/${{ matrix.artifact }}-compiled-debug.json
+            out/${{ matrix.artifact }}-provenance.json
+            out/${{ matrix.artifact }}-test-signed-release-path.json
+            out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.apk
+            out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.aab
+            out/${{ matrix.artifact }}-EPHEMERAL-TEST-ONLY-release.sha256
+            out/*-EPHEMERAL-TEST-ONLY-compiled-proof.json
+          if-no-files-found: error
+          retention-days: 30
+
+  custodial-native-generated-app:
+    needs: prebuild-source
+    environment: custodial-prebuild-final-audit
+    name: Custodial generated app native vault (Pixel 2 API 35)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      MZ_APP_EDITION: custodial
+      MZ_API_BASE: https://memphis-zoo-mcp.onrender.com
+      MZ_SOURCE_COMMIT: ${{ github.sha }}
+      MZ_BUILD_NUMBER: ${{ github.run_number }}
+      MZ_RELEASE_VERSION: 1.0.0
+      MZ_SHELL_START: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Resolve exact signed backend for native status matrix
+        id: native_status_backend
+        shell: bash
+        env:
+          RELEASE_ATTESTATION_JSON: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_JSON }}
+          RELEASE_ATTESTATION_PUBLIC_KEY: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY }}
+          RELEASE_ATTESTATION_KEY_ID: 'memphis-zoo-release-2026-08-13'
+        run: |
+          set -euo pipefail
+          node scripts/verify-native-status-release-attestation.mjs --resolve
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: lasrevinu333-design/memphis-zoo-mcp
+          ref: ${{ steps.native_status_backend.outputs.commit }}
+          path: .custodial-backend-status-source
+      - name: Verify exact signed backend tree and evidence
+        shell: bash
+        env:
+          RELEASE_ATTESTATION_JSON: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_JSON }}
+          RELEASE_ATTESTATION_PUBLIC_KEY: ${{ secrets.MEMPHIS_RELEASE_ATTESTATION_PUBLIC_KEY }}
+          RELEASE_ATTESTATION_KEY_ID: 'memphis-zoo-release-2026-08-13'
+        run: |
+          set -euo pipefail
+          node scripts/verify-native-status-release-attestation.mjs --verify-checkout .custodial-backend-status-source
+          # This tree is exported only after the exact signed pair/evidence pass.
+          printf 'NATIVE_SQL_EXPECTED_BACKEND_TREE=%s\n' "$(git -C .custodial-backend-status-source rev-parse 'HEAD^{tree}')" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+      - name: Install exact Android SDK and managed-device image
+        shell: bash
+        run: |
+          set -euo pipefail
+          # AGP's AOSP managed-device source is the SDK's default image tag.
+          sdkmanager --install \
+            'build-tools;35.0.1' \
+            'platforms;android-35' \
+            'platforms;android-36' \
+            'emulator' \
+            'system-images;android-35;default;x86_64'
+          grep -Fxq 'Pkg.Revision=35.0.1' "$ANDROID_SDK_ROOT/build-tools/35.0.1/source.properties"
+          test -c /dev/kvm
+          sudo chmod 666 /dev/kvm
+      - name: Install and verify exact Node and npm toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+          test "$(node --version)" = 'v22.23.4'
+          test "$(npm --version)" = '11.17.0'
+      - name: Install root workspace without dependency lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Generate exact backend status matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix .custodial-backend-status-source ci --ignore-scripts --no-audit --no-fund
+          node .custodial-backend-status-source/scripts/device-status-native-matrix-tests.mjs --json \
+            > "$RUNNER_TEMP/custodial-backend-status-matrix.json"
+          node -e "const m=require(process.argv[1]);if(m.schema!==1||m.synthetic!==true||m.cases?.length!==36||m.failures?.length)process.exit(1)" \
+            "$RUNNER_TEMP/custodial-backend-status-matrix.json"
+      - name: Retain verified backend outside clean native source checkout
+        shell: bash
+        env:
+          NATIVE_SQL_EXPECTED_BACKEND_COMMIT: ${{ steps.native_status_backend.outputs.commit }}
+        run: |
+          set -euo pipefail
+          node scripts/native-actual-sql-fixtures.mjs --retain-backend
+      - name: Generate actual-SQL native wire fixtures from signed backend
+        shell: bash
+        env:
+          NATIVE_SQL_BACKEND_CHECKOUT: ${{ runner.temp }}/custodial-native-backend-source
+          NATIVE_SQL_EXPECTED_BACKEND_COMMIT: ${{ steps.native_status_backend.outputs.commit }}
+        run: |
+          set -euo pipefail
+          # The owning prepare first resolves four exact JAR inputs with the
+          # approved wrapper/strict metadata, then emits actual Java Query
+          # bytes. No generated app or cache-derived dependency is substituted.
+          node scripts/provider-event-decision-wire-contract-tests.mjs
+          node scripts/native-schedule-mirror-tests.mjs
+          node scripts/native-schedule-wire-source-tests.mjs
+          node --test scripts/device-location-wording-tests.mjs
+          node scripts/native-actual-sql-fixtures-contract-tests.mjs
+          node scripts/native-actual-sql-fixtures.mjs --prepare
+          # All five SQL fixtures, including Java raw-query/current-HMAC integrated227,
+          # must be sealed before the signed backend checkout may be removed.
+      - name: Remove task-owned backend status checkout before exact build
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/native-actual-sql-fixtures.mjs --cleanup-backend
+      - name: Verify generated-app acceptance source contracts
+        run: node mobile/scripts/custodial-generated-app-test-contracts.mjs
+      - name: Build Custodial web application
+        run: npm run --silent build:custodial
+      - name: Generate and configure clean Custodial Android app
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf android
+          npx --no-install cap add android
+          npx --no-install cap sync android
+          node scripts/configure-firebase.mjs android
+          node scripts/configure-branding.mjs
+          node scripts/configure-native-links.mjs android
+          node scripts/configure-android-backup.mjs
+          node scripts/configure-custodial-generated-app-test.mjs
+          node scripts/configure-native-release.mjs android-version
+          grep -Fxq \
+            "apply from: rootProject.file('../scripts/custodial-generated-app-test.gradle')" \
+            android/app/build.gradle
+          test -f \
+            android/app/src/main/java/org/memphiszoo/custodial/MainActivity.java
+          test -f \
+            native-tests/custodial-generated-app/src/androidTest/java/org/memphiszoo/custodial/vault/GeneratedCustodialNativeVaultTest.java
+          cmp \
+            native-locks/android/custodial/verification-metadata.xml \
+            android/gradle/verification-metadata.xml
+      - name: Run standalone native-vault unit and managed instrumentation tests
+        shell: bash
+        env:
+          CUSTODIAL_STATUS_MATRIX_JSON: ${{ runner.temp }}/custodial-backend-status-matrix.json
+          NATIVE_SQL_BACKEND_CHECKOUT: ${{ runner.temp }}/custodial-native-backend-source
+        run: |
+          set -euo pipefail
+          plugin_root="$GITHUB_WORKSPACE/mobile/plugins/custodial-native-vault/android"
+          verification_directory="$plugin_root/gradle"
+          verification_file="$verification_directory/verification-metadata.xml"
+          gradle_user_home="$RUNNER_TEMP/gradle-strict-custodial-native-acceptance"
+          test ! -e "$verification_directory"
+          test ! -e "$gradle_user_home"
+          mkdir -p "$verification_directory"
+          cp \
+            mobile/native-locks/android/custodial/verification-metadata.xml \
+            "$verification_file"
+          GRADLE_USER_HOME="$gradle_user_home" \
+            mobile/android/gradlew -p "$plugin_root" \
+              --no-daemon --dependency-verification strict \
+              testDebugUnitTest assembleDebugAndroidTest pixel2Api35DebugAndroidTest \
+              --rerun-tasks --no-build-cache --stacktrace
+          cmp \
+            mobile/native-locks/android/custodial/verification-metadata.xml \
+            "$verification_file"
+          rm "$verification_file"
+          rmdir "$verification_directory"
+      - name: Verify actual-SQL fixture hashes and non-skipped native JUnit results
+        shell: bash
+        env:
+          NATIVE_SQL_BACKEND_CHECKOUT: ${{ runner.temp }}/custodial-native-backend-source
+          NATIVE_SQL_JUNIT_RESULTS: ${{ github.workspace }}/mobile/plugins/custodial-native-vault/android/build/test-results/testDebugUnitTest
+        run: |
+          set -euo pipefail
+          node scripts/native-actual-sql-fixtures.mjs --verify
+      - name: Remove task-owned actual-SQL native fixtures
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/native-actual-sql-fixtures.mjs --cleanup
+      - name: Run generated app on Gradle-managed Pixel 2 API 35 AOSP
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle_user_home="$RUNNER_TEMP/gradle-strict-custodial-native-acceptance"
+          test -d "$gradle_user_home"
+          rm -rf \
+            mobile/android/.gradle \
+            mobile/android/app/build \
+            mobile/android/build \
+            mobile/plugins/custodial-native-vault/android/.gradle \
+            mobile/plugins/custodial-native-vault/android/build
+          (
+            cd mobile/android
+            GRADLE_USER_HOME="$gradle_user_home" \
+              ./gradlew --no-daemon --dependency-verification strict \
+                :app:assembleDebugAndroidTest :app:pixel2Api35DebugAndroidTest \
+                --rerun-tasks --no-build-cache --stacktrace --max-workers 2
+          )
+          cmp \
+            mobile/native-locks/android/custodial/verification-metadata.xml \
+            mobile/android/gradle/verification-metadata.xml
+          test -s \
+            mobile/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk

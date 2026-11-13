@@ -1,0 +1,263 @@
+{
+  "schema": "custodial.provider-required-kind-byte-deltas.v1",
+  "base": "3db165ff4b08b7af4109d8787a0f6e96374f33c0",
+  "qualified": false,
+  "production_activation": false,
+  "files": [
+    {
+      "name": "memphis-device-reminders.js",
+      "path": "memphis-device-reminders.js",
+      "prior_sha256": "4f12d3a7cc7e158fe10dad5364c6d447c0f333ffd5d770b079dcf884531fe1df",
+      "current_sha256": "b782d86c472b720bce028beeff6b3cdf845ab5a47cbafadd492f575d14591d5c",
+      "hunks": [
+        {
+          "old_start": 1104,
+          "old_count": 1,
+          "new_start": 1104,
+          "new_count": 18,
+          "before": [
+            "    if(!['employee_lunch_coverage','employee_location_status'].includes(data.kind)||!data.notification_key)return false;"
+          ],
+          "after": [
+            "    if(!data.notification_key)return false;",
+            "    const requiredKind=data.kind==='employee_event'?'event':data.kind==='employee_message'?'message':null;",
+            "    if(requiredKind){",
+            "      // Only the native-owned claim path can supply these protocols. Legacy",
+            "      // unbound FCM/poll notices do not become admitted through a UI flag.",
+            "      const sourceId=data[requiredKind==='event'?'event_id':'thread_id'];",
+            "      const route=requiredKind==='event'?`events.html?hub=employee&event_id=${sourceId}`:`messages.html?hub=employee&thread_id=${sourceId}`;",
+            "      if(typeof boundReceiptAction!=='function'||boundReceiptAction.providerMirror!==true",
+            "        ||data.schema!==`custodial.native-${requiredKind}-payload.v1`||data.notification_type!==requiredKind",
+            "        ||typeof sourceId!=='string'||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(sourceId)||data.route!==route)return false;",
+            "      const body=safeText(notification.body);",
+            "      if(!body)return false;",
+            "      return showAlert({id:data.notification_key,notificationKey:data.notification_key,notificationType:requiredKind,boundReceiptAction,",
+            "        kicker:requiredKind==='event'?'Event reminder':'Message',title:safeText(notification.title,'Memphis Zoo'),body,",
+            "        openLabel:requiredKind==='event'?'Open event':'Open message',dismissLabel:'Dismiss',openUrl:new URL(route,window.location.href).toString(),",
+            "        speakerName:state.currentDisplayName,speechText:body},true);",
+            "    }",
+            "    if(!['employee_lunch_coverage','employee_location_status'].includes(data.kind))return false;"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderPayload.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderPayload.java",
+      "prior_sha256": "c1712425e744a7d94eece8db3e1a0036d3370966ee680a4273b142da610b1a32",
+      "current_sha256": "e4e08a0225f5684e481f0e3c8c64f541fde96f1701102332cc487857193228e4",
+      "hunks": [
+        {
+          "old_start": 24,
+          "old_count": 0,
+          "new_start": 25,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "    static final String EVENT_SCHEMA = \"custodial.native-event-payload.v1\";",
+            "    static final String MESSAGE_SCHEMA = \"custodial.native-message-payload.v1\";"
+          ]
+        },
+        {
+          "old_start": 29,
+          "old_count": 0,
+          "new_start": 32,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "    private static final String[] EVENT = {\"event_id\", \"instance_id\", \"event_revision\", \"notification_kind\", \"source_revision\", \"recipient_device_uuid\"};",
+            "    private static final String[] MESSAGE = {\"message_id\", \"thread_id\", \"recipient_user_id\", \"source_revision\"};"
+          ]
+        },
+        {
+          "old_start": 48,
+          "old_count": 3,
+          "new_start": 52,
+          "new_count": 5,
+          "before": [
+            "            if (!lunch && !\"employee_location_status\".equals(copy.get(\"kind\"))) throw invalid();",
+            "            Set<String> fields = new HashSet<>(Arrays.asList(COMMON)); fields.addAll(Arrays.asList(lunch ? LUNCH : LOCATION));",
+            "            if (!copy.keySet().equals(fields) || !(lunch ? SCHEMA : LOCATION_SCHEMA).equals(copy.get(\"schema\"))) throw invalid();"
+          ],
+          "after": [
+            "            boolean event = \"employee_event\".equals(copy.get(\"kind\")), message = \"employee_message\".equals(copy.get(\"kind\"));",
+            "            if (!lunch && !event && !message && !\"employee_location_status\".equals(copy.get(\"kind\"))) throw invalid();",
+            "            Set<String> fields = new HashSet<>(Arrays.asList(COMMON));",
+            "            fields.addAll(Arrays.asList(lunch ? LUNCH : event ? EVENT : message ? MESSAGE : LOCATION));",
+            "            if (!copy.keySet().equals(fields) || !(lunch ? SCHEMA : event ? EVENT_SCHEMA : message ? MESSAGE_SCHEMA : LOCATION_SCHEMA).equals(copy.get(\"schema\"))) throw invalid();"
+          ]
+        },
+        {
+          "old_start": 66,
+          "old_count": 1,
+          "new_start": 72,
+          "new_count": 1,
+          "before": [
+            "            if (lunch) validateLunch(); else validateLocation();"
+          ],
+          "after": [
+            "            if (lunch) validateLunch(); else if (event) validateEvent(); else if (message) validateMessage(); else validateLocation();"
+          ]
+        },
+        {
+          "old_start": 77,
+          "old_count": 0,
+          "new_start": 84,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            || \"employee_event\".equals(kind) || \"employee_message\".equals(kind)"
+          ]
+        },
+        {
+          "old_start": 79,
+          "old_count": 1,
+          "new_start": 86,
+          "new_count": 2,
+          "before": [
+            "                || ((String) schema).startsWith(\"custodial.native-location-\")));"
+          ],
+          "after": [
+            "                || ((String) schema).startsWith(\"custodial.native-location-\") || ((String) schema).startsWith(\"custodial.native-event-\")",
+            "                || ((String) schema).startsWith(\"custodial.native-message-\")));"
+          ]
+        },
+        {
+          "old_start": 120,
+          "old_count": 0,
+          "new_start": 129,
+          "new_count": 23,
+          "before": [],
+          "after": [
+            "    /** These closed envelopes are conditional protocol support. The producer",
+            "     * must separately prove reservation/current source and the supplied finite",
+            "     * cutoff. Neither this parser nor an FCM arrival selects that policy, grants",
+            "     * a clock profile, or authorizes a new effect. Legacy traffic is not upgraded. */",
+            "    private void validateEvent() throws VaultFailure {",
+            "        if (!\"event\".equals(get(\"notification_type\")) || !\"employee-events\".equals(get(\"channel_id\"))) throw invalid();",
+            "        for (String field : new String[]{\"event_id\", \"instance_id\", \"recipient_device_uuid\"}) uuid(get(field));",
+            "        positiveInteger(get(\"event_revision\")); digest(get(\"source_revision\"));",
+            "        if (!Arrays.asList(\"three_days_before\", \"two_days_before\", \"shift_plus_15\").contains(get(\"notification_kind\"))",
+            "            || !(\"events.html?hub=employee&event_id=\" + get(\"event_id\")).equals(get(\"route\"))",
+            "            || !(\"event:\" + get(\"event_id\") + \":\" + get(\"event_revision\") + \":\" + get(\"service_date\") + \":\"",
+            "                + get(\"receipt_employee_id\") + \":\" + get(\"recipient_device_uuid\") + \":\" + get(\"receipt_assignment_epoch\")",
+            "                + \":\" + get(\"notification_kind\")).equals(notificationKey)) throw invalid();",
+            "        // SQL binds the database UUID to the current KIOSK/principal/generation.",
+            "        // The client cannot infer that mapping from either spelling of the ID.",
+            "    }",
+            "    private void validateMessage() throws VaultFailure {",
+            "        if (!\"message\".equals(get(\"notification_type\")) || !\"employee-messages\".equals(get(\"channel_id\"))) throw invalid();",
+            "        for (String field : new String[]{\"message_id\", \"thread_id\", \"recipient_user_id\"}) uuid(get(field));",
+            "        digest(get(\"source_revision\"));",
+            "        if (!(\"messages.html?hub=employee&thread_id=\" + get(\"thread_id\")).equals(get(\"route\"))",
+            "            || !(\"message:\" + get(\"message_id\")).equals(notificationKey)) throw invalid();",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile/src/custodial/provider-mirror-bridge.js",
+      "path": "mobile/src/custodial/provider-mirror-bridge.js",
+      "prior_sha256": "13aec5acb97791fd0b714f379616197c4dba9ee856c228822e8a4310c41c2bde",
+      "current_sha256": "8d513cd3c63d5cd8ef6de8b3a00f433509447aeb1d4d602e098f1e9d6a657d71",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 0,
+          "new_start": 2,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import {custodialProviderNotificationEnabled} from './release-scope.js';"
+          ]
+        },
+        {
+          "old_start": 6,
+          "old_count": 0,
+          "new_start": 8,
+          "new_count": 30,
+          "before": [],
+          "after": [
+            "const common=['schema','generation_id','principal_digest','token_digest','receipt_job_id','receipt_credential_id',",
+            "  'receipt_employee_id','receipt_device_id','receipt_assignment_epoch','notification_key','reservation_at','valid_until',",
+            "  'content_sha256','kind','notification_type','title','body','channel_id','route','service_date'];",
+            "const wireUuid=value=>typeof value==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);",
+            "const digest=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);",
+            "const positive=value=>typeof value==='string'&&/^[1-9][0-9]{0,15}$/.test(value)&&Number.isSafeInteger(Number(value));",
+            "function requiredKindPayload(value){",
+            "  const event=value.kind==='employee_event';",
+            "  if(!event&&value.kind!=='employee_message')return true; // Existing exact native protocols stay unchanged.",
+            "  const fields=event?['event_id','instance_id','event_revision','notification_kind','source_revision','recipient_device_uuid']",
+            "    :['message_id','thread_id','recipient_user_id','source_revision'];",
+            "  if(!exact(value,[...common,...fields])||!['generation_id','receipt_job_id','receipt_credential_id','receipt_employee_id'].every(k=>wireUuid(value[k]))",
+            "    ||!['principal_digest','token_digest','content_sha256','source_revision'].every(k=>digest(value[k]))",
+            "    ||!positive(value.receipt_assignment_epoch)||!/^KIOSK_(?:0[2-9]|10)$/.test(value.receipt_device_id)",
+            "    ||!/^\\d{4}-\\d{2}-\\d{2}$/.test(value.service_date)",
+            "    ||!['reservation_at','valid_until'].every(k=>/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$/.test(value[k])))return false;",
+            "  // Java/SQL own calendar, digest, original-principal and interval authority.",
+            "  // This is a closed shape/cross-field projection, never another time owner.",
+            "  if(event)return ['event_id','instance_id','recipient_device_uuid'].every(k=>wireUuid(value[k]))&&positive(value.event_revision)",
+            "    &&['three_days_before','two_days_before','shift_plus_15'].includes(value.notification_kind)",
+            "    &&value.channel_id==='employee-events'&&value.route===`events.html?hub=employee&event_id=${value.event_id}`",
+            "    &&value.notification_key===`event:${value.event_id}:${value.event_revision}:${value.service_date}:${value.receipt_employee_id}:${value.recipient_device_uuid}:${value.receipt_assignment_epoch}:${value.notification_kind}`;",
+            "  return ['message_id','thread_id','recipient_user_id'].every(k=>wireUuid(value[k]))&&value.channel_id==='employee-messages'",
+            "    &&value.route===`messages.html?hub=employee&thread_id=${value.thread_id}`&&value.notification_key===`message:${value.message_id}`;",
+            "}",
+            "function includedPayload(value){",
+            "  if(value.kind==='employee_event'||value.kind==='employee_message')return custodialProviderNotificationEnabled(value)&&requiredKindPayload(value);",
+            "  return ['custodial.native-provider-payload.v1','custodial.native-location-payload.v2'].includes(value.schema)",
+            "    &&['employee_lunch_coverage','employee_location_status'].includes(value.kind);",
+            "}"
+          ]
+        },
+        {
+          "old_start": 35,
+          "old_count": 2,
+          "new_start": 66,
+          "new_count": 1,
+          "before": [
+            "        ||!['custodial.native-provider-payload.v1','custodial.native-location-payload.v2'].includes(value.payload.schema)",
+            "        ||!['employee_lunch_coverage','employee_location_status'].includes(value.payload.kind)"
+          ],
+          "after": [
+            "        ||!includedPayload(value.payload)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mobile/src/custodial/release-scope.js",
+      "path": "mobile/src/custodial/release-scope.js",
+      "prior_sha256": "da67e41769476209300d2bb4fbb2dee99011f08f755c91e01b97e6fff5e1f7d7",
+      "current_sha256": "d162ec3573b5f5638c6913b050df802139f78e14a61df8230948a5d5effcdcdb",
+      "hunks": [
+        {
+          "old_start": 28,
+          "old_count": 0,
+          "new_start": 29,
+          "new_count": 16,
+          "before": [],
+          "after": [
+            "",
+            "// Inclusion for the native-owned claim path, NOT FCM/JS ingress admission.",
+            "// The caller must still validate the complete native envelope and retain its",
+            "// exact claim capability. This supplies neither a clock profile nor authority.",
+            "export function custodialProviderNotificationEnabled(data){",
+            "  if(!data||typeof data!=='object'||Array.isArray(data))return false;",
+            "  const protocols={",
+            "    employee_lunch_coverage:['custodial.native-provider-payload.v1','lunch_coverage','schedule'],",
+            "    employee_location_status:['custodial.native-location-payload.v2','location_status','schedule'],",
+            "    employee_event:['custodial.native-event-payload.v1','event','events'],",
+            "    employee_message:['custodial.native-message-payload.v1','message','messenger'],",
+            "  };",
+            "  if(!Object.hasOwn(protocols,data.kind))return false;",
+            "  const [schema,type,feature]=protocols[data.kind];",
+            "  return data.schema===schema&&data.notification_type===type&&CUSTODIAL_RELEASE_CAPABILITIES[feature]===true;",
+            "}"
+          ]
+        }
+      ]
+    }
+  ]
+}

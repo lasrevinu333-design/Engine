@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import {createCleaningCorrectionPanel} from '../manager-cleaning-correction.mjs';
+const uuid=n=>`98000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+class Element {constructor(tag='div'){this.tagName=tag;this.children=[];this.textContent='';this.value='';this.dataset={};this.hidden=false;this.listeners=new Map();}append(...items){this.children.push(...items);}replaceChildren(...items){this.children=items;this.textContent='';}addEventListener(k,fn){this.listeners.set(k,fn);}querySelectorAll(tag){return all(this).filter(e=>e.tagName===tag);}}
+const all=node=>[node,...node.children.flatMap(all)];
+const text=node=>all(node).map(e=>e.textContent).join(' ');
+const record=()=>({session_id:uuid(1),session_uuid:'original opaque identity',status:'completed',correction_id:null,original_employee_id:uuid(2),current_employee_id:uuid(2),original_employee_name:'Original person',current_employee_name:'Original person',original_location_id:uuid(3),current_location_id:uuid(3),original_location_name:'Primate',current_location_name:'Primate',original_device_id:uuid(4),current_device_id:uuid(4),original_device_name:'Assigned phone',current_device_name:'Assigned phone',original_started_at:'2026-10-31T13:00:00.000Z',current_started_at:'2026-10-31T13:00:00.000Z',original_ended_at:'2026-10-31T13:15:00.000Z',current_ended_at:'2026-10-31T13:15:00.000Z'});
+const options={employees:[{id:uuid(2),label:'Original person'},{id:uuid(5),label:'Corrected person'}],locations:[{id:uuid(3),label:'Primate'}],devices:[{id:uuid(4),label:'Assigned phone'}]};
+function fixture(){let truth=record(),owner='ORIGINAL_SYNTHETIC_BINDING',saved=null,mode='ok',statusMode='ok';const calls=[],panel=new Element(),status=new Element(),content=new Element();
+ const receipt={session_id:uuid(1),operation_id:uuid(10),correction_id:uuid(11),changed_fields:['employee'],created_at:'2026-10-31T19:00:00Z',replayed:false};
+ const api={truth:async()=>structuredClone(truth),choices:async()=>structuredClone(options),save:async(id,operation,body)=>{calls.push({id,operation,body});if(mode==='conflict')throw Object.assign(new Error('conflict'),{status:409});if(mode==='lost-before')throw new Error('network');saved=structuredClone(receipt);truth={...truth,correction_id:uuid(11),current_employee_id:uuid(5),current_employee_name:'Corrected person',corrected_by_manager_name_snapshot:'Self-asserted manager',corrected_at:receipt.created_at,correction_reason:body.reason};if(mode==='lost-after')throw new Error('network');return saved;},status:async(id,op)=>{if(statusMode==='mismatch')return{found:true,...receipt,operation_id:uuid(99)};if(statusMode==='wrong-fields')return{found:true,...receipt,changed_fields:['location']};if(statusMode==='owner-change'){owner='OTHER';return{found:true,...receipt};}return saved?{found:true,...saved,replayed:true,actor_manager_id:uuid(8),actor_name:'Self-asserted manager (shared PIN; self-asserted)',reason:'Correct attribution from verified record'}:{found:false,session_id:id,operation_id:op};}};
+ const controller=createCleaningCorrectionPanel({document:{createElement:tag=>new Element(tag)},panel,status,content,api,binding:()=>owner,canWrite:()=>true,uuid:()=>uuid(10)});
+ return{controller,panel,status,content,calls,api,field:name=>all(content).find(e=>e.name===name),mode:value=>mode=value,statusMode:value=>statusMode=value,changeOwner:()=>owner='OTHER',setTruth:value=>truth=value,truth:()=>truth};}
+const cases=[];const test=async(name,fn)=>{await fn();cases.push(name);console.log('ok - '+name);};
+async function preview(f){await f.controller.open(record());f.field('employee_id').value=uuid(5);f.field('reason').value='Correct attribution from verified record';await f.controller.preview();assert.equal(f.controller.getState(),'PREVIEW');}
+await test('completed original/current record and typed preview precede exact one-time confirmation/readback',async()=>{
+ const f=fixture();await preview(f);assert.match(text(f.content),/Original record — preserved/);assert.match(text(f.content),/Original person → Corrected person/);assert.equal(f.calls.length,0);await f.controller.confirm();assert.equal(f.controller.getState(),'SAVED');assert.equal(f.calls.length,1);assert.deepEqual(f.calls[0],{id:uuid(1),operation:uuid(10),body:{reason:'Correct attribution from verified record',expected_correction_id:null,expected_session_uuid:'original opaque identity',corrected_employee_id:uuid(5)}});assert.equal(f.truth().original_employee_name,'Original person');assert.match(text(f.content),/Self-asserted manager/);await f.controller.confirm();assert.equal(f.calls.length,1);assert.equal(f.controller.clear(),true);
+});
+await test('cancel before confirmation sends no mutation; pending/interrupted/mismatched records never open a form',async()=>{
+ const f=fixture();await preview(f);assert.equal(f.controller.clear(),true);assert.equal(f.calls.length,0);
+ for(const status of ['pending_submit','in_progress','interrupted',null]){const x=fixture();x.setTruth({...record(),status});assert.equal(await x.controller.open(record()),false);assert.equal(x.controller.getState(),'UNAVAILABLE');assert.equal(x.field('reason'),undefined);assert.equal(x.calls.length,0);}
+ const wrong=fixture();wrong.setTruth({...record(),session_uuid:'different'});assert.equal(await wrong.controller.open(record()),false);
+});
+await test('civil invalid/gap/fold correction choices cannot bypass explicit Zoo time selection',async()=>{
+ const f=fixture();await f.controller.open(record());f.field('reason').value='Verified time correction';f.field('started_at').value='2026-03-08T02:30';await f.controller.preview();assert.equal(f.controller.getState(),'EDITING');assert.match(f.status.textContent,/does not exist/);f.field('started_at').value='2026-11-01T01:30';await f.controller.preview();assert.match(f.status.textContent,/occurs twice/);assert.equal(f.calls.length,0);
+});
+await test('current-record marker change during confirmation withdraws preview before write; server409 stays a conflict',async()=>{
+ const f=fixture();await preview(f);f.setTruth({...record(),correction_id:uuid(30)});await f.controller.confirm();assert.equal(f.controller.getState(),'EDITING');assert.equal(f.calls.length,0);assert.match(f.status.textContent,/changed since preview/);
+ const x=fixture();await preview(x);x.mode('conflict');await x.controller.confirm();assert.equal(x.controller.getState(),'CONFLICT');assert.equal(x.controller.hasUnresolved(),false);
+});
+await test('lost response preserves original operation, prevents replacement, and resolves only matching readback',async()=>{
+ const f=fixture();await preview(f);f.mode('lost-after');await f.controller.confirm();assert.equal(f.controller.getState(),'UNKNOWN');assert.equal(f.controller.clear(),false);assert.equal(await f.controller.open({...record(),session_id:uuid(80)}),false);f.controller.retire();assert.equal(f.controller.getState(),'DENIED');f.controller.resume();assert.equal(f.controller.getState(),'UNKNOWN');await f.controller.checkSaved();assert.equal(f.controller.getState(),'SAVED');assert.equal(f.calls.length,1);
+});
+await test('missing receipt offers only explicit identical-id identical-payload retry, never automatic send',async()=>{
+ const f=fixture();await preview(f);f.mode('lost-before');await f.controller.confirm();await f.controller.checkSaved();assert.equal(f.controller.getState(),'UNKNOWN');assert.equal(f.calls.length,1);assert.match(text(f.content),/Retry this exact correction/);f.mode('ok');await f.controller.retry();assert.equal(f.controller.getState(),'SAVED');assert.equal(f.calls.length,2);assert.deepEqual(f.calls[0],f.calls[1]);
+});
+await test('wrong operation or changed fields never confirms saved correction',async()=>{
+ for(const mode of ['mismatch','wrong-fields']){const f=fixture();await preview(f);f.mode('lost-after');await f.controller.confirm();f.statusMode(mode);await f.controller.checkSaved();assert.equal(f.controller.getState(),'UNKNOWN');assert.equal(f.controller.hasUnresolved(),true);}
+});
+await test('authority change during saved-outcome read withdraws details and blocks another manager replacing operation',async()=>{
+ const f=fixture();await preview(f);f.mode('lost-after');await f.controller.confirm();f.statusMode('owner-change');await f.controller.checkSaved();assert.equal(f.controller.getState(),'DENIED');assert.equal(f.controller.hasUnresolved(),true);assert.equal(f.content.children.length,0);assert.equal(await f.controller.open(record()),false);assert.equal(f.calls.length,1);
+});
+console.log(JSON.stringify({suite:'actual completed-cleaning correction controller with synthetic API/DOM',passed:cases.length,failed:0,cases,network:false,SQL:false,independentAcceptance:false}));

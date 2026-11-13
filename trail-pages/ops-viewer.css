@@ -1,0 +1,261 @@
+/* Terracotta presentation adapter for ops-viewer.html. No layout, visibility or behavior overrides. */
+@media screen{
+html[data-trail-theme="terracotta"]{
+  color-scheme:light}
+html[data-trail-theme="terracotta"]{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] body{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] button:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] a:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] input:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] textarea:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] select:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] .uxButton{border:1px solid var(--trail-control-border);background:var(--trail-surface);
+  color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .uxButton.primary{background:var(--trail-brand);color:var(--trail-on-brand);border-color:var(--trail-border)}
+html[data-trail-theme="terracotta"] .uxButton.danger{background:var(--trail-danger-soft);color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .uxInput{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .uxTextarea{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .uxSelect{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .uxCard{background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .uxMuted{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .uxEyebrow{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .uxStatus{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .uxStatus.ok{color:var(--trail-success)}
+html[data-trail-theme="terracotta"] .uxStatus.error{color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .uxStatus.info{color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .uxToast{background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubHero{background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubBrand p{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .accessMode{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .accessMode.full{color:var(--trail-ink);border-color:var(--trail-border);background:var(--trail-surface)}
+html[data-trail-theme="terracotta"] .snapshotCard{background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .snapshotLabel{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .snapshotCard small{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .sectionHeading p{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubTile{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .hubTile:hover{border-color:var(--trail-border);background:var(--trail-selected);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubTile.primary{border-color:var(--trail-border)}
+html[data-trail-theme="terracotta"] .hubTile.insightTile{border-color:var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .tileIcon{background:var(--trail-surface);border:1px solid var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mediaIcon{background:var(--trail-surface);border-color:var(--trail-border);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .insightTile .tileIcon{background:var(--trail-surface);border-color:var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubTile small{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .accessSection details{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .accessSection summary::after{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .hubFooter{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubNav{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubNav a{color:var(--trail-brand)}
+html[data-trail-theme="terracotta"] .hubNav a.active{color:var(--trail-on-brand);background:var(--trail-brand);border:1px solid var(--trail-border)}
+@media(max-width:760px){
+html[data-trail-theme="terracotta"] .managerIdentity{border-top:1px solid var(--trail-border)}}
+html[data-trail-theme="terracotta"] .tileIcon.hubIllustratedIcon{border:2px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubIllustratedIcon>svg{background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .weatherAttribution{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .weatherSourceDetails{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapStage{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapStage p{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapControls button{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapControls button:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] .mzMapViewport{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapLeader{background:var(--trail-surface);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapLeader::after{background:var(--trail-surface);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapCallout{background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .mzMapAlertList li{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapSelection{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mzMapStatus{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mapNotice{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mapPage .mzMapStage{background:var(--trail-surface);border-color:var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mapTools select{border:1px solid var(--trail-control-border);background:var(--trail-raised);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mapTools select:focus-visible{outline:3px solid var(--trail-focus);outline-offset:2px}
+html[data-trail-theme="terracotta"] .mapAttention summary:focus-visible{outline:3px solid var(--trail-focus);outline-offset:2px}
+html[data-trail-theme="terracotta"] .mapSourceNote{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .mapPage .mzMapViewport{border:0;background:transparent}
+html[data-trail-theme="terracotta"] .mapAttention{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mapAttention summary>span{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .mapScreenReader{border:0}
+html[data-trail-theme="terracotta"] .operationsPage{color-scheme:light;color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .commandPage.mapPage{background:transparent}
+html[data-trail-theme="terracotta"] .operationsPage button:not(.mzMapPin){color:inherit;border:1px solid var(--trail-control-border);background:var(--trail-surface)}
+html[data-trail-theme="terracotta"] .operationsPage select{color:inherit;border:1px solid var(--trail-control-border);background:var(--trail-raised)}
+html[data-trail-theme="terracotta"] .operationsPage :focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] .telemetry{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .telemetry>section+section{border-left:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .eyebrow{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .calendarDate{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .attendanceValue{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .metricNote{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .metricNote[data-stale=true]{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .hourForecast{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .tickerLabel{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .feedButton{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .commandPage .commandMap.mzMapStage{background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .statusCounts{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .statusCounts span{border:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .statusCounts [data-status=due_soon]{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .statusCounts [data-status=overdue]{color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .statusCounts [data-status=in_progress]{color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .commandPage .mzMapViewport{background:var(--trail-surface);border:1px solid var(--trail-border);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .operationsPage .locationsBand{background:var(--trail-surface);border-color:var(--trail-border);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .locationsBand .tickerLabel{background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .operationsBoard{border:0;background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .operationsBoard::backdrop{background:var(--trail-scrim)}
+html[data-trail-theme="terracotta"] .boardHeader{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .boardNote{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .boardCard{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .boardCard .sourceTag{border:1px solid var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .boardCard[data-state=REVIEW_REQUIRED]{border-color:var(--trail-border)}
+html[data-trail-theme="terracotta"]:fullscreen{background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"].dashboard-expanded{background:var(--trail-surface);
+color:var(--trail-ink)}
+@media(max-width:699px){
+html[data-trail-theme="terracotta"] .telemetry .weatherCard{border-left:0;border-top:1px solid var(--trail-border)}}
+html[data-trail-theme="terracotta"] .publicViewNav a{border:1px solid var(--trail-border);color:var(--trail-brand);background:var(--trail-surface)}
+html[data-trail-theme="terracotta"] .publicViewNav a[aria-current=page]{background:var(--trail-brand);border-color:var(--trail-border);color:var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .publicMetric{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicMetric span{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicReport{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicReport h2{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .publicReport th{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .publicReport td{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .publicReport th{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicReport .cleaningState{border:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=okay]{color:var(--trail-success)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=in_progress]{color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=due_soon]{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=overdue]{color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=unknown]{color:var(--trail-ink);border-style:dashed}
+html[data-trail-theme="terracotta"] .cleaningState[data-status=pending_submit]{color:var(--trail-info);border-style:dashed}
+@media(max-width:699px){
+html[data-trail-theme="terracotta"] .publicReport td:before{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .publicReport tr+tr{border-top:2px solid var(--trail-border)}}
+html[data-trail-theme="terracotta"] .locationTickerItem{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .locationTickerItem::before{border:2px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=okay]::before{background:var(--trail-success-soft);
+color:var(--trail-success)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=in_progress]::before{background:var(--trail-info-soft);
+color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=due_soon]::before{background:var(--trail-warning-soft);
+color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=overdue]::before{background:var(--trail-danger-soft);
+color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=not_cleaned]::before{background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=pending_submit]::before{background:var(--trail-info-soft);
+color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .locationTickerItem[data-status=unknown]::before{background:var(--trail-surface);border-style:dashed;
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .tickerRecord+.tickerRecord{border-inline-start:double var(--trail-border)}
+html[data-trail-theme="terracotta"] .tickerBand[data-stale=true] .tickerLabel{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] .operationsPage .tickerBand .tickerLabel{background:var(--trail-surface);color:var(--trail-ink)}
+@media(max-width:950px){
+html[data-trail-theme="terracotta"] .telemetry.hasMod .weatherCard{border-left:0;border-top:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .telemetry.hasMod .modCard{border-top:1px solid var(--trail-border)}}
+html[data-trail-theme="terracotta"] .operationsPage .commandPage .commandMap[data-map-presentation="original-horizontal"]{background:transparent;border-color:var(--trail-border);box-shadow:none}
+html[data-trail-theme="terracotta"] .telemetry.separateTelemetry{border:0;background:transparent}
+html[data-trail-theme="terracotta"] .telemetry.separateTelemetry>section{border:0;box-shadow:var(--trail-shadow);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-secondary-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-brand)}
+html[data-trail-theme="terracotta"] .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .operationsPage .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .mz-back-link:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-icon-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-field:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-select:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-textarea:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-button{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-button--secondary{ background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-button--danger{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-card{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  box-shadow: var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-status{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-alert{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-empty{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-error{
+  border: 1px solid var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-status{ background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-alert--success{ background: var(--trail-success-soft); color: var(--trail-success)}
+html[data-trail-theme="terracotta"] .mz-alert--warning{ background: var(--trail-warning-soft); color: var(--trail-warning)}
+html[data-trail-theme="terracotta"] .mz-alert--error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-empty{ border-style: dashed; background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-field{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-select{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-textarea{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-loading{
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-loading::before{
+  border: 2px solid var(--trail-border);
+  border-top-color: var(--trail-brand)}
+html[data-trail-theme="terracotta"] .mz-visually-hidden{
+  border: 0 !important}
+html[data-trail-theme="terracotta"] #restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}}

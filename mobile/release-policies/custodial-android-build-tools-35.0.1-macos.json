@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "platform": "macosx",
+  "android_build_tools_version": "35.0.1",
+  "repository_index": "https://dl.google.com/android/repository/repository2-1.xml",
+  "archive": {
+    "url": "https://dl.google.com/android/repository/build-tools_r35.0.1_macosx.zip",
+    "size_bytes": 76857925,
+    "sha1": "f4dda6855ddf1ea1a51ee3ab6587104bd0c1d727",
+    "sha256": "c01e4b763da96ae5ef67e8bdf2abc94fb6cb3e73a42209581feb6a7019a51b9c"
+  },
+  "installed_files_sha256": {
+    "aapt2": "2ed636477a40fbc88670837c3ead484ce68b5da410eb408036416fd3ef2517d6",
+    "apksigner": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
+    "lib/apksigner.jar": "00ef9948f843fe395d2440ae3ef41405b8040a6d5d46493bd1902ac0ee6deae7",
+    "source.properties": "1ce878b52b027d9b7aba4dfb85d4be3c601e27849fc2b99b1db54b4c25d682a5",
+    "zipalign": "0c04fa35895adb7ed7af332918e82f9da3d6969b68ffcca1762a5640d7f1524e"
+  }
+}

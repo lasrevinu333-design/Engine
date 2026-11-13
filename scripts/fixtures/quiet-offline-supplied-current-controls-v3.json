@@ -1,0 +1,40 @@
+{
+  "schema": "custodial.quiet-current-controls-known-scan-delta.v3",
+  "archive_bytes": 186755686,
+  "archive_sha256": "6dfbef995d35b73751591828d14c49e305abada448d20902eeac0f159dc63bde",
+  "scope": "Current controls already supplied after bf805 historical context; all three exact unchanged original input files. Stronger malformed-queue refusal remains intact.",
+  "files": [
+    {
+      "path": "memphis-scan-sync.js",
+      "bytes": 233977,
+      "sha256": "7af3817294d6a2d2d05e5dfc18d91609b6ee808cfe8fbaae6b02e6d5835938d0",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/memphis-scan-sync.js",
+      "current_bytes": 234025,
+      "current_sha256": "99616370a7da85057a21d3f0b6607db097a22dd6b8c07ad0cad411af064b90a6",
+      "known_repair_comparison_only_reverse": [
+        {
+          "before": "    const local = exactSessionForPayload(payload);\n    return {\n      client_session_id:",
+          "after": "    const local = exactSessionForPayload(payload);\n    const epoch = supplied.assignment_epoch ?? local?.offline_authority_assignment_epoch ?? payload.p_snapshot_assignment_epoch;\n    return {\n      client_session_id:"
+        },
+        {
+          "before": "assignment_epoch: Number(supplied.assignment_epoch ?? local?.offline_authority_assignment_epoch ?? payload.p_snapshot_assignment_epoch),",
+          "after": "assignment_epoch: epoch == null ? null : Number(epoch),"
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/chatscope/app.jsx",
+      "bytes": 151323,
+      "sha256": "523f076238a9bb209defa07be0641664cbdcba5b881e4b3c6678590a88c1c415",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/chatscope/app.jsx"
+    },
+    {
+      "path": "mobile/src/custodial/readiness.js",
+      "bytes": 5724,
+      "sha256": "a8aed39b183b62b2844f213999c38fd9a3513f3f1c900eca797796fdd45135a6",
+      "archive_member": "custodial-candidate-solo-01a19518/candidate/frontend/mobile/src/custodial/readiness.js"
+    }
+  ],
+  "production": false,
+  "release_admission": false
+}

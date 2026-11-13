@@ -1,0 +1,223 @@
+/* Terracotta presentation adapter for index.html. No layout, visibility or behavior overrides. */
+@media screen {
+    html[data-trail-theme="terracotta"] .mz-secondary-link {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-brand)
+    }
+    html[data-trail-theme="terracotta"] .mz-back-link {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)
+    }
+    html[data-trail-theme="terracotta"] .operationsPage .mz-back-link {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)
+    }
+    html[data-trail-theme="terracotta"] .mz-back-link:focus-visible {
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px
+    }
+    html[data-trail-theme="terracotta"] .mz-button:focus-visible {
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px
+    }
+    html[data-trail-theme="terracotta"] .mz-icon-button:focus-visible {
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px
+    }
+    html[data-trail-theme="terracotta"] .mz-field:focus-visible {
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px
+    }
+    html[data-trail-theme="terracotta"] .mz-select:focus-visible {
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px
+    }
+    html[data-trail-theme="terracotta"] .mz-textarea:focus-visible {
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px
+    }
+    html[data-trail-theme="terracotta"] .mz-button {
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-button--secondary { background: var(--trail-surface); color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-button--danger { background: var(--trail-danger-soft); color: var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .mz-card {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  box-shadow: var(--trail-shadow);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-status {
+  border: 1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .mz-alert {
+  border: 1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .mz-empty {
+  border: 1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .mz-error {
+  border: 1px solid var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .mz-status { background: var(--trail-surface); color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-alert--success { background: var(--trail-success-soft); color: var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .mz-alert--warning { background: var(--trail-warning-soft); color: var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .mz-alert--error { background: var(--trail-danger-soft); color: var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .mz-error { background: var(--trail-danger-soft); color: var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .mz-empty { border-style: dashed; background: var(--trail-surface); color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-field {
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-select {
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-textarea {
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-loading {
+  color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .mz-loading::before {
+  border: 2px solid var(--trail-border);
+  border-top-color: var(--trail-brand)
+    }
+    html[data-trail-theme="terracotta"] .mz-visually-hidden {
+  border: 0 !important
+    }
+    html[data-trail-theme="terracotta"] #restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2) {
+  border-bottom: 0
+    }
+    html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2) {
+  border-bottom: 0
+    }
+    html[data-trail-theme="terracotta"] {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] body {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .card {background:var(--trail-surface);box-shadow:var(--trail-shadow);border:1px solid var(--trail-border);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .eyebrow {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .title-green {color:var(--trail-success)
+    }
+    html[data-trail-theme="terracotta"] .title-blue {color:var(--trail-info)
+    }
+    html[data-trail-theme="terracotta"] .title-amber {color:var(--trail-warning)
+    }
+    html[data-trail-theme="terracotta"] .title-red {color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .location {text-shadow:none
+    }
+    html[data-trail-theme="terracotta"] .helper {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .employeeLine {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .timer {color:var(--trail-ink);text-shadow:none
+    }
+    html[data-trail-theme="terracotta"] .notice {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .status {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .error {color:var(--trail-danger)
+    }
+    html[data-trail-theme="terracotta"] .small {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .infoBox {background:var(--trail-surface);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .infoRow {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .infoRowCompact {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .infoRowTight {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .metric {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .pill {background:var(--trail-surface);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .syncBadge {background:var(--trail-surface);color:var(--trail-ink);border:1px solid var(--trail-border)
+    }
+    html[data-trail-theme="terracotta"] .choiceButton span {border:2px solid var(--trail-control-border);background:var(--trail-surface);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .choiceButton input:checked+span {border-color:var(--trail-border);background:var(--trail-raised);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .formStatus {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .kioskLock {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .kioskLockPanel {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .lockBrand {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .lockClock {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .lockDate {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .lockAssigned {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .lockHint {color:var(--trail-muted)
+    }
+    html[data-trail-theme="terracotta"] .lockUnlockBtn {background:var(--trail-surface);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] label {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] select {border:none
+    }
+    html[data-trail-theme="terracotta"] input {border:none
+    }
+    html[data-trail-theme="terracotta"] textarea {border:none
+    }
+    html[data-trail-theme="terracotta"] button {border:none
+    }
+    html[data-trail-theme="terracotta"] select {background:var(--trail-raised);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] input {background:var(--trail-raised);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] textarea {background:var(--trail-raised);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .startBtn {background:var(--trail-surface);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .continueBtn {background:var(--trail-surface);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .submitBtn {background:var(--trail-surface);color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .checkboxRow {background:var(--trail-surface);
+        color: var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .checkboxLabel {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .radioLabel {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .checkboxDesc {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .sectionTitle {color:var(--trail-ink)
+    }
+    html[data-trail-theme="terracotta"] .radioRow {background:var(--trail-surface);
+        color: var(--trail-ink)
+    }
+}

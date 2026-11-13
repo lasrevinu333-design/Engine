@@ -1,0 +1,705 @@
+{
+  "snapshot_version": "batch-0a.production-migration-baseline.v1",
+  "captured_at": "2026-07-23T19:43:24Z",
+  "purpose": "Read-only production migration inventory for rollback and reconstruction comparison. Migration SQL, rollback SQL, authors, notes, and row data are intentionally excluded.",
+  "frontend_commit": "1bbdcb059e3fdf260f6ae76a6ab024502d9d26e5",
+  "backend_commit": "ac70f68c78cfcaff11cf9834620e0b2775a339dd",
+  "supabase_schema_migrations": [
+    {
+      "name": "install_demo_scan_mock_engine_v2",
+      "version": "20260514224806",
+      "idempotency_key": null
+    },
+    {
+      "name": "patch_demo_scan_mock_make_interval_int_casts",
+      "version": "20260514224945",
+      "idempotency_key": null
+    },
+    {
+      "name": "patch_demo_scan_mock_advance_transition",
+      "version": "20260514225332",
+      "idempotency_key": null
+    },
+    {
+      "name": "enable_demo_scan_mock_cron_20m",
+      "version": "20260514225800",
+      "idempotency_key": null
+    },
+    {
+      "name": "patch_demo_scan_mock_stop_cancel_open",
+      "version": "20260514225919",
+      "idempotency_key": null
+    },
+    {
+      "name": "add_safe_demo_scan_mock_cron_wrapper",
+      "version": "20260514225955",
+      "idempotency_key": null
+    },
+    {
+      "name": "demo_scan_mock_shift_schedule_mode",
+      "version": "20260515023051",
+      "idempotency_key": null
+    },
+    {
+      "name": "switch_demo_cron_to_shift_schedule",
+      "version": "20260515023123",
+      "idempotency_key": null
+    },
+    {
+      "name": "demo_mock_v4_complete_dynamic_helper",
+      "version": "20260515145134",
+      "idempotency_key": null
+    },
+    {
+      "name": "demo_mock_v4_assigned_locations_view",
+      "version": "20260515145151",
+      "idempotency_key": null
+    },
+    {
+      "name": "demo_mock_v4_assigned_area_tick",
+      "version": "20260515145238",
+      "idempotency_key": null
+    },
+    {
+      "name": "demo_mock_v4_wire_cron_to_assigned_area",
+      "version": "20260515150336",
+      "idempotency_key": null
+    },
+    {
+      "name": "demo_mock_v4_start_515_triple_sessions",
+      "version": "20260517031749",
+      "idempotency_key": null
+    },
+    {
+      "name": "demo_mock_v4_view_515_simple",
+      "version": "20260517111535",
+      "idempotency_key": null
+    },
+    {
+      "name": "demo_mock_v4_distinct_employee_wave_fix",
+      "version": "20260517111943",
+      "idempotency_key": null
+    },
+    {
+      "name": "security_and_stale_session_foundation_20260714",
+      "version": "20260714115918",
+      "idempotency_key": null
+    },
+    {
+      "name": "expand_session_completion_source_contract_20260714",
+      "version": "20260714120020",
+      "idempotency_key": null
+    },
+    {
+      "name": "atomic_scan_and_messaging_foundation_20260714",
+      "version": "20260714121817",
+      "idempotency_key": null
+    },
+    {
+      "name": "scan_state_v2_recovery_20260714",
+      "version": "20260714123412",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_api_boundary_20260714",
+      "version": "20260714130037",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_foundation_v2_20260714",
+      "version": "20260714130742",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_scan_atomic_v2_20260714",
+      "version": "20260714131105",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_data_write_and_stale_v2_20260714",
+      "version": "20260714131222",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_messenger_lifecycle_v2_20260714",
+      "version": "20260714131352",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_legacy_scan_compatibility_v2_20260714",
+      "version": "20260714134046",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_public_rpc_lockdown_v2_20260714",
+      "version": "20260714135144",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_archive_runtime_migration_log_20260714",
+      "version": "20260714141721",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_remove_obsolete_scan_overloads_20260714",
+      "version": "20260714141837",
+      "idempotency_key": null
+    },
+    {
+      "name": "scheduler_foundation_application_write_20260714",
+      "version": "20260714164028",
+      "idempotency_key": null
+    },
+    {
+      "name": "scheduler_foundation_durable_reminders_20260714",
+      "version": "20260714164308",
+      "idempotency_key": null
+    },
+    {
+      "name": "scheduler_foundation_static_readiness_20260714",
+      "version": "20260714164417",
+      "idempotency_key": null
+    },
+    {
+      "name": "scheduler_foundation_authoritative_gps_20260714",
+      "version": "20260714164746",
+      "idempotency_key": null
+    },
+    {
+      "name": "scheduler_foundation_notification_ack_canonical_20260714",
+      "version": "20260714174214",
+      "idempotency_key": null
+    },
+    {
+      "name": "update_markiesha_shift_8_to_5_20260714",
+      "version": "20260714201504",
+      "idempotency_key": null
+    },
+    {
+      "name": "temporary_source_repair_payloads_20260714",
+      "version": "20260714202221",
+      "idempotency_key": null
+    },
+    {
+      "name": "temporary_repair_payload_upload_rpc_20260714",
+      "version": "20260714210209",
+      "idempotency_key": null
+    },
+    {
+      "name": "temporary_repair_payload_staging_20260714",
+      "version": "20260714213818",
+      "idempotency_key": null
+    },
+    {
+      "name": "remove_temporary_repair_payload_channel_20260714",
+      "version": "20260714214652",
+      "idempotency_key": null
+    },
+    {
+      "name": "markiesha_shift_0800_1700_20260714",
+      "version": "20260714220206",
+      "idempotency_key": null
+    },
+    {
+      "name": "temporary_repair_payload_chunks_20260714",
+      "version": "20260714223858",
+      "idempotency_key": null
+    },
+    {
+      "name": "scheduler_full_day_my_schedule_contract_20260714",
+      "version": "20260714224744",
+      "idempotency_key": null
+    },
+    {
+      "name": "messenger_notification_instance_deduplication_20260714",
+      "version": "20260714224811",
+      "idempotency_key": null
+    },
+    {
+      "name": "device_notification_acknowledgement_list_20260714",
+      "version": "20260714224925",
+      "idempotency_key": null
+    },
+    {
+      "name": "release_validation_ledger_20260714",
+      "version": "20260714225409",
+      "idempotency_key": null
+    },
+    {
+      "name": "internal_http_health_monitor_pg_net_20260714",
+      "version": "20260714231421",
+      "idempotency_key": null
+    },
+    {
+      "name": "my_schedule_current_and_full_day_contract_20260714",
+      "version": "20260714232148",
+      "idempotency_key": null
+    },
+    {
+      "name": "backfill_event_read_acknowledgements_20260714",
+      "version": "20260714232459",
+      "idempotency_key": null
+    },
+    {
+      "name": "scheduler_full_window_absence_coverage_20260714",
+      "version": "20260714235212",
+      "idempotency_key": null
+    },
+    {
+      "name": "terminal_cancelled_queue_reconciliation_20260715",
+      "version": "20260715004418",
+      "idempotency_key": null
+    },
+    {
+      "name": "messenger_thread_foundation_20260715",
+      "version": "20260715012451",
+      "idempotency_key": null
+    },
+    {
+      "name": "schedule_assignment_exact_duplicate_guard_20260715_v2",
+      "version": "20260715013305",
+      "idempotency_key": null
+    },
+    {
+      "name": "messenger_orphan_reply_recovery_and_smoke_cleanup_20260715",
+      "version": "20260715013329",
+      "idempotency_key": null
+    },
+    {
+      "name": "temporary_fleet_acceptance_rpc_20260715",
+      "version": "20260715013904",
+      "idempotency_key": null
+    },
+    {
+      "name": "remove_temporary_fleet_acceptance_rpc_20260715",
+      "version": "20260715014014",
+      "idempotency_key": null
+    },
+    {
+      "name": "dedupe_schedule_display_rows_20260715",
+      "version": "20260715021137",
+      "idempotency_key": null
+    },
+    {
+      "name": "event_notification_one_instance_guarantee_v2_20260715",
+      "version": "20260715021411",
+      "idempotency_key": null
+    },
+    {
+      "name": "archive_automated_acceptance_cleaning_sessions_20260715",
+      "version": "20260715035139",
+      "idempotency_key": null
+    },
+    {
+      "name": "archive_all_message_state_before_clear_20260715",
+      "version": "20260715035227",
+      "idempotency_key": null
+    },
+    {
+      "name": "isolate_moxie_private_data_from_memphis_clients_20260715",
+      "version": "20260715035431",
+      "idempotency_key": null
+    },
+    {
+      "name": "foundational_runtime_schema_preprovision_20260715",
+      "version": "20260715040708",
+      "idempotency_key": null
+    },
+    {
+      "name": "lock_moxie_private_tables_20260715",
+      "version": "20260715041327",
+      "idempotency_key": null
+    },
+    {
+      "name": "secure_moxie_private_data_boundary_20260715",
+      "version": "20260715042105",
+      "idempotency_key": null
+    },
+    {
+      "name": "remove_foundation_concurrency_locations_20260715",
+      "version": "20260715042229",
+      "idempotency_key": null
+    },
+    {
+      "name": "disable_destructive_retention_jobs_20260715",
+      "version": "20260715043004",
+      "idempotency_key": null
+    },
+    {
+      "name": "retired_identity_archive_20260715",
+      "version": "20260715043255",
+      "idempotency_key": null
+    },
+    {
+      "name": "event_notification_superseded_state_20260715",
+      "version": "20260715043425",
+      "idempotency_key": null
+    },
+    {
+      "name": "revoke_trigger_function_public_execute_20260715",
+      "version": "20260715043547",
+      "idempotency_key": null
+    },
+    {
+      "name": "isolate_moxie_private_data_20260715",
+      "version": "20260715044458",
+      "idempotency_key": null
+    },
+    {
+      "name": "fix_schedule_source_type_contract_20260715",
+      "version": "20260715112141",
+      "idempotency_key": null
+    },
+    {
+      "name": "remove_demo_people_and_harden_messenger_identity_20260715",
+      "version": "20260715121049",
+      "idempotency_key": null
+    },
+    {
+      "name": "messenger_runtime_membership_and_thread_visibility_20260715",
+      "version": "20260715130556",
+      "idempotency_key": null
+    },
+    {
+      "name": "messenger_thread_delete_server_authority_20260715",
+      "version": "20260715130800",
+      "idempotency_key": null
+    },
+    {
+      "name": "ops_manager_trusted_device_auth",
+      "version": "20260715200108",
+      "idempotency_key": null
+    },
+    {
+      "name": "device_credential_foundation",
+      "version": "20260715233040",
+      "idempotency_key": null
+    },
+    {
+      "name": "device_credential_foundation",
+      "version": "20260716000250",
+      "idempotency_key": null
+    },
+    {
+      "name": "add_missing_foreign_key_indexes",
+      "version": "20260716001029",
+      "idempotency_key": null
+    },
+    {
+      "name": "retire_abandoned_repair_payload_tables",
+      "version": "20260716001048",
+      "idempotency_key": null
+    },
+    {
+      "name": "moxie_persistent_password_credentials",
+      "version": "20260716001441",
+      "idempotency_key": null
+    },
+    {
+      "name": "release_deployment_manifest",
+      "version": "20260716001701",
+      "idempotency_key": null
+    },
+    {
+      "name": "ai_provider_data_boundary",
+      "version": "20260716001853",
+      "idempotency_key": null
+    },
+    {
+      "name": "retire_legacy_backup_tables",
+      "version": "20260716001958",
+      "idempotency_key": null
+    },
+    {
+      "name": "harden_dynamic_sql_functions",
+      "version": "20260716002449",
+      "idempotency_key": null
+    },
+    {
+      "name": "migration_log_governance",
+      "version": "20260716002500",
+      "idempotency_key": null
+    },
+    {
+      "name": "harden_security_definer_search_paths",
+      "version": "20260716002543",
+      "idempotency_key": null
+    },
+    {
+      "name": "force_rls_public_tables",
+      "version": "20260716003127",
+      "idempotency_key": null
+    },
+    {
+      "name": "auto_enforce_device_credentials_v2",
+      "version": "20260716003629",
+      "idempotency_key": null
+    },
+    {
+      "name": "retire_mcp_write_test_table",
+      "version": "20260716004053",
+      "idempotency_key": null
+    },
+    {
+      "name": "residual_database_hygiene",
+      "version": "20260716010600",
+      "idempotency_key": null
+    },
+    {
+      "name": "rls_and_function_hardening",
+      "version": "20260716010648",
+      "idempotency_key": null
+    },
+    {
+      "name": "operational_recovery_20260716",
+      "version": "20260716121245",
+      "idempotency_key": null
+    },
+    {
+      "name": "foundation_repair_archive_cleanup",
+      "version": "20260716193526",
+      "idempotency_key": null
+    },
+    {
+      "name": "foundation_repair_schedule_audit",
+      "version": "20260716193547",
+      "idempotency_key": null
+    },
+    {
+      "name": "foundation_repair_schedule_window",
+      "version": "20260716193606",
+      "idempotency_key": null
+    },
+    {
+      "name": "foundation_repair_schedule_cron",
+      "version": "20260716193627",
+      "idempotency_key": null
+    },
+    {
+      "name": "foundation_repair_migration_log_compaction",
+      "version": "20260716193644",
+      "idempotency_key": null
+    },
+    {
+      "name": "foundation_repair_migration_runner_governance",
+      "version": "20260716193725",
+      "idempotency_key": null
+    },
+    {
+      "name": "foundation_repair_legacy_ledger_rollup",
+      "version": "20260716194539",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_foundation_repair_delta",
+      "version": "20260717170035",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_foundation_repair_device_eval_fix",
+      "version": "20260717170136",
+      "idempotency_key": null
+    },
+    {
+      "name": "ops_manager_pairing_links",
+      "version": "20260717175320",
+      "idempotency_key": null
+    },
+    {
+      "name": "manager_passwordless_onboarding_security_app",
+      "version": "20260717203456",
+      "idempotency_key": null
+    },
+    {
+      "name": "device_security_code_rpc_qualification",
+      "version": "20260717211212",
+      "idempotency_key": null
+    },
+    {
+      "name": "ops_manager_one_time_codes",
+      "version": "20260718002000",
+      "idempotency_key": null
+    },
+    {
+      "name": "event_input_console_scope_venue_taxonomy",
+      "version": "20260718021910",
+      "idempotency_key": null
+    },
+    {
+      "name": "event_input_console_verified_venue_backfill_20260718",
+      "version": "20260718022648",
+      "idempotency_key": null
+    },
+    {
+      "name": "ops_manager_shared_48_hour_enrollment",
+      "version": "20260718070417",
+      "idempotency_key": null
+    },
+    {
+      "name": "ops_manager_shared_enrollment_fk_indexes",
+      "version": "20260718072634",
+      "idempotency_key": null
+    },
+    {
+      "name": "gemini_console_professional_foundation",
+      "version": "20260718081916",
+      "idempotency_key": null
+    },
+    {
+      "name": "reconstruct_public_grant_hardening",
+      "version": "20260718083335",
+      "idempotency_key": null
+    },
+    {
+      "name": "schema_authority_cron_jobs",
+      "version": "20260718084607",
+      "idempotency_key": null
+    },
+    {
+      "name": "schema_authority_comments",
+      "version": "20260718085603",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_v3_reliability_and_retention",
+      "version": "20260718124426",
+      "idempotency_key": null
+    },
+    {
+      "name": "restore_members_night_retention_recovery",
+      "version": "20260718124433",
+      "idempotency_key": null
+    },
+    {
+      "name": "prevent_cleaning_notes_false_maintenance_tickets",
+      "version": "20260718131734",
+      "idempotency_key": null
+    },
+    {
+      "name": "moxie_password_rotation",
+      "version": "20260718143726",
+      "idempotency_key": null
+    },
+    {
+      "name": "ops_manager_shared_messenger",
+      "version": "20260718160914",
+      "idempotency_key": null
+    },
+    {
+      "name": "professional_employee_messenger",
+      "version": "20260718181345",
+      "idempotency_key": null
+    },
+    {
+      "name": "messenger_delete_retention_shared_identity",
+      "version": "20260718194840",
+      "idempotency_key": null
+    },
+    {
+      "name": "messenger_delete_actor_fk_indexes",
+      "version": "20260718195342",
+      "idempotency_key": null
+    },
+    {
+      "name": "gps_proximity_motion_hardening_20260719",
+      "version": "20260719235243",
+      "idempotency_key": null
+    },
+    {
+      "name": "operations_leadership_mobile_foundation_schema",
+      "version": "20260721212246",
+      "idempotency_key": null
+    },
+    {
+      "name": "operations_leadership_mobile_foundation_data",
+      "version": "20260721212339",
+      "idempotency_key": null
+    },
+    {
+      "name": "operations_leadership_mobile_foundation_finalize",
+      "version": "20260721212406",
+      "idempotency_key": null
+    },
+    {
+      "name": "manager_mobile_notifications_schema",
+      "version": "20260721212552",
+      "idempotency_key": null
+    },
+    {
+      "name": "manager_mobile_notifications_runtime",
+      "version": "20260721214714",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_employee_phone_foundation",
+      "version": "20260722210339",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_employee_phone_assignment",
+      "version": "20260722210533",
+      "idempotency_key": null
+    },
+    {
+      "name": "custodial_employee_status_management",
+      "version": "20260722210620",
+      "idempotency_key": null
+    },
+    {
+      "name": "retire_forced_operations_leadership_thread",
+      "version": "20260722210658",
+      "idempotency_key": null
+    },
+    {
+      "name": "event_notification_retention_integrity",
+      "version": "20260722230915",
+      "idempotency_key": null
+    },
+    {
+      "name": "operational_retention_and_analytics",
+      "version": "20260723004728",
+      "idempotency_key": null
+    },
+    {
+      "name": "event_retention_history_guard",
+      "version": "20260723004749",
+      "idempotency_key": null
+    },
+    {
+      "name": "v17_trigger_privilege_hardening",
+      "version": "20260723111542",
+      "idempotency_key": null
+    }
+  ],
+  "mcp_rpc_migration_log": [
+    {
+      "applied_at": "2026-07-21T14:45:26.250966+00:00",
+      "migration_name": "restroom_rebalance_completion_1784645126221_khd1ii"
+    },
+    {
+      "applied_at": "2026-07-22T14:45:49.213985+00:00",
+      "migration_name": "restroom_rebalance_completion_1784731549160_7hsvsm"
+    },
+    {
+      "applied_at": "2026-07-23T14:45:17.288537+00:00",
+      "migration_name": "restroom_rebalance_completion_1784817917246_z800qv"
+    },
+    {
+      "applied_at": "2026-07-23T18:19:19.752894+00:00",
+      "migration_name": "verify_mcp_write_access_20260723_ac70f68c"
+    }
+  ],
+  "capture": {
+    "supabase_schema_migration_count": 133,
+    "mcp_rpc_migration_count": 4,
+    "truncated": false,
+    "excluded_fields": [
+      "statements",
+      "rollback",
+      "created_by",
+      "sql_text",
+      "applied_by",
+      "notes"
+    ]
+  }
+}

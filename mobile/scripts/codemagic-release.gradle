@@ -1,0 +1,29 @@
+def requiredEnvironment = [
+    'CM_KEYSTORE_PATH',
+    'CM_KEYSTORE_PASSWORD',
+    'CM_KEY_ALIAS',
+    'CM_KEY_PASSWORD'
+]
+
+requiredEnvironment.each { name ->
+    if (!System.getenv(name)?.trim()) {
+        throw new GradleException("Missing required environment variable: ${name}")
+    }
+}
+
+android {
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('CM_KEYSTORE_PATH'))
+            storePassword System.getenv('CM_KEYSTORE_PASSWORD')
+            keyAlias System.getenv('CM_KEY_ALIAS')
+            keyPassword System.getenv('CM_KEY_PASSWORD')
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+        }
+    }
+}

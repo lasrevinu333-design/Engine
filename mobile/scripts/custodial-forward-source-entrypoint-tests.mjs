@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+import { createHash } from 'node:crypto';
+import { parseForwardSourceArguments, runForwardSourceAdmission } from './configure-native-release.mjs';
+
+const repoRoot = new URL('../..', import.meta.url).pathname;
+const script = join(repoRoot, 'mobile/scripts/configure-native-release.mjs');
+const H = 'a'.repeat(64); const C = 'b'.repeat(40); const T = 'c'.repeat(40); const packageName = 'org.memphiszoo.custodial';
+const source = (ref) => ({ ref, commit: C, tree: T });
+const descriptor = (version, ref) => ({ version_code: version, package_name: packageName, signer_certificate_sha256: H, signer_public_key_sha256: H, source: source(ref), artifact_sha256: H, schema_sha256: H, native_sha256: H, runtime_sha256: H });
+const store = (name) => ({ status: 'compatible', schema: `custodial.${name}.v2`, provenance_sha256: H, source: source('refs/heads/retained-source') });
+const retained = { schema_version: 1, source_pair: { frontend_commit: C, frontend_tree: T, backend_commit: C, backend_tree: T }, enrollment: store('enrollment'), protected_pending: store('protected-pending'), history: store('history'), crypto: store('crypto'), reset_or_downgrade_forbidden: true };
+const trusted = { schema_version: 1, policy_generation: 'post56-v2-reviewed', target_id: 'target-installed-56', package_name: packageName, signer_certificate_sha256: H, signer_public_key_sha256: H, installed_target: descriptor(56, 'refs/tags/installed-56-source'), candidate: descriptor(57, 'refs/heads/candidate-source'), recovery: descriptor(58, 'refs/heads/recovery-source'), retained_store_compatibility: retained, evidence_refs: { baseline_receipt_sha256: H, candidate_source_receipt_sha256: H, recovery_source_receipt_sha256: H, retained_data_plan_sha256: H }, legacy_policy: { highest_fleet_version_code: 29, minimum_next_version_code: 30, maximum_candidate_version_code_for_staged_recovery: 31 } };
+const adapterInput = { schema_version: 1, policy_generation: trusted.policy_generation, purpose: 'source_compatibility_diagnostic', fleet_promotion: false, scope: 'one_explicit_target_only', target_id: trusted.target_id, installed_target: structuredClone(trusted.installed_target), candidate: structuredClone(trusted.candidate), recovery: structuredClone(trusted.recovery), retained_store_compatibility: structuredClone(retained), evidence_refs: structuredClone(trusted.evidence_refs) };
+
+async function writeInputs(root, input = adapterInput, pins = trusted) {
+  const sourcePath = join(root, 'source-input.json'); const trustedPath = join(root, 'trusted-pins.json');
+  await writeFile(sourcePath, JSON.stringify({ schema_version: 1, kind: 'custodial.forward-source-admission-input.v1', source_only: true, activation: false, adapter_input: input }));
+  await writeFile(trustedPath, JSON.stringify({ schema_version: 1, kind: 'custodial.forward-source-trusted-pins.v1', external_trusted_pins: pins }));
+  return { sourcePath, trustedPath };
+}
+async function invokeForward(sourcePath, trustedPath) { let output = ''; const originalLog = console.log; console.log = (...args) => { output += `${args.join(' ')}\n`; }; try { await runForwardSourceAdmission(['--source-input', sourcePath, '--trusted-pins', trustedPath]); } finally { console.log = originalLog; } return JSON.parse(output); }
+
+test('source-only branch accepts externally pinned source metadata with no edition/build env', async () => { const root = await mkdtemp(join(tmpdir(), 'custodial-forward-entrypoint-')); try { const { sourcePath, trustedPath } = await writeInputs(root); const output = await invokeForward(sourcePath, trustedPath); assert.equal(output.result.accepted, true); assert.equal(output.result.source_ready, true); assert.equal(output.result.admitted, false); assert.equal(output.result.install_ready, false); assert.equal(output.entrypoint.seam_status, 'main_owned_source_mounted_inactive'); } finally { await rm(root, { recursive: true, force: true }); } });
+test('source-only branch does not create provenance or execute legacy signing/build path', async () => { const root = await mkdtemp(join(tmpdir(), 'custodial-forward-entrypoint-')); try { const { sourcePath, trustedPath } = await writeInputs(root); const provenance = join(repoRoot, 'build/provenance/custodial-android-configuration.json'); const before = await readFile(provenance).catch(() => null); await invokeForward(sourcePath, trustedPath); const after = await readFile(provenance).catch(() => null); assert.deepEqual(after, before); } finally { await rm(root, { recursive: true, force: true }); } });
+test('legacy configure body is byte-identical after the guarded source branch', async () => { const current = await readFile(script, 'utf8'); const marker = "  if (!['android', 'android-version', 'android-wrapper', 'ios'].includes(platform))"; const currentTail = current.slice(current.indexOf(marker)); assert.equal(createHash('sha256').update(currentTail).digest('hex'), '9e5abdd1f10cc1a06c213662cec05446cc451a453def3e1058946c88d31eb552'); });
+test('strict source CLI rejects missing, reordered, extra, relative, and duplicate flags', async () => { const root = await mkdtemp(join(tmpdir(), 'custodial-forward-entrypoint-')); try { const { sourcePath, trustedPath } = await writeInputs(root); for (const args of [[], ['--trusted-pins', trustedPath, '--source-input', sourcePath], ['--source-input', sourcePath, '--trusted-pins', trustedPath, '--extra'], ['--source-input', 'relative.json', '--trusted-pins', trustedPath], ['--source-input', sourcePath, '--trusted-pins', sourcePath]]) assert.throws(() => parseForwardSourceArguments(args)); } finally { await rm(root, { recursive: true, force: true }); } });
+test('source rejection remains source-only and cannot activate on a non-forward candidate', async () => { const root = await mkdtemp(join(tmpdir(), 'custodial-forward-entrypoint-')); try { const bad = structuredClone(adapterInput); bad.candidate.version_code = 56; const { sourcePath, trustedPath } = await writeInputs(root, bad, { ...trusted, candidate: { ...trusted.candidate, version_code: 56 } }); const output = await invokeForward(sourcePath, trustedPath); assert.equal(output.result.accepted, false); assert.equal(output.result.admitted, false); } finally { await rm(root, { recursive: true, force: true }); } });
+
+console.log(JSON.stringify({ result: 'PASS', scope: 'normal forward-source entrypoint affected source-only boundaries', cases: 5, subprocess_cli: 'validated separately outside node:test sandbox', legacy_configure_not_run: true, signing_build_network_phone: 'not run' }));

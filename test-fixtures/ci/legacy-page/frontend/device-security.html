@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<!-- release-2026.07.19.custodial-v3.12 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://memphis-zoo-mcp.onrender.com https://api.open-meteo.com; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Device Security</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1220;--panel:#111c2e;--panel2:#17243a;--line:rgba(255,255,255,.13);--text:#f8fafc;--muted:#b8c6d8;--green:#9be11f;--amber:#fbbf24;--red:#f87171}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}body{background-image:linear-gradient(rgba(4,10,20,.72),rgba(4,10,20,.82)),url('./dashboard-bg_optimized.webp?v=release-2026.07.19.custodial-v3.12');background-size:cover;background-attachment:fixed}
+    .page{width:min(980px,100%);margin:0 auto;padding:calc(max(18px,env(safe-area-inset-top)) + 10px) 16px calc(max(30px,env(safe-area-inset-bottom)) + 20px)}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.back{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border:0;border-radius:999px;background:linear-gradient(#a8e146,#6cb81f);color:#102106;font-weight:900;text-decoration:none}.title{font-size:clamp(1.55rem,5vw,2.25rem);font-weight:900;text-align:right}
+    .card{background:linear-gradient(180deg,rgba(17,28,46,.95),rgba(11,18,32,.96));border:1px solid var(--line);border-radius:22px;padding:18px;margin:14px 0;box-shadow:0 14px 34px rgba(0,0,0,.3)}h2{margin:0 0 8px;font-size:1.25rem}.muted{color:var(--muted);line-height:1.42}.status{min-height:1.4em;color:var(--muted);font-weight:800}.status.error{color:var(--red)}
+    .modeRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.modeBtn,.action{border:1px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--panel2);color:var(--text);font-weight:900;cursor:pointer}.modeBtn.active{background:var(--green);color:#102106}.modeBtn.danger{border-color:rgba(248,113,113,.5)}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.metric{padding:13px;border-radius:16px;background:rgba(255,255,255,.06);text-align:center}.metric strong{display:block;font-size:1.6rem;color:var(--green)}
+    .devices{display:grid;gap:10px}.device{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border-radius:17px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08)}.deviceName{font-weight:900;font-size:1.07rem}.deviceMeta{margin-top:5px;color:var(--muted);font-size:.9rem;line-height:1.35}.badge{display:inline-flex;margin-top:7px;padding:5px 9px;border-radius:999px;font-size:.78rem;font-weight:900}.badge.ok{background:rgba(132,195,65,.22);color:#dff7bf}.badge.missing{background:rgba(251,191,36,.18);color:#fde68a}.badge.blocked{background:rgba(248,113,113,.18);color:#fecaca}.buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.action.primary{background:var(--green);color:#102106}.action.revoke{background:rgba(127,29,29,.55)}.action:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.45)}
+    .codeBox{display:none;margin-top:14px;padding:18px;border-radius:18px;background:#f8fafc;color:#111827;text-align:center}.codeBox.show{display:block}.code{font-size:clamp(2rem,10vw,3.8rem);font-weight:900;letter-spacing:.16em}.codeMeta{margin-top:8px;font-weight:800;color:#475569}.unlock input{width:100%;margin-top:10px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.08);color:var(--text);padding:13px;font-size:1.05rem}.hidden{display:none!important}
+    @media(max-width:760px){.summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.summary{grid-template-columns:1fr}.device{grid-template-columns:1fr}.buttons{justify-content:flex-start}.code{letter-spacing:.08em}}
+  </style>
+  <link rel="icon" href="./dashboard_tiger_icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
+  <script defer src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
+</head>
+<body data-memphis-context="manager">
+  <main class="page">
+    <header class="top mz-page-header"><a class="mz-back-link" data-mz-back href="./start_page1.html">Back</a><div class="title">Device Security</div></header>
+    <section id="unlock-card" class="card unlock">
+      <h2>Security Admin unlock required</h2>
+      <div class="muted">This application generates and revokes sensitive employee phone security codes. It requires both a trusted manager browser and the separate Device Security password.</div>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Device Security password" />
+      <div class="modeRow"><button id="unlock" class="action primary" type="button">Unlock for 15 minutes</button></div>
+      <div id="unlock-status" class="status"></div>
+    </section>
+    <section id="app" class="hidden">
+      <section class="card">
+        <h2>Credential rollout</h2>
+        <div class="muted">Each employee phone receives one revocable, ten-year credential through a short-lived eight-digit code. Codes are generated server-side, stored only as hashes, and displayed once.</div>
+        <div class="modeRow">
+          <button id="lock" class="action revoke" type="button">Lock Device Security</button>
+          <button id="revoke-security-sessions" class="action revoke" type="button">Revoke All Security Sessions</button>
+        </div>
+        <div id="mode-row" class="modeRow"></div>
+        <div id="summary" class="summary"></div>
+        <div id="status" class="status"></div>
+      </section>
+      <section class="card">
+        <h2>Employee phones</h2>
+        <div id="devices" class="devices"></div>
+        <div id="code-box" class="codeBox"><div id="code-title"></div><div id="code" class="code"></div><div id="code-meta" class="codeMeta"></div><div class="modeRow"><button id="copy-code" class="action primary" type="button">Copy Code</button><button id="revoke-code" class="action revoke" type="button">Revoke Code</button></div></div>
+      </section>
+      <!-- same-original preparation panel begin -->
+      <section class="card unlock">
+        <h2>Same-original recovery preparation</h2>
+        <p class="muted">Review the exact original challenge and its unchanged server expiry before explicitly confirming preparation only. This does not approve native effects, accept work, retire keys, or mark a phone ready.</p>
+        <label for="sameOriginalChallenge">Original challenge UUID</label>
+        <input id="sameOriginalChallenge" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" pattern="[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}" aria-describedby="sameOriginalMessage" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" disabled />
+        <div class="modeRow">
+          <button id="sameOriginalReview" class="action" type="button" disabled>Review original challenge</button>
+          <button id="sameOriginalConfirm" class="action primary" type="button" disabled>Confirm preparation only</button>
+          <button id="sameOriginalStatus" class="action" type="button" disabled>Read original status</button>
+        </div>
+        <pre id="sameOriginalSummary" class="muted" hidden></pre>
+        <div id="sameOriginalMessage" class="status" role="status">Preparation only. Controls remain unavailable until the current authorized page is bound. No native approval, work acceptance, key retirement, or phone readiness is granted here.</div>
+      </section>
+      <!-- same-original preparation panel end -->
+    </section>
+  </main>
+  <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <!-- same-original preparation modules begin -->
+  <script src="./same-original-recovery-client.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./same-original-recovery-panel.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./same-original-recovery-original-store.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <script src="./same-original-recovery-page.js?v=release-2026.07.19.custodial-v3.12"></script>
+  <!-- same-original preparation modules end -->
+  <script>
+  (async function(){
+    'use strict';
+    const API='https://memphis-zoo-mcp.onrender.com/admin-api/device-auth';
+    const SECURITY_API='https://memphis-zoo-mcp.onrender.com/admin-api/device-security';
+    const els={unlockCard:document.getElementById('unlock-card'),app:document.getElementById('app'),password:document.getElementById('password'),unlock:document.getElementById('unlock'),unlockStatus:document.getElementById('unlock-status'),modeRow:document.getElementById('mode-row'),summary:document.getElementById('summary'),status:document.getElementById('status'),devices:document.getElementById('devices'),codeBox:document.getElementById('code-box'),codeTitle:document.getElementById('code-title'),code:document.getElementById('code'),codeMeta:document.getElementById('code-meta'),copyCode:document.getElementById('copy-code'),revokeCode:document.getElementById('revoke-code'),lock:document.getElementById('lock'),revokeSecuritySessions:document.getElementById('revoke-security-sessions')};
+    let current=null;let lastCode=null;let managerSession=null;let managerSessionPins=null;let actionGeneration=0;let codeRequestGeneration=0;
+    // Manager preparation is local intent only. None of these ports represents
+    // native readiness, server approval, or authority to retire protected work.
+    const preparationIds=['sameOriginalChallenge','sameOriginalReview','sameOriginalConfirm','sameOriginalStatus','sameOriginalSummary','sameOriginalMessage'];
+    const preparationNodes=preparationIds.map(id=>document.getElementById(id));
+    const originalPrefix='mz_same_original_recovery_original.v1:';
+    const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+    let preparation=null,preparationFloor=null;
+    function quietPreparation(message){for(const id of preparationIds.slice(0,4))document.getElementById(id).disabled=true;const summary=document.getElementById('sameOriginalSummary');summary.textContent='';summary.hidden=true;document.getElementById('sameOriginalChallenge').value='';document.getElementById('sameOriginalMessage').textContent=message;}
+    function retirePreparation(){const owned=preparation;preparation=null;preparationFloor=null;if(owned){owned.closed=true;for(const controller of owned.requests)controller.abort();owned.requests.clear();if(owned.dispose)owned.dispose();}quietPreparation('Preparation page closed. Any original remains retained.');}
+    // Capture only normal, still-unwrapped Storage methods. An already
+    // installed firewall, missing native Storage, or missing lock fails closed.
+    // There is never a denied-write/raw-retry path.
+    const preparationStorage=(async()=>{
+      const storage=window.localStorage,proto=window.Storage?.prototype;
+      if(!storage||!proto||Object.getPrototypeOf(storage)!==proto)throw new Error('Original manager storage unavailable.');
+      const originals={};for(const name of ['getItem','setItem','removeItem','clear']){const d=Object.getOwnPropertyDescriptor(proto,name);if(!d||typeof d.value!=='function'||!d.configurable||!d.writable||storage[name]!==d.value)throw new Error('Original manager storage already guarded or unavailable.');originals[name]=d.value;}
+      const [firewall,admission]=await Promise.all([import('./mobile/src/custodial/storage-firewall.js'),import('./mobile/src/custodial/protected-browser-admission.js')]);
+      for(const name of Object.keys(originals))if(proto[name]!==originals[name])throw new Error('Original manager storage changed before capture.');
+      const raw=firewall.createRawStorageAdapter(storage);
+      // The ordinary native gate is deliberately NOT satisfied by manager login.
+      firewall.installCustodialStorageFirewall({storage,getSecurityStatus:()=>({initialized:false,ready:false,available:false})});
+      if(typeof window.navigator?.locks?.request!=='function')throw new Error('Protected manager admission unavailable.');
+      return Object.freeze({raw,admission});
+    })();
+    preparationStorage.catch(()=>{});
+    function sessionPins(session){if(!session)return null;return JSON.stringify([session.role,session.manager_id,session.credential_id,session.device_id,session.expires_at,session.access_level,session.read_only,session.trusted_device,session.auth_mode,session.identity_source,session.operational_day,session.permissions,session.roles]);}
+    function fullPreparationOwner(session){return session?.role==='ops_manager'&&uuid.test(session.manager_id)&&uuid.test(session.credential_id)&&typeof session.device_id==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(session.device_id)&&session.access_level==='full_access'&&session.read_only===false&&session.trusted_device===true&&session.permissions?.schema==='custodial.manager-permissions.v1'&&session.permissions.read===true&&session.permissions.owner===true&&window.MemphisAuth.hasRole('SECURITY_ADMIN',session);}
+    function ownsPreparation(binding){return !binding.closed&&preparation===binding&&actionGeneration===binding.generation&&managerSession===binding.session&&window.MemphisAuth.readSession()===binding.session&&sessionPins(binding.session)===managerSessionPins&&sessionPins(binding.session)===binding.pins&&fullPreparationOwner(binding.session)&&preparationFloor===binding.floor&&binding.floor.state.unlocked===true&&binding.floor.state.manager_id===binding.session.manager_id&&Number.isFinite(Date.parse(binding.floor.state.expires_at))&&Date.parse(binding.floor.state.expires_at)>Date.now()&&Date.parse(binding.session.expires_at)>Date.now()&&document.getElementById('app')===els.app&&preparationIds.every((id,index)=>document.getElementById(id)===preparationNodes[index]&&els.app.querySelector('#'+id)===preparationNodes[index])&&!els.app.classList.contains('hidden');}
+    function observePreparationFloor(generation,session,state){if(!preparationFloor&&generation===actionGeneration&&managerSession===session&&window.MemphisAuth.readSession()===session)preparationFloor=Object.freeze({generation,session,state:Object.freeze({manager_id:state?.manager_id,unlocked:state?.unlocked,expires_at:state?.expires_at})});}
+    function requirePreparation(binding){if(!ownsPreparation(binding)){if(preparation===binding)retirePreparation();throw new Error('Original preparation owner or password lifetime is no longer current.');}}
+    function boundedPreparation(binding){requirePreparation(binding);const controller=new AbortController(),deadline=performance.now()+30000;binding.requests.add(controller);let timer;
+      const expired=new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('Preparation response unconfirmed within original local request budget.'));},30000);});
+      function assertCurrent(){requirePreparation(binding);if(controller.signal.aborted||performance.now()>=deadline)throw new Error('Preparation response unconfirmed.');}
+      return {signal:controller.signal,assertCurrent,lockBudget(requested){assertCurrent();return Math.max(1,Math.min(requested,Math.ceil(deadline-performance.now())));},async wait(effect){assertCurrent();const value=await Promise.race([Promise.resolve().then(effect),expired]);assertCurrent();return value;},close(){clearTimeout(timer);binding.requests.delete(controller);}};
+    }
+    async function mountPreparation(){
+      const generation=actionGeneration,session=managerSession;
+      if(preparation){if(ownsPreparation(preparation))return preparation.mount;retirePreparation();return;}
+      if(!fullPreparationOwner(session)||!preparationFloor||preparationFloor.session!==session||preparationFloor.generation!==generation){quietPreparation('Preparation unavailable. The current named full-owner Security Admin password session is required.');return;}
+      const binding={generation,session,pins:sessionPins(session),floor:preparationFloor,closed:false,requests:new Set(),dispose:null,mount:null};preparation=binding;
+      binding.mount=(async()=>{try{
+        requirePreparation(binding);const {raw,admission}=await preparationStorage;requirePreparation(binding);
+        const stem=originalPrefix+session.manager_id+':'+session.credential_id+':'+session.device_id;let admittedBudget=null;
+        const storage=Object.freeze({getItem(key){requirePreparation(binding);if(key!==stem+':intent'&&key!==stem+':original'&&key!==admission.PROTECTED_BROWSER_HOLD_KEY)throw new Error('Manager original key refused.');return raw.getItem(key);},setItem(key,value){requirePreparation(binding);if(!admittedBudget||key!==stem+':intent'&&key!==stem+':original'||typeof value!=='string')throw new Error('Manager original write refused.');admittedBudget.assertCurrent();protectedAdmission.requireAdmission();raw.setItem(key,value);requirePreparation(binding);}});
+        // Admission binds the SAME private original adapter captured before
+        // the firewall. The page/controller still receives only the two-key
+        // current-manager wrapper above; no raw storage or metadata port escapes.
+        const protectedAdmission=admission.createProtectedBrowserAdmission({storage:raw,locks:window.navigator.locks,cryptoApi:window.crypto});
+        // Observe the durable hold before hydration as well as each mutation;
+        // its later disappearance is uncertainty, never permission to thaw.
+        protectedAdmission.held();
+        const currentOwner=()=>{if(!ownsPreparation(binding))return null;return Object.freeze({manager_id:session.manager_id,manager_credential_id:session.credential_id,manager_device_id:session.device_id,page_generation:generation});};
+        async function floor(budget){if(!await budget.wait(()=>currentSecurityAdmin(generation,session)))throw new Error('Current Security Admin password session required.');requirePreparation(binding);}
+        const mutate=async(operation,options)=>{const budget=boundedPreparation(binding);try{await floor(budget);budget.assertCurrent();const result=await protectedAdmission.mutate(()=>{budget.assertCurrent();protectedAdmission.requireAdmission();admittedBudget=budget;try{return operation();}finally{admittedBudget=null;}},{timeoutMs:budget.lockBudget(options.timeoutMs)});budget.assertCurrent();await floor(budget);return result;}finally{budget.close();}};
+        const guardedRequest=async(call)=>{requirePreparation(binding);const prefix='/admin-api/device-security';const review=call?.method==='GET'&&typeof call.path==='string'&&call.path.startsWith(prefix+'/same-original-recovery/challenges/')&&uuid.test(call.path.slice((prefix+'/same-original-recovery/challenges/').length));const decision=call?.method==='POST'&&(call.path===prefix+'/same-original-recovery/approvals'||call.path===prefix+'/same-original-recovery/approvals/original-status');if(!review&&!decision)throw new Error('Preparation request path refused.');const budget=boundedPreparation(binding);try{await floor(budget);return await budget.wait(()=>securityRequest(call.path.slice(prefix.length),{method:call.method,body:call.body,signal:budget.signal}));}catch(error){requirePreparation(binding);if(error?.status===401||error?.status===403){retirePreparation();throw error;}return null; // Unknown is status-only; not evidence of no server write.
+          }finally{budget.close();}};
+        if(typeof window.MemphisSameOriginalRecoveryPage?.mountSameOriginalRecoveryPage!=='function')throw new Error('Preparation composition unavailable.');
+        const dispose=await window.MemphisSameOriginalRecoveryPage.mountSameOriginalRecoveryPage({root:els.app,storage,currentOwner,mutate,request:guardedRequest,ownsPage:()=>ownsPreparation(binding)});
+        if(!ownsPreparation(binding)){dispose();return;}binding.dispose=dispose;
+      }catch{if(preparation===binding){retirePreparation();quietPreparation('Preparation unavailable. Any original remains retained; no replacement request is enabled.');}}})();
+      return binding.mount;
+    }
+    window.addEventListener('pagehide',()=>invalidatePage());
+    function clearCode(){lastCode=null;els.codeTitle.textContent='';els.code.textContent='';els.codeMeta.textContent='';els.codeBox.classList.remove('show');}
+    function invalidatePage(){retirePreparation();actionGeneration++;codeRequestGeneration++;clearCode();return actionGeneration;}
+    function denyCurrentAccess(generation){if(generation!==actionGeneration)return;invalidatePage();els.app.classList.add('hidden');els.unlockCard.classList.remove('hidden');setUnlockStatus('Named Security Admin session or Device Security unlock is no longer current.');}
+    async function currentSecurityAdmin(generation,session){if(generation!==actionGeneration)return false;const pins=sessionPins(session),device=window.MemphisAuth.getDeviceId();if(!device||session?.device_id!==device||!session||sessionPins(session)!==managerSessionPins||window.MemphisAuth.readSession()!==session||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session)){denyCurrentAccess(generation);return false;}try{const named=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:false,redirect:false,throwOnFailure:true});if(generation!==actionGeneration)return false;if(window.MemphisAuth.getDeviceId()!==device||named!==session||window.MemphisAuth.readSession()!==session||sessionPins(session)!==pins||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session)){denyCurrentAccess(generation);return false;}const state=await window.MemphisAuth.deviceSecuritySession();if(generation!==actionGeneration)return false;if(window.MemphisAuth.getDeviceId()!==device||window.MemphisAuth.readSession()!==session||sessionPins(session)!==pins||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session)||state?.unlocked!==true||state.manager_id!==session.manager_id){denyCurrentAccess(generation);return false;}observePreparationFloor(generation,session,state);return true;}catch{denyCurrentAccess(generation);return false;}}
+    function setStatus(text,error=false){els.status.textContent=text||'';els.status.className=`status${error?' error':''}`;}
+    function setUnlockStatus(text,error=false){els.unlockStatus.textContent=text||'';els.unlockStatus.className=`status${error?' error':''}`;}
+    function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+    async function request(path,{method='GET',body=null}={}){
+      const generation=actionGeneration,session=managerSession;
+      const auth=window.MemphisAuth,pins=sessionPins(session),device=auth.getDeviceId();
+      function currentRequest(){
+        if(generation!==actionGeneration||window.MemphisAuth!==auth||!session||managerSession!==session
+          ||auth.readSession()!==session||sessionPins(session)!==pins||pins!==managerSessionPins
+          ||!device||auth.getDeviceId()!==device||session.device_id!==device||!auth.hasRole('SECURITY_ADMIN',session)){
+          denyCurrentAccess(generation);throw new Error('Device Security request owner is no longer current.');
+        }
+      }
+      currentRequest();
+      let headers;
+      try{headers=await auth.deviceSecurityAuthHeaders();}catch(error){currentRequest();throw error;}
+      currentRequest();
+      if(body!=null)headers['Content-Type']='application/json';
+      let response;
+      try{response=await fetch(`${API}${path}`,{method,cache:'no-store',credentials:'include',headers,body:body==null?undefined:JSON.stringify(body)});}catch(error){currentRequest();throw error;}
+      currentRequest();
+      const payload=await response.json().catch(()=>null);
+      currentRequest();
+      if(!response.ok||!payload?.ok)throw new Error(payload?.error||`HTTP ${response.status}`);
+      return payload.data;
+    }
+    async function securityRequest(path,{method='POST',body=null,signal}={}){
+      const generation=actionGeneration,session=managerSession;
+      const pins=sessionPins(session);
+      function currentRequest(){if(signal?.aborted||generation!==actionGeneration||managerSession!==session||window.MemphisAuth.readSession()!==session||sessionPins(session)!==pins||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session)){if(!signal?.aborted)denyCurrentAccess(generation);throw new Error('Device Security request owner is no longer current.');}}
+      if(!session||window.MemphisAuth.readSession()!==session||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session)){denyCurrentAccess(generation);throw new Error('Device Security request owner is no longer current.');}
+      const headers=await window.MemphisAuth.deviceSecurityAuthHeaders();
+      currentRequest();
+      if(body!=null)headers['Content-Type']='application/json';
+      const response=await fetch(`${SECURITY_API}${path}`,{method,cache:'no-store',credentials:'include',headers,body:body==null?undefined:JSON.stringify(body),...(signal?{signal}:{})});
+      currentRequest();
+      const payload=await response.json().catch(()=>null);
+      currentRequest();
+      if(!response.ok||!payload?.ok)throw Object.assign(new Error(payload?.error||`HTTP ${response.status}`),{status:response.status});
+      return payload.data;
+    }
+    function devicePresentation(row){
+      if(!row.registry_present)return{label:'Registry row missing',badge:'blocked',eligible:false,detail:'Create the canonical device record before enrollment.'};
+      if(row.coverage_required===false&&row.employee_id===null)return{label:'Unassigned registry position — not required',badge:'',eligible:false,detail:'This registered position has no employee assigned. It remains a fleet diagnostic, not a required employee phone.'};
+      if(row.coverage_required===false&&row.employee_id&&row.employee_active===false&&/^EMP\d+$/i.test(String(row.employee_code||'')))return{label:'Inactive employee assignment — not required',badge:'',eligible:false,detail:'The current roster marks this assigned employee inactive. This position remains a fleet diagnostic; no enrollment is required for this inactive assignment.'};
+      if(row.coverage_required===false&&row.employee_id&&row.employee_code==null)return{label:'Current employee eligibility unknown',badge:'blocked',eligible:false,detail:'The current assigned employee roster mapping is unavailable. This is not an explicit vacancy or verified nonrequired assignment.'};
+      if(!row.device_active)return{label:'Device inactive',badge:'blocked',eligible:false,detail:'Reactivate the device record before enrollment.'};
+      if(!row.employee_id)return{label:'No employee assigned',badge:'blocked',eligible:false,detail:'Assign an active custodial employee before enrollment.'};
+      if(!row.employee_active)return{label:'Assigned employee inactive',badge:'blocked',eligible:false,detail:'The assigned employee must be active.'};
+      if(!/^EMP\d+$/i.test(String(row.employee_code||'')))return{label:'Assignment is not custodial',badge:'blocked',eligible:false,detail:'The assigned employee must have a canonical EMP-number code.'};
+      if(!row.assignment_valid)return{label:'Assignment invalid',badge:'blocked',eligible:false,detail:'Correct the registry assignment before enrollment.'};
+      if(row.credential&&!row.confirmed)return{label:'Credential issued — awaiting phone confirmation',badge:'missing',eligible:true,detail:'The phone must successfully use its protected cookie before enforcement. Generate a new code if confirmation does not arrive.'};
+      if(row.credential)return{label:row.ready?'Credential active':'Credential present — not ready',badge:row.ready?'ok':'blocked',eligible:true,detail:row.ready?'This phone is ready for enforcement.':'Correct the registry state before enforcement.'};
+      return{label:'Enrollment needed',badge:'missing',eligible:true,detail:'Generate a code and enter it once on this phone.'};
+    }
+    function coverageReason(coverage){
+      const issueText={no_current_eligible_employees:'No current eligible employees were verified.',active_employee_not_uniquely_assigned_to_active_canonical_device:'A current eligible employee is not uniquely assigned to an active canonical device.',duplicate_canonical_device:'A canonical registry position has duplicate device records.',canonical_device_registry_missing:'A canonical device registry record is missing.',assigned_employee_roster_join_unknown_or_changed:'An assigned employee current roster mapping is unknown or changed.',canonical_assignment_not_eligible:'A canonical device assignment is not a current eligible employee.',active_device_credential_conflict:'An active assigned device has conflicting current credentials.'};
+      const reasons=[];const missing=Array.isArray(coverage?.missing)?coverage.missing.filter(value=>typeof value==='string'&&value):[];
+      if(missing.length)reasons.push(`Missing required or registry devices: ${missing.join(', ')}.`);
+      if(Array.isArray(coverage?.coverage_issues))for(const issue of coverage.coverage_issues)reasons.push(Object.prototype.hasOwnProperty.call(issueText,issue)?issueText[issue]:'Current coverage has an unrecognized issue and is not verified.');
+      return [...new Set(reasons)].join(' ')||'Current coverage is not verified; no complete readiness reason was returned.';
+    }
+    function render(){
+      const policy=current?.policy||{};const coverage=current?.coverage||{};const modes=['observe','enroll','enforce'];
+      els.modeRow.innerHTML=modes.map((mode)=>`<button class="modeBtn ${policy.mode===mode?'active':''} ${mode==='enforce'?'danger':''}" data-mode="${mode}" type="button">${mode==='observe'?'Observe only':mode==='enroll'?'Enroll phones':'Enforce credentials'}</button>`).join('');
+      els.modeRow.querySelectorAll('[data-mode]').forEach((button)=>button.addEventListener('click',()=>setMode(button.dataset.mode)));
+      const required=Number.isSafeInteger(coverage.required_total)&&coverage.required_total>=0?coverage.required_total:'Unavailable';
+      els.summary.innerHTML=`<div class="metric"><strong>${Number(coverage.ready||0)} / ${required}</strong>Ready / current eligible employees</div><div class="metric"><strong>${Number(coverage.enrolled||0)}</strong>Credentials</div><div class="metric"><strong>${Number(coverage.total||0)}</strong>Registry positions</div><div class="metric"><strong>${coverage.ready_to_enforce?'Yes':'No'}</strong>Ready to enforce</div>${coverage.ready_to_enforce?'':`<div class="muted">${escapeHtml(coverageReason(coverage))}</div>`}`;
+      const rows=Array.isArray(coverage.devices)?coverage.devices:[];
+      els.devices.innerHTML=rows.map((row)=>{const view=devicePresentation(row);const employee=row.employee_name||(row.employee_id?'Unknown employee':'Unassigned');const detailParts=[row.device_name||'',row.employee_code?`Employee code ${row.employee_code}`:'',view.detail,row.credential?.last_used_at?`Last used ${new Date(row.credential.last_used_at).toLocaleString()}`:''].filter(Boolean);return `<article class="device"><div><div class="deviceName">${escapeHtml(row.device_id)} · ${escapeHtml(employee)}</div><div class="deviceMeta">${detailParts.map(escapeHtml).join('<br>')}</div><span class="badge ${view.badge}">${escapeHtml(view.label)}</span></div><div class="buttons"><button class="action primary" data-code="${escapeHtml(row.device_id)}" type="button" ${view.eligible?'':'disabled aria-disabled="true"'}>Generate Code</button>${row.credential?`<button class="action revoke" data-revoke="${escapeHtml(row.credential.credential_id)}" type="button">Revoke Credential</button>`:''}</div></article>`;}).join('')||'<div class="muted">No employee kiosks were returned.</div>';
+      els.devices.querySelectorAll('[data-code]:not([disabled])').forEach((button)=>button.addEventListener('click',()=>generateCode(button.dataset.code)));
+      els.devices.querySelectorAll('[data-revoke]').forEach((button)=>button.addEventListener('click',()=>revoke(button.dataset.revoke)));
+    }
+    async function refresh(){const generation=actionGeneration,session=managerSession;setStatus('Loading device security state…');try{const data=await request('/summary');if(!await currentSecurityAdmin(generation,session))return;current=data;render();setStatus('Device security state is current.');await mountPreparation();}catch(error){clearCode();if(generation===actionGeneration)setStatus(error?.message||'Could not load device security.',true);}}
+    async function generateCode(deviceId){const generation=actionGeneration,session=managerSession,requestGeneration=++codeRequestGeneration;clearCode();setStatus(`Generating a code for ${deviceId}…`);try{const data=await request('/enrollment-code',{method:'POST',body:{device_id:deviceId}});if(requestGeneration!==codeRequestGeneration||generation!==actionGeneration)return;if(!await currentSecurityAdmin(generation,session)||requestGeneration!==codeRequestGeneration||generation!==actionGeneration)return;lastCode=data;els.codeTitle.textContent=`Enrollment code for ${data.canonical_device_id}${data.employee_name?` · ${data.employee_name}`:''}`;els.code.textContent=data.enrollment_code;els.codeMeta.textContent=`Code ID ${data.code_id}. Expires ${new Date(data.expires_at).toLocaleString()}. Displayed once; database stores only its hash.`;els.codeBox.classList.add('show');els.codeBox.scrollIntoView({behavior:'smooth',block:'center'});setStatus('Code generated.');}catch(error){if(requestGeneration===codeRequestGeneration)clearCode();if(generation===actionGeneration&&requestGeneration===codeRequestGeneration)setStatus(error?.message||'Could not generate code.',true);}}
+    async function revokeCode(){const generation=actionGeneration,session=managerSession,code=lastCode;if(!code?.code_id||!await currentSecurityAdmin(generation,session)||!lastCode||lastCode.code_id!==code.code_id)return;if(!confirm('Revoke this just-generated code?'))return;clearCode();try{await request(`/codes/${encodeURIComponent(code.code_id)}/revoke`,{method:'POST',body:{reason:'revoked_from_device_security_ui'}});if(generation===actionGeneration&&await currentSecurityAdmin(generation,session))setStatus('Code revoked.');}catch(error){if(generation===actionGeneration)setStatus(error?.message||'Could not revoke code.',true);}}
+    async function revoke(credentialId){if(!confirm('Revoke this phone credential? The phone will need a new enrollment code.'))return;setStatus('Revoking credential…');try{await request(`/credentials/${encodeURIComponent(credentialId)}/revoke`,{method:'POST',body:{reason:'revoked_from_device_security_console'}});await refresh();}catch(error){setStatus(error?.message||'Could not revoke credential.',true);}}
+    async function setMode(mode){if(mode==='enforce'&&!current?.coverage?.ready_to_enforce){setStatus(`Cannot enforce yet. ${coverageReason(current?.coverage)}`,true);return;}if(!confirm(`Change employee device authentication mode to ${mode}?`))return;setStatus(`Changing mode to ${mode}…`);try{await request('/mode',{method:'POST',body:{mode}});await refresh();}catch(error){setStatus(error?.message||'Could not change mode.',true);}}
+    async function unlock(){if(preparation&&ownsPreparation(preparation)){els.password.value='';await currentSecurityAdmin(actionGeneration,managerSession);return;}const generation=invalidatePage();let session=null;try{setUnlockStatus('Checking named Security Admin session…');session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:false,redirect:false,throwOnFailure:true});if(generation!==actionGeneration)return;if(!session||window.MemphisAuth.readSession()!==session||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session))throw new Error('Security Admin access is required.');managerSession=session;managerSessionPins=sessionPins(session);setUnlockStatus('Unlocking…');await window.MemphisAuth.unlockDeviceSecurity(els.password.value);els.password.value='';if(generation!==actionGeneration||window.MemphisAuth.readSession()!==session||sessionPins(session)!==managerSessionPins||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session))return;const state=await window.MemphisAuth.deviceSecuritySession();if(generation!==actionGeneration||window.MemphisAuth.readSession()!==session||sessionPins(session)!==managerSessionPins||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session)||state?.unlocked!==true)return;observePreparationFloor(generation,session,state);els.unlockCard.classList.add('hidden');els.app.classList.remove('hidden');await refresh();if(generation===actionGeneration)setUnlockStatus('');}catch(error){els.password.value='';if(generation===actionGeneration){managerSession=null;els.app.classList.add('hidden');els.unlockCard.classList.remove('hidden');setUnlockStatus(error?.message||'Device Security password rejected.',true);}}}
+    els.unlock.addEventListener('click',unlock);els.password.addEventListener('keydown',(event)=>{if(event.key==='Enter')unlock();});
+    els.copyCode.addEventListener('click',async()=>{const generation=actionGeneration,session=managerSession,code=lastCode;if(!code?.enrollment_code||!Number.isFinite(Date.parse(code.expires_at))||Date.parse(code.expires_at)<=Date.now()||!await currentSecurityAdmin(generation,session)||generation!==actionGeneration||lastCode!==code)return;await navigator.clipboard.writeText(code.enrollment_code);});
+    els.revokeCode.addEventListener('click',()=>revokeCode().catch((error)=>setStatus(error.message,true)));
+    els.lock.addEventListener('click',async()=>{invalidatePage();els.app.classList.add('hidden');els.unlockCard.classList.remove('hidden');setUnlockStatus('Device Security locked.');try{await window.MemphisAuth.lockDeviceSecurity();}finally{location.reload();}});
+    els.revokeSecuritySessions.addEventListener('click',async()=>{if(confirm('Revoke every active Device Security password session?')){const generation=invalidatePage();els.app.classList.add('hidden');els.unlockCard.classList.remove('hidden');setUnlockStatus('Security sessions are being revoked.');try{await securityRequest('/sessions/revoke-all');if(generation!==actionGeneration)return;await window.MemphisAuth.lockDeviceSecurity();}finally{location.reload();}}});
+    try{const session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:true,redirect:true,throwOnFailure:true});if(!window.MemphisAuth.hasRole('SECURITY_ADMIN',session))throw new Error('Security Admin access is required.');managerSession=session;managerSessionPins=sessionPins(session);const generation=actionGeneration;const state=await window.MemphisAuth.deviceSecuritySession();if(generation!==actionGeneration||window.MemphisAuth.readSession()!==session||sessionPins(session)!==managerSessionPins||!window.MemphisAuth.hasRole('SECURITY_ADMIN',session))return;if(state.unlocked){observePreparationFloor(generation,session,state);els.unlockCard.classList.add('hidden');els.app.classList.remove('hidden');await refresh();}else{setUnlockStatus(state.configured===false?'Device Security password is not initialized.':'Enter the Device Security password.');}}catch(error){clearCode();setUnlockStatus(error?.message||'Ops Manager authentication failed.',true);}
+  })();
+  </script>
+</body>
+</html>

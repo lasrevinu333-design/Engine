@@ -1,0 +1,148 @@
+/* Terracotta presentation adapter for start_page1.html. No layout, visibility or behavior overrides. */
+@media screen{
+html[data-trail-theme="terracotta"]{
+  color-scheme:light}
+html[data-trail-theme="terracotta"]{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] body{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] button:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] a:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] input:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] textarea:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] select:focus-visible{outline:3px solid var(--trail-focus);outline-offset:3px}
+html[data-trail-theme="terracotta"] .uxButton{border:1px solid var(--trail-control-border);background:var(--trail-surface);
+  color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .uxButton.primary{background:var(--trail-brand);color:var(--trail-on-brand);border-color:var(--trail-border)}
+html[data-trail-theme="terracotta"] .uxButton.danger{background:var(--trail-danger-soft);color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .uxInput{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .uxTextarea{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .uxSelect{border:1px solid var(--trail-control-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .uxCard{background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .uxMuted{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .uxEyebrow{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .uxStatus{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .uxStatus.ok{color:var(--trail-success)}
+html[data-trail-theme="terracotta"] .uxStatus.error{color:var(--trail-danger)}
+html[data-trail-theme="terracotta"] .uxStatus.info{color:var(--trail-info)}
+html[data-trail-theme="terracotta"] .uxToast{background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-secondary-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-brand)}
+html[data-trail-theme="terracotta"] .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .operationsPage .mz-back-link{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-brand);
+  box-shadow: var(--trail-shadow);
+  color: var(--trail-on-brand)}
+html[data-trail-theme="terracotta"] .mz-back-link:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-icon-button:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-field:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-select:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-textarea:focus-visible{
+  outline: 2px solid var(--trail-focus);
+  outline-offset: 2px}
+html[data-trail-theme="terracotta"] .mz-button{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-button--secondary{ background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-button--danger{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-card{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  box-shadow: var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-status{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-alert{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-empty{
+  border: 1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] .mz-error{
+  border: 1px solid var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-status{ background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-alert--success{ background: var(--trail-success-soft); color: var(--trail-success)}
+html[data-trail-theme="terracotta"] .mz-alert--warning{ background: var(--trail-warning-soft); color: var(--trail-warning)}
+html[data-trail-theme="terracotta"] .mz-alert--error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-error{ background: var(--trail-danger-soft); color: var(--trail-danger)}
+html[data-trail-theme="terracotta"] .mz-empty{ border-style: dashed; background: var(--trail-surface); color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-field{
+  border: 1px solid var(--trail-border);
+  background: var(--trail-surface);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-select{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-textarea{
+  border: 1px solid var(--trail-control-border);
+  background: var(--trail-raised);
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-loading{
+  color: var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mz-loading::before{
+  border: 2px solid var(--trail-border);
+  border-top-color: var(--trail-brand)}
+html[data-trail-theme="terracotta"] .mz-visually-hidden{
+  border: 0 !important}
+html[data-trail-theme="terracotta"] #restroom-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+html[data-trail-theme="terracotta"] #exhibit-wrap tbody tr:has(.status-not_cleaned) td:nth-child(2){
+  border-bottom: 0}
+html[data-trail-theme="terracotta"] .hubHero{background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubBrand p{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .accessMode{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .accessMode.full{color:var(--trail-ink);border-color:var(--trail-border);background:var(--trail-surface)}
+html[data-trail-theme="terracotta"] .snapshotCard{background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .snapshotLabel{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .snapshotCard small{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .sectionHeading p{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubTile{border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .hubTile:hover{border-color:var(--trail-border);background:var(--trail-selected);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubTile.primary{border-color:var(--trail-border)}
+html[data-trail-theme="terracotta"] .hubTile.insightTile{border-color:var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .tileIcon{background:var(--trail-surface);border:1px solid var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .mediaIcon{background:var(--trail-surface);border-color:var(--trail-border);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .insightTile .tileIcon{background:var(--trail-surface);border-color:var(--trail-border);color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubTile small{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .accessSection details{border:1px solid var(--trail-border);background:var(--trail-surface);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .accessSection summary::after{color:var(--trail-muted)}
+html[data-trail-theme="terracotta"] .hubFooter{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubNav{border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubNav a{color:var(--trail-brand)}
+html[data-trail-theme="terracotta"] .hubNav a.active{color:var(--trail-on-brand);background:var(--trail-brand);border:1px solid var(--trail-border)}
+@media(max-width:760px){
+html[data-trail-theme="terracotta"] .managerIdentity{border-top:1px solid var(--trail-border)}}
+html[data-trail-theme="terracotta"] .tileIcon.hubIllustratedIcon{border:2px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);
+color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .hubIllustratedIcon>svg{background:var(--trail-surface);color:var(--trail-ink);box-shadow:var(--trail-shadow)}
+html[data-trail-theme="terracotta"] .weatherAttribution{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] .weatherSourceDetails{color:var(--trail-ink)}
+html[data-trail-theme="terracotta"] #manager-weather-hours li{border:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] #manager-weather [data-stale="true"]{color:var(--trail-warning)}
+html[data-trail-theme="terracotta"] #today-events article{border-bottom:1px solid var(--trail-border)}
+html[data-trail-theme="terracotta"] #open-problems-list article{border-bottom:1px solid var(--trail-border)}}

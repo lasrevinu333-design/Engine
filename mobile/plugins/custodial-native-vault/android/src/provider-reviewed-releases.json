@@ -1,0 +1,20 @@
+{
+  "schema": "custodial.native-provider-reviewed-releases.v1",
+  "package_name": "org.memphiszoo.custodial",
+  "releases": [
+    {
+      "version_code": 80,
+      "version_name": "1.0.0",
+      "backend_protocol_evidence_sha256": "c7f6869105eac96cb7e7612155c2a0227ec731c887094310b128c254173dbeab",
+      "composition_evidence_sha256": "327a9a0ba342f5e853b090defcc21469642f3acf7dc3f6e6a62eeb92a9a85401",
+      "profile": {
+        "id": "android-elapsed-best-effort.karen-api36.v1",
+        "api": "android.os.SystemClock.elapsedRealtime/API-36",
+        "build": "motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys",
+        "device": "motorola/moto g - 2025/kansas/mt6835",
+        "timing_model": "android-elapsed-best-effort.v1",
+        "evidence_sha256": "ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798"
+      }
+    }
+  ]
+}

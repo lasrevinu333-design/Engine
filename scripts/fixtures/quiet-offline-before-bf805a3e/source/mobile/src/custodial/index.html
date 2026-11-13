@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#102018">
+  <title>Memphis Zoo Custodial</title>
+  <style>
+    :root{color-scheme:dark;--text:#fff;--panel:rgba(5,15,20,.88);--line:rgba(255,255,255,.42);--green:#b7e66a;--danger:#fecaca}
+    *{box-sizing:border-box}
+    [hidden]{display:none!important}
+    html,body{width:100%;min-height:100%;margin:0;font-family:Arial,sans-serif;color:var(--text);background:#111827;-webkit-text-size-adjust:100%}
+    body{background-image:linear-gradient(rgba(2,8,14,.34),rgba(2,8,14,.48)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed;overflow-x:hidden}
+    button,input,select,textarea{font:inherit}
+    button,a{touch-action:manipulation}
+    /* Restore the pre-app Custodial Team Hub hierarchy; enrollment and NFC stay native. */
+    .homeScreen{min-height:100vh;width:min(860px,100%);margin:0 auto;padding:calc(max(18px,env(safe-area-inset-top)) + 10px) 16px max(100px,calc(54px + env(safe-area-inset-bottom)));display:flex;flex-direction:column;align-items:center}
+    .heroStack{width:100%;max-width:720px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(240px,.8fr);gap:10px;align-items:stretch;margin:6px 0 14px}
+    .hubTitle,.weatherCard,.attendanceCard,.employeeCard{border:1px solid rgba(255,255,255,.16);background:linear-gradient(180deg,rgba(10,18,26,.78),rgba(10,18,26,.52));box-shadow:0 12px 26px rgba(0,0,0,.24);backdrop-filter:blur(8px);text-align:center}
+    .hubTitle{padding:14px 22px 16px;border-radius:24px;display:flex;flex-direction:column;justify-content:center}
+    .hubTitle h1{margin:0;font-size:clamp(2rem,4.8vw,2.75rem);font-weight:900;letter-spacing:-.03em;line-height:1}
+    .hubTitleSub,.factLabel,.employeeLabel{font-weight:800;text-transform:uppercase;color:#84c341;letter-spacing:.12em}
+    .hubTitleSub{margin-top:6px;font-size:.92rem}.hubClock{margin-top:10px;display:grid;gap:3px;justify-items:center}
+    .clockText{font-size:clamp(1.55rem,5.8vw,2rem);font-weight:900;line-height:1}.dateText{font-size:.9rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+    .infoGrid{min-width:0;display:grid;gap:10px}.weatherCard,.attendanceCard{padding:12px 14px 13px;border-radius:22px;display:flex;flex-direction:column;justify-content:center}
+    .factLabel{font-size:.75rem;margin-bottom:6px}.weatherValue,.attendanceValue{font-size:clamp(1.28rem,5.6vw,1.76rem);font-weight:900;line-height:1.12}
+    .weatherValue{display:flex;gap:10px;align-items:center;justify-content:center}.weatherIcon{font-size:1.72em;line-height:1}.weatherMeta,.attendanceDetails{margin-top:6px;font-size:.82rem;line-height:1.25;color:rgba(248,250,252,.88)}
+    .employeeCard{width:100%;max-width:720px;margin-bottom:22px;padding:14px 18px 16px;border-radius:22px}.employeeLabel{font-size:.82rem;margin-bottom:7px}
+    #employee-name{font-size:clamp(1.28rem,4.7vw,1.95rem);font-weight:900;line-height:1.08;overflow-wrap:anywhere}#employee-role{margin-top:7px;font-size:.82rem;color:rgba(248,250,252,.86)}
+    .homeMenu{width:100%;max-width:520px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px;justify-items:center;align-items:start;margin:10px auto 0}
+    .memphisHome{width:100%;max-width:520px;display:flex;align-items:center;gap:14px;padding:12px 16px;margin:0 0 14px;border:2px solid #b7e66a;border-radius:20px;background:rgba(5,29,20,.94);color:#fff;text-decoration:none;min-height:76px}.memphisHome img{width:52px;height:52px;border-radius:14px;flex:none}.memphisHome strong{display:block;font-size:1.2rem}.memphisHome small{display:block;margin-top:4px;line-height:1.3;color:#edf5ff}.memphisHome:focus-visible{outline:4px solid #f7ffd9;outline-offset:3px}
+    .activeCleaning{width:min(390px,92vw);margin:4px 0 0;padding:16px 18px;border:2px solid rgba(183,230,106,.84);border-radius:18px;background:rgba(5,29,20,.94);box-shadow:0 8px 22px rgba(0,0,0,.38);text-align:center}
+    .activeCleaning p{margin:0;font-size:1.08rem;font-weight:900;line-height:1.35;color:#f7ffd9}
+    .homeButton{min-height:106px;width:100%;max-width:116px;text-decoration:none;color:inherit;display:grid;justify-items:center;align-content:start;gap:9px;border-radius:20px;touch-action:manipulation}
+    .homeIcon{width:78px;height:78px;border-radius:21px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.20);border:2px solid rgba(255,255,255,.3);box-shadow:0 10px 24px rgba(0,0,0,.28)}
+    .homeIcon img{width:100%;height:100%;object-fit:cover}.homeLabel{font-size:.94rem;font-weight:800;text-align:center;line-height:1.15;text-shadow:0 2px 12px rgba(0,0,0,.42)}
+    .messengerIcon{border-color:rgba(244,193,76,.78)}.scheduleIcon{border-color:rgba(96,229,197,.78)}.eventsIcon{border-color:rgba(162,118,255,.78)}.feedbackIcon{background:linear-gradient(180deg,rgba(59,130,246,.92),rgba(14,165,233,.88));border-color:rgba(191,219,254,.88);font-size:2.1rem}
+    .homeButton:active{transform:translateY(2px)}.homeLogo{width:70px;margin:22px 0 0;opacity:.72}.homeLogo img{width:100%;height:auto}
+    .homeButton:focus-visible,.action:focus-visible{outline:4px solid #f7ffd9;outline-offset:3px}
+    .phoneLock{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:calc(max(18px,env(safe-area-inset-top)) + 16px) 20px calc(max(28px,env(safe-area-inset-bottom)) + 28px);background-image:linear-gradient(180deg,rgba(3,7,13,.48),rgba(3,7,13,.78)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-repeat:no-repeat;color:#f8fafc;touch-action:none;user-select:none;-webkit-user-select:none}
+    .phoneLock[hidden]{display:none!important}.phoneLockPanel{width:min(520px,92vw);min-height:min(640px,86vh);border-radius:34px;padding:34px 24px 30px;background:linear-gradient(180deg,rgba(5,12,20,.46),rgba(5,12,20,.22));border:1px solid rgba(255,255,255,.14);box-shadow:0 22px 60px rgba(0,0,0,.38);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;text-align:center}
+    .phoneLockBrand{margin-top:auto;font-size:.82rem;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--green);text-shadow:0 2px 12px rgba(0,0,0,.32)}
+    .phoneLockClock{margin-top:12px;font-size:clamp(3rem,18vw,5.7rem);font-weight:900;line-height:.92;letter-spacing:-.08em;text-shadow:0 5px 24px rgba(0,0,0,.36)}
+    .phoneLockDate{margin-top:12px;font-size:clamp(1.05rem,4.4vw,1.42rem);font-weight:900;letter-spacing:.04em;text-shadow:0 3px 16px rgba(0,0,0,.34)}
+    .phoneLockName{margin-top:18px;padding:11px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.28);font-size:clamp(1.2rem,5vw,1.7rem);font-weight:900;color:#f7ffd9;text-shadow:0 2px 10px rgba(0,0,0,.45)}
+    .phoneUnlock{margin-top:auto;min-width:min(250px,78vw);min-height:62px;padding:16px 24px;border:none;border-radius:18px;background:linear-gradient(180deg,#c7ef81,#9bd449);color:#102106;font-size:1.16rem;font-weight:900;box-shadow:0 12px 28px rgba(0,0,0,.3)}
+    .stateScreen{min-height:100vh;padding:max(28px,env(safe-area-inset-top)) 18px max(28px,env(safe-area-inset-bottom));display:grid;place-items:center}
+    .stateCard{width:min(520px,100%);padding:24px 20px;border:1px solid rgba(255,255,255,.18);border-radius:24px;background:var(--panel);box-shadow:0 18px 44px rgba(0,0,0,.45)}
+    .stateCard h1{margin:0 0 12px;font-size:clamp(1.8rem,8vw,2.5rem);line-height:1.05}.stateCard p{margin:0 0 18px;font-size:1.08rem;line-height:1.4;color:#edf5ff}
+    .field{display:grid;gap:8px;margin:14px 0}.field label{font-weight:900}.field select,.field input{width:100%;min-height:58px;border:2px solid rgba(255,255,255,.3);border-radius:16px;padding:12px 14px;background:#fff;color:#111827;font-size:1.08rem}
+    .action{width:100%;min-height:58px;margin-top:12px;border:0;border-radius:17px;padding:12px 16px;background:linear-gradient(180deg,#c7ef81,#9bd449);color:#102106;font-size:1.12rem;font-weight:900}.action.secondary{background:#f8fafc;color:#111827}.action.danger{background:#fecaca;color:#450a0a}
+    .status{min-height:1.4em;margin-top:14px;text-align:center;font-size:1rem;font-weight:800;line-height:1.35}.status.error{color:var(--danger)}.status.ok{color:#d9f99d}.status.info{color:#dbeafe}
+    .factNote{font-size:.75rem;color:#dbeafe;margin:6px 0 0;line-height:1.2}.infoGrid [data-stale="true"]{color:#ffe9b0}
+    .phoneReadiness{width:100%;max-width:720px;padding:12px 14px;margin:10px 0;border:2px solid #fde68a;border-radius:14px;background:#17212c;color:#fff;font-size:.94rem;line-height:1.45;overflow-wrap:anywhere;text-align:left}.phoneReadiness.ready{border-color:#b7e66a}.phoneReadiness.do_not_use{border-color:#fecaca}.phoneReadiness.needs_manager{border-color:#fdba74}
+    .hourlyFacts{list-style:none;padding:0;margin:10px 0 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(114px,1fr);gap:8px;overflow-x:auto;max-width:100%;text-align:center}.hourlyFacts:focus-visible{outline:3px solid #fff;outline-offset:3px}.hourlyFacts li{padding:10px 8px;border:1px solid rgba(255,255,255,.2);border-radius:12px;display:grid;gap:4px;font-size:.78rem;line-height:1.3}.hourlyFacts strong{font-size:1.05rem}.weatherWarnings{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px;text-align:left}.weatherWarnings li{padding:10px;border:1px solid rgba(255,210,90,.65);border-radius:12px;overflow-wrap:anywhere}.weatherWarnings [data-urgent="true"]{border-width:2px}.weatherWarnings p{white-space:pre-line;margin:6px 0;font-size:.9rem}.shiftFacts{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin-top:8px;font-size:.9rem}.weatherCard{min-width:0;overflow:hidden}.activeCleaning{order:-1;margin-bottom:12px}
+    @media(max-width:640px){.homeScreen{padding:calc(max(10px,env(safe-area-inset-top)) + 6px) 14px max(30px,env(safe-area-inset-bottom))}.heroStack{grid-template-columns:1fr;gap:7px;margin:4px 0 10px}.hubTitle{padding:10px 16px 11px;border-radius:20px}.hubTitle h1{font-size:clamp(1.5rem,6.2vw,1.85rem)}.hubTitleSub{font-size:.75rem}.hubClock{margin-top:7px}.clockText{font-size:1.65rem}.dateText{font-size:.8rem}.infoGrid{gap:7px}.weatherCard,.attendanceCard{padding:9px 10px;border-radius:18px}.weatherValue,.attendanceValue{font-size:1.55rem}.employeeCard{margin-bottom:10px;padding:10px;border-radius:18px}.employeeLabel{font-size:.72rem;margin-bottom:5px}.homeMenu{max-width:360px;gap:12px 4px;margin:2px auto 0}.homeButton{gap:6px}.homeLabel{font-size:.84rem}}
+  </style>
+  <script>document.documentElement.classList.add('mz-native-app',/Android/i.test(navigator.userAgent)?'mz-native-android':'mz-native-ios');</script>
+</head>
+<body data-memphis-context="employee">
+  <section id="phone-lock" class="phoneLock" aria-label="Employee phone lock screen" hidden>
+    <div class="phoneLockPanel">
+      <div class="phoneLockBrand">Custodial</div>
+      <div id="phone-lock-clock" class="phoneLockClock">--:--</div>
+      <div id="phone-lock-date" class="phoneLockDate">--</div>
+      <div id="phone-lock-name" class="phoneLockName" aria-live="polite">Employee phone</div>
+      <p id="lock-readiness" class="phoneReadiness" role="status">Needs internet — Current work readiness is not confirmed. Saved work is retained.</p>
+      <button id="phone-unlock" class="phoneUnlock" type="button">Unlock</button>
+    </div>
+  </section>
+  <main id="home" class="homeScreen" hidden>
+    <p id="home-readiness" class="phoneReadiness" role="status">Needs internet — Current work readiness is not confirmed. Saved work is retained.</p>
+    <div class="heroStack">
+      <header class="hubTitle"><h1>Custodial Hub</h1><div class="hubTitleSub">Team Devices</div><div class="hubClock"><div id="home-clock" class="clockText">--:--</div><div id="home-date" class="dateText">--</div></div></header>
+      <div class="infoGrid">
+        <section class="weatherCard" aria-label="Today's Weather"><div class="factLabel">Today’s Weather</div><div class="weatherValue"><span id="home-weather-icon" class="weatherIcon" aria-hidden="true">--</span><span id="home-weather-current">Unavailable</span></div><div id="home-weather-summary" class="weatherMeta"></div><p id="home-weather-freshness" class="factNote">Weather feed unavailable.</p><ul id="home-weather-hours" class="hourlyFacts" role="region" tabindex="0" aria-label="Hourly weather forecast; use left and right arrow keys to scroll"></ul><p id="home-hourly-freshness" class="factNote">Hourly weather unavailable.</p><ul id="home-weather-alerts" class="weatherWarnings" aria-label="Weather warnings"></ul><p id="home-alerts-freshness" class="factNote">Weather warnings unavailable.</p></section>
+        <section class="attendanceCard" aria-label="Today's Guest Entries"><div class="factLabel">Today’s Guest Entries</div><div id="home-guest-count" class="attendanceValue">Unavailable</div><div id="home-guest-details" class="attendanceDetails"></div><p id="home-attendance-freshness" class="factNote">Guest count has not been verified.</p></section>
+      </div>
+    </div>
+    <section class="employeeCard" aria-label="Assigned Employee"><div class="employeeLabel">Assigned Employee</div><div id="employee-name">Employee</div><div id="employee-role">Custodian</div><div class="shiftFacts"><span>Shift: <strong id="home-shift">Schedule unavailable</strong></span><span>Lunch: <strong id="home-lunch">Lunch unavailable</strong></span></div><p id="home-schedule-freshness" class="factNote">Open Schedule for the latest assignments.</p></section>
+    <section id="active-cleaning" class="activeCleaning" aria-live="polite" hidden>
+      <p id="active-cleaning-text"></p>
+    </section>
+    <a id="home-memphis" class="memphisHome" href="./messages.html?hub=employee&amp;assistant=memphis" aria-label="Ask Memphis"><img src="./memphis_avatar_ui.webp" alt=""><span><strong>Ask Memphis</strong><small>Work questions, cleaning help and everyday questions</small></span></a>
+    <nav class="homeMenu" aria-label="Employee menu">
+      <a class="homeButton" href="./messages.html?hub=employee"><span class="homeIcon messengerIcon"><img alt="" src="./memphis_avatar_ui.webp"></span><span class="homeLabel">Memphis Messenger</span></a>
+      <a class="homeButton" href="./employee-schedule.html?hub=employee"><span class="homeIcon scheduleIcon"><img alt="" src="./scheduler_icon_ui.webp"></span><span class="homeLabel">My Schedule</span></a>
+      <a class="homeButton" href="./events.html?hub=employee"><span class="homeIcon eventsIcon"><img alt="" src="./Event_Icon_ui.webp"></span><span class="homeLabel">Upcoming Events</span></a>
+      <a class="homeButton" href="./employee-feedback.html?hub=employee"><span class="homeIcon feedbackIcon" aria-hidden="true">💬</span><span class="homeLabel">Program Feedback</span></a>
+    </nav>
+    <div class="homeLogo" aria-hidden="true"><img src="./Zoo_Logo_ui.webp" alt=""></div>
+  </main>
+
+  <main id="boot" class="stateScreen" aria-live="polite">
+    <section class="stateCard">
+      <h1 id="boot-title">Please wait</h1>
+      <p id="boot-status">Opening your work phone…</p>
+      <p id="boot-readiness" class="phoneReadiness" role="status">Needs internet — Current work readiness is not confirmed. Saved work is retained.</p>
+    </section>
+  </main>
+
+  <main id="assignment" class="stateScreen" aria-live="polite" hidden>
+    <section class="stateCard">
+      <h1>Waiting for manager assignment</h1>
+      <p id="assignment-status">Your manager assigns this phone. No employee sign-in is needed.</p>
+      <p id="assignment-readiness" class="phoneReadiness" role="status">Needs manager — Your manager assigns this phone. Saved work is retained.</p>
+    </section>
+  </main>
+
+  <script src="./memphis-custodial-bridge.js"></script>
+  <script src="./memphis-scan-sync.js"></script>
+  <script src="./memphis-device-reminders.js"></script>
+  <script src="./memphis-ui.js"></script>
+  <script src="./mobile-custodial.js"></script>
+</body>
+</html>
