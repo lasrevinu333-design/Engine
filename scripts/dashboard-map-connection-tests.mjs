@@ -38,8 +38,8 @@ function fixture({query='?hub=manager&device=kiosk_08&origin=annie',session=prin
     document:{hidden:false,getElementById:id=>elements[id]||null,
       addEventListener(name,fn){listeners.set('doc:'+name,fn);},removeEventListener(name){listeners.delete('doc:'+name);}},
     addEventListener(name,fn){listeners.set(name,fn);},removeEventListener(name){listeners.delete(name);}};
-  let creates=0,accepted=0,failures=0;
-  const map={async init(){return true;},async resume(){return true;},stop(){},suspend(){},
+  let creates=0,accepted=0,failures=0,suspends=0;
+  const map={async init(){return true;},async resume(){return true;},stop(){},suspend(){suspends++;},
     checkSession(){return true;},invalidate(){},beginRefresh(){return {};},
     accept(_ticket,data){assert.deepEqual(data,summary);accepted++;return true;},fail(){failures++;}};
   const fetchImpl=async(url,options)=>{
@@ -60,8 +60,8 @@ function fixture({query='?hub=manager&device=kiosk_08&origin=annie',session=prin
   const auth=window.MemphisAuth;
   const controller=page.create({auth,renderer:{create(){creates++;return map;}},section,status,window,fetchImpl,
     setIntervalImpl(fn){timers.add(fn);return fn;},clearIntervalImpl(fn){timers.delete(fn);}});
-  return{controller,auth,window,anchors,section,calls,timers,listeners,
-    counts:()=>({creates,accepted,failures}),close(){controller.stop();assert.equal(timers.size,0);assert.equal(listeners.size,0);}};
+  return{controller,auth,window,anchors,section,status,calls,timers,listeners,
+    counts:()=>({creates,accepted,failures,suspends}),close(){controller.stop();assert.equal(timers.size,0);assert.equal(listeners.size,0);}};
 }
 
 await test('map outgoing links retain manager/device/Annie context even when storage is unavailable',async()=>{
@@ -110,7 +110,7 @@ await test('non-manager authority does not construct map or request summary',asy
 });
 await test('summary denial cannot become cleaning authority despite successful shared sign-in',async()=>{
   const f=fixture({summaryStatus:403});assert.equal(await f.controller.init(),true);await flush();
-  assert.equal(f.counts().accepted,0);assert.equal(f.counts().failures,1);f.close();
+  assert.equal(f.counts().accepted,0);assert.equal(f.counts().failures,0);assert.equal(f.counts().suspends,1);assert.equal(f.section.hidden,true);assert.match(f.status.textContent,/Manager access unavailable/);const before=f.calls.length;assert.equal(await f.controller.refresh(),false);assert.equal(f.calls.length,before,'Denied authority must not make another read');f.close();
 });
 await test('real shared-auth logout invalidates page and stops its owned listeners/timers',async()=>{
   const f=fixture();assert.equal(await f.controller.init(),true);await flush();
