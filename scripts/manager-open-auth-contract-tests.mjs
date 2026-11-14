@@ -37,7 +37,7 @@ assert.match(hub,/Operational Insights/);
 assert.match(hubClient,/Named manager enrollment required/);
 assert.match(hubClient,/ops-manager-hub\.html/);
 assert.match(hubClient,/hasRole\('CUSTODIAL_MANAGER'/);
-assert.match(hubClient,/manager_display_name/);assert.match(hubClient,/Leadership management.*self-asserted name/);
+assert.match(hubClient,/manager_display_name/);assert.match(hubClient,/canMutateOpsManagerSurface/);assert.match(hubClient,/MANAGER_ACCESS_DENIED/);assert.match(hubClient,/Manager access was denied/);
 assert.match(hubClient,/accessLevel:'full_access'/);
 assert.doesNotMatch(hub+hubClient,/consumeSharedEnrollmentPasscode|shared enrollment passcode/i);
 
