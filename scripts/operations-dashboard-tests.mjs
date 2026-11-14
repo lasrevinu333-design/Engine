@@ -1451,3 +1451,24 @@ test('HUB_SESSION_REFRESH ordinary use keeps the verified session without repeat
  await f.turn();assert.equal(calls.length,1);assert.equal(f.node('hub-status').textContent,'Access current.');
  assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.navigations.length,0);f.emit('pagehide');
 });
+
+// Renewal must retain the immutable admitted principal even if the old cached
+// object is mutated before expiry or replaced with a fresh bearer object.
+for(const mode of ['expiry','clone','bfcache'])for(const [name,mutate]of [
+ ['manager',s=>{s.manager_id='98000000-0000-4000-8000-000000000099';}],
+ ['credential',s=>{s.credential_id='98000000-0000-4000-8000-000000000099';}],
+ ['permission',s=>{s.permissions.read=false;}],
+ ['claim',s=>{s.claimed_manager_id='98000000-0000-4000-8000-000000000099';}],
+])test('HUB_SESSION_REFRESH immutable admission refuses '+name+' drift before '+mode,async()=>{
+ let forceCalls=0;
+ const f=await managerHomeFixture({configure:f=>{
+  f.auth.readSession=()=>Date.parse(f.session()?.expires_at)>f.now()?f.session():null;
+  f.auth.requireOpsManagerSession=async opts=>{if(opts.forceRefresh){forceCalls++;f.setSession({...f.session(),token:'synthetic-renewed-drift',expires_at:new Date(f.now()+900000).toISOString()});}return f.session();};
+ }});
+ const admitted=f.session();mutate(admitted);
+ if(mode==='expiry')f.setNow(Date.parse(admitted.expires_at)+1000);
+ if(mode==='clone')f.setSession({...admitted,token:'synthetic-cloned-drift'});
+ if(mode==='bfcache'){f.emit('pagehide',{persisted:true});f.emit('pageshow',{persisted:true});}else f.emit('focus');
+ await f.turn();await f.turn();assertHomeWithdrawn(f);assert.equal(f.node('hub-status').textContent,'Manager access changed or page retired. Reload to verify access.');
+ assert.equal(f.intervals.size,0);if(mode!=='bfcache')assert.equal(forceCalls,0);f.emit('pagehide');
+});

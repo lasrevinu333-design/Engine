@@ -8,7 +8,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
   const numeric = value => (typeof value === 'number' || typeof value === 'string' && value.trim()) && Number.isFinite(Number(value)) ? Number(value) : null;
   const sourceInstant = value => typeof value === 'string' && /(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value)) ? Date.parse(value) : null;
   const localDay = time => new Intl.DateTimeFormat('en-CA', {timeZone:ZONE,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(time));
-  const state={currentDeviceId:'',session:null,sessionBinding:'',auth:null,authMethods:null,generation:0,retired:false,suspended:false,resumeBinding:'',verifying:true,renewing:null};
+  const state={currentDeviceId:'',session:null,sessionBinding:'',admittedOwnerBinding:'',auth:null,authMethods:null,generation:0,retired:false,suspended:false,resumeBinding:'',verifying:true,renewing:null};
   const authMethodNames=['getDeviceId','readSession','isOpsManager','requireOpsManagerSession','hasRole','canMutateOpsManagerSurface','isCustodialManagementAdmin'];
   const intervals=new Set();
   const els={
@@ -62,7 +62,8 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
   }
   function renewKnownOwner(){
     if(state.retired||state.suspended||state.renewing||!state.session)return;
-    const expectedBinding=resumeBinding(state.session),methods=state.authMethods;
+    const expectedBinding=state.admittedOwnerBinding,methods=state.authMethods;
+    if(!expectedBinding||sessionBinding(state.session)!==state.sessionBinding){retire();return;}
     state.resumeBinding=expectedBinding;state.verifying=true;state.generation++;
     stopRefreshes();clearManagerView();state.session=null;state.sessionBinding='';
     setStatus('Checking saved manager access…');
@@ -73,7 +74,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
   }
   function retire({persisted=false}={}){
     if(state.retired)return;
-    state.resumeBinding=persisted?(state.resumeBinding||resumeBinding(state.session)):'';
+    state.resumeBinding=persisted?(state.resumeBinding||state.admittedOwnerBinding):'';
     state.suspended=persisted;state.retired=!persisted;state.verifying=false;state.generation++;stopRefreshes();
     clearManagerView();state.session=null;state.sessionBinding='';
     setStatus(persisted?'Verifying manager access when this page returns.':'Manager access changed or page retired. Reload to verify access.','error');
@@ -83,13 +84,16 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     try{
       const auth=window.MemphisAuth,session=auth?.readSession?.();
       if(auth!==state.auth||!originalAuthMethods(auth,state.authMethods)||resolveDeviceId()!==state.currentDeviceId){retire();return false;}
+      // Check the captured admission before expiry or a replacement can enter
+      // renewal. The mutable old session object is not an identity source.
+      if(!state.session||sessionBinding(state.session)!==state.sessionBinding){retire();return false;}
       if(!session){
         if(state.session&&Date.parse(state.session.expires_at)<=Date.now())renewKnownOwner();else retire();
         return false;
       }
       if(!auth.isOpsManager(session)||session.device_id!==state.currentDeviceId){retire();return false;}
       if(session!==state.session){
-        if(resumeBinding(session)===resumeBinding(state.session))renewKnownOwner();else retire();
+        if(resumeBinding(session)===state.admittedOwnerBinding)renewKnownOwner();else retire();
         return false;
       }
       if(sessionBinding(session)!==state.sessionBinding){retire();return false;}
@@ -249,7 +253,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     if(auth.readSession()!==session){retire();return;}
     if(!priorSession&&window.MemphisAuth.isCustodialManagementAdmin?.(session))state.currentDeviceId=resolveDeviceId();
     state.session=session;state.resumeBinding='';
-    state.sessionBinding=sessionBinding(session);state.verifying=false;
+    state.sessionBinding=sessionBinding(session);state.admittedOwnerBinding=resumeBinding(session);state.verifying=false;
     if(!current(generation))return;
     const returnPath=new URLSearchParams(window.location.search).get('return');
     if(returnPath){try{const resolved=new URL(returnPath,window.location.href);if(resolved.origin===window.location.origin&&!resolved.pathname.includes('..')){window.location.replace(resolved.toString());return;}}catch{}}
