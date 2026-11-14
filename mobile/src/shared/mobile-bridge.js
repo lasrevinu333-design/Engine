@@ -37,7 +37,11 @@ import { StatusBar } from '@capacitor/status-bar';
   }
 
   function storeSession(session) {
+    const previous=JSON.stringify(current);
     current = session?.token ? session : null;
+    // Central auth publishes before this adapter adopts its new session.
+    // Publish again after adoption so settled manager pages see the current identity.
+    if(previous!==JSON.stringify(current)&&typeof window.CustomEvent==='function')window.dispatchEvent?.(new window.CustomEvent('memphis:manager-session-changed'));
     if (current?.device_id) {
       localStorage.setItem(DEVICE_KEY, current.device_id);
       localStorage.setItem(LEGACY_DEVICE_KEY, current.device_id);

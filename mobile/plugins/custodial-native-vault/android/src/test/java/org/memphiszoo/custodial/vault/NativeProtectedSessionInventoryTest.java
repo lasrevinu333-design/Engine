@@ -125,6 +125,8 @@ public final class NativeProtectedSessionInventoryTest {
     }
     @Test public void zeroOccurrenceRecordsNeverProveEmptyBrowserOrReusablePhone()throws Exception{
         var f=new NativeSeparationFreezeTest.Fixture();JSONObject result=inspect(f);assertEquals(0,result.getJSONArray("session_links").length());
-        assertEquals(1,result.getInt("unknown_record_count"));assertEquals("UNKNOWN",result.getString("native_semantic_inventory_state"));
+        assertTrue(f.preferences.disk.containsKey(AndroidProtectedWorkPreferences.WORK_GENERATION_KEY));
+        assertTrue(f.preferences.disk.containsKey(AndroidProtectedWorkPreferences.MUTATION_KEY));
+        assertEquals(2,result.getInt("unknown_record_count"));assertEquals("UNKNOWN",result.getString("native_semantic_inventory_state"));
     }
 }

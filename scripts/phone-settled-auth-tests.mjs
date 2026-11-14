@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';import vm from 'node:vm';import{readFileSync}from'node:fs';
+const root=process.argv[2]||new URL('..',import.meta.url).pathname;
+async function run(mode){
+const nodes=new Map(),events=new Map(),docs=new Map(),requests=[];const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',innerHTML:'',hidden:false,listeners:new Map(),classList:{add(){},remove(){},toggle(){}},addEventListener(k,fn){this.listeners.set(k,fn);}});return nodes.get(id)};
+let now=Date.parse('2026-11-14T12:00:00Z');class Clock extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now}}
+const id=n=>'ba000000-0000-4000-8000-'+String(n).padStart(12,'0');
+const session={role:'ops_manager',token:'SYNTHETIC_ONLY',device_id:'synthetic-manager-device',manager_id:id(2),credential_id:id(3),expires_at:'2026-11-14T12:01:00Z',auth_mode:'custodial_leadership_pin',owner:false,custodial_management_admin:true,read_only:false,access_level:'full_access',permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:false,custodialManagementAdmin:true,policyVersion:1}};
+let serverSession=session,release;let defer=mode==='late-successor';
+const localStorage={getItem(){return null},setItem(){},removeItem(){}};
+const window={CustomEvent:class{constructor(type){this.type=type}},dispatchEvent:e=>events.get(e.type)?.(e),location:new URL('https://synthetic.invalid/phone-assignments.html'),navigator:{},localStorage,addEventListener(k,fn){events.set(k,fn)}};
+const fetch=async(url,options={})=>{const path=new URL(url).pathname;requests.push({path,method:options.method||'GET'});let body;
+if(path.endsWith('/session'))body={ok:true,enrolled:true,csrfToken:'SYNTHETIC_CSRF',session:{identityAssurance:'SELF_ASSERTED_NAME',registrationId:id(3),claimedAccount:{accountId:id(1)},cohort:{principalId:serverSession.manager_id,policyVersion:1,permissions:['custodialManagementAdmin']},managerSession:serverSession}};
+else if(path.endsWith('/revoke'))body={ok:true,revoked:true};
+else if(path==='/leadership-api/phone-assignments'){if(defer)await new Promise(r=>release=r);body={ok:true,data:{devices:[{device_id:'SYNTHETIC_PHONE',assigned_employee_id:id(8),employee_name:'PROTECTED_SYNTHETIC_EMPLOYEE',assignment_epoch:7,pending_work_groups:[{employee_id:id(9),employee_name:'PROTECTED_PREVIOUS_EMPLOYEE',queue_count:2,assignment_epoch:6}]}],employees:[{id:id(8),display_name:'PROTECTED_SYNTHETIC_EMPLOYEE'}]}};}
+else throw Error('unexpected synthetic path '+path);return {ok:true,status:200,json:async()=>body};};
+const context=vm.createContext({window,localStorage,navigator:window.navigator,document:{getElementById:node,addEventListener(k,fn){docs.set(k,fn)}},fetch,URL,AbortSignal,Date:Clock,Intl,console,setTimeout,clearTimeout,crypto:{randomUUID:()=>id(99)}});
+vm.runInContext(readFileSync(root+'/memphis-auth.js','utf8'),context);await window.MemphisAuth.refreshLeadershipSession();vm.runInContext(readFileSync(root+'/phone-assignments.js','utf8'),context);await new Promise(r=>setImmediate(r));
+if(mode==='late-successor'){assert.equal(typeof release,'function');serverSession={...session,manager_id:id(44),token:'SYNTHETIC_SUCCESSOR'};await window.MemphisAuth.refreshLeadershipSession();release();await new Promise(r=>setImmediate(r));}
+else {assert.match(node('phone-list').innerHTML,/PROTECTED_SYNTHETIC_EMPLOYEE/);if(mode==='expiry')now+=61000;else await window.MemphisAuth.clearSession();assert.equal(window.MemphisAuth.readSession(),null);events.get('focus')?.();docs.get('visibilitychange')?.();events.get('pagehide')?.();events.get('pageshow')?.({persisted:true});await new Promise(r=>setImmediate(r));}
+const result={root,mode,actual_auth:true,actual_page:true,synthetic_records_only:true,read_session_null:window.MemphisAuth.readSession()===null,protected_marker_retained:node('phone-list').innerHTML.includes('PROTECTED_SYNTHETIC_EMPLOYEE'),pending_prior_employee_retained:node('phone-list').innerHTML.includes('PROTECTED_PREVIOUS_EMPLOYEE'),status:node('assignment-status').textContent,assignment_requests:requests.filter(x=>x.path.includes('phone-assignments'))};console.log(JSON.stringify(result));return result;
+}
+const results=[];for(const mode of ['expiry','confirmed-revoke','late-successor'])results.push(await run(mode));assert.equal(results.filter(x=>x.protected_marker_retained).length,0,'Protected assignment data must be withdrawn and late original responses refused after manager authority changes');

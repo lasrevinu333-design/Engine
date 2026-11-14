@@ -394,8 +394,10 @@ public final class NativeGenerationBoundBatchTest {
         var f=new Fixture();var backing=new AndroidRetainedBatchStore(f.batch.root.preferences(),f.batch.indexCipher,(q,i)->new NativeRetainedBatchOwnerTest.DomainCipher("synthetic-unused"),f.batch.old.journal,f.batch.queryZero);
         f.batch.journal=new NativeRetainedBatchJournal(new NativeRetainedBatchJournal.Backend(){
             public Map<String,?> readAll()throws Exception{return backing.readAll();}
-            public boolean compareAndCommit(Map<String,String> expected,Map<String,String> next)throws Exception {
-                boolean result=backing.compareAndCommit(expected,next);f.provider.captureToken("changed-during-index-commit");return result;
+            public boolean compareAndCommit(Map<String,String> expected,Map<String,String> next)throws Exception {throw new AssertionError("unbound commit forbidden");}
+            public Map<String,String> pendingOriginal(NativeRetainedBatchJournal.OriginalCommit original)throws Exception{return backing.pendingOriginal(original);}
+            public boolean commitOriginal(NativeRetainedBatchJournal.OriginalCommit original,Map<String,String> next)throws Exception {
+                boolean result=backing.commitOriginal(original,next);f.provider.captureToken("changed-during-index-commit");return result;
             }
         },f.batch.indexCipher,(q,i)->new NativeRetainedBatchOwnerTest.DomainCipher("synthetic-unused"),new Object(),f.batch.old.journal,f.batch.queryZero);
         try(var generation=f.generation()){denied(()->f.prepare(generation));}
@@ -477,7 +479,7 @@ public final class NativeGenerationBoundBatchTest {
     }
     @Test public void laterChunkGenerationSubstitutionCannotAdvanceBoundOwner() throws Exception {
         var f=new Fixture();try(var generation=f.generation();var batch=f.prepare(generation)) {
-            f.batch.completeZero(batch);f.batch.inject(1,batch.operationId(),id(99));var stable=new Stable(f);denied(()->f.batch.next(batch));stable.check();
+            f.batch.completeZero(batch);var stable=new Stable(f);denied(()->f.batch.inject(1,batch.operationId(),id(99)));stable.check();assertNull(f.batch.write(1).observe());
         }f.preserved();
     }
 }

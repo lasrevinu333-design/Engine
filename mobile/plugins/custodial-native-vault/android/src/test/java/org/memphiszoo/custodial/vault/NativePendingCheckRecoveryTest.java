@@ -31,12 +31,12 @@ public final class NativePendingCheckRecoveryTest {
     @Test public void freshAuthenticatedSamePrincipalRecoversOnlyPendingAndPreservesAllWork()throws Exception{
         var f=new NativeSeparationFreezeTest.Fixture();var originals=new HashMap<>(f.preferences.disk);var state=f.transport.engine.getState();
         pending(f);String first=(String)f.preferences.disk.get(AndroidProtectedWorkPreferences.PROBE_KEY);
-        recover(f);assertEquals(originals,f.preferences.disk);assertEquals(originals,f.preferences.durableDisk);
+        recover(f);assertCancelledPayload(originals,f.preferences.disk);assertEquals(f.preferences.disk,f.preferences.durableDisk);
         f.store.requireWorkAdmission();assertEquals(state,f.transport.engine.getState());assertEquals(2,f.transport.calls);
         assertEquals(NativeActivePrincipalStatus.PATH,f.transport.request.path);f.transport.wiped();assertEquals(0,f.workCipher.destroyCalls);
         pending(f);String second=(String)f.preferences.disk.get(AndroidProtectedWorkPreferences.PROBE_KEY);
         assertNotEquals(first,second); // New operation cannot adopt a cancelled check, even with deterministic encryption.
-        recover(f);assertEquals(originals,f.preferences.disk);
+        recover(f);assertCancelledPayload(originals,f.preferences.disk);
     }
     @Test public void wrongOrUnavailableStatusNeverThawsPending()throws Exception{
         for(int mode=0;mode<12;mode++){
@@ -78,6 +78,14 @@ public final class NativePendingCheckRecoveryTest {
             AndroidProtectedWorkPreferencesTest.denied(()->f.store.requireWorkAdmission());
         }
     }
+    static void assertCancelledPayload(Map<String,Object> before,Map<String,Object> after){
+        var expected=new HashMap<String,Object>(before);
+        var prior=new java.math.BigInteger(String.valueOf(before.get(AndroidProtectedWorkPreferences.MUTATION_KEY)));
+        var current=new java.math.BigInteger(String.valueOf(after.get(AndroidProtectedWorkPreferences.MUTATION_KEY)));
+        assertTrue("cancellation must advance durable epoch",current.compareTo(prior)>0);
+        expected.put(AndroidProtectedWorkPreferences.MUTATION_KEY,after.get(AndroidProtectedWorkPreferences.MUTATION_KEY));
+        assertEquals("all original protected values and generation remain exact",expected,after);
+    }
     @Test public void failedRemovalCannotAdmitAcrossAdaptersOrSimulatedRestart()throws Exception{
         for(int mode=0;mode<3;mode++){
             var f=new NativeSeparationFreezeTest.Fixture();var originals=new HashMap<>(f.preferences.disk);pending(f);
@@ -90,11 +98,13 @@ public final class NativePendingCheckRecoveryTest {
             AndroidProtectedWorkPreferencesTest.denied(()->second.requireWorkAdmission());assertFalse(staged.commit());
             assertTrue(f.preferences.durableDisk.containsKey(AndroidProtectedWorkPreferences.PROBE_KEY));
             if(mode==1)assertFalse(f.preferences.disk.containsKey(AndroidProtectedWorkPreferences.PROBE_KEY));
-            for(var e:originals.entrySet())assertEquals(e.getValue(),f.preferences.disk.get(e.getKey()));
+            for(var e:originals.entrySet())if(!e.getKey().equals(AndroidProtectedWorkPreferences.MUTATION_KEY))assertEquals(e.getValue(),f.preferences.disk.get(e.getKey()));
+            assertTrue(new java.math.BigInteger(String.valueOf(f.preferences.disk.get(AndroidProtectedWorkPreferences.MUTATION_KEY)))
+                .compareTo(new java.math.BigInteger(String.valueOf(originals.get(AndroidProtectedWorkPreferences.MUTATION_KEY))))>=0);
             var restart=new AndroidProtectedWorkPreferencesTest.Preferences();restart.disk=new HashMap<>(f.preferences.durableDisk);restart.durableDisk=new HashMap<>(restart.disk);
             AndroidProtectedWorkPreferencesTest.denied(()->new AndroidOfflineAuthorityTimeStore(restart.object(),f.workCipher).requireWorkAdmission());
             f.preferences.fail=false;f.preferences.persistThenFail=false;f.preferences.beforeCommit=()->{};f.transport.hook=()->{};
-            recover(f);assertEquals(originals,f.preferences.disk);assertEquals(originals,f.preferences.durableDisk);second.requireWorkAdmission();
+            recover(f);assertCancelledPayload(originals,f.preferences.disk);assertEquals(f.preferences.disk,f.preferences.durableDisk);second.requireWorkAdmission();
         }
     }
     @Test public void lateCancellationCannotAdoptAnotherPendingOperation()throws Exception{

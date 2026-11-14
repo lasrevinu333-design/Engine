@@ -100,8 +100,8 @@ public final class NativeCompletionOriginalValuesTest {
         }
     }
     @Test public void bodyRetentionCapacityFailurePreservesPayloadWithoutPartialReceipt()throws Exception{
-        var f=new Fixture();f.args.getJSONObject("p_response_json").put("historical_large_work_value","x".repeat(60000));f.request=NativeCompletionJournalTest.request(f.args);byte[] original=f.request.body.clone();
-        assertTrue(original.length<65536);refused(()->f.capture());assertArrayEquals(original,f.request.body);assertTrue(f.store.rows.isEmpty());assertEquals(0,f.store.writes);assertEquals(0,f.store.deletes);
+        var f=new Fixture();f.args.getJSONObject("p_response_json").put("historical_large_work_value","x".repeat(NativeCompletionJournal.MAX_BODY_BYTES+1));f.request=NativeCompletionJournalTest.request(f.args);byte[] original=f.request.body.clone();
+        assertTrue(original.length>NativeCompletionJournal.MAX_BODY_BYTES);refused(()->f.capture());assertArrayEquals(original,f.request.body);assertTrue(f.store.rows.isEmpty());assertEquals(0,f.store.writes);assertEquals(0,f.store.deletes);
     }
     @Test public void requestMutationDuringPersistenceCannotReplaceSavedOriginalOrReturnSuccess()throws Exception{
         var f=new Fixture();byte[] original=f.request.body.clone();f.store.save=()->f.request.body[0]=0;refused(()->f.capture());

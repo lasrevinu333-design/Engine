@@ -10,13 +10,23 @@
   const freshOutboxOriginals=new WeakSet(),admittedOutboxDispatches=new WeakSet();
   const state={session:null,conversations:[],conversation:null,selectedConversationGeneration:0,messages:[],proposals:[],jobs:[],attachments:[],busy:false,submitting:false,abort:null,userMessageId:'',draftTimer:null};
   const el={authGate:q('#auth-gate'),authStatus:q('#auth-status'),app:q('#app'),sidebar:q('#sidebar'),sidebarOpen:q('#sidebar-open'),sidebarClose:q('#sidebar-close'),newChat:q('#new-chat'),searchInput:q('#search-input'),searchButton:q('#search-button'),conversationList:q('#conversation-list'),title:q('#conversation-title'),status:q('#status'),rename:q('#rename-chat'),delete:q('#delete-chat'),transcript:q('#transcript'),welcome:q('#welcome'),drop:q('#drop-zone'),attachmentList:q('#attachment-list'),input:q('#message-input'),attach:q('#attach-button'),fileInput:q('#file-input'),send:q('#send-button'),stop:q('#stop-button')};
+  let displayOwner=null,authorityTimer=null,pageClosed=false;
   syncViewportHeight();
   init().catch(lock);
 
   function q(selector){return document.querySelector(selector);}
   function uuid(){return crypto.randomUUID();}
   function setStatus(text,type=''){el.status.textContent=text;el.status.className=`status ${type}`.trim();}
-  function lock(error){el.app.hidden=true;el.authGate.hidden=false;el.authStatus.textContent=error?.message||'A trusted Ops Manager device is required.';}
+  function lock(error){
+    clearTimeout(state.draftTimer);state.draftTimer=null;
+    if(authorityTimer!==null){window.clearTimeout?.(authorityTimer);authorityTimer=null;}
+    state.abort?.abort();state.selectedConversationGeneration++;displayOwner=null;pageClosed=true;
+    state.conversations=[];state.conversation=null;state.messages=[];state.proposals=[];state.jobs=[];state.attachments=[];
+    el.transcript.replaceChildren();el.conversationList.replaceChildren();el.attachmentList.replaceChildren();
+    el.input.value='';el.searchInput.value='';el.fileInput.value='';el.title.textContent='';el.status.textContent='';
+    el.sidebar.classList.remove('open');
+    el.app.hidden=true;el.authGate.hidden=false;el.authStatus.textContent=error?.message||'A trusted Ops Manager device is required.';
+  }
   function openApp(){syncViewportHeight();el.authGate.hidden=true;el.app.hidden=false;requestAnimationFrame(syncViewportHeight);}
   function syncViewportHeight(){
     const viewportHeight=Math.max(320,Math.round(window.visualViewport?.height||window.innerHeight||document.documentElement.clientHeight));
@@ -27,6 +37,7 @@
     bind();
     state.session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:false,redirect:true,throwOnFailure:true});
     if(!state.session||window.MemphisAuth.isReadOnlySession(state.session))throw new Error('Full-access trusted Ops Manager access is required.');
+    displayOwner=captureManagerIdentity();armAuthorityExpiry();
     openApp();
     await loadConversations();
     if(!state.conversations.length)await createConversation();
@@ -34,6 +45,10 @@
   }
 
   function bind(){
+    for(const name of ['focus','storage','memphis:manager-session-changed'])window.addEventListener(name,revalidateDisplayAuthority);
+    document.addEventListener('visibilitychange',revalidateDisplayAuthority);
+    window.addEventListener('pagehide',()=>lock(originalManagerChanged()));
+    window.addEventListener('pageshow',revalidateDisplayAuthority);
     window.addEventListener('resize',syncViewportHeight,{passive:true});
     window.visualViewport?.addEventListener('resize',syncViewportHeight,{passive:true});
     window.visualViewport?.addEventListener('scroll',syncViewportHeight,{passive:true});
@@ -57,9 +72,19 @@
   }
 
   async function headers(json=false){const value=await window.MemphisAuth.opsManagerAuthHeaders();if(json)value['Content-Type']='application/json';return value;}
+  function revalidateDisplayAuthority(){if(displayOwner&&(!sameManagerSession(displayOwner)||displayOwner.auth!==window.MemphisAuth))lock(originalManagerChanged());}
+  function assertDisplayAuthority(owner){if(pageClosed||!owner||displayOwner!==owner||!sameManagerSession(owner)||owner.auth!==window.MemphisAuth){revalidateDisplayAuthority();throw originalManagerChanged();}}
+  function armAuthorityExpiry(){
+    if(authorityTimer!==null)window.clearTimeout?.(authorityTimer);
+    if(!displayOwner||!window.setTimeout)return;
+    authorityTimer=window.setTimeout(()=>{authorityTimer=null;revalidateDisplayAuthority();if(displayOwner)armAuthorityExpiry();},Math.max(0,Math.min(2147483647,Date.parse(displayOwner.expires_at)-Date.now())));
+  }
   async function api(path,options={}){
-    const response=await fetch(`${API}${path}`,{cache:'no-store',credentials:'include',...options,headers:{...(await headers(Boolean(options.body))),...(options.headers||{})}});
-    const payload=await response.json().catch(()=>null);
+    const owner=displayOwner;assertDisplayAuthority(owner);
+    const authenticated=await headers(Boolean(options.body));assertDisplayAuthority(owner);
+    const response=await fetch(`${API}${path}`,{cache:'no-store',credentials:'include',...options,headers:{...authenticated,...(options.headers||{})}});
+    assertDisplayAuthority(owner);
+    const payload=await response.json().catch(()=>null);assertDisplayAuthority(owner);
     if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`HTTP ${response.status}`);error.status=response.status;throw error;}
     return payload;
   }
@@ -132,7 +157,7 @@
       ||!Number.isFinite(Date.parse(session.expires_at))||Date.parse(session.expires_at)<=Date.now()
       ||session.access_level!=='full_access'||session.read_only!==false
       ||permissions?.schema!=='custodial.manager-permissions.v1'||permissions.read!==true||!(permissions.owner===true||window.MemphisAuth.isCustodialManagementAdmin?.(session)===true))throw originalManagerChanged();
-    return Object.freeze({session,role:session.role,manager_id:session.manager_id,
+    return Object.freeze({auth:window.MemphisAuth,session,role:session.role,manager_id:session.manager_id,
       credential_id:session.credential_id,device_id:session.device_id,token:session.token,expires_at:session.expires_at,
       access_level:session.access_level,read_only:session.read_only,permission_schema:permissions.schema,permission_read:permissions.read,permission_write:permissions.owner,permission_admin:window.MemphisAuth.isCustodialManagementAdmin?.(session)===true});
   }
@@ -142,7 +167,7 @@
   }
   function sameManagerSession(binding){
     const session=window.MemphisAuth.readSession(),p=session?.permissions;
-    return Boolean(binding&&session&&session===binding.session&&state.session===binding.session&&session.role===binding.role
+    return Boolean(!pageClosed&&binding&&session&&session===binding.session&&state.session===binding.session&&session.role===binding.role
       &&session.manager_id===binding.manager_id&&session.credential_id===binding.credential_id&&session.device_id===binding.device_id
       &&session.token===binding.token&&session.expires_at===binding.expires_at&&Number.isFinite(Date.parse(session.expires_at))
       &&Date.parse(session.expires_at)>Date.now()&&session.access_level===binding.access_level&&session.access_level==='full_access'
@@ -263,7 +288,15 @@
   }
   function toggleBusy(value){el.send.disabled=value;el.attach.disabled=value;el.newChat.disabled=value;el.stop.hidden=!value;el.send.hidden=value;}
 
-  function scheduleDraftSave(immediate=false){clearTimeout(state.draftTimer);if(!state.conversation)return;state.draftTimer=setTimeout(()=>api(`/conversations/${state.conversation.conversation_id}`,{method:'PATCH',body:JSON.stringify({draft_text:el.input.value})}).then(payload=>Object.assign(state.conversation,payload.data)).catch(()=>{}),immediate?0:500);}
+  function scheduleDraftSave(immediate=false){
+    clearTimeout(state.draftTimer);if(!state.conversation)return;
+    const binding=captureConversationPage(),text=el.input.value;
+    state.draftTimer=setTimeout(()=>{
+      if(!sameConversationPage(binding))return;
+      void managerPageApi(`/conversations/${binding.conversation_id}`,binding,{method:'PATCH',body:JSON.stringify({draft_text:text})})
+        .then(payload=>{if(sameConversationPage(binding))Object.assign(binding.conversation,payload.data);}).catch(()=>{});
+    },immediate?0:500);
+  }
   async function resumeOutbox(){
     const binding=captureOriginalManager(),rows=await outboxAll();assertOriginalManager(binding);
     let completed=0,held=0;

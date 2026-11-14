@@ -76,7 +76,8 @@ public final class NativeProtectedWorkInventoryTest {
         JSONObject result=NativeSeparationFreeze.inspect(f.transport.engine,f.store,f.principal,null).json();
         assertEquals(proof.rawSnapshotDigest,result.getString("raw_snapshot_sha256"));
         assertEquals(before.size()-1,result.getInt("record_count"));assertEquals(result.getInt("record_count"),result.getJSONArray("records").length());
-        assertEquals(2,result.getInt("unknown_record_count")); // Opaque fixture receipt is preserved, not a valid typed record.
+        assertTrue(before.containsKey(AndroidProtectedWorkPreferences.WORK_GENERATION_KEY));assertTrue(before.containsKey(AndroidProtectedWorkPreferences.MUTATION_KEY));
+        assertEquals(4,result.getInt("unknown_record_count")); // Opaque receipt, original unknown and both current metadata rows stay represented.
         assertEquals(id(41),kind(result,"OCCURRENCE").getJSONArray("identifiers").getJSONObject(0).getString("client_session_id"));
         assertEquals(id(44),kind(result,"FINISH_PROOF").getJSONArray("identifiers").getJSONObject(0).getString("entry_id"));
         assertEquals(id(45),kind(result,"NFC_HANDOFFS").getJSONArray("identifiers").getJSONObject(0).getString("handoff_id"));
@@ -101,7 +102,8 @@ public final class NativeProtectedWorkInventoryTest {
             f.preferences.disk.put(key,variation==5?7:raw);f.observe();var before=new HashMap<>(f.preferences.disk);
             JSONObject result=NativeSeparationFreeze.inspect(f.transport.engine,f.store,f.principal,null).json();
             JSONObject item=kind(result,"OCCURRENCE");assertEquals("UNKNOWN",item.getString("state"));assertFalse(item.has("identifiers"));
-            assertEquals(2,result.getInt("unknown_record_count"));assertEquals(before.size()-1,result.getInt("record_count"));assertEquals(before,f.preferences.disk);
+            assertTrue(before.containsKey(AndroidProtectedWorkPreferences.WORK_GENERATION_KEY));assertTrue(before.containsKey(AndroidProtectedWorkPreferences.MUTATION_KEY));
+            assertEquals(3,result.getInt("unknown_record_count"));assertEquals(before.size()-1,result.getInt("record_count"));assertEquals(before,f.preferences.disk);
         }
     }
     @Test public void arrayDuplicateIdsAreUnknownNotDeduplicatedOrDropped()throws Exception{

@@ -88,8 +88,9 @@ public final class NativeVaultOriginalWorkAdmissionTest {
     }
     @Test public void uncertainProbeCancellationDeniesVaultEvenWhenGuardVanishedInMemory()throws Exception {
         var f=new Fixture(null);var prefs=new AndroidProtectedWorkPreferences(f.raw);var original=prefs.protectedSnapshot();
-        prefs.prepareProbe(original,"synthetic original same pending guard");f.raw.failNext=true;
+        prefs.prepareProbe(original,"synthetic original same pending guard");f.raw.faultKey=AndroidProtectedWorkPreferences.MUTATION_KEY;f.raw.failNext=true;
         try{prefs.cancelProbe(original,"synthetic original same pending guard");fail("fixture must be uncertain");}catch(VaultFailure expected){}
+        assertEquals("exact cancellation fault fired once",1,f.raw.faults);assertFalse(f.raw.failNext);
         assertFalse(f.raw.values.containsKey(AndroidProtectedWorkPreferences.PROBE_KEY));
         refused(f.engine::getState);assertEquals(0,f.loads);assertEquals(0,f.memory.commitAttempts.get());assertEquals(0,f.cipher.encrypts);
     }

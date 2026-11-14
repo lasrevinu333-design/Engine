@@ -85,7 +85,15 @@ public final class NativeRetainedBatchOwnerTest {
                 String domain=AndroidRetainedBatchStore.AAD+":"+(query?"query:":"write:")+index;
                 return domains.computeIfAbsent(domain,DomainCipher::new);},old.journal,queryZero).journal();}
         String nextId(){return id(1000+(++ids));}
-        VaultEngine.NativeRetainedBatchOperation prepare()throws VaultFailure{return old.engine.prepareNativeRetainedBatch(old.work,old.principal,null,journal,this::nextId);}
+        NativeGenerationBoundBatchTest.Fixture generationOwner;
+        final java.util.List<VaultEngine.NativeRetainedGenerationObservation> observations=new java.util.ArrayList<>();
+        VaultEngine.NativeRetainedBatchOperation prepare()throws VaultFailure{
+            try{
+                if(generationOwner==null)generationOwner=new NativeGenerationBoundBatchTest.Fixture(this);
+                var generation=generationOwner.generation();observations.add(generation);
+                return old.engine.prepareNativeRetainedBatch(generation,journal,this::nextId);
+            }catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(NativeRetainedAttempt.FAILURE,e);}
+        }
         NativeRetainedAttemptJournal write(int index)throws Exception{return journal.writes(journal.observe(),index);}
         NativeRetainedQueryJournal read(int index)throws Exception{return journal.reads(journal.observe(),index);}
         VaultEngine.NativeRetainedOperation next(VaultEngine.NativeRetainedBatchOperation batch)throws VaultFailure{return old.engine.prepareNextNativeRetainedBatchChunk(batch,this::nextId);}
@@ -140,23 +148,25 @@ public final class NativeRetainedBatchOwnerTest {
         JSONObject index()throws Exception{var envelope=new JSONObject((String)root.memory.get(NativeRetainedBatchJournal.INDEX));char[] clear=indexCipher.decrypt(new EncryptedSecret(envelope.getString("ciphertext"),envelope.getString("iv")));
             try{return new JSONObject(new String(clear));}finally{Arrays.fill(clear,'\0');}}
         void replaceIndex(JSONObject value)throws Exception{char[] clear=value.toString().toCharArray();try{var sealed=indexCipher.encryptWithExistingKey(clear);root.memory.put(NativeRetainedBatchJournal.INDEX,new JSONObject().put("ciphertext",sealed.ciphertext).put("iv",sealed.iv).toString());}finally{Arrays.fill(clear,'\0');}}
-        void preserved(){assertEquals(frozen,old.workDisk.durable);old.wiped();indexCipher.wiped();for(var cipher:domains.values())cipher.wiped();assertEquals(0,queryZeroCipher.creates);assertEquals(0,queryZeroCipher.destroys);}
+        void preserved(){for(var observation:observations)observation.close();assertEquals(frozen,old.workDisk.durable);old.wiped();indexCipher.wiped();for(var cipher:domains.values())cipher.wiped();assertEquals(0,queryZeroCipher.creates);assertEquals(0,queryZeroCipher.destroys);}
     }
     static void diagnostic(VaultEngine.NativeRetainedBatchProgress result){assertFalse(result.currentServerReadback);assertFalse(result.resendAllowed);assertFalse(result.workAccepted);assertFalse(result.inventoryAcknowledged);assertFalse(result.keyRemovalAllowed);}
 
     @Test public void threeChunksShareSealedOperationGenerationButEveryWriteAndQueryHasItsOwnOriginalNonce()throws Exception{
         var f=new Fixture();var vault=f.old.persistence.current();java.util.Set<String> nonces=new java.util.HashSet<>();
-        try(var batch=f.prepare()){assertEquals(3,batch.chunkCount());assertEquals(2,f.ids);var zeroBefore=(Map<String,Object>)null;
+        try(var batch=f.prepare()){assertEquals(3,batch.chunkCount());assertEquals(1,f.ids);var zeroBefore=(Map<String,Object>)null;
             for(int index=0;index<batch.chunkCount();index++){
                 f.sendWrite(batch,index);var write=f.write(index).observe().record();assertEquals(batch.operationId(),write.getString("operation_id"));assertEquals(batch.generationId(),write.getString("generation_id"));assertTrue(nonces.add(write.getString("native_request_id")));
                 f.observe(batch,index,index+1==batch.chunkCount()?"RAW_VALUES_RETAINED_PENDING_SEMANTIC_RECONCILIATION":"CHUNK_RETAINED_INCOMPLETE_VALUES");assertTrue(nonces.add(f.read(index).observe().record().getString("native_request_id")));
                 if(index==0)zeroBefore=new HashMap<>(f.old.journalDisk.durable);else assertEquals(zeroBefore,f.old.journalDisk.durable);
             }
-            var progress=f.old.engine.inspectNativeRetainedBatch(batch);diagnostic(progress);assertEquals("CACHED_ALL_CHUNKS_OBSERVED",progress.state);assertEquals(3,progress.observedPrefix);assertEquals(6,nonces.size());assertEquals(8,f.ids);denied(()->f.next(batch));assertEquals(6,f.old.opened);
+            var progress=f.old.engine.inspectNativeRetainedBatch(batch);diagnostic(progress);assertEquals("CACHED_ALL_CHUNKS_OBSERVED",progress.state);assertEquals(3,progress.observedPrefix);assertEquals(6,nonces.size());assertEquals(7,f.ids);denied(()->f.next(batch));assertEquals(6,f.old.opened);
         }assertEquals(vault,f.old.persistence.current());f.preserved();
     }
     @Test public void existingChunkZeroIsAdoptedExactlyWithoutRemintingOriginalIdentity()throws Exception{
-        var f=new Fixture();try(var original=f.old.prepare()){try(var reply=f.old.send(original)){} }
+        var f=new Fixture();f.generationOwner=new NativeGenerationBoundBatchTest.Fixture(f);
+        String[] originalIds={id(7000),f.generationOwner.original.generationId,id(7001)};int[] at={0};
+        try(var original=f.old.engine.prepareNativeRetainedChunk(f.old.work,f.old.principal,null,f.old.journal,()->originalIds[at[0]++],0)){try(var reply=f.old.send(original)){} }
         var before=new HashMap<>(f.old.journalDisk.durable);var record=f.old.journal.observe().record();try(var batch=f.prepare()){
             assertEquals(record.getString("operation_id"),batch.operationId());assertEquals(record.getString("generation_id"),batch.generationId());assertEquals(0,f.ids);
             f.observe(batch,0,"CHUNK_RETAINED_INCOMPLETE_VALUES");try(var next=f.next(batch)){assertEquals(2,f.ids);assertEquals(batch.operationId(),f.write(1).observe().record().getString("operation_id"));}
@@ -169,8 +179,8 @@ public final class NativeRetainedBatchOwnerTest {
         assertEquals(root,f.root.durable);assertEquals(zero,f.old.journalDisk.durable);assertEquals(queries,f.queryZeroDisk.durable);assertEquals(ids,f.ids);assertEquals(opened,f.old.opened);assertEquals(encrypts,f.indexCipher.encrypts);f.preserved();
     }
     @Test public void falseBatchIndexCommitRequiresTrueExactCiphertextRecommitNotNewIdentity()throws Exception{
-        var f=new Fixture();f.root.memoryOnly=true;denied(f::prepare);assertTrue(f.root.durable.isEmpty());var volatileCipher=new HashMap<>(f.root.memory);assertEquals(2,f.ids);
-        f.root.memoryOnly=false;try(var batch=f.prepare()){assertEquals(volatileCipher,f.root.durable);assertEquals(2,f.ids);assertEquals("NEW_CHUNK_SLOT",f.old.engine.inspectNativeRetainedBatch(batch).state);}assertEquals(0,f.old.opened);f.preserved();
+        var f=new Fixture();f.root.memoryOnly=true;denied(f::prepare);assertTrue(f.root.durable.isEmpty());var volatileCipher=new HashMap<>(f.root.memory);assertEquals(1,f.ids);
+        f.root.memoryOnly=false;try(var batch=f.prepare()){assertEquals(volatileCipher,f.root.durable);assertEquals(1,f.ids);assertEquals("NEW_CHUNK_SLOT",f.old.engine.inspectNativeRetainedBatch(batch).state);}assertEquals(0,f.old.opened);f.preserved();
     }
     @Test public void falseLaterPreparationReusesOriginalCipherBodyAndNonce()throws Exception{
         var f=new Fixture();try(var batch=f.prepare()){f.completeZero(batch);f.root.memoryOnly=true;denied(()->f.next(batch));var volatileCipher=new HashMap<>(f.root.memory);var record=f.write(1).observe().record();int ids=f.ids;
@@ -202,8 +212,11 @@ public final class NativeRetainedBatchOwnerTest {
     }
     @Test public void gapsAndMixedValidHMACGenerationCannotBeSilentlySkipped()throws Exception{
         for(boolean mixed:new boolean[]{false,true}){var f=new Fixture();try(var batch=f.prepare()){if(mixed)f.completeZero(batch);
-            f.inject(1,mixed?id(8000):batch.operationId(),mixed?id(8001):batch.generationId());var before=new HashMap<>(f.root.durable);int ids=f.ids,opened=f.old.opened;
-            denied(()->f.old.engine.inspectNativeRetainedBatch(batch));denied(()->f.next(batch));assertEquals(before,f.root.durable);assertEquals(ids,f.ids);assertEquals(opened,f.old.opened);
+            var before=new HashMap<>(f.root.durable);int ids=f.ids,opened=f.old.opened;
+            if(mixed){denied(()->f.inject(1,id(8000),id(8001)));assertNull(f.write(1).observe());}
+            else {f.inject(1,batch.operationId(),batch.generationId());before=new HashMap<>(f.root.durable);
+                denied(()->f.old.engine.inspectNativeRetainedBatch(batch));denied(()->f.next(batch));}
+            assertEquals(before,f.root.durable);assertEquals(ids,f.ids);assertEquals(opened,f.old.opened);
         }f.preserved();}
     }
     @Test public void nonceReuseAcrossAnyEarlierWriteOrQueryIsRefusedBeforeLaterPreparation()throws Exception{
@@ -246,10 +259,12 @@ public final class NativeRetainedBatchOwnerTest {
             (query,index)->new DomainCipher(AndroidRetainedBatchStore.AAD+":"+(query?"query:":"write:")+index),f.old.journal,f.queryZero);
             var journal=new NativeRetainedBatchJournal(new NativeRetainedBatchJournal.Backend(){
                 public Map<String,?> readAll(){return backing.readAll();}
-                public boolean compareAndCommit(Map<String,String> before,Map<String,String> next)throws Exception{
-                    boolean committed=backing.compareAndCommit(before,next);if(work)f.old.workDisk.memory.put("unknown-original-work","changed during true commit");else f.old.bumpVault();return committed;}
+                public boolean compareAndCommit(Map<String,String> before,Map<String,String> next)throws Exception{throw new AssertionError("unbound commit forbidden");}
+                public Map<String,String> pendingOriginal(NativeRetainedBatchJournal.OriginalCommit original)throws Exception{return backing.pendingOriginal(original);}
+                public boolean commitOriginal(NativeRetainedBatchJournal.OriginalCommit original,Map<String,String> next)throws Exception{
+                    boolean committed=backing.commitOriginal(original,next);if(work)f.old.workDisk.memory.put("unknown-original-work","changed during true commit");else f.old.bumpVault();return committed;}
             },f.indexCipher,(query,index)->new DomainCipher(AndroidRetainedBatchStore.AAD+":"+(query?"query:":"write:")+index),new Object(),f.old.journal,f.queryZero);
-            denied(()->f.old.engine.prepareNativeRetainedBatch(f.old.work,f.old.principal,null,journal,f::nextId));assertNull(f.old.journal.observe());assertEquals(0,f.old.opened);f.preserved();
+            f.journal=journal;denied(f::prepare);assertNull(f.old.journal.observe());assertEquals(0,f.old.opened);f.preserved();
         }
     }
     @Test public void aLaterQueryCannotReuseAnEarlierQueryNonceOrOverwriteAnyWitness()throws Exception{
