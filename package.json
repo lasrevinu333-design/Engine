@@ -87,9 +87,13 @@
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "vite": "8.1.6",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "overrides": {
-    "@grpc/grpc-js": "1.13.6"
+    "@grpc/grpc-js": "1.13.6",
+    "fast-uri": "3.1.9",
+    "rimraf": "6.1.4",
+    "glob": "14.0.6",
+    "minimatch": "11.0.8"
   }
 }

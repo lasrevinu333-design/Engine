@@ -196,13 +196,17 @@
     return `Ops Manager · ${platform}`.slice(0,160);
   }
 
+  function notifySessionChange(){
+    try{if(typeof window.dispatchEvent==='function'&&typeof window.CustomEvent==='function')window.dispatchEvent(new window.CustomEvent('memphis:manager-session-changed'));}catch{}
+  }
   function readSession(){
     if(opsSession&&opsSession.token&&opsSession.role==='ops_manager'&&Date.parse(opsSession.expires_at)>Date.now())return opsSession;
-    opsSession=null;
+    const previous=opsSession;opsSession=null;
+    if(previous)notifySessionChange();
     return null;
   }
 
-  function clearSessionRecord(){opsSessionGeneration++;opsSession=null;leadershipBinding=null;leadershipCsrf='';opsSessionRequest=null;}
+  function clearSessionRecord(){opsSessionGeneration++;opsSession=null;leadershipBinding=null;leadershipCsrf='';opsSessionRequest=null;notifySessionChange();}
   function requireSessionGeneration(generation){
     if(generation!==opsSessionGeneration)throw Object.assign(new Error('Manager session request is no longer current.'),{code:'STALE_MANAGER_SESSION_REQUEST'});
   }
@@ -224,7 +228,7 @@
     opsSession={...payload.data.session,token:payload.data.session.token};
     const canonicalDevice=payload.data?.trusted_device?.device_id||opsSession.device_id;
     if(canonicalDevice)persistDeviceId(canonicalDevice);
-    return opsSession;
+    notifySessionChange();return opsSession;
   }
 
   function isCustodialManagementAdmin(session=readSession()){
@@ -241,7 +245,7 @@
     const body=await response.json().catch(()=>null);requireSessionGeneration(generation);
     const v=body?.session,session=v?.managerSession,uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value),p=session?.permissions;
     if(!response.ok||body?.ok!==true||body.enrolled!==true){
-      opsSession=null;leadershipBinding=null;leadershipCsrf='';
+      opsSession=null;leadershipBinding=null;leadershipCsrf='';notifySessionChange();
       const missing=response.status===401||(response.ok&&body?.ok===true&&body.enrolled===false);
       const error=new Error(missing?'Sign in once to remember this browser.':response.status===403?'Manager access was denied. Your saved sign-in has not been replaced.':body?.error==='leadership_disabled'?'Manager sign-in is not enabled.':'Manager access is temporarily unavailable. Reload to check your saved sign-in.');
       error.status=missing?401:response.ok?503:response.status;
@@ -257,13 +261,13 @@
       ||session.owner!==false||session.custodial_management_admin!==true||session.read_only!==false||session.access_level!=='full_access'
       ||p?.schema!=='custodial.manager-permissions.v1'||p.read!==true||p.owner!==false||p.custodialManagementAdmin!==true
       ||p.policyVersion!==v.cohort.policyVersion||!v.cohort.permissions.includes('custodialManagementAdmin')){
-      opsSession=null;leadershipBinding=null;throw new Error('The server manager-session adapter is unavailable or unverified. No client authority was created.');
+      opsSession=null;leadershipBinding=null;notifySessionChange();throw new Error('The server manager-session adapter is unavailable or unverified. No client authority was created.');
     }
     // Preserve the ACTUAL server session verbatim. Name selection never creates
     // an owner, role, token or employee identity in this client.
     opsSession=session;leadershipCsrf=body.csrfToken;
     leadershipBinding=Object.freeze({principalId:v.cohort.principalId,registrationId:v.registrationId,deviceId:session.device_id,policyVersion:v.cohort.policyVersion,claimedAccountId:v.claimedAccount.accountId});
-    persistDeviceId(session.device_id);return opsSession;
+    persistDeviceId(session.device_id);notifySessionChange();return opsSession;
   }
   async function requestTrustedOpsSession(accessLevel='full_access'){
     normalizeAccessLevel(accessLevel);return refreshLeadershipSession();

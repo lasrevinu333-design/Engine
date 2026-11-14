@@ -73,6 +73,15 @@
           <label>Location<select id="cleanings-location" class="uxSelect"><option value="">All locations</option></select></label>
           <button id="apply-cleanings" class="uxButton primary" type="button">Apply</button>
         </div>
+        <div class="dataAction" id="test-archive-controls" hidden>
+          <label>Reason for selecting these test records<input id="test-archive-reason" class="uxInput" type="text" maxlength="1000"></label>
+          <button id="preview-test-archive" class="uxButton compact" type="button">Preview selected test records</button>
+        </div>
+        <section id="test-archive-preview" class="uxCard" hidden aria-labelledby="test-archive-heading">
+          <h3 id="test-archive-heading">Selected test-record archive review</h3>
+          <p id="test-archive-status" role="status" aria-live="polite"></p>
+          <div id="test-archive-content"></div>
+        </section>
         <div id="cleanings-list" class="dataList" aria-live="polite"></div>
         <section id="completion-evidence-panel" class="uxCard" hidden aria-labelledby="completion-evidence-heading" style="padding:18px;margin-top:16px">
           <h3 id="completion-evidence-heading" tabindex="-1">Exact completion record — read-only</h3>
@@ -108,10 +117,10 @@
     </section>
   </main>
 
-  <script src="./memphis-auth.js"></script>
+  <script src="./memphis-auth.js?v=20261114-r44"></script>
   <script src="./memphis-ui.js"></script>
   <script src="./operational-insights-native-auth.js"></script>
   <script src="./memphis-completion-evidence.js"></script>
-  <script src="./operational-insights.js"></script>
+  <script src="./operational-insights.js?v=20261114-r44"></script>
 </body>
 </html>
