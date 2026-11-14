@@ -46,7 +46,7 @@ pass('dedicated manager map uses existing Hub authentication and clear normal re
  assert.match(hub,/id="dashboard-link"[^>]+href="\.\/dashboard\.html"/);
  assert.match(hub,/id="dashboard-map-link"[^>]+href="\.\/operations-dashboard\.html"/);
  assert.match(hubController,/dashboardMapLink\.href=dashboardMapUrl\.toString\(\)/);
- assert.match(hubController,/requireOpsManagerSession\(\{accessLevel:'full_access',interactive:!resuming,forceRefresh:resuming,redirect:false,throwOnFailure:true\}\)/);
+ assert.match(hubController,/requireOpsManagerSession\(\{accessLevel:'full_access',interactive:false,forceRefresh:resuming,redirect:false,throwOnFailure:true\}\)/);
  assert.doesNotMatch(employeeHub,/dashboard(?:-map)?\.html/);
  assert.match(dashboard,/requireOpsManagerSession\(\{interactive:false,redirect:true\}\)/);
  assert.doesNotMatch(html,/staging_map=1|localhost|manager_access|enroll-form|ticket-marker/i);
