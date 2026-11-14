@@ -196,6 +196,7 @@
 @media(min-width:1400px){
   :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels{grid-template-columns:repeat(3,minmax(0,1fr))}
   :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>.telemetry,
+  :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>.tickerBand,
   :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>#dashboard-map,
   :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>.dashboardTools{grid-column:1/-1}
   :is(:root:fullscreen,:root.dashboard-expanded) .commandPage:has(>.publicViewNav){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-content:start}
