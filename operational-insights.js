@@ -55,6 +55,7 @@
     focusTarget: els.evidenceHeading, readEnvelope: readCompletionEnvelope,
     }) : null;
 
+  const archiveSelections=new Map();let archiveGeneration=0;
   let correctionPanel=null,correctionModule=null;
   const correctionBinding=()=>{
     const session=window.MemphisAuth?.readSession?.();
@@ -309,6 +310,7 @@
   }
 
   function renderCleanings() {
+    const archiveControls=document.getElementById('test-archive-controls');if(archiveControls)archiveControls.hidden=!canCorrect();
     const rows = state.cleanings;
     if (!state.cleaningsAvailable) { els.cleaningsList.innerHTML = '<div class="emptyState">Cleaning history unavailable.</div>'; return; }
     if (!rows.length) {
@@ -340,6 +342,7 @@
         <div class="dataAction">
           <span class="scorePill ${scoreClass(score)}">${scoreKnown ? `${number(score)}%` : scoreUnknown}</span>
           <small class="uxMuted">Historical inspection records only; new recording is retired.</small>
+          ${canCorrect() && window.MemphisCompletionEvidence?.canReadRow(row) ? `<label><input type="checkbox" data-test-record-select data-session-uuid="${escapeHtml(row.session_uuid)}" ${archiveSelections.has(row.session_id)?'checked':''}>Select as a test record</label>` : ''}
           ${canCorrect() && window.MemphisCompletionEvidence?.canReadRow(row) ? `<button class="uxButton compact" type="button" data-cleaning-correction data-session-uuid="${escapeHtml(row.session_uuid)}">Review correction</button>` : ''}
           ${evidenceView && window.MemphisCompletionEvidence.canReadRow(row) ? `<button class="uxButton compact" type="button" data-completion-evidence data-session-uuid="${escapeHtml(row.session_uuid)}">View completion record</button>` : `<small class="uxMuted">${evidenceView ? 'Exact session identity unavailable.' : 'Exact completion view unavailable; existing history is preserved.'}</small>`}
         </div>
@@ -428,15 +431,43 @@
   };
   let statusGeneration = 0, pageClosed = false;
   const principal = () => {
-    const s=window.MemphisAuth?.readSession?.() || window.MemphisMobile?.readSession?.();
-    return s ? JSON.stringify([s.role,s.manager_id,s.credential_id,s.device_id,s.token,s.expires_at,s.auth_mode]) : null;
+    if(window.MemphisMobile?.authHeaders){
+      const security=window.MemphisCustodialSecurity, status=security?.getStatus?.();
+      if(!security || status?.ready!==true || status?.available===false || status?.quarantined===true)return null;
+      return JSON.stringify(['native',status.generation,status.deviceId,status.principal]);
+    }
+    const a=window.MemphisAuth,s=a?.readSession?.();
+    if(!s || !a?.isOpsManager?.(s) || !Number.isFinite(Date.parse(s.expires_at)) || Date.parse(s.expires_at)<=Date.now())return null;
+    return JSON.stringify([s.role,s.manager_id,s.credential_id,s.device_id,s.token,s.expires_at,s.auth_mode,s.read_only,s.access_level,s.roles,s.permissions]);
   };
+  const settledOwners=new Map();let expiryTimer=null,withdrawing=false;
+  const cancelExpiry=()=>{if(expiryTimer!==null){window.clearTimeout?.(expiryTimer);expiryTimer=null;}};
+  function clearSensitiveFilters(){for(const control of [els.performanceEmployee,els.performanceLocation,els.cleaningsEmployee,els.cleaningsLocation])control.value='';}
+  function withdrawAuthority(){
+    if(withdrawing)return;
+    withdrawing=true;
+    try{cancelExpiry();clearSensitiveFilters();statusGeneration+=1;Object.keys(paths).forEach(withdraw);settledOwners.clear();
+      evidenceView?.clear();correctionPanel?.revalidate();renderAll();
+      setStatus('Manager access changed. Refresh with current access to load operational evidence.','error');
+    }finally{withdrawing=false;}
+  }
+  function revalidateAuthority(){
+    const current=principal();
+    if(settledOwners.size && [...settledOwners.values()].some(owner=>owner.key!==current || owner.auth!==window.MemphisAuth || owner.mobile!==window.MemphisMobile || owner.security!==window.MemphisCustodialSecurity))withdrawAuthority();
+    correctionPanel?.revalidate();
+  }
+  function armExpiry(){
+    cancelExpiry();if(window.MemphisMobile?.authHeaders || !window.setTimeout)return;
+    const s=window.MemphisAuth?.readSession?.();if(!s)return;
+    expiryTimer=window.setTimeout(()=>{expiryTimer=null;revalidateAuthority();if(settledOwners.size)armExpiry();},Math.max(0,Math.min(2147483647,Date.parse(s.expires_at)-Date.now())));
+  }
   const paths={performance:'/analytics-api/cleaning-performance',cleanings:'/analytics-api/session-facts',tickets:'/analytics-api/ticket-trends',inspections:'/analytics-api/inspections',inspectionCoverage:'/analytics-api/inspection-coverage'};
   function withdraw(kind) {
+    settledOwners.delete(kind);
     generations[kind]=(generations[kind]||0)+1;
     if(kind==='inspectionCoverage')state.inspectionCoverage=null;
     else {state[kind+'Available']=false;state[kind]=[];}
-    if(kind==='cleanings')evidenceView?.clear();
+    if(kind==='cleanings'){evidenceView?.clear();clearArchivePreview();}
   }
   async function load(kind) {
     withdraw(kind);
@@ -447,13 +478,14 @@
       // The first real page read establishes its signed browser session here.
       // Capture the original principal after that authentication has completed.
       await authHeaders();if(!current())return false;
-      const owner=principal();
+      const owner=principal(),authority={key:owner,auth:window.MemphisAuth,mobile:window.MemphisMobile,security:window.MemphisCustodialSecurity};
+      if(!owner && !window.MemphisMobile?.authHeaders)throw new Error('Current Custodial Manager access is required.');
       const value=await request(query(paths[kind],parameters));
       if(!current())return false;
-      if(owner!==principal())throw new Error('Current Custodial Manager session changed. Refresh with the current session.');
+      if(owner!==principal() || authority.auth!==window.MemphisAuth || authority.mobile!==window.MemphisMobile || authority.security!==window.MemphisCustodialSecurity)throw new Error('Current Custodial Manager session changed. Refresh with the current session.');
       state[kind]=kind==='inspectionCoverage' ? value || null : rows(value);
       if(kind!=='inspectionCoverage')state[kind+'Available']=true;
-      renderAll();return true;
+      settledOwners.set(kind,authority);armExpiry();renderAll();return true;
     } catch(error) {if(!current())return false;throw error;}
   }
   const loadPerformance=()=>load('performance'), loadCleanings=()=>load('cleanings'), loadTickets=()=>load('tickets');
@@ -514,13 +546,45 @@
     void evidenceView.open(rows[0], button);
   });
   els.closeEvidence?.addEventListener('click', () => evidenceView?.clear({returnToSelection:true}));
-  window.addEventListener('focus',()=>correctionPanel?.revalidate());
-  window.addEventListener('storage',()=>correctionPanel?.revalidate());
-  document.addEventListener?.('visibilitychange',()=>correctionPanel?.revalidate());
+  function clearArchivePreview(){
+    archiveGeneration++;archiveSelections.clear();
+    const panel=document.getElementById('test-archive-preview'),content=document.getElementById('test-archive-content'),reason=document.getElementById('test-archive-reason');
+    if(panel)panel.hidden=true;if(content)content.textContent='';if(reason)reason.value='';
+  }
+  els.cleaningsList.addEventListener('change',event=>{
+    const box=event.target.closest('[data-test-record-select]');if(!box)return;
+    const id=box.closest('[data-session-id]')?.dataset.sessionId,identity=box.dataset.sessionUuid;
+    if(!canCorrect()||state.cleanings.filter(r=>r.session_id===id&&r.session_uuid===identity).length!==1){clearArchivePreview();renderAll();return;}
+    archiveGeneration++;if(box.checked)archiveSelections.set(id,{session_id:id,session_uuid:identity});else archiveSelections.delete(id);
+    const panel=document.getElementById('test-archive-preview');if(panel)panel.hidden=true;
+  });
+  document.getElementById('test-archive-reason')?.addEventListener('input',()=>{archiveGeneration++;const panel=document.getElementById('test-archive-preview');if(panel)panel.hidden=true;});
+  document.getElementById('preview-test-archive')?.addEventListener('click',()=>void (async()=>{
+    const panel=document.getElementById('test-archive-preview'),status=document.getElementById('test-archive-status'),content=document.getElementById('test-archive-content');
+    if(!panel||!status||!content)return;
+    const owner=correctionBinding(),generation=++archiveGeneration;
+    const assertCurrent=()=>{if(generation!==archiveGeneration||!canCorrect()||owner!==correctionBinding())throw Error('Manager access or selection changed.');};
+    panel.hidden=false;content.textContent='';status.textContent='Verifying the selected completed records…';
+    try{
+      assertCurrent();const {prepareTestRecordArchivePreview}=await import('./manager-test-record-archive-preview.mjs');assertCurrent();
+      const packet=await prepareTestRecordArchivePreview({selections:[...archiveSelections.values()],reason:document.getElementById('test-archive-reason').value,assertCurrent,
+        readTruth:id=>correctionEnvelope(`/admin-api/custodial/cleaning-sessions/${encodeURIComponent(id)}/truth`)});
+      assertCurrent();const list=document.createElement('ul');
+      for(const record of packet.records){const item=document.createElement('li');item.textContent=`${record.current_employee_name||'Recorded employee'} · ${record.current_location_name||'Recorded location'} · ${dateTime(record.current_started_at)} — ${dateTime(record.current_ended_at)}`;list.append(item);}
+      content.append(list);const reason=document.createElement('p');reason.textContent='Reason: '+packet.reason;content.append(reason);
+      status.textContent='Review prepared. These records remain in history and Insights. Archiving is not enabled; no records were changed.';
+    }catch(error){if(generation===archiveGeneration){content.textContent='';status.textContent=safe(error);}}
+  })());
+
+  window.addEventListener('focus',revalidateAuthority);
+  window.addEventListener('storage',revalidateAuthority);
+  window.addEventListener('memphis:manager-session-changed',revalidateAuthority);
+  window.addEventListener('memphis:custodial-security-state',revalidateAuthority);
+  document.addEventListener?.('visibilitychange',revalidateAuthority);
   window.addEventListener('beforeunload',event=>{if(correctionPanel?.hasUnresolved()){event.preventDefault();event.returnValue='';}});
-  window.addEventListener('pagehide', () => {correctionPanel?.retire();pageClosed=true;statusGeneration+=1;Object.keys(paths).forEach(withdraw);evidenceView?.clear();});
+  window.addEventListener('pagehide', () => {cancelExpiry();clearSensitiveFilters();correctionPanel?.retire();pageClosed=true;statusGeneration+=1;Object.keys(paths).forEach(withdraw);evidenceView?.clear();renderAll();});
   window.addEventListener('pageshow', () => {correctionPanel?.resume();if(pageClosed){pageClosed=false;void loadAll();}});
-  window.addEventListener('online', () => { if (state.activeTab) setStatus('Connection restored. Refresh operational evidence.', 'ok'); });
+  window.addEventListener('online', () => { revalidateAuthority();if (state.activeTab) setStatus('Connection restored. Refresh operational evidence.', 'ok'); });
 
   const hashTab = () => {const name=String(window.location?.hash || '').replace(/^#panel-/, '');if(els.tabs.some(tab=>tab.dataset.tab===name))setTab(name);};
   window.addEventListener('hashchange', hashTab);hashTab();

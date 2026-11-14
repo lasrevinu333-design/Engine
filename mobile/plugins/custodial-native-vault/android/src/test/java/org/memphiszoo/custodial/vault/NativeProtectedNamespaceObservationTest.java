@@ -331,9 +331,15 @@ public final class NativeProtectedNamespaceObservationTest {
                 // A fixed-family stamp never replaces any actual namespace
                 // read, its source exception, or post-read/copy revalidation.
                 AtomicInteger withdrawals=new AtomicInteger();
-                x.onRead=name->{if(name.equals(BATCH)){withdrawals.incrementAndGet();throw new IllegalStateException("synthetic source withdrawn");}};
-                try{assertThrows(VaultFailure.class,observed::stillCurrent);assertTrue(withdrawals.get()>0);}
-                finally{x.onRead=name->{};}
+                try(var fresh=NativeProtectedNamespaceObservation.observe(x.readers)){
+                    x.onRead=name->{if(name.equals(BATCH)){withdrawals.incrementAndGet();throw new IllegalStateException("synthetic source withdrawn");}};
+                    try{
+                        assertThrows(VaultFailure.class,observed::stillCurrent);
+                        assertEquals("a retired observation cannot reread or revive",0,withdrawals.get());
+                        assertThrows(VaultFailure.class,fresh::stillCurrent);assertTrue(withdrawals.get()>0);
+                        noAuthority(fresh);
+                    }finally{x.onRead=name->{};}
+                }
                 noAuthority(observed);
                 assertArrayEquals(metadata,java.nio.file.Files.readAllBytes(x.dir.resolve(NativePrivateMutationEpochStore.CURRENT)));
                 assertEquals(inode,java.nio.file.Files.readAttributes(x.dir.resolve(NativePrivateMutationEpochStore.CURRENT),

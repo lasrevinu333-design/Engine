@@ -20,7 +20,8 @@ public final class AndroidProtectedWorkReadOnlyAbaTest {
         AndroidProtectedWorkPreferences.ReadOnlyObservation original = first.observeReadOnly();
         assertTrue(first.edit().putString("protected", "B").commit());
         assertTrue(first.edit().putString("protected", "A").commit());
-        assertEquals(original.values, raw.getAll());
+        assertPayloadEquals(original.values, raw.getAll());
+        assertTrue(epoch(raw.getAll()) > epoch(original.values));
         assertFalse("equal bytes after ABA cannot attest the original observation", first.matchesReadOnly(original));
     }
     @Test public void unchangedOriginalSameSourceObservationStillMatches() throws Exception {
@@ -36,7 +37,8 @@ public final class AndroidProtectedWorkReadOnlyAbaTest {
         AndroidProtectedWorkPreferences wrapper = new AndroidProtectedWorkPreferences(raw);
         AndroidProtectedWorkPreferences.ReadOnlyObservation original = wrapper.observeReadOnly();
         assertTrue(wrapper.edit().putString("protected", "A").commit());
-        assertEquals(original.values, raw.getAll());
+        assertPayloadEquals(original.values, raw.getAll());
+        assertTrue(epoch(raw.getAll()) > epoch(original.values));
         assertFalse(wrapper.matchesReadOnly(original));
         assertTrue(wrapper.matchesReadOnly(wrapper.observeReadOnly()));
     }
@@ -45,11 +47,15 @@ public final class AndroidProtectedWorkReadOnlyAbaTest {
         raw.values.put("protected", "A");
         AndroidProtectedWorkPreferences wrapper = new AndroidProtectedWorkPreferences(raw);
         AndroidProtectedWorkPreferences.ReadOnlyObservation original = wrapper.observeReadOnly();
-        raw.failNext = true;
+        raw.faultKey="protected";raw.failNext = true;
         assertFalse(wrapper.edit().putString("protected", "B").commit());
         assertEquals("B", raw.getString("protected", null));
-        assertTrue(wrapper.edit().putString("protected", "A").commit());
-        assertEquals(original.values, raw.getAll());
+        assertEquals(1,raw.faults);
+        assertTrue(wrapper.frozen());
+        assertFalse("ordinary writes cannot thaw an uncertain commit",wrapper.edit().putString("protected", "A").commit());
+        raw.values.put("protected","A"); // simulated out-of-band ABA; never recovery authority
+        assertPayloadEquals(original.values, raw.getAll());
+        assertTrue(epoch(raw.getAll()) > epoch(original.values));
         assertFalse(wrapper.matchesReadOnly(original));
     }
     @Test public void thrownMemoryOnlyCommitAndRestorationRemainAChangedObservation() throws Exception {
@@ -57,11 +63,15 @@ public final class AndroidProtectedWorkReadOnlyAbaTest {
         raw.values.put("protected", "A");
         AndroidProtectedWorkPreferences wrapper = new AndroidProtectedWorkPreferences(raw);
         AndroidProtectedWorkPreferences.ReadOnlyObservation original = wrapper.observeReadOnly();
-        raw.throwNext = true;
+        raw.faultKey="protected";raw.throwNext = true;
         try { wrapper.edit().putString("protected", "B").commit(); fail("fault fixture must throw"); }
         catch (IllegalStateException expected) { assertEquals("synthetic-memory-only-commit", expected.getMessage()); }
-        assertTrue(wrapper.edit().putString("protected", "A").commit());
-        assertEquals(original.values, raw.getAll());
+        assertEquals(1,raw.faults);
+        assertTrue(wrapper.frozen());
+        assertFalse("ordinary writes cannot thaw an uncertain commit",wrapper.edit().putString("protected", "A").commit());
+        raw.values.put("protected","A"); // simulated out-of-band ABA; never recovery authority
+        assertPayloadEquals(original.values, raw.getAll());
+        assertTrue(epoch(raw.getAll()) > epoch(original.values));
         assertFalse(wrapper.matchesReadOnly(original));
     }
     @Test public void sourceIdentityAndAliasMutationsAreBoundToTheOriginalObservation() throws Exception {
@@ -88,7 +98,8 @@ public final class AndroidProtectedWorkReadOnlyAbaTest {
         assertTrue(wrapper.frozen());
         wrapper.cancelProbe(original.values, "SYNTHETIC-PROTECTED-PROBE-NOT-AUTHORITY");
         assertFalse(wrapper.frozen());
-        assertEquals(original.values, raw.getAll());
+        assertPayloadEquals(original.values, raw.getAll());
+        assertTrue(epoch(raw.getAll()) > epoch(original.values));
         assertFalse(wrapper.matchesReadOnly(original));
         // This exercises the storage primitive only, never a native authenticated
         // cancellation, separation decision, current inventory or key release.
@@ -104,9 +115,19 @@ public final class AndroidProtectedWorkReadOnlyAbaTest {
         assertTrue(wrapper.matchesReadOnly(original));
     }
 
+    static long epoch(Map<String,?> values){
+        Object value=values.get(AndroidProtectedWorkPreferences.MUTATION_KEY);
+        if(value==null)return 0;
+        assertTrue(value instanceof String);assertTrue(((String)value).matches("[1-9][0-9]*"));return Long.parseLong((String)value);
+    }
+    static void assertPayloadEquals(Map<String,?> before,Map<String,?> after){
+        Map<String,Object> a=new HashMap<>(before),b=new HashMap<>(after);
+        a.remove(AndroidProtectedWorkPreferences.MUTATION_KEY);b.remove(AndroidProtectedWorkPreferences.MUTATION_KEY);
+        assertEquals(a,b);
+    }
     static final class MemoryPreferences implements SharedPreferences {
         final Map<String,Object> values = new HashMap<>();
-        boolean failNext, throwNext; int commits;
+        boolean failNext, throwNext; String faultKey;int commits,faults;
         public Map<String,?> getAll() { return new HashMap<>(values); }
         public String getString(String key,String fallback) { return (String)values.getOrDefault(key,fallback); }
         @SuppressWarnings("unchecked") public Set<String> getStringSet(String key,Set<String> fallback) {
@@ -133,8 +154,8 @@ public final class AndroidProtectedWorkReadOnlyAbaTest {
             public boolean commit() {
                 commits++;if(clear)values.clear();for(String key:removed)values.remove(key);
                 for(var entry:put.entrySet())if(entry.getValue()==null)values.remove(entry.getKey());else values.put(entry.getKey(),entry.getValue());
-                if(throwNext){throwNext=false;throw new IllegalStateException("synthetic-memory-only-commit");}
-                if(failNext){failNext=false;return false;}return true;
+                if(throwNext&&put.containsKey(faultKey)){throwNext=false;faults++;throw new IllegalStateException("synthetic-memory-only-commit");}
+                if(failNext&&put.containsKey(faultKey)){failNext=false;faults++;return false;}return true;
             }
             public void apply() { throw new AssertionError("no synthetic apply"); }
         }
