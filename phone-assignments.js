@@ -42,6 +42,30 @@
       && session.permissions.read===true && session.permissions.owner===true && session.trusted_device===true
       && session.access_level==='full_access' && session.read_only===false);
   };
+  let pageClosed=false, loadGeneration=0, settledOwner=null, expiryTimer=null;
+  function managerIdentity() {
+    const auth=window.MemphisAuth,session=auth?.readSession?.();
+    if(!session || auth?.isOpsManager?.(session)!==true || !session.token
+      || !Number.isFinite(Date.parse(session.expires_at)) || Date.parse(session.expires_at)<=Date.now())return null;
+    return JSON.stringify([session.role,session.manager_id,session.credential_id,session.device_id,
+      session.token,session.expires_at,session.auth_mode,session.access_level,session.read_only,session.roles,session.permissions]);
+  }
+  function captureAuthority(){return {key:managerIdentity(),auth:window.MemphisAuth,mobile:window.MemphisMobile};}
+  function sameAuthority(owner){return Boolean(!pageClosed && owner?.key && owner.key===managerIdentity()
+    && owner.auth===window.MemphisAuth && owner.mobile===window.MemphisMobile);}
+  function assertAuthority(owner){if(!sameAuthority(owner))throw new Error('Current Custodial Manager session changed. Refresh with current access.');}
+  function cancelExpiry(){if(expiryTimer!==null){window.clearTimeout?.(expiryTimer);expiryTimer=null;}}
+  function withdrawAuthority(){
+    cancelExpiry();loadGeneration++;settledOwner=null;state.data=null;
+    els.list.innerHTML='';els.search.value='';clearTimeout(state.toastTimer);els.toast.textContent='';els.toast.className='uxToast';
+    setStatus(els.status,'Manager access changed. Refresh with current access.','error');
+  }
+  function revalidateAuthority(){if(settledOwner&&!sameAuthority(settledOwner))withdrawAuthority();}
+  function armExpiry(){
+    cancelExpiry();if(!window.setTimeout)return;
+    const session=window.MemphisAuth?.readSession?.();if(!session)return;
+    expiryTimer=window.setTimeout(()=>{expiryTimer=null;revalidateAuthority();if(settledOwner)armExpiry();},Math.max(0,Math.min(2147483647,Date.parse(session.expires_at)-Date.now())));
+  }
   async function authHeaders() {
     if (window.MemphisMobile?.authHeaders) return window.MemphisMobile.authHeaders();
     const session = await window.MemphisAuth?.requireOpsManagerSession?.({
@@ -51,16 +75,24 @@
     if(typeof window.MemphisAuth.opsManagerAuthHeaders!=='function')throw new Error('Current manager authentication adapter unavailable.');
     return window.MemphisAuth.opsManagerAuthHeaders();
   }
-  async function request(path, { method = 'GET', body = null, headers: extraHeaders = {} } = {}) {
+  async function request(path, { method = 'GET', body = null, headers: extraHeaders = {}, authority = null } = {}) {
+    const admitted=authority||(method!=='GET'?settledOwner:null);
+    if(method!=='GET'&&!admitted)throw new Error('Refresh phone assignments with current manager access.');
+    if(admitted)assertAuthority(admitted);
+    const authenticatedHeaders=await authHeaders(),owner=admitted||captureAuthority();assertAuthority(owner);
     if (method !== 'GET' && !ownerAccess()) throw new Error('Phone assignment and activation are owner-only.');
-    if (window.MemphisMobile?.requestEnvelope) return (await window.MemphisMobile.requestEnvelope(path, { method, body, headers: extraHeaders })).data;
-    const headers = { ...await authHeaders(), ...extraHeaders };
+    if (window.MemphisMobile?.requestEnvelope) {
+      const envelope=await window.MemphisMobile.requestEnvelope(path, { method, body, headers: extraHeaders });
+      assertAuthority(owner);return envelope.data;
+    }
+    const headers = { ...authenticatedHeaders, ...extraHeaders };
     if (body != null) headers['Content-Type'] = 'application/json';
     const response = await fetch(`${API}${path}`, {
       method, cache: 'no-store', credentials: 'include', headers,
       body: body == null ? undefined : JSON.stringify(body),
     });
-    const payload = await response.json().catch(() => null);
+    assertAuthority(owner);
+    const payload = await response.json().catch(() => null);assertAuthority(owner);
     if (!response.ok || !payload?.ok) throw Object.assign(new Error(payload?.error || `HTTP ${response.status}`),{status:response.status});
     return payload.data;
   }
@@ -137,17 +169,24 @@
     </article>`;
   }
   function render() {
+    if(settledOwner&&!sameAuthority(settledOwner)){withdrawAuthority();return;}
     const devices = state.data?.devices || [];
     els.list.innerHTML = devices.map(rowView).join('') || '<div class="uxMuted">No employee kiosk phones were found.</div>';
   }
   async function load() {
+    if(pageClosed)return;
+    const generation=++loadGeneration;
     setStatus(els.status, 'Loading phone assignments…', 'info');
     try {
-      state.data = await request('/leadership-api/phone-assignments');
-      render();
+      await authHeaders();if(pageClosed||generation!==loadGeneration)return;
+      const owner=captureAuthority();assertAuthority(owner);
+      const data=await request('/leadership-api/phone-assignments');
+      if(pageClosed||generation!==loadGeneration)return;assertAuthority(owner);
+      state.data=data;settledOwner=owner;armExpiry();render();
       setStatus(els.status, `${state.data.devices?.length || 0} kiosk assignments loaded. Phone activation is verified separately.`, 'ok');
     } catch (error) {
-      if([401,403].includes(error?.status)){state.data=null;els.list.innerHTML='';}
+      if(pageClosed||generation!==loadGeneration)return;
+      if(!managerIdentity()||[401,403].includes(error?.status)){withdrawAuthority();}
       setStatus(els.status, safe(error), 'error');
     }
   }
@@ -179,6 +218,8 @@
   }
   async function activationRow(row,start) {
     if(!ownerAccess())return showToast('Phone activation is owner-only.','error');
+    const owner=settledOwner;if(!sameAuthority(owner)){withdrawAuthority();return;}
+    const ownedRequest=(path,options={})=>request(path,{...options,authority:owner});
     const deviceId=row.dataset.device;
     if(state.activating.has(deviceId))return;
     const output=row.querySelector('[data-activation-result]'),buttons=[row.querySelector('[data-activate]'),row.querySelector('[data-activation-status]')];
@@ -188,7 +229,7 @@
       let record=savedActivation(deviceId),result;
       if(!start){
         if(!record){output.textContent='No activation request saved on this manager device. Nothing was sent.';return;}
-        result=await request(`/custodial-admin-api/assigned-activation-operations/${encodeURIComponent(record.operation_id)}`);
+        result=await ownedRequest(`/custodial-admin-api/assigned-activation-operations/${encodeURIComponent(record.operation_id)}`);
       }else{
         const device=state.data.devices.find(item=>item.device_id===deviceId);
         if(!device?.assigned_employee_id||!Number.isSafeInteger(device.assignment_epoch)||device.assignment_epoch<1)
@@ -198,18 +239,19 @@
         // An unknown initial response must replay the same POST, not mint a new
         // operation. Only an actual terminal server result permits a new one.
         if(record){
-          try{result=await request(`/custodial-admin-api/assigned-activation-operations/${encodeURIComponent(record.operation_id)}`);}
+          try{result=await ownedRequest(`/custodial-admin-api/assigned-activation-operations/${encodeURIComponent(record.operation_id)}`);}
           catch{result=null;}
           if(result){activationMessage(result,record);if(terminalActivation.has(result.state))record=null;}
         }
         if(!record){
+          assertAuthority(owner);
           record={device_id:deviceId,operation_id:operationId(),expected_employee_id:device.assigned_employee_id,
             expected_assignment_epoch:device.assignment_epoch,action:'activate_or_recover'};
           persistActivation(record); // durable BEFORE request/possible issuance
         }
         if(record.expected_employee_id!==device.assigned_employee_id||record.expected_assignment_epoch!==device.assignment_epoch)
           throw new Error('The prior request belongs to an older assignment. Check its server status before another request.');
-        result=await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId)}/activation-operations`,{
+        result=await ownedRequest(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId)}/activation-operations`,{
           method:'POST',headers:{'Idempotency-Key':record.operation_id},body:{operation_id:record.operation_id,
             expected_employee_id:record.expected_employee_id,expected_assignment_epoch:record.expected_assignment_epoch,action:record.action}});
       }
@@ -220,6 +262,7 @@
   }
   async function saveRow(row) {
     if(!ownerAccess())return showToast('Changing phone assignments is owner-only.','error');
+    const owner=settledOwner;if(!sameAuthority(owner)){withdrawAuthority();return;}
     const deviceId = row.dataset.device;
     const employeeId = row.querySelector('[data-employee]').value || null;
     const device = state.data.devices.find((item) => item.device_id === deviceId) || {};
@@ -240,7 +283,7 @@
     status.className = 'rowStatus';
     try {
       const data = await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId)}`, {
-        method: 'POST',
+        method: 'POST', authority:owner,
         body: {
           operation_id: operationId(), employee_id: employeeId,
           expected_current_employee_id: expected.value,
@@ -268,5 +311,9 @@
   });
   els.search.addEventListener('input', render);
   els.refresh.addEventListener('click', () => void load());
+  for(const name of ['focus','storage','memphis:manager-session-changed'])window.addEventListener(name,revalidateAuthority);
+  document.addEventListener?.('visibilitychange',revalidateAuthority);
+  window.addEventListener('pagehide',()=>{pageClosed=true;withdrawAuthority();});
+  window.addEventListener('pageshow',()=>{pageClosed=false;revalidateAuthority();});
   void load();
 })();

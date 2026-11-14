@@ -79,7 +79,7 @@ assert.match(chatScope, /window\.addEventListener\('online', online\)/);
 assert.match(chatScope, /AbortController/);
 assert.match(chatScope, /controller\.signal\.aborted/);
 assert.match(chatScope, /wait_ms=20000/);
-assert.match(chatScope, /disabled=\{!selectedThread\.canSend \|\| accessBlocked\}/, 'read-only conversations must disable the composer');
+assert.match(chatScope, /disabled=\{!selectedThread\.canSend \|\| accessBlocked \|\| verifyingManager\}/, 'read-only conversations must disable the composer');
 assert.match(chatScope, /placeholder=\{selectedThread\.canSend \? 'Type a message' : 'Read-only conversation'\}/);
 assert.match(chatScope, /!thread \|\| thread\.shared/, 'the retired shared system room must not be deleted');
 assert.doesNotMatch(chatScope, /!thread \|\| thread\.shared \|\| isMemphis\(thread\)/, 'Memphis conversations must be removable by the current user');

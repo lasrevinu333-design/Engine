@@ -430,8 +430,10 @@
     inspections: () => ({limit:300}), inspectionCoverage: () => ({}),
   };
   let statusGeneration = 0, pageClosed = false;
+  const custodialAuthority = () => Boolean((window.MemphisCustodialSecurity && window.MemphisCustodialSecurity.native!==false)
+    || window.MemphisMobile?.edition==='custodial' || window.MemphisMobileBuildIdentity?.edition==='custodial');
   const principal = () => {
-    if(window.MemphisMobile?.authHeaders){
+    if(custodialAuthority()){
       const security=window.MemphisCustodialSecurity, status=security?.getStatus?.();
       if(!security || status?.ready!==true || status?.available===false || status?.quarantined===true)return null;
       return JSON.stringify(['native',status.generation,status.deviceId,status.principal]);
@@ -457,7 +459,7 @@
     correctionPanel?.revalidate();
   }
   function armExpiry(){
-    cancelExpiry();if(window.MemphisMobile?.authHeaders || !window.setTimeout)return;
+    cancelExpiry();if(custodialAuthority() || !window.setTimeout)return;
     const s=window.MemphisAuth?.readSession?.();if(!s)return;
     expiryTimer=window.setTimeout(()=>{expiryTimer=null;revalidateAuthority();if(settledOwners.size)armExpiry();},Math.max(0,Math.min(2147483647,Date.parse(s.expires_at)-Date.now())));
   }
@@ -479,7 +481,7 @@
       // Capture the original principal after that authentication has completed.
       await authHeaders();if(!current())return false;
       const owner=principal(),authority={key:owner,auth:window.MemphisAuth,mobile:window.MemphisMobile,security:window.MemphisCustodialSecurity};
-      if(!owner && !window.MemphisMobile?.authHeaders)throw new Error('Current Custodial Manager access is required.');
+      if(!owner)throw new Error('Current Custodial Manager access is required.');
       const value=await request(query(paths[kind],parameters));
       if(!current())return false;
       if(owner!==principal() || authority.auth!==window.MemphisAuth || authority.mobile!==window.MemphisMobile || authority.security!==window.MemphisCustodialSecurity)throw new Error('Current Custodial Manager session changed. Refresh with the current session.');
