@@ -2452,7 +2452,13 @@ function MessengerApp() {
   }, [currentDeviceId, loadThreads, setNotice]);
 
   const removeConversation = async (threadId) => {
-    try { await ensureCurrentIdentity(); await deleteThread(threadId); }
+    const original = identityRef.current;
+    try {
+      const current = await ensureCurrentIdentity();
+      if (!mounted.current || identityRef.current !== current
+        || current?.msg_user_id !== original?.msg_user_id) return;
+      await deleteThread(threadId);
+    }
     catch (error) { setNotice(safe(error),'error'); }
   };
 

@@ -14,10 +14,11 @@ const TIMING_PROFILE_SHA='3ecfd3bcaead83f945fbd86bacc7999097c0f0d7c9d4b117d3cd06
 const WEB_READINESS_PROFILE_SHA='0a9b95a37e141f71fd89602a1da6ac85c9ebe1c5af1add09fbfe45e77c097dbf';
 const STARTUP_MESSENGER_PROFILE_SHA='595a7b1d644d0e4b81ba19b2b1dfa3ede8c6758f9646c748582289b7d23d6149';
 const STARTUP_MESSENGER_R21_PROFILE_SHA='1b9b0e0c133fa48cc6e809f85f05fd2d44c5277beb3be2b8a4ec7398a57caea9';
+const STARTUP_MESSENGER_R22_PROFILE_SHA='d92fdc03487f177f59ca2abcb18aa3f56830dc7687ea70311d0a55dfe2fee34a';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
- assert.ok([PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact separately reviewed GPS or additive diagnostic profile');
+ assert.ok([PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact separately reviewed GPS or additive diagnostic profile');
  assert.equal(value.schema,'custodial.current-gps-source-qualification.v1');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
  for(const rows of [value.main_java,value.test_java,value.auxiliary,value.legacy_proofs,value.core_sources,...(value.presentation_sources?[value.presentation_sources]:[])]){
@@ -25,8 +26,8 @@ export function validateCurrentGpsQualification(value){
   for(const row of rows){assert.ok(!isAbsolute(row.path)&&!row.path.split('/').some(x=>!x||x==='.'||x==='..'));
    assert.match(row.sha256,/^[0-9a-f]{64}$/);assert.ok(Number.isSafeInteger(row.bytes)&&row.bytes>0);}
  }
- assert.equal(value.main_java.length,194);assert.equal(value.test_java.length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA].includes(sha(JSON.stringify(value)))?209:208);
- assert.equal(value.deltas.filter(row=>row.kind==='added'&&row.path.endsWith('.java')).length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA].includes(sha(JSON.stringify(value)))?2:1);
+ assert.equal(value.main_java.length,194);assert.equal(value.test_java.length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA].includes(sha(JSON.stringify(value)))?209:208);
+ assert.equal(value.deltas.filter(row=>row.kind==='added'&&row.path.endsWith('.java')).length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA].includes(sha(JSON.stringify(value)))?2:1);
  return value;
 }
 const originalProfile=JSON.parse(readFileSync(new URL('./fixtures/current-gps-source-qualification.json',import.meta.url),'utf8'));
@@ -45,7 +46,9 @@ const startupMessengerProfile=JSON.parse(readFileSync(new URL('./fixtures/curren
 assert.equal(sha(JSON.stringify(startupMessengerProfile)),STARTUP_MESSENGER_PROFILE_SHA,'Exact additive Messenger/startup successor inputs');
 const startupMessengerR21Profile=JSON.parse(readFileSync(new URL('./fixtures/current-program-startup-messenger-r21-source-qualification.json',import.meta.url),'utf8'));
 assert.equal(sha(JSON.stringify(startupMessengerR21Profile)),STARTUP_MESSENGER_R21_PROFILE_SHA,'Exact additive resume/source-test repair inputs');
-export const currentGpsQualification=freeze(validateCurrentGpsQualification(startupMessengerR21Profile));
+const startupMessengerR22Profile=JSON.parse(readFileSync(new URL('./fixtures/current-program-startup-messenger-r22-source-qualification.json',import.meta.url),'utf8'));
+assert.equal(sha(JSON.stringify(startupMessengerR22Profile)),STARTUP_MESSENGER_R22_PROFILE_SHA,'Exact additive removal owner/source-test repair inputs');
+export const currentGpsQualification=freeze(validateCurrentGpsQualification(startupMessengerR22Profile));
 const all=[...currentGpsQualification.main_java,...currentGpsQualification.test_java,...currentGpsQualification.auxiliary,...currentGpsQualification.core_sources,...(currentGpsQualification.presentation_sources||[])];
 const byPath=new Map(all.map(row=>[row.path,row]));
 const aliases=new Map(Object.entries(currentGpsQualification.basename_aliases));

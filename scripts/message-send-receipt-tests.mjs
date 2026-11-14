@@ -1215,6 +1215,26 @@ helpCalls.length=0;helpScope.ensureCurrentIdentity=async()=>{throw Error('synthe
 helpScope.online();helpScope.resume();await new Promise(setImmediate);
 assert.deepEqual(helpCalls,[],'failed identity verification admits no optional operation');
 console.log('EXPLICIT_HELP_OUTBOX_INDEPENDENCE_PASS');
+const removalStart=source.indexOf('  const removeConversation = async (threadId) => {');
+const removalEnd=source.indexOf('\n  useEffect(',removalStart);
+assert.ok(removalStart>0&&removalEnd>removalStart);
+for(const kind of ['same-owner','same-owner-renewed','changed-user','changed-mapping','unmounted','auth-denied']){
+ const original={msg_user_id:U},current=kind==='same-owner-renewed'?{msg_user_id:U}:original;
+ const calls=[],scope=vm.createContext({identityRef:{current:original},mounted:{current:true},
+  ensureCurrentIdentity:async()=>{
+   if(kind==='auth-denied')throw Error('synthetic identity refused');
+   if(kind==='changed-user')scope.identityRef.current={msg_user_id:OTHER};
+   else if(kind==='changed-mapping')scope.identityRef.current={msg_user_id:U};
+   else scope.identityRef.current=current;
+   if(kind==='unmounted')scope.mounted.current=false;
+   return current;
+  },deleteThread:async id=>calls.push({id,owner:scope.identityRef.current}),setNotice:()=>{},safe:e=>e.message});
+ vm.runInContext(source.slice(removalStart,removalEnd)+'\nthis.remove=removeConversation;',scope);
+ await scope.remove(T);
+ assert.equal(calls.length,['same-owner','same-owner-renewed'].includes(kind)?1:0,kind+' removal keeps the admitted original owner');
+ if(calls.length){assert.equal(calls[0].id,T);assert.equal(calls[0].owner,current);}
+}
+console.log('CONVERSATION_REMOVAL_ENTRY_OWNER_PASS');
 const retryStart=source.indexOf('  const retryOutbox = useCallback(() => {'),retryEnd=source.indexOf('\n  const discardMessageRecovery',retryStart);
 assert.ok(retryStart>0&&retryEnd>retryStart);
 const deletion={schema_version:'chatscope-delete-outbox.v2',id:M,thread_id:T,user_id:U,device_id:entry.device_id,created_at:1,security_generation:1};
