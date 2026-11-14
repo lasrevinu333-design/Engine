@@ -346,7 +346,7 @@ test('PRODUCT Home preserves genuine zero and Central service day without fabric
  const at='2026-10-11T01:00:00Z',epoch=Date.parse(at)/1000;
  const f=await managerHomeFixture({attendance:{attendance:0,planned:null,stale:false,source_timestamp:at,service_date:'2026-10-10'},weather:{current:{time:epoch,temperature_2m:0,weather_code:null},current_units:{time:'unixtime',temperature_2m:'°F'}}});
  assert.equal(f.nodes.get('attendance-value').textContent,'0');assert.equal(f.nodes.get('attendance-meta').textContent,'Today’s plan: unavailable');
- assert.equal(f.nodes.get('weather-value').textContent,'0°F');assert.equal(f.nodes.get('weather-meta').textContent,'High / Low unavailable · Precipitation unavailable');assert.doesNotMatch(f.nodes.get('weather-value').textContent,/clear|sunny|high|low/i);
+ assert.equal(f.nodes.get('weather-value').textContent,'0°F');assert.equal(f.nodes.get('weather-meta').textContent,'');assert.doesNotMatch(f.nodes.get('weather-value').textContent,/clear|sunny|high|low/i);
  assert.match(f.nodes.get('date').textContent,/October 10/);assert.match(f.nodes.get('clock').textContent,/8:00/);
  assert.ok(f.requests.some(url=>{const u=new URL(url);return u.hostname==='api.open-meteo.com'&&u.searchParams.get('temperature_unit')==='fahrenheit'&&u.searchParams.get('timeformat')==='unixtime';}));
  for(const attendance of [{attendance:null},{attendance:false},{attendance:0,available:false},{attendance:4,source_timestamp:'2026-10-10T01:00:00Z'},{attendance:4,source_timestamp:'2026-10-11T02:00:00Z'}]){
@@ -376,7 +376,7 @@ test('MOD follows the confirmed Chicago date and clears at midnight or invalid a
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-11T05:59:59Z')),'Unavailable');
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-11T06:00:00Z')),'Eric McKenney');
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-12T06:00:00Z')),'Unavailable');
- for(const patch of [{state:'unavailable'},{manager_id:null},{service_date:null},{name:''},{schema:'other'}])
+ for(const patch of [{state:'unavailable'},{manager_id:undefined},{service_date:null},{name:''},{schema:'other'}])
   assert.equal(D.managerOnDuty({...value,...patch},Date.parse('2026-11-11T12:00:00Z')),'Unavailable');
 });
 test('map forecast caption retains the actual Central source time and stale state',()=>{
@@ -1170,16 +1170,18 @@ test('PRODUCT current original SQL-summary-dashboard callable source composition
  }
 });
 
-test('requested Spiceworks ticker keeps both opened and closed activity inside rolling24h and never substitutes open inventory',()=>{
+test('requested Spiceworks ticker keeps new-ticket notices inside rolling72h and never substitutes open inventory',()=>{
  const source={state:'snapshot',generated_at:new Date(noon).toISOString(),rows:[
   {ticket_id:'1',title:'Synthetic',kind:'opened',at:new Date(noon-3600000).toISOString()},
   {ticket_id:'1',title:'Synthetic',kind:'closed',at:new Date(noon-1800000).toISOString()},
-  {ticket_id:'2',kind:'opened',at:new Date(noon-86400001).toISOString()},
+  {ticket_id:'2',kind:'opened',at:new Date(noon-259200001).toISOString()},
   {ticket_id:'3',kind:'opened',at:new Date(noon+1).toISOString()}]};
- const out=D.spiceworksActivity(source,noon);assert.deepEqual(out.cards.map(r=>r.activity),['closed','opened']);
- assert.match(out.note,/Other ticket activity may not yet be received/);
+ const out=D.spiceworksActivity(source,noon);assert.deepEqual(out.cards.map(r=>r.activity),['opened']);
+ assert.equal(out.title,'Spiceworks 72 Hours');assert.equal(out.cards[0].title,'#1 · Synthetic');assert.deepEqual(out.cards[0].lines,[]);
+ assert.equal(out.cards[0].state,'OPEN');assert.equal(source.rows[0].kind,'opened');
+ assert.match(out.note,/Other new-ticket notices may not yet be received/);
  assert.equal(D.spiceworksActivity({...source,rows:[{ticket_id:'1',status:'Open'}]},noon).cards.length,0);
- assert.match(D.spiceworksActivity({...source,rows:[]},noon).note,/No imported openings or closures/);
+ assert.match(D.spiceworksActivity({...source,rows:[]},noon).note,/No imported new-ticket notices received/);
 });
 test('City ticker requires the complete active Zoo source and displays original status',()=>{
  const source={state:'current',coverage:'city_active_zoo',generated_at:new Date(noon).toISOString(),rows:[{id:'1',work_order_id:'123',facility:'15Z05 Birdhouse',status:'In Progress',description:'Repair light',requested_at:new Date(noon).toISOString()}]};
@@ -1240,7 +1242,7 @@ test('upcoming school board preserves tomorrow and historical dates without pret
  const past={...visit,id:'yesterday',name:'Yesterday School',date:'2026-10-04',arrival_at:'2026-10-04T14:30:00Z'};
  const board=D.schools({state:'snapshot',generated_at:'2026-10-05T17:00:00Z',rows:[future,past,visit]},noon);
  assert.deepEqual(board.cards.map(r=>r.id),[visit.id,future.id]);assert.equal(board.history[0].id,past.id);
- assert.match(board.cards[1].lines[0],/2026-10-06/);assert.equal(board.cards[1].state,'SCHEDULED');
+ assert.match(board.cards[1].lines[0],/Tuesday, October 6/);assert.equal(board.cards[1].state,'SCHEDULED');
  assert.match(board.note,/Today.*50 students.*58 reported quantity/);assert.doesNotMatch(board.note,/150 students/);
  assert.match(board.history[0].lines.join(' '),/Past scheduled date.*not independently confirmed/);
 });
@@ -1314,6 +1316,77 @@ test('Events and school visits share chronological date/time ordering with unkno
  const sorted=D.orderedSchools({state:'current',rows:schools});
  assert.deepEqual(sorted.map(r=>r.id),D.schools({state:'current',rows:schools},noon).cards.map(r=>r.id));
  assert.equal(sorted[0].id,'early');assert.equal(sorted.at(-1).id,'tomorrow');
+});
+
+
+test('City cleanup preserves unrelated leading decimal details in both card and ticker for both audiences',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});
+  try{
+   for(const description of ['.5-inch supply pipe leaking; replace fitting.',', verify the existing repair detail.', 'Repair light at North Parkway and McLean Boulevard. Zoo location: Birdhouse kitchen','Repair (at North Parkway and McLean Boulevard). Zoo location: Birdhouse kitchen']){
+    const city={state:'current',coverage:'city_active_zoo',generated_at:'2026-10-05T17:00:00Z',rows:[{id:'1',work_order_id:'123',facility:'15Z05 Birdhouse',status:'Approved',description,requested_at:'2026-10-05T14:00:00Z'}]};
+    const original=JSON.stringify(city),expected=description.replace(' at North Parkway and McLean Boulevard','').replace('(at North Parkway and McLean Boulevard)','()');
+    await loaded(f,{operations:{ok:true,data:{...payload.data,city}}});
+    assert.ok(f.text(f.elements['ops-city-ticker']).includes(expected));
+    f.controller.openBoard('city');assert.ok(f.text(f.content).includes(expected));
+    assert.equal(JSON.stringify(city),original);f.controller.closeBoard();
+   }
+  }finally{f.clean();}
+ }
+});
+
+test('event ticker changes Today label at Memphis midnight without a fresh fetch',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});try{
+   f.setNow(Date.parse('2026-11-13T05:59:00Z'));
+   const event={id:'e',name:'Midnight fixture',date:'2026-11-13',location:'Birdhouse',start_time:'08:00',end_time:'17:00',attendees:60,status:'SCHEDULED'};
+   await loaded(f,{operations:{ok:true,data:{...payload.data,events:[event]}}});
+   const track=f.elements['ops-events-ticker'];assert.match(f.text(track),/Friday, November 13/);assert.doesNotMatch(f.text(track),/Today,/);
+   f.setNow(Date.parse('2026-11-13T06:00:00Z'));f.controller.tick();
+   assert.match(f.text(track),/Today, Friday, November 13/);assert.match(f.text(track),/Birdhouse.*8:00 a.m..*5:00 p.m..*Attendees: 60/);
+   f.setNow(Date.parse('2026-11-14T06:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(track),/Today,|Midnight fixture/);
+  }finally{f.clean();}
+ }
+});
+
+test('school bus ticker gains Today at Memphis midnight and expires the prior date',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});try{
+   f.setNow(Date.parse('2026-11-13T05:59:00Z'));
+   const schools={state:'current',generated_at:'2026-11-12T17:00:00Z',rows:[{id:'s',name:'Bus fixture',date:'2026-11-13',arrival_at:'2026-11-13T14:00:00Z',buses:2,students:40,adults:20}]};
+   await loaded(f,{operations:{ok:true,data:{...payload.data,schools}}});
+   const track=f.elements['ops-schools-ticker'];assert.match(f.text(track),/Friday, November 13/);assert.doesNotMatch(f.text(track),/Today,/);
+   f.setNow(Date.parse('2026-11-13T06:00:00Z'));f.controller.tick();
+   assert.match(f.text(track),/Today, Friday, November 13.*Expected 8:00 AM CST.*2 buses.*60 planned people/);
+   f.setNow(Date.parse('2026-11-14T06:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(track),/Today,|Bus fixture/);
+  }finally{f.clean();}
+ }
+});
+
+test('daily high/low clears previous Memphis day even without a successful refresh',async()=>{
+ for(const audience of ['manager','public_readonly']){
+ const f=fixture({audience});try{
+ const now=Date.parse('2026-11-13T05:59:59Z');f.setNow(now);
+ const weather={timezone:D.ZONE,current:{time:now/1000,temperature_2m:60},current_units:{temperature_2m:'°F'},daily_units:{temperature_2m_max:'°F',temperature_2m_min:'°F'},daily:{time:[Date.parse('2026-11-12T06:00:00Z')/1000],temperature_2m_max:[65],temperature_2m_min:[43]}};
+ await f.controller.refresh({headers:{},isCurrent:()=>true,summary:{open_tickets:[]},fetchImpl:async url=>({ok:true,json:async()=>url.includes('open-meteo')?weather:url.endsWith('/operations')?payload:null})});
+ assert.equal(f.elements['ops-weather-high-low'].textContent,'High 65°F · Low 43°F');
+ f.setNow(now+1000);f.controller.tick();assert.equal(f.elements['ops-weather-high-low'].textContent,'High/low unavailable.');
+ }finally{f.clean();}
+ }
+});
+
+test('Spiceworks entries show ID and title without repeated status for both dashboard audiences',async()=>{
+ for(const audience of ['manager','public_readonly']){
+  const f=fixture({audience});try{
+   await loaded(f,{operations:{ok:true,data:{...payload.data,spiceworks_activity:{state:'snapshot',coverage:'imported_only',mailbox_completeness_verified:false,generated_at:new Date(noon).toISOString(),rows:[{ticket_id:'321',title:'Synthetic drain',kind:'opened',at:new Date(noon-1000).toISOString()}]}}}});
+   assert.equal(f.elements['ops-spiceworks-ticker'].children[0].textContent,'#321 · Synthetic drain');
+   f.controller.openBoard('spiceworks');
+   assert.equal(f.elements['operations-board-title'].textContent,'Spiceworks 72 Hours');
+   assert.doesNotMatch(f.text(f.content),/\b(?:Open|Opened|undefined)\b/);
+   assert.match(f.text(f.content),/#321 · Synthetic drain/);
+   assert.match(f.elements['operations-board-note'].textContent,/current ticket status is not confirmed/);
+  }finally{f.clean();}
+ }
 });
 
 // Mandatory default-run Hub renewal cases. Normal auth verification remains
