@@ -34,6 +34,7 @@ async function fixture(mode='same') {
         window.__renewals++;restored=true;
         if(Date.parse(session.expires_at)<=Date.now()){
           window.__renewalOptions=options;
+          if(mode==='send-delayed')await new Promise(resolve=>{window.__finishAuth=resolve;});
           if(mode==='revoked')throw Error('Synthetic registration revoked');
           session={...session,token:'synthetic-renewed',expires_at:new Date(Date.now()+3600000).toISOString()};
           if(mode==='manager')session.manager_id=id(71);
@@ -47,6 +48,7 @@ async function fixture(mode='same') {
       opsManagerAuthHeaders:async()=>({Authorization:'Bearer '+session.token,'X-Device-Id':session.device_id,'X-CSRF-Token':'synthetic-csrf'})};
     const thread=id(4),user=id(5),row={id:id(100),thread_id:thread,sender_user_id:user,sender_display_name:'Synthetic owner',
       body:'Server accepted fixture',message_type:'text',sent_at:'2026-11-13T20:00:00Z',updated_at:'2026-11-13T20:00:00Z'};
+    const messages=[row];
     localStorage.setItem('synthetic:opaque-original','unchanged original bytes');
     window.fetch=async(url,options={})=>{
       const u=new URL(url),path=u.pathname;
@@ -63,7 +65,11 @@ async function fixture(mode='same') {
         display_name:'Synthetic owner',role:'manager',canonical_device_id:session.device_id,read_only:session.read_only};
       else if(path.endsWith('/threads'))data=removed?[]:[{id:thread,thread_type:'direct',thread_title:'Synthetic conversation',participant_names:'Synthetic peer',viewer_can_send:true}];
       else if(path.endsWith('/users'))data=[{id:id(6),display_name:'Synthetic peer',role:'manager',is_active:true}];
-      else if(path.endsWith('/messages'))data=[row];
+      else if(path.endsWith('/messages'))data=messages;
+      else if(path.endsWith('/message')){
+        data={...row,id:id(101),body:body.body,client_message_id:mode==='send-wrong'?'unrelated-original':body.client_message_id};
+        if(mode!=='send-wrong')messages.push(data);
+      }
       else if(path.endsWith('/read'))data=1;
       else if(path.endsWith('/updates'))return new Promise((resolve,reject)=>{
         options.signal?.addEventListener('abort',()=>reject(new DOMException('Closed synthetic request','AbortError')),{once:true});
@@ -149,6 +155,34 @@ try {
       assert.equal(await page.evaluate(()=>localStorage.getItem('synthetic:opaque-original')),'unchanged original bytes');
       assert.deepEqual(errors,[]);
       results.push({case:'deletion-'+mode,result:'PASS'});console.log(JSON.stringify(results.at(-1)));
+    }finally{await context.close();}
+  }
+  for(const mode of ['send','send-expired','send-delayed','send-wrong']){
+    const {context,page,errors}=await fixture(mode);
+    try{
+      const editor=page.getByRole('textbox',{name:'Type a message',exact:true});
+      if(mode==='send-expired'||mode==='send-delayed')await page.evaluate(()=>window.__expire());
+      await page.locator('.cs-button--send').click();
+      if(mode==='send-delayed'){
+        await page.waitForFunction(()=>typeof window.__finishAuth==='function');
+        assert.equal(await editor.getAttribute('contenteditable'),'false','manager composer pauses during authentication instead of accepting an unowned edit');
+        assert.equal(await editor.textContent(),'Keep this unsent draft');
+        await page.evaluate(()=>window.__finishAuth());
+      }
+      await page.waitForFunction(()=>window.__calls.some(c=>c.path.endsWith('/message')));
+      if(mode==='send-wrong'){
+        await page.waitForFunction(()=>Object.entries(localStorage).some(([k,v])=>k.startsWith('mz_chatscope_outbox:')&&JSON.parse(v).retry_count===1));
+        const saved=await page.evaluate(()=>Object.entries(localStorage).filter(([k])=>k.startsWith('mz_chatscope_outbox:')));
+        assert.equal(saved.length,1);assert.equal(JSON.parse(saved[0][1]).body,'Keep this unsent draft');
+        assert.equal(await page.getByText('Sent.',{exact:true}).count(),0,'unmatched receipt cannot announce Sent');
+      }else{
+        await page.getByText('Sent.',{exact:true}).waitFor({state:'visible'});
+        assert.equal(await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('mz_chatscope_outbox:')).length),0);
+        assert.equal(await editor.textContent(),'','accepted exact original clears only its submitted draft');
+      }
+      assert.equal((await page.evaluate(()=>window.__calls)).filter(c=>c.path.endsWith('/message')).length,1);
+      assert.equal(await page.evaluate(()=>localStorage.getItem('synthetic:opaque-original')),'unchanged original bytes');
+      assert.deepEqual(errors,[]);results.push({case:mode,result:'PASS'});console.log(JSON.stringify(results.at(-1)));
     }finally{await context.close();}
   }
   console.log(JSON.stringify({status:'PASS',scope:'generated browser bundle, synthetic authentication/API only; no real messages, browser or phone',cases:results}));

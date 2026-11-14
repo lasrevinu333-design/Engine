@@ -1229,6 +1229,7 @@ function MessengerApp() {
   const emojiPanel = useRef(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [accessBlocked, setAccessBlocked] = useState(false);
+  const [verifyingManager, setVerifyingManager] = useState(false);
   const [assistantOpening, setAssistantOpening] = useState(false);
   const assistantClick = useRef(false);
   const accessEpoch = useRef(0);
@@ -1703,6 +1704,8 @@ function MessengerApp() {
     } catch {
       const renewal = originalManagerRenewalOwners.get(mapped);
       assertManagerRenewalOwner(renewal,null,false);
+      setVerifyingManager(true);
+      setEmojiOpen(false); emojiRange.current = null;
       // Invalidate callbacks from the expired profile before authenticating.
       // Keep drafts and durable originals intact, including uncertain writes.
       accessEpoch.current += 1;
@@ -1728,7 +1731,10 @@ function MessengerApp() {
       })();
       identityRenewal.current = flight;
       try { return await flight; }
-      finally { if (identityRenewal.current === flight) identityRenewal.current = null; }
+      finally {
+        if (identityRenewal.current === flight) identityRenewal.current = null;
+        if (mounted.current) setVerifyingManager(false);
+      }
     }
   }, [currentDeviceId, loadIdentity, loadThreads, loadMessages, setNotice]);
 
@@ -1954,10 +1960,6 @@ function MessengerApp() {
 
   const sendMessage = useCallback(async (...args) => {
     const body = messageBodyFromChatScopeArgs(args);
-    const intendedThreadId = selectedRef.current;
-    try { await ensureCurrentIdentity(); }
-    catch (error) { setNotice(safe(error),'error'); return; }
-    if (selectedRef.current !== intendedThreadId) return;
     const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
     const mapped = identityRef.current;
     if (!body || !thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
@@ -2092,7 +2094,21 @@ function MessengerApp() {
     await Promise.all([selectedRef.current === thread.id ? loadMessages(thread.id) : Promise.resolve(), loadThreads()]).catch(() => null);
     try { assertSendOwner(); } catch { return; }
     setNotice('Sent.', 'ok');
-  }, [currentDeviceId, ensureCurrentIdentity, flushMessageOutbox, loadMessages, loadThreads, serializeDelivery, setNotice, updateDraft]);
+  }, [currentDeviceId, flushMessageOutbox, loadMessages, loadThreads, serializeDelivery, setNotice, updateDraft]);
+
+  const submitMessage = async (...args) => {
+    const original = identityRef.current, threadId = selectedRef.current;
+    const key = `${original?.msg_user_id || ''}:${threadId}`, draft = draftsRef.current[key];
+    try {
+      const current = await ensureCurrentIdentity();
+      if (!mounted.current || identityRef.current !== current || current?.msg_user_id !== original?.msg_user_id
+        || selectedRef.current !== threadId) return;
+      if (draftsRef.current[key] !== draft) {
+        setNotice('Your draft changed while browser access was verified. Press Send again.'); return;
+      }
+      await sendMessage(...args);
+    } catch (error) { setNotice(safe(error),'error'); }
+  };
 
   const retryOutbox = useCallback(() => {
     if (identityRef.current?.read_only) return Promise.resolve();
@@ -2274,8 +2290,6 @@ function MessengerApp() {
   }, [currentDeviceId, setNotice]);
 
   const deleteThread = useCallback(async (threadId = selectedRef.current) => {
-    try { await ensureCurrentIdentity(); }
-    catch (error) { setNotice(safe(error),'error'); return; }
     const thread = threadsRef.current.find((item) => item.id === threadId);
     if (!thread || thread.shared) return;
     const mapped = identityRef.current;
@@ -2304,7 +2318,7 @@ function MessengerApp() {
         };
         requireNoSavedDeletion();
       }
-    } catch (error) { setNotice(safe(error),'error'); return; }
+    } catch { return; }
     if (!mapped?.msg_user_id || !currentDeviceId) {
       setNotice('Messenger identity could not be resolved.', 'error');
       return;
@@ -2435,7 +2449,12 @@ function MessengerApp() {
       try { assertManager(); } catch { return; }
       setNotice('Saved deletion needs recovery. It was not applied automatically.', 'error');
     }
-  }, [currentDeviceId, ensureCurrentIdentity, loadThreads, setNotice]);
+  }, [currentDeviceId, loadThreads, setNotice]);
+
+  const removeConversation = async (threadId) => {
+    try { await ensureCurrentIdentity(); await deleteThread(threadId); }
+    catch (error) { setNotice(safe(error),'error'); }
+  };
 
   useEffect(() => {
     if (!deviceIdentity.ready) return undefined;
@@ -2465,9 +2484,10 @@ function MessengerApp() {
       if (document.visibilityState !== 'visible') return;
       void (async () => {
         await ensureCurrentIdentity();
-        await resolveHomeAssistant();
-        await retryOutbox();
-        await loadThreads({preferId:selectedRef.current});
+        // Optional sources share verified identity, not each other's uptime.
+        void resolveHomeAssistant().catch(error => setNotice(safe(error),'error'));
+        void retryOutbox().catch(error => setNotice(safe(error),'error'));
+        void loadThreads({preferId:selectedRef.current}).catch(error => setNotice(safe(error),'error'));
       })().catch(error => setNotice(safe(error),'error'));
     };
     const online = resumeMessenger;
@@ -2724,7 +2744,7 @@ function MessengerApp() {
           <Search placeholder="Search conversations" value={search} onChange={setSearch} />
           <ConversationList loading={false}>
             {visibleThreads.map((thread) => EMPLOYEE_CONTEXT
-              ? <SwipeConversation key={thread.id} thread={thread} active={thread.id === selectedId} onOpen={selectThread} onDelete={(id) => void deleteThread(id)} />
+              ? <SwipeConversation key={thread.id} thread={thread} active={thread.id === selectedId} onOpen={selectThread} onDelete={(id) => void removeConversation(id)} />
               : <Conversation
                 key={thread.id}
                 name={thread.title}
@@ -2743,7 +2763,7 @@ function MessengerApp() {
             {!EMPLOYEE_CONTEXT && <ConversationHeader.Back><button className="cs-button cs-button--arrow" type="button" aria-label="Back to conversations" onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }}>←</button></ConversationHeader.Back>}
             {messengerAvatar(selectedThread.title, isMemphis(selectedThread) ? MEMPHIS_AVATAR : '')}
             <ConversationHeader.Content userName={selectedThread.title} info={EMPLOYEE_CONTEXT ? '' : (selectedThread.shared ? 'Leadership' : selectedThread.participantNames || '')} />
-            <ConversationHeader.Actions><div className="mz-chat-thread-actions">{hasOlderMessages && <button className="mz-button" type="button" disabled={loadingOlderMessages || loadingMessages || accessBlocked} onClick={() => void loadEarlierMessages().catch(error => setNotice(safe(error), 'error'))}>{loadingOlderMessages ? 'Loading earlier messages…' : 'Earlier messages'}</button>}<button ref={emojiButton} className="mz-button mz-emoji-toggle" type="button" aria-label="Insert emoji" aria-expanded={emojiOpen} aria-controls="messenger-emoji-picker" disabled={!selectedThread.canSend || accessBlocked} onPointerDown={captureEmojiCaret} onClick={() => setEmojiOpen(open => !open)}>Emoji</button>{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" disabled={identity?.read_only || accessBlocked} onClick={() => void deleteThread(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
+            <ConversationHeader.Actions><div className="mz-chat-thread-actions">{hasOlderMessages && <button className="mz-button" type="button" disabled={loadingOlderMessages || loadingMessages || accessBlocked} onClick={() => void loadEarlierMessages().catch(error => setNotice(safe(error), 'error'))}>{loadingOlderMessages ? 'Loading earlier messages…' : 'Earlier messages'}</button>}<button ref={emojiButton} className="mz-button mz-emoji-toggle" type="button" aria-label="Insert emoji" aria-expanded={emojiOpen} aria-controls="messenger-emoji-picker" disabled={!selectedThread.canSend || accessBlocked || verifyingManager} onPointerDown={captureEmojiCaret} onClick={() => setEmojiOpen(open => !open)}>Emoji</button>{!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back" type="button" onClick={() => { mobileThreadRef.current = false; setMobileThread(false); }}>Chats</button>}{!selectedThread.shared && <button className="mz-button danger" type="button" disabled={identity?.read_only || accessBlocked} onClick={() => void removeConversation(selectedThread.id)}>Delete</button>}</div></ConversationHeader.Actions>
           </ConversationHeader>
           <MessageList loading={loadingMessages} loadingMore={loadingOlderMessages}>
             {renderedMessages}
@@ -2757,11 +2777,11 @@ function MessengerApp() {
             onKeyPressCapture={event => { if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) event.stopPropagation(); }}
             placeholder={selectedThread.canSend ? 'Type a message' : 'Read-only conversation'}
             attachButton={false}
-            disabled={!selectedThread.canSend || accessBlocked}
+            disabled={!selectedThread.canSend || accessBlocked || verifyingManager}
             sendDisabled={composerTooLong || !plainMessageBody(htmlMessageBody(drafts[draftKey] || ''))}
             sendOnReturnDisabled={composerTooLong}
             onChange={handleComposerChange}
-            onSend={sendMessage}
+            onSend={submitMessage}
           />
         </ChatContainer> : <div className="mz-chat-empty"><div><strong>Choose a message</strong>Tap a person, or tap New.</div></div>}
       </MainContainer>
