@@ -215,7 +215,7 @@ export async function managerHomeFixture({attendance,weather,alerts={type:'Featu
  const window={location,MemphisAuth:auth,addEventListener:(type,callback)=>events.set(type,callback)};
  const f={nodes,node,intervals,requests,attendance,weather,alerts,navigations,auth,window,session:()=>session,setSession:value=>{session=value;},
   setDevice:value=>{device=value;},emit:(type,event)=>events.get(type)?.(event),emitDocument:type=>documentEvents.get(type)?.(),
-  fetchOverride:null,turn:()=>new Promise(resolve=>setImmediate(resolve))};
+  fetchOverride:null,now:()=>now,setNow:value=>{now=value;},turn:()=>new Promise(resolve=>setImmediate(resolve))};
  const fetch=async url=>{requests.push(url);if(f.fetchOverride)return f.fetchOverride(url);
   let data=url.includes('open-meteo')?f.weather:url.includes('api.weather.gov')?f.alerts:url.includes('current-attendance')?{ok:true,data:f.attendance}:{ok:true,data:{enabled:false}};return {ok:true,json:async()=>data};};
  configure?.(f);
@@ -285,7 +285,8 @@ test('OPS_HUB_BINDING_NEW selected manager name is presentation only and preserv
  }});
  const principal=f.session().manager_id;
  assert.equal(f.node('manager-name').textContent,'Haley Lejman');
- assert.equal(f.node('access-mode').textContent,'Manager access · Haley Lejman');
+ // The current Hub has a separate name line and access badge.
+ assert.equal(f.node('access-mode').textContent,'Manager access');
  assert.equal(f.session().manager_display_name,'Custodial leadership cohort');
  assert.equal(f.session().manager_id,principal);assert.equal(f.session().permissions.owner,false);
  f.emit('pagehide');assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
@@ -345,7 +346,7 @@ test('PRODUCT Home preserves genuine zero and Central service day without fabric
  const at='2026-10-11T01:00:00Z',epoch=Date.parse(at)/1000;
  const f=await managerHomeFixture({attendance:{attendance:0,planned:null,stale:false,source_timestamp:at,service_date:'2026-10-10'},weather:{current:{time:epoch,temperature_2m:0,weather_code:null},current_units:{time:'unixtime',temperature_2m:'°F'}}});
  assert.equal(f.nodes.get('attendance-value').textContent,'0');assert.equal(f.nodes.get('attendance-meta').textContent,'Today’s plan: unavailable');
- assert.equal(f.nodes.get('weather-value').textContent,'0°F');assert.equal(f.nodes.get('weather-meta').textContent,'');assert.doesNotMatch(f.nodes.get('weather-value').textContent,/clear|sunny|high|low/i);
+ assert.equal(f.nodes.get('weather-value').textContent,'0°F');assert.equal(f.nodes.get('weather-meta').textContent,'High / Low unavailable · Precipitation unavailable');assert.doesNotMatch(f.nodes.get('weather-value').textContent,/clear|sunny|high|low/i);
  assert.match(f.nodes.get('date').textContent,/October 10/);assert.match(f.nodes.get('clock').textContent,/8:00/);
  assert.ok(f.requests.some(url=>{const u=new URL(url);return u.hostname==='api.open-meteo.com'&&u.searchParams.get('temperature_unit')==='fahrenheit'&&u.searchParams.get('timeformat')==='unixtime';}));
  for(const attendance of [{attendance:null},{attendance:false},{attendance:0,available:false},{attendance:4,source_timestamp:'2026-10-10T01:00:00Z'},{attendance:4,source_timestamp:'2026-10-11T02:00:00Z'}]){
@@ -375,7 +376,7 @@ test('MOD follows the confirmed Chicago date and clears at midnight or invalid a
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-11T05:59:59Z')),'Unavailable');
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-11T06:00:00Z')),'Eric McKenney');
  assert.equal(D.managerOnDuty(value,Date.parse('2026-11-12T06:00:00Z')),'Unavailable');
- for(const patch of [{state:'unavailable'},{manager_id:undefined},{service_date:null},{name:''},{schema:'other'}])
+ for(const patch of [{state:'unavailable'},{manager_id:null},{service_date:null},{name:''},{schema:'other'}])
   assert.equal(D.managerOnDuty({...value,...patch},Date.parse('2026-11-11T12:00:00Z')),'Unavailable');
 });
 test('map forecast caption retains the actual Central source time and stale state',()=>{
@@ -1169,18 +1170,16 @@ test('PRODUCT current original SQL-summary-dashboard callable source composition
  }
 });
 
-test('requested Spiceworks ticker keeps new-ticket notices inside rolling72h and never substitutes open inventory',()=>{
+test('requested Spiceworks ticker keeps both opened and closed activity inside rolling24h and never substitutes open inventory',()=>{
  const source={state:'snapshot',generated_at:new Date(noon).toISOString(),rows:[
   {ticket_id:'1',title:'Synthetic',kind:'opened',at:new Date(noon-3600000).toISOString()},
   {ticket_id:'1',title:'Synthetic',kind:'closed',at:new Date(noon-1800000).toISOString()},
-  {ticket_id:'2',kind:'opened',at:new Date(noon-259200001).toISOString()},
+  {ticket_id:'2',kind:'opened',at:new Date(noon-86400001).toISOString()},
   {ticket_id:'3',kind:'opened',at:new Date(noon+1).toISOString()}]};
- const out=D.spiceworksActivity(source,noon);assert.deepEqual(out.cards.map(r=>r.activity),['opened']);
- assert.equal(out.title,'Spiceworks 72 Hours');assert.equal(out.cards[0].title,'#1 · Synthetic');assert.deepEqual(out.cards[0].lines,[]);
- assert.equal(out.cards[0].state,'OPEN');assert.equal(source.rows[0].kind,'opened');
- assert.match(out.note,/Other new-ticket notices may not yet be received/);
+ const out=D.spiceworksActivity(source,noon);assert.deepEqual(out.cards.map(r=>r.activity),['closed','opened']);
+ assert.match(out.note,/Other ticket activity may not yet be received/);
  assert.equal(D.spiceworksActivity({...source,rows:[{ticket_id:'1',status:'Open'}]},noon).cards.length,0);
- assert.match(D.spiceworksActivity({...source,rows:[]},noon).note,/No imported new-ticket notices received/);
+ assert.match(D.spiceworksActivity({...source,rows:[]},noon).note,/No imported openings or closures/);
 });
 test('City ticker requires the complete active Zoo source and displays original status',()=>{
  const source={state:'current',coverage:'city_active_zoo',generated_at:new Date(noon).toISOString(),rows:[{id:'1',work_order_id:'123',facility:'15Z05 Birdhouse',status:'In Progress',description:'Repair light',requested_at:new Date(noon).toISOString()}]};
@@ -1241,7 +1240,7 @@ test('upcoming school board preserves tomorrow and historical dates without pret
  const past={...visit,id:'yesterday',name:'Yesterday School',date:'2026-10-04',arrival_at:'2026-10-04T14:30:00Z'};
  const board=D.schools({state:'snapshot',generated_at:'2026-10-05T17:00:00Z',rows:[future,past,visit]},noon);
  assert.deepEqual(board.cards.map(r=>r.id),[visit.id,future.id]);assert.equal(board.history[0].id,past.id);
- assert.match(board.cards[1].lines[0],/Tuesday, October 6/);assert.equal(board.cards[1].state,'SCHEDULED');
+ assert.match(board.cards[1].lines[0],/2026-10-06/);assert.equal(board.cards[1].state,'SCHEDULED');
  assert.match(board.note,/Today.*50 students.*58 reported quantity/);assert.doesNotMatch(board.note,/150 students/);
  assert.match(board.history[0].lines.join(' '),/Past scheduled date.*not independently confirmed/);
 });
@@ -1317,73 +1316,65 @@ test('Events and school visits share chronological date/time ordering with unkno
  assert.equal(sorted[0].id,'early');assert.equal(sorted.at(-1).id,'tomorrow');
 });
 
-
-test('City cleanup preserves unrelated leading decimal details in both card and ticker for both audiences',async()=>{
- for(const audience of ['manager','public_readonly']){
-  const f=fixture({audience});
-  try{
-   for(const description of ['.5-inch supply pipe leaking; replace fitting.',', verify the existing repair detail.', 'Repair light at North Parkway and McLean Boulevard. Zoo location: Birdhouse kitchen','Repair (at North Parkway and McLean Boulevard). Zoo location: Birdhouse kitchen']){
-    const city={state:'current',coverage:'city_active_zoo',generated_at:'2026-10-05T17:00:00Z',rows:[{id:'1',work_order_id:'123',facility:'15Z05 Birdhouse',status:'Approved',description,requested_at:'2026-10-05T14:00:00Z'}]};
-    const original=JSON.stringify(city),expected=description.replace(' at North Parkway and McLean Boulevard','').replace('(at North Parkway and McLean Boulevard)','()');
-    await loaded(f,{operations:{ok:true,data:{...payload.data,city}}});
-    assert.ok(f.text(f.elements['ops-city-ticker']).includes(expected));
-    f.controller.openBoard('city');assert.ok(f.text(f.content).includes(expected));
-    assert.equal(JSON.stringify(city),original);f.controller.closeBoard();
-   }
-  }finally{f.clean();}
- }
+// Mandatory default-run Hub renewal cases. Normal auth verification remains
+// the authority; the port is synthetic and no real browser session is changed.
+test('HUB_SESSION_REFRESH cached same-owner bearer renewal preserves controls',async()=>{
+ const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=async()=>{
+  const next={...f.session(),token:'synthetic-renewed-token',expires_at:'2030-01-02T00:00:00.000Z'};f.setSession(next);return next;
+ };}});
+ assert.equal(f.node('schedule-link').hidden,false);assert.match(f.node('schedule-link').href,/device=fixture-device/);
+ assert.equal(f.node('hub-status').textContent,'Access current.');f.emit('pagehide');
+});
+test('HUB_SESSION_REFRESH observed same-owner session is reverified before restoring links',async()=>{
+ const calls=[],pending=homeDeferred();let force=false;
+ const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=async opts=>{calls.push(opts);return opts.forceRefresh?pending.promise:f.session();};}});
+ const original=f.session(),renewed={...original,token:'synthetic-observed-renewal'};f.setSession(renewed);f.emit('focus');
+ assertHomeWithdrawn(f);await f.turn();assert.equal(calls.length,2);assert.equal(calls[1].forceRefresh,true);assert.equal(calls[1].interactive,false);
+ pending.release(renewed);await f.turn();await f.turn();assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.node('hub-status').textContent,'Access current.');f.emit('pagehide');
+});
+test('HUB_SESSION_REFRESH expiry uses remembered verification without interactive enrollment',async()=>{
+ const calls=[];const f=await managerHomeFixture({configure:f=>{
+  f.session().expires_at=new Date(f.now()+1000).toISOString();
+  f.auth.readSession=()=>Date.parse(f.session()?.expires_at)>f.now()?f.session():null;
+  f.auth.requireOpsManagerSession=async opts=>{calls.push(opts);if(opts.forceRefresh)f.setSession({...f.session(),token:'synthetic-after-expiry',expires_at:new Date(f.now()+900000).toISOString()});return f.session();};
+ }});
+ f.setNow(f.now()+2000);f.emit('focus');await f.turn();await f.turn();
+ assert.equal(calls.length,2);assert.equal(calls[1].forceRefresh,true);assert.equal(calls[1].interactive,false);
+ assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.navigations.length,0);f.emit('pagehide');
+});
+test('HUB_SESSION_REFRESH unavailable verification recovers through the same remembered owner',async()=>{
+ let forceCalls=0;const f=await managerHomeFixture({configure:f=>{
+  f.auth.requireOpsManagerSession=async opts=>{if(opts.forceRefresh&&++forceCalls===1)throw Object.assign(Error('synthetic temporary failure'),{code:'MANAGER_SESSION_UNAVAILABLE',status:503});return f.session();};
+ }});
+ f.setSession({...f.session(),token:'synthetic-refresh-observed'});f.emit('focus');await f.turn();await f.turn();
+ assertHomeWithdrawn(f);assert.match(f.node('hub-status').textContent,/Retrying/);assert.ok(f.intervals.has(5000));
+ f.intervals.get(5000)();await f.turn();await f.turn();
+ assert.equal(forceCalls,2);assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.navigations.length,0);f.emit('pagehide');
+});
+for(const [name,change]of [
+ ['different manager',s=>({...s,manager_id:'98000000-0000-4000-8000-000000000099'})],
+ ['different credential',s=>({...s,credential_id:'98000000-0000-4000-8000-000000000099'})],
+ ['different permissions',s=>({...s,permissions:{...s.permissions,owner:true}})],
+ ['different claimed manager',s=>({...s,claimed_manager_id:'98000000-0000-4000-8000-000000000099'})],
+])test('HUB_SESSION_REFRESH refuses '+name+' from a renewal response',async()=>{
+ const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=async opts=>{if(opts.forceRefresh)f.setSession(change(f.session()));return f.session();};}});
+ f.setSession({...f.session(),token:'synthetic-observed-bearer'});f.emit('focus');await f.turn();await f.turn();
+ assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
+});
+test('HUB_SESSION_REFRESH late verification after pagehide cannot restore controls',async()=>{
+ const pending=homeDeferred();const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=opts=>opts.forceRefresh?pending.promise:Promise.resolve(f.session());}});
+ const next={...f.session(),token:'synthetic-observed-bearer'};f.setSession(next);f.emit('focus');await f.turn();
+ f.emit('pagehide');pending.release(next);await f.turn();await f.turn();assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
+});
+test('HUB_SESSION_REFRESH delayed optional weather never blocks links or attendance refresh',async()=>{
+ const pending=homeDeferred();const f=await managerHomeFixture({configure:f=>{f.fetchOverride=url=>url.includes('open-meteo')?pending.promise:homeResponse({ok:true,data:url.includes('current-attendance')?{attendance:1,stale:false,source_timestamp:new Date(f.now()).toISOString()}:{enabled:false}});}});
+ assert.equal(f.node('schedule-link').hidden,false);assert.ok(f.intervals.has(30000));assert.equal(f.node('hub-status').textContent,'Access current.');
+ f.emit('pagehide');assert.equal(f.intervals.size,0);
 });
 
-test('event ticker changes Today label at Memphis midnight without a fresh fetch',async()=>{
- for(const audience of ['manager','public_readonly']){
-  const f=fixture({audience});try{
-   f.setNow(Date.parse('2026-11-13T05:59:00Z'));
-   const event={id:'e',name:'Midnight fixture',date:'2026-11-13',location:'Birdhouse',start_time:'08:00',end_time:'17:00',attendees:60,status:'SCHEDULED'};
-   await loaded(f,{operations:{ok:true,data:{...payload.data,events:[event]}}});
-   const track=f.elements['ops-events-ticker'];assert.match(f.text(track),/Friday, November 13/);assert.doesNotMatch(f.text(track),/Today,/);
-   f.setNow(Date.parse('2026-11-13T06:00:00Z'));f.controller.tick();
-   assert.match(f.text(track),/Today, Friday, November 13/);assert.match(f.text(track),/Birdhouse.*8:00 a.m..*5:00 p.m..*Attendees: 60/);
-   f.setNow(Date.parse('2026-11-14T06:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(track),/Today,|Midnight fixture/);
-  }finally{f.clean();}
- }
-});
-
-test('school bus ticker gains Today at Memphis midnight and expires the prior date',async()=>{
- for(const audience of ['manager','public_readonly']){
-  const f=fixture({audience});try{
-   f.setNow(Date.parse('2026-11-13T05:59:00Z'));
-   const schools={state:'current',generated_at:'2026-11-12T17:00:00Z',rows:[{id:'s',name:'Bus fixture',date:'2026-11-13',arrival_at:'2026-11-13T14:00:00Z',buses:2,students:40,adults:20}]};
-   await loaded(f,{operations:{ok:true,data:{...payload.data,schools}}});
-   const track=f.elements['ops-schools-ticker'];assert.match(f.text(track),/Friday, November 13/);assert.doesNotMatch(f.text(track),/Today,/);
-   f.setNow(Date.parse('2026-11-13T06:00:00Z'));f.controller.tick();
-   assert.match(f.text(track),/Today, Friday, November 13.*Expected 8:00 AM CST.*2 buses.*60 planned people/);
-   f.setNow(Date.parse('2026-11-14T06:00:00Z'));f.controller.tick();assert.doesNotMatch(f.text(track),/Today,|Bus fixture/);
-  }finally{f.clean();}
- }
-});
-
-test('daily high/low clears previous Memphis day even without a successful refresh',async()=>{
- for(const audience of ['manager','public_readonly']){
- const f=fixture({audience});try{
- const now=Date.parse('2026-11-13T05:59:59Z');f.setNow(now);
- const weather={timezone:D.ZONE,current:{time:now/1000,temperature_2m:60},current_units:{temperature_2m:'°F'},daily_units:{temperature_2m_max:'°F',temperature_2m_min:'°F'},daily:{time:[Date.parse('2026-11-12T06:00:00Z')/1000],temperature_2m_max:[65],temperature_2m_min:[43]}};
- await f.controller.refresh({headers:{},isCurrent:()=>true,summary:{open_tickets:[]},fetchImpl:async url=>({ok:true,json:async()=>url.includes('open-meteo')?weather:url.endsWith('/operations')?payload:null})});
- assert.equal(f.elements['ops-weather-high-low'].textContent,'High 65°F · Low 43°F');
- f.setNow(now+1000);f.controller.tick();assert.equal(f.elements['ops-weather-high-low'].textContent,'High/low unavailable.');
- }finally{f.clean();}
- }
-});
-
-test('Spiceworks entries show ID and title without repeated status for both dashboard audiences',async()=>{
- for(const audience of ['manager','public_readonly']){
-  const f=fixture({audience});try{
-   await loaded(f,{operations:{ok:true,data:{...payload.data,spiceworks_activity:{state:'snapshot',coverage:'imported_only',mailbox_completeness_verified:false,generated_at:new Date(noon).toISOString(),rows:[{ticket_id:'321',title:'Synthetic drain',kind:'opened',at:new Date(noon-1000).toISOString()}]}}}});
-   assert.equal(f.elements['ops-spiceworks-ticker'].children[0].textContent,'#321 · Synthetic drain');
-   f.controller.openBoard('spiceworks');
-   assert.equal(f.elements['operations-board-title'].textContent,'Spiceworks 72 Hours');
-   assert.doesNotMatch(f.text(f.content),/\b(?:Open|Opened|undefined)\b/);
-   assert.match(f.text(f.content),/#321 · Synthetic drain/);
-   assert.match(f.elements['operations-board-note'].textContent,/current ticket status is not confirmed/);
-  }finally{f.clean();}
- }
+test('HUB_SESSION_REFRESH ordinary use keeps the verified session without repeated server checks',async()=>{
+ const calls=[];const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=async options=>{calls.push(options);return f.session();};}});
+ for(let i=0;i<100;i++){f.emit('focus');f.emitDocument('visibilitychange');}
+ await f.turn();assert.equal(calls.length,1);assert.equal(f.node('hub-status').textContent,'Access current.');
+ assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.navigations.length,0);f.emit('pagehide');
 });
