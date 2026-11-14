@@ -247,6 +247,26 @@ function originalCustodialIdentityGuard(expectedDeviceId) {
 // outbox/profile. This is a rejection fence, not a new authentication port.
 const originalManagerOutboxOwners = new WeakMap();
 const originalManagerReaderOwners = new WeakMap();
+// Renewal is normal authentication followed by a new server profile. These
+// immutable fields only constrain that transition; they never authorize an old
+// request or allow a different registration/principal to inherit saved work.
+const originalManagerRenewalOwners = new WeakMap();
+function managerRenewalOwner(auth, session) {
+  return Object.freeze({auth,read:auth?.readSession,requireSession:auth?.requireOpsManagerSession,
+    getDevice:auth?.getDeviceId,isReadOnly:auth?.isReadOnlySession,expiresAt:session?.expires_at,
+    binding:JSON.stringify({manager_id:session?.manager_id,credential_id:session?.credential_id,
+      device_id:session?.device_id,role:session?.role,roles:session?.roles,
+      access_level:session?.access_level,read_only:session?.read_only,permissions:session?.permissions})});
+}
+function assertManagerRenewalOwner(original, session, requireSession = true) {
+  const auth = window.MemphisAuth;
+  if (!original || auth !== original.auth || auth?.readSession !== original.read
+    || auth?.requireOpsManagerSession !== original.requireSession || auth?.getDeviceId !== original.getDevice
+    || auth?.isReadOnlySession !== original.isReadOnly
+    || (requireSession && (!session || managerRenewalOwner(auth,session).binding !== original.binding))) {
+    throw new Error('Browser access changed. Saved drafts and requests remain protected. Reopen Messages.');
+  }
+}
 function originalManagerOutboxOwner(mapped, device, identityRef, accessEpoch, mounted, reader = false) {
   const held = () => Object.assign(new Error('Original manager session changed. Saved requests remain protected.'), {code:'messenger_original_manager_owner_held'});
   try {
@@ -1192,6 +1212,7 @@ function MessengerApp() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(EMPLOYEE_CONTEXT ? 'Opening Messages…' : 'Opening Messenger…');
   const [statusKind, setStatusKind] = useState('');
+  const noticeEpoch = useRef(0);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
@@ -1229,6 +1250,7 @@ function MessengerApp() {
   const identityRef = useRef(null);
   const threadsRef = useRef([]);
   const bootstrapStarted = useRef(false);
+  const identityRenewal = useRef(null);
   const outboxRetryInFlight = useRef(null);
   const deliveryTail = useRef(Promise.resolve());
   const mobileThreadRef = useRef(false);
@@ -1253,6 +1275,7 @@ function MessengerApp() {
   }, [threads, search]);
 
   const setNotice = useCallback((text, kind = '') => {
+    const notice = ++noticeEpoch.current;
     const raw = String(text || '');
     const originalMessageNotice = [
       'Original employee identity is unavailable. Your draft has not been sent.',
@@ -1270,7 +1293,9 @@ function MessengerApp() {
       : raw;
     setStatus(employeeText);
     setStatusKind(kind);
-    if (text && kind === 'ok') setTimeout(() => mounted.current && setStatus(''), 1600);
+    if (text && kind === 'ok') setTimeout(() => {
+      if (mounted.current && noticeEpoch.current === notice) setStatus('');
+    }, 1600);
   }, []);
 
   const serializeDelivery = useCallback((operation) => {
@@ -1315,7 +1340,7 @@ function MessengerApp() {
     };
   }, [setNotice]);
 
-  const loadIdentity = useCallback(async () => {
+  const loadIdentity = useCallback(async ({renewal = null} = {}) => {
     const assertOriginalSecurity = originalCustodialIdentityGuard(currentDeviceId);
     const profileMobile = EMPLOYEE_CONTEXT && isNativeCustodialAuthority() ? window.MemphisMobile : null;
     const profileMatchMethod = profileMobile?.profileMatchesPrincipal;
@@ -1324,15 +1349,20 @@ function MessengerApp() {
     if (!EMPLOYEE_CONTEXT) {
       const auth = window.MemphisAuth, read = auth?.readSession, requireSession = auth?.requireOpsManagerSession, getDevice = auth?.getDeviceId;
       if (typeof read !== 'function' || typeof requireSession !== 'function' || typeof getDevice !== 'function') throw custodialWorkUnavailable();
+      if (renewal) {
+        if (originalManagerRenewalOwners.get(originalMapped) !== renewal) throw custodialWorkUnavailable();
+        assertManagerRenewalOwner(renewal,null,false);
+      }
       if (!read.call(auth)) {
         // Normal trusted-session bootstrap, not adoption of a completed identity
         // response. No profile request/effect exists before this session settles.
-        const session = await requireSession.call(auth,{accessLevel:'full_access',interactive:true,redirect:false,throwOnFailure:true});
+        const session = await requireSession.call(auth,{accessLevel:'full_access',interactive:!renewal,redirect:false,throwOnFailure:true});
         assertOriginalSecurity();
         if (!mounted.current || epoch !== accessEpoch.current || identityRef.current !== originalMapped || window.MemphisAuth !== auth
           || auth.readSession !== read || auth.requireOpsManagerSession !== requireSession || auth.getDeviceId !== getDevice
           || read.call(auth) !== session) throw custodialWorkUnavailable();
       }
+      if (renewal) assertManagerRenewalOwner(renewal,read.call(auth));
       assertManager = originalManagerOutboxOwner(null,currentDeviceId,identityRef,accessEpoch,mounted,true);
     }
     const assertCurrent = () => {
@@ -1351,8 +1381,12 @@ function MessengerApp() {
     if (!mapped?.msg_user_id) throw new Error(EMPLOYEE_CONTEXT ? 'Messenger could not open for this employee.' : 'Messenger identity could not be resolved.');
     if (!EMPLOYEE_CONTEXT) {
       if (!isUuid(mapped.msg_user_id) || mapped.canonical_device_id !== currentDeviceId) throw custodialWorkUnavailable();
+      if (renewal && (mapped.msg_user_id !== originalMapped.msg_user_id || mapped.read_only !== originalMapped.read_only)) {
+        throw new Error('Browser access changed. Saved drafts and requests remain protected. Reopen Messages.');
+      }
       assertCurrent();
       originalManagerReaderOwners.set(mapped,Object.freeze({device:currentDeviceId,user:mapped.msg_user_id,readOnly:mapped.read_only,current:assertManager}));
+      originalManagerRenewalOwners.set(mapped,managerRenewalOwner(window.MemphisAuth,window.MemphisAuth.readSession()));
     }
     assertOriginalSecurity();
     if (!isNativeCustodialAuthority()) {
@@ -1384,7 +1418,7 @@ function MessengerApp() {
     return mapped;
   }, [currentDeviceId]);
 
-  const loadThreads = useCallback(async ({ preferId = '', assertCurrent } = {}) => {
+  const loadThreads = useCallback(async ({ preferId = '', assertCurrent, preserveNotice = false } = {}) => {
     assertCurrent?.();
     const originalMapped = identityRef.current, originalEpoch = accessEpoch.current;
     const assertManager = !EMPLOYEE_CONTEXT ? originalManagerOutboxOwner(originalMapped,currentDeviceId,identityRef,accessEpoch,mounted,true) : () => {};
@@ -1433,7 +1467,7 @@ function MessengerApp() {
       mobileThreadRef.current = false;
       setMobileThread(false);
     }
-    setNotice('');
+    if (!preserveNotice) setNotice('');
     return rows;
   }, [currentDeviceId, loadIdentity, setNotice]);
 
@@ -1658,6 +1692,53 @@ function MessengerApp() {
     }
   }, [currentDeviceId]);
 
+  const ensureCurrentIdentity = useCallback(async () => {
+    const mapped = identityRef.current;
+    if (EMPLOYEE_CONTEXT) return mapped;
+    if (!mapped?.msg_user_id || !mounted.current) throw custodialWorkUnavailable();
+    if (identityRenewal.current) return identityRenewal.current;
+    try {
+      originalManagerOutboxOwner(mapped,currentDeviceId,identityRef,accessEpoch,mounted,true)();
+      return mapped;
+    } catch {
+      const renewal = originalManagerRenewalOwners.get(mapped);
+      assertManagerRenewalOwner(renewal,null,false);
+      // Invalidate callbacks from the expired profile before authenticating.
+      // Keep drafts and durable originals intact, including uncertain writes.
+      accessEpoch.current += 1;
+      for (const controller of activeMessengerRequests) controller.abort();
+      homeAssistantEntry.current.cancel();
+      const flight = (async () => {
+        const fresh = await loadIdentity({renewal});
+        historyRef.current = null;
+        setHasOlderMessages(false); setLoadingOlderMessages(false);
+        // Authentication/profile admission is complete. Optional view reads
+        // must not make a verified browser reopen the page or click twice.
+        const readNotice = noticeEpoch.current;
+        const reportReadFailure = error => {
+          if (mounted.current && identityRef.current === fresh && noticeEpoch.current === readNotice) setNotice(safe(error),'error');
+        };
+        void (async () => {
+          await loadThreads({preferId:selectedRef.current,preserveNotice:true}).catch(reportReadFailure);
+          if (mounted.current && identityRef.current === fresh && selectedRef.current) {
+            await loadMessages(selectedRef.current).catch(reportReadFailure);
+          }
+        })();
+        return fresh;
+      })();
+      identityRenewal.current = flight;
+      try { return await flight; }
+      finally { if (identityRenewal.current === flight) identityRenewal.current = null; }
+    }
+  }, [currentDeviceId, loadIdentity, loadThreads, loadMessages, setNotice]);
+
+  const openNewConversation = async () => {
+    try {
+      const mapped = await ensureCurrentIdentity();
+      if (mounted.current && identityRef.current === mapped && !mapped?.read_only) setNewConversation(true);
+    } catch (error) { setNotice(safe(error),'error'); }
+  };
+
   const selectThread = useCallback((id) => {
     homeAssistantEntry.current.cancel();
     const changed = id !== selectedRef.current;
@@ -1702,6 +1783,7 @@ function MessengerApp() {
 
   const openAssistant = async () => {
     if(assistantClick.current||!identityRef.current?.msg_user_id||identityRef.current.read_only||accessBlocked)return;
+    try{await ensureCurrentIdentity();}catch(error){setNotice(safe(error),'error');return;}
     const existing=threadsRef.current.find(thread=>isMemphis(thread)&&thread.is_active!==false);
     if(existing){selectThread(existing.id);return;}
     if(!homeAssistantEntry.current.request())return;
@@ -1872,6 +1954,10 @@ function MessengerApp() {
 
   const sendMessage = useCallback(async (...args) => {
     const body = messageBodyFromChatScopeArgs(args);
+    const intendedThreadId = selectedRef.current;
+    try { await ensureCurrentIdentity(); }
+    catch (error) { setNotice(safe(error),'error'); return; }
+    if (selectedRef.current !== intendedThreadId) return;
     const thread = threadsRef.current.find((item) => item.id === selectedRef.current);
     const mapped = identityRef.current;
     if (!body || !thread?.id || !mapped?.msg_user_id || thread.canSend === false) return;
@@ -2006,7 +2092,7 @@ function MessengerApp() {
     await Promise.all([selectedRef.current === thread.id ? loadMessages(thread.id) : Promise.resolve(), loadThreads()]).catch(() => null);
     try { assertSendOwner(); } catch { return; }
     setNotice('Sent.', 'ok');
-  }, [currentDeviceId, flushMessageOutbox, loadMessages, loadThreads, serializeDelivery, setNotice, updateDraft]);
+  }, [currentDeviceId, ensureCurrentIdentity, flushMessageOutbox, loadMessages, loadThreads, serializeDelivery, setNotice, updateDraft]);
 
   const retryOutbox = useCallback(() => {
     if (identityRef.current?.read_only) return Promise.resolve();
@@ -2188,6 +2274,8 @@ function MessengerApp() {
   }, [currentDeviceId, setNotice]);
 
   const deleteThread = useCallback(async (threadId = selectedRef.current) => {
+    try { await ensureCurrentIdentity(); }
+    catch (error) { setNotice(safe(error),'error'); return; }
     const thread = threadsRef.current.find((item) => item.id === threadId);
     if (!thread || thread.shared) return;
     const mapped = identityRef.current;
@@ -2216,7 +2304,7 @@ function MessengerApp() {
         };
         requireNoSavedDeletion();
       }
-    } catch { return; }
+    } catch (error) { setNotice(safe(error),'error'); return; }
     if (!mapped?.msg_user_id || !currentDeviceId) {
       setNotice('Messenger identity could not be resolved.', 'error');
       return;
@@ -2307,7 +2395,7 @@ function MessengerApp() {
         publishDelete(setMobileThread,false);
       }
       assertDeleteOwner();
-      setNotice(employee ? 'Conversation removal is saved. Server confirmation is still pending.' : EMPLOYEE_CONTEXT ? 'Deleted.' : 'Conversation removed from your Messenger.', employee ? 'error' : 'ok');
+      setNotice('Conversation removal is saved. Server confirmation is still pending.');
     } catch { return; }
     try {
       assertManager();
@@ -2326,6 +2414,7 @@ function MessengerApp() {
       if (identityRef.current !== mapped) return;
       await retireAcceptedDeletion(entry, receipt, key, expectedBytes, assertManager);
       assertManager();
+      setNotice('Conversation removed from your Messenger.', 'ok');
     } catch (error) {
       try { assertManager(); } catch { return; }
       if (identityRef.current !== mapped) return;
@@ -2346,7 +2435,7 @@ function MessengerApp() {
       try { assertManager(); } catch { return; }
       setNotice('Saved deletion needs recovery. It was not applied automatically.', 'error');
     }
-  }, [currentDeviceId, loadThreads, setNotice]);
+  }, [currentDeviceId, ensureCurrentIdentity, loadThreads, setNotice]);
 
   useEffect(() => {
     if (!deviceIdentity.ready) return undefined;
@@ -2372,16 +2461,16 @@ function MessengerApp() {
         setNotice(safe(error), 'error');
       }
     })();
-    const online = () => {
-      void resolveHomeAssistant().catch(error => setNotice(safe(error), 'error'));
-      void retryOutbox().catch(error => setNotice(safe(error), 'error'));
-    };
     const resumeMessenger = () => {
       if (document.visibilityState !== 'visible') return;
-      void resolveHomeAssistant().catch(error => setNotice(safe(error), 'error'));
-      void retryOutbox().catch(error => setNotice(safe(error), 'error'));
-      void loadThreads({ preferId: selectedRef.current }).catch((error) => setNotice(safe(error), 'error'));
+      void (async () => {
+        await ensureCurrentIdentity();
+        await resolveHomeAssistant();
+        await retryOutbox();
+        await loadThreads({preferId:selectedRef.current});
+      })().catch(error => setNotice(safe(error),'error'));
     };
+    const online = resumeMessenger;
     window.addEventListener('online', online);
     document.addEventListener('visibilitychange', resumeMessenger);
     window.addEventListener('pageshow', resumeMessenger);
@@ -2394,7 +2483,25 @@ function MessengerApp() {
       window.removeEventListener('pageshow', resumeMessenger);
       window.removeEventListener('memphis:messenger-resume', resumeMessenger);
     };
-  }, [currentDeviceId, deviceIdentity.ready, deviceIdentity.generation, loadIdentity, loadThreads, retryOutbox, resolveHomeAssistant, setNotice]);
+  }, [currentDeviceId, deviceIdentity.ready, deviceIdentity.generation, ensureCurrentIdentity, loadIdentity, loadThreads, retryOutbox, resolveHomeAssistant, setNotice]);
+
+  useEffect(() => {
+    if (EMPLOYEE_CONTEXT || !identity?.msg_user_id) return undefined;
+    const owner = originalManagerRenewalOwners.get(identity);
+    const deadline = Date.parse(owner?.expiresAt);
+    if (!Number.isFinite(deadline)) return undefined;
+    let stopped = false, timer;
+    const renewAtExpiry = () => {
+      if (stopped || identityRef.current !== identity) return;
+      const remaining = deadline - Date.now();
+      if (remaining > 0) { timer = setTimeout(renewAtExpiry,Math.min(remaining,2147483647)); return; }
+      void ensureCurrentIdentity().catch(error => {
+        if (!stopped && identityRef.current === identity) setNotice(safe(error),'error');
+      });
+    };
+    renewAtExpiry();
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [identity, ensureCurrentIdentity, setNotice]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -2599,7 +2706,7 @@ function MessengerApp() {
       sender: row.sender_display_name || 'Unknown',
       direction: mine ? 'outgoing' : 'incoming',
       position: 'single',
-    }}><Message.Header sender={row.sender_display_name || (mine ? identity?.display_name : 'Unknown')} sentTime={formatTime(row.sent_at)} />{mine && <Message.Footer>{row.recovery_state === 'permanent' ? 'Needs recovery — not sent' : row.confirmationPending ? 'Server confirmation pending' : row.locallyQueued || row.optimistic || row.failed ? (row.failed || navigator.onLine === false ? 'Saved on this device' : 'Sending…') : 'Sent to server'}</Message.Footer>}</Message>;
+    }}><Message.Header sender={row.sender_display_name || (mine ? identity?.display_name : 'Unknown')} sentTime={formatTime(row.sent_at)} />{mine && <Message.Footer>{row.recovery_state === 'permanent' ? 'Needs recovery — not sent' : row.confirmationPending ? 'Server confirmation pending' : row.locallyQueued || row.optimistic || row.failed ? (row.failed || navigator.onLine === false ? 'Saved on this device' : 'Sending…') : 'Sent'}</Message.Footer>}</Message>;
   });
 
   const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
@@ -2608,7 +2715,7 @@ function MessengerApp() {
     <header className={`mz-chat-toolbar${mobileThread ? ' thread-toolbar' : ''}`}>
       <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) { mobileThreadRef.current = false; setMobileThread(false); } else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
       <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? displayName(identity.display_name) : `${displayName(identity.display_name)} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
-      {!mobileThread && <button className="mz-button primary" type="button" disabled={!identity?.msg_user_id || identity.read_only || accessBlocked} onClick={() => setNewConversation(true)}>New</button>}
+      {!mobileThread && <button className="mz-button primary" type="button" disabled={!identity?.msg_user_id || identity.read_only || accessBlocked} onClick={() => void openNewConversation()}>New</button>}
       <button className="mz-ask-memphis" type="button" aria-label="Ask Memphis" title="Ask Memphis" disabled={!identity?.msg_user_id||identity.read_only||accessBlocked||assistantOpening} onClick={()=>void openAssistant()}><img src={MEMPHIS_AVATAR} alt=""/><span>Ask Memphis</span></button>
     </header>
     <section className="mz-chat-stage">
@@ -2684,7 +2791,7 @@ function MessengerApp() {
     </section>}
     {heldReadOriginals && <div className="mz-chat-status error" role="status">A saved read acknowledgement cannot be verified. Its original data remains held; no read was sent or cleared for that record.</div>}
     {status && <div className={`mz-chat-status ${statusKind}`} role="status" aria-live="polite">{status}</div>}
-    {newConversation && identity?.msg_user_id && <NewConversation key={`${identity.msg_user_id}:${currentDeviceId}`} currentUserId={String(identity.msg_user_id)} currentDeviceId={currentDeviceId} getCurrentIdentity={() => mounted.current && !accessBlocked ? identityRef.current : null} onClose={() => setNewConversation(false)} onCreated={async (id,assertCurrent,retireOriginal) => { assertCurrent(); const rows = await loadThreads({ preferId:id, assertCurrent }); assertCurrent(); if (retireOriginal) { if (!rows.some(row => row.id === id && row.type === 'group')) throw new Error('confirmed group is not currently available'); await retireOriginal(); assertCurrent(); } selectThread(id); setNewConversation(false); }} />}
+    {newConversation && identity?.msg_user_id && <NewConversation key={`${identity.msg_user_id}:${currentDeviceId}:${accessEpoch.current}`} currentUserId={String(identity.msg_user_id)} currentDeviceId={currentDeviceId} getCurrentIdentity={() => mounted.current && !accessBlocked ? identityRef.current : null} onClose={() => setNewConversation(false)} onCreated={async (id,assertCurrent,retireOriginal) => { assertCurrent(); const rows = await loadThreads({ preferId:id, assertCurrent }); assertCurrent(); if (retireOriginal) { if (!rows.some(row => row.id === id && row.type === 'group')) throw new Error('confirmed group is not currently available'); await retireOriginal(); assertCurrent(); } selectThread(id); setNewConversation(false); }} />}
   </div>;
 }
 
