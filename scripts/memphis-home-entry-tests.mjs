@@ -14,7 +14,7 @@ assert.doesNotMatch(home,/id="home-memphis"|>Ask Memphis</);
 assert.match(home,/href="\.\/messages\.html\?hub=employee"[\s\S]*?Memphis Messenger/);
 assert.match(app,/EMPLOYEE_CONTEXT && PAGE_URL\.searchParams\.get\('assistant'\) === 'memphis'/);
 assert.match(app,/await resolveHomeAssistant\(\);\s*await retryOutbox\(\);/,'explicit Home assistant must not be blocked behind unrelated outbox failure');
-assert.match(app,/void resolveHomeAssistant\(\)\.catch\(error => setNotice\(safe\(error\), 'error'\)\);\s*void retryOutbox\(\)\.catch/,'online/resume assistant request remains independent from unrelated retry result');
+assert.match(app,/void resolveHomeAssistant\(\)\.catch\(error => setNotice\(safe\(error\),\s*'error'\)\);\s*void retryOutbox\(\)\.catch/,'online/resume assistant request remains independent from unrelated retry result');
 assert.match(app,/const selectThread = useCallback\(\(id\) => \{\s*homeAssistantEntry\.current\.cancel\(\);/);
 assert.match(app,/const withdraw = \(\) => \{\s*homeAssistantEntry\.current\.cancel\(\);/);
 assert.equal((app.match(/setInterval\([\s\S]{0,250}resolveHomeAssistant/g)||[]).length,0,'no new assistant polling');
