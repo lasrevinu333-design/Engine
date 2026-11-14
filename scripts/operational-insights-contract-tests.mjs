@@ -32,7 +32,9 @@ if (process.argv.includes('--product-only')) {
   };
   const nullRow={employee_name:'<script>bad()</script>',location_name:'Fixture',cleaning_count:null,inspection_count:null,maintenance_ticket_count:null,average_duration_minutes:null,median_duration_minutes:null,duration_delta_from_location_minutes:null,average_inspection_score:' ',latest_cleaning_at:null};
   const f=await fixture({'/analytics-api/cleaning-performance':[nullRow],'/analytics-api/session-facts':[{session_id:'fixture',duration_minutes:null,started_at:null,ended_at:null,inspection_count:null,latest_inspection_score:null,open_maintenance_ticket_count:null}],'/analytics-api/ticket-trends':[{total_ticket_count:null,open_ticket_count:null,first_reported_at:null,latest_reported_at:null}],'/analytics-api/inspections':[{passed:null,overall_score:null,inspected_at:null}]});
-  assert.ok(f.options.length===5&&f.options.every(opts=>opts.accessLevel==='read_only'));
+  assert.equal(f.requests.length,5,'The current Insights load reads five distinct feeds');
+  assert.equal(f.options.length,10,'Each feed checks current read-only access before load and at request admission');
+  assert.ok(f.options.every(opts=>opts.accessLevel==='read_only'));
   assert.ok(f.requests.every(({opts})=>opts.method==='GET'&&opts.headers.Authorization==='Bearer synthetic-read-token'));
   assert.equal(f.nodes.get('summary-cleanings').textContent,'—');assert.equal(f.nodes.get('summary-score').textContent,'—');
   const shown=['performance-list','cleanings-list','tickets-list','inspections-list'].map(id=>f.nodes.get(id).innerHTML).join('\n');
@@ -75,7 +77,7 @@ assert.match(nativeAuth, /startsWith\('\/analytics-api\/'\)/);
 assert.match(nativeAuth, /mobile\.authHeaders/);
 assert.match(nativeAuth, /401 \|\| response\.status === 403/);
 
-assert.equal((hub.match(/href="\.\/messages\.html/g) || []).length, 2, 'Hub body and fixed nav should point to one Messenger client');
+assert.equal((hub.match(/href="\.\/messages\.html/g) || []).length, 1, 'Hub exposes one canonical Messenger entry');
 assert.doesNotMatch(hub, /ChatScope Messenger|messages-chatscope\.html|chatscope-link/i);
 assert.match(hub, /insights/i);
 assert.match(hub, /Phone Assignments/);
