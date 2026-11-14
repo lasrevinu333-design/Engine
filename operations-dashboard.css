@@ -182,7 +182,31 @@
 .tickerBand[data-board="spiceworks"] .tickerLabel { text-transform: none; }
 
 /* A shared heading row aligns titles independently of the value stack. */
-.telemetry.separateTelemetry>section{display:grid;grid-template-rows:2.7em minmax(0,1fr);align-items:stretch;justify-content:normal;aspect-ratio:1;box-sizing:border-box;padding:10px 12px;gap:6px}
+.telemetry.separateTelemetry>section{display:grid;grid-template-rows:2.7em minmax(0,1fr);align-items:stretch;justify-content:normal;box-sizing:border-box;padding:8px 12px;gap:4px}
 .telemetry.separateTelemetry>section>.eyebrow{align-self:start;display:flex;align-items:flex-start;min-height:2.7em;margin:0}
 .telemetry.separateTelemetry .telemetryValue{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;max-width:100%;overflow-wrap:anywhere}
 .telemetry.separateTelemetry .telemetryValue>strong{font-size:22px;font-weight:720;line-height:1.2;letter-spacing:normal;font-variant-numeric:tabular-nums;max-width:100%;overflow-wrap:anywhere}
+
+/* Keep the forecast readable without making every metric a large square. */
+.telemetry.separateTelemetry .dailyExpected{margin-top:0}
+.telemetry.separateTelemetry .telemetryValue{gap:3px}
+.telemetry.separateTelemetry .weatherNow{flex-direction:row;gap:6px}
+.telemetry.separateTelemetry .weatherArt{width:32px;height:28px}
+.telemetry.separateTelemetry .hourForecast{margin-top:2px}
+@media(min-width:1400px){
+  :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels{grid-template-columns:repeat(3,minmax(0,1fr))}
+  :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>.telemetry,
+  :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>#dashboard-map,
+  :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>.dashboardTools{grid-column:1/-1}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandPage:has(>.publicViewNav){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-content:start}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandPage:has(>.publicViewNav)>.dashboardPageHeader{grid-column:1;grid-row:1}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandPage:has(>.publicViewNav)>#map-page-status{grid-column:2;grid-row:1;align-self:center;margin:0}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandPage>.publicViewNav{grid-column:3;grid-row:1;margin:0}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandPage:has(>.publicViewNav)>#operations-panels{grid-column:1/-1}
+  :is(:root:fullscreen,:root.dashboard-expanded) .commandPage:has(>.publicViewNav)>.metricNote{grid-column:2/-1}
+}
+@media(min-width:1700px){
+  :is(:root:fullscreen,:root.dashboard-expanded) .telemetry.separateTelemetry>section{grid-template-rows:1.5em minmax(0,1fr);padding-block:3px;gap:2px}
+  :is(:root:fullscreen,:root.dashboard-expanded) .telemetry.separateTelemetry>section>.eyebrow{min-height:1.5em}
+  :is(:root:fullscreen,:root.dashboard-expanded) .telemetry.separateTelemetry .telemetryValue{gap:2px}
+}
