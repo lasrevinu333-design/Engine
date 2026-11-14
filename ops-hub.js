@@ -8,7 +8,8 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
   const numeric = value => (typeof value === 'number' || typeof value === 'string' && value.trim()) && Number.isFinite(Number(value)) ? Number(value) : null;
   const sourceInstant = value => typeof value === 'string' && /(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value)) ? Date.parse(value) : null;
   const localDay = time => new Intl.DateTimeFormat('en-CA', {timeZone:ZONE,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(time));
-  const state={currentDeviceId:'',session:null,sessionBinding:'',auth:null,generation:0,retired:false,suspended:false,resumeBinding:''};
+  const state={currentDeviceId:'',session:null,sessionBinding:'',admittedOwnerBinding:'',auth:null,authMethods:null,generation:0,retired:false,suspended:false,resumeBinding:'',verifying:true,renewing:null};
+  const authMethodNames=['getDeviceId','readSession','isOpsManager','requireOpsManagerSession','hasRole','canMutateOpsManagerSurface','isCustodialManagementAdmin'];
   const intervals=new Set();
   const els={
     accessMode:document.getElementById('access-mode'),managerName:document.getElementById('manager-name'),managerTitle:document.getElementById('manager-title'),
@@ -37,7 +38,9 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
   function sessionBinding(session){
     return JSON.stringify([session.role,session.manager_id,session.credential_id,session.device_id,session.token,
       session.expires_at,session.access_level,session.read_only,session.trusted_device,
-      session.roles,session.permissions,session.manager_display_name,session.manager_job_title]);
+      session.roles,session.permissions,session.manager_display_name,session.manager_job_title,
+      session.auth_mode,session.owner,session.custodial_management_admin,session.claimed_manager_id,
+      session.claimed_manager_display_name,session.identity_assurance,session.individual_identity_verified]);
   }
   function resumeBinding(session){
     if(!session)return '';
@@ -51,26 +54,54 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     els.managerName.textContent='';els.managerTitle.textContent='';
     els.accessMode.textContent='Restoring manager access…';els.accessMode.className='accessMode';
   }
+  function originalAuthMethods(auth,methods){
+    return !!auth&&!!methods&&authMethodNames.every(name=>auth[name]===methods[name]);
+  }
+  function stopRefreshes(){
+    weather.stop();for(const interval of intervals)clearInterval(interval);intervals.clear();
+  }
+  function renewKnownOwner(){
+    if(state.retired||state.suspended||state.renewing||!state.session)return;
+    const expectedBinding=state.admittedOwnerBinding,methods=state.authMethods;
+    if(!expectedBinding||sessionBinding(state.session)!==state.sessionBinding){retire();return;}
+    state.resumeBinding=expectedBinding;state.verifying=true;state.generation++;
+    stopRefreshes();clearManagerView();state.session=null;state.sessionBinding='';
+    setStatus('Checking saved manager access…');
+    const pending=Promise.resolve().then(()=>init({resuming:true,expectedBinding,expectedMethods:methods}))
+      .catch(()=>{if(!state.retired&&!state.suspended)setStatus('Manager access could not be checked. Retrying…','error');})
+      .finally(()=>{if(state.renewing===pending)state.renewing=null;});
+    state.renewing=pending;
+  }
   function retire({persisted=false}={}){
     if(state.retired)return;
-    state.resumeBinding=persisted?(state.resumeBinding||resumeBinding(state.session)):'';
-    state.suspended=persisted;state.retired=!persisted;state.generation++;weather.stop();
-    for(const interval of intervals)clearInterval(interval);intervals.clear();
+    state.resumeBinding=persisted?(state.resumeBinding||state.admittedOwnerBinding):'';
+    state.suspended=persisted;state.retired=!persisted;state.verifying=false;state.generation++;stopRefreshes();
     clearManagerView();state.session=null;state.sessionBinding='';
     setStatus(persisted?'Verifying manager access when this page returns.':'Manager access changed or page retired. Reload to verify access.','error');
   }
   function current(generation){
-    if(state.retired||state.suspended||generation!==state.generation)return false;
+    if(state.retired||state.suspended||state.verifying||generation!==state.generation)return false;
     try{
       const auth=window.MemphisAuth,session=auth?.readSession?.();
-      if(auth!==state.auth||!session||session!==state.session||!auth.isOpsManager(session)
-        ||resolveDeviceId()!==state.currentDeviceId||session.device_id!==state.currentDeviceId
-        ||sessionBinding(session)!==state.sessionBinding){retire();return false;}
+      if(auth!==state.auth||!originalAuthMethods(auth,state.authMethods)||resolveDeviceId()!==state.currentDeviceId){retire();return false;}
+      // Check the captured admission before expiry or a replacement can enter
+      // renewal. The mutable old session object is not an identity source.
+      if(!state.session||sessionBinding(state.session)!==state.sessionBinding){retire();return false;}
+      if(!session){
+        if(state.session&&Date.parse(state.session.expires_at)<=Date.now())renewKnownOwner();else retire();
+        return false;
+      }
+      if(!auth.isOpsManager(session)||session.device_id!==state.currentDeviceId){retire();return false;}
+      if(session!==state.session){
+        if(resumeBinding(session)===state.admittedOwnerBinding)renewKnownOwner();else retire();
+        return false;
+      }
+      if(sessionBinding(session)!==state.sessionBinding){retire();return false;}
       return true;
     }catch{retire();return false;}
   }
   function every(callback,delay){
-    const handle=setInterval(callback,delay);intervals.add(handle);
+    const handle=setInterval(callback,delay);intervals.add(handle);return handle;
   }
   for(const link of managerLinks)link.addEventListener('click',event=>{if(!current(state.generation))event.preventDefault();});
   window.addEventListener('pagehide',event=>retire({persisted:event?.persisted===true}));
@@ -80,7 +111,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     const expectedBinding=state.resumeBinding;state.suspended=false;
     void init({resuming:true,expectedBinding}).catch(error=>{if(!state.retired&&!state.suspended)setStatus(safe(error),'error');});
   });
-  const checkIdentity=()=>{if(state.session)current(state.generation);
+  const checkIdentity=()=>{if(state.verifying)return;if(state.session)current(state.generation);
     else if(state.currentDeviceId&&resolveDeviceId()!==state.currentDeviceId)retire();};
   window.addEventListener('storage',checkIdentity);window.addEventListener('focus',checkIdentity);
   document.addEventListener('visibilitychange',checkIdentity);
@@ -182,27 +213,47 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     }catch{if(current(generation))els.guestIssuesLink.hidden=true;}
   }
 
-  async function init({resuming=false,expectedBinding=''}={}){
-    const generation=++state.generation;state.auth=window.MemphisAuth;
+  async function init({resuming=false,expectedBinding='',expectedMethods=null}={}){
+    if(state.retired||state.suspended)return;
+    if(resuming&&(window.MemphisAuth!==state.auth||!originalAuthMethods(state.auth,expectedMethods||state.authMethods))){retire();return;}
+    const generation=++state.generation;state.auth=window.MemphisAuth;state.verifying=true;
+    state.authMethods=Object.freeze(Object.fromEntries(authMethodNames.map(name=>[name,state.auth?.[name]])));
+    const auth=state.auth,methods=state.authMethods;
+    stopRefreshes();
     clearManagerView();
     state.currentDeviceId=resolveDeviceId();
     if(!state.currentDeviceId||!['getDeviceId','readSession','isOpsManager','requireOpsManagerSession','hasRole','canMutateOpsManagerSurface']
       .every(method=>typeof state.auth?.[method]==='function')){showAccessRequired();return;}
-    const priorSession=state.auth.readSession(),priorBinding=priorSession?sessionBinding(priorSession):'';
+    const priorSession=auth.readSession(),requiredBinding=expectedBinding||(priorSession?resumeBinding(priorSession):'');
     let session=null,accessError=null;
-    try{session=await window.MemphisAuth.requireOpsManagerSession({accessLevel:'full_access',interactive:!resuming,forceRefresh:resuming,redirect:false,throwOnFailure:true});}
+    try{session=await auth.requireOpsManagerSession({accessLevel:'full_access',interactive:false,forceRefresh:resuming,redirect:false,throwOnFailure:true});}
     catch(error){accessError=error;}
     if(state.retired||state.suspended||generation!==state.generation)return;
+    if(window.MemphisAuth!==auth||!originalAuthMethods(auth,methods)){retire();return;}
     if(accessError&&accessError.code!=='MANAGER_SIGN_IN_REQUIRED'){
+      state.verifying=false;
       els.accessMode.textContent='Manager access could not be checked';
-      setStatus(accessError.code==='MANAGER_ACCESS_DENIED'?'Manager access was denied. Your saved sign-in has not been replaced.':'Manager access is temporarily unavailable. Reload to check your saved sign-in.','error');
+      if(accessError.code==='MANAGER_ACCESS_DENIED'){
+        retire();els.accessMode.textContent='Manager access was denied';
+        setStatus('Manager access was denied. Your saved sign-in has not been replaced.','error');return;
+      }
+      state.resumeBinding=requiredBinding;
+      setStatus('Manager access is temporarily unavailable. Retrying your saved sign-in…','error');
+      const retry=every(()=>{
+        clearInterval(retry);intervals.delete(retry);
+        if(state.retired||state.suspended||generation!==state.generation)return;
+        if(window.MemphisAuth!==auth||!originalAuthMethods(auth,methods)||resolveDeviceId()!==state.currentDeviceId){retire();return;}
+        void init({resuming:Boolean(requiredBinding),expectedBinding:requiredBinding,expectedMethods:methods})
+          .catch(()=>{if(!state.retired)setStatus('Manager access could not be checked.','error');});
+      },5000);
       return;
     }
-    if(resuming?(!expectedBinding||resumeBinding(session)!==expectedBinding):priorSession&&(session!==priorSession||sessionBinding(session)!==priorBinding)){retire();return;}
+    if((resuming&&!expectedBinding)||(requiredBinding&&resumeBinding(session)!==requiredBinding)){retire();return;}
     if(!session||!window.MemphisAuth.isOpsManager(session)){showAccessRequired();return;}
+    if(auth.readSession()!==session){retire();return;}
     if(!priorSession&&window.MemphisAuth.isCustodialManagementAdmin?.(session))state.currentDeviceId=resolveDeviceId();
     state.session=session;state.resumeBinding='';
-    state.sessionBinding=sessionBinding(session);
+    state.sessionBinding=sessionBinding(session);state.admittedOwnerBinding=resumeBinding(session);state.verifying=false;
     if(!current(generation))return;
     const returnPath=new URLSearchParams(window.location.search).get('return');
     if(returnPath){try{const resolved=new URL(returnPath,window.location.href);if(resolved.origin===window.location.origin&&!resolved.pathname.includes('..')){window.location.replace(resolved.toString());return;}}catch{}}
@@ -212,8 +263,9 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     const name=fullNames[selectedName]||selectedName||'Custodial management';const title=session.manager_job_title||'';
     els.managerName.textContent=name;els.managerTitle.textContent=title;els.accessMode.textContent=leadership?"Manager access":session.permissions?.owner===true?"Owner · full control":"Read-only";els.accessMode.className=window.MemphisAuth.canMutateOpsManagerSurface(session)?"accessMode full":"accessMode";
     updateLinks();applyRoleVisibility(session);setStatus('Access current.','ok');
-    await Promise.allSettled([weather.start(),refreshAttendance(),setBuildStamp(),refreshGuestFeature()]);
-    if(!current(generation))return;
+    // Optional feeds start independently; a delayed weather or feature request
+    // cannot hold the remembered-access transition or attendance refresh loop.
+    void weather.start().catch(()=>{});void refreshAttendance();void setBuildStamp();void refreshGuestFeature();
     every(refreshAttendance,30000);
   }
 

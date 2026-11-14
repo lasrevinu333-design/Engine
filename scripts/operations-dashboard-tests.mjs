@@ -215,7 +215,7 @@ export async function managerHomeFixture({attendance,weather,alerts={type:'Featu
  const window={location,MemphisAuth:auth,addEventListener:(type,callback)=>events.set(type,callback)};
  const f={nodes,node,intervals,requests,attendance,weather,alerts,navigations,auth,window,session:()=>session,setSession:value=>{session=value;},
   setDevice:value=>{device=value;},emit:(type,event)=>events.get(type)?.(event),emitDocument:type=>documentEvents.get(type)?.(),
-  fetchOverride:null,turn:()=>new Promise(resolve=>setImmediate(resolve))};
+  fetchOverride:null,now:()=>now,setNow:value=>{now=value;},turn:()=>new Promise(resolve=>setImmediate(resolve))};
  const fetch=async url=>{requests.push(url);if(f.fetchOverride)return f.fetchOverride(url);
   let data=url.includes('open-meteo')?f.weather:url.includes('api.weather.gov')?f.alerts:url.includes('current-attendance')?{ok:true,data:f.attendance}:{ok:true,data:{enabled:false}};return {ok:true,json:async()=>data};};
  configure?.(f);
@@ -285,7 +285,8 @@ test('OPS_HUB_BINDING_NEW selected manager name is presentation only and preserv
  }});
  const principal=f.session().manager_id;
  assert.equal(f.node('manager-name').textContent,'Haley Lejman');
- assert.equal(f.node('access-mode').textContent,'Manager access · Haley Lejman');
+ // The current Hub has a separate name line and access badge.
+ assert.equal(f.node('access-mode').textContent,'Manager access');
  assert.equal(f.session().manager_display_name,'Custodial leadership cohort');
  assert.equal(f.session().manager_id,principal);assert.equal(f.session().permissions.owner,false);
  f.emit('pagehide');assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
@@ -1313,4 +1314,88 @@ test('Events and school visits share chronological date/time ordering with unkno
  const sorted=D.orderedSchools({state:'current',rows:schools});
  assert.deepEqual(sorted.map(r=>r.id),D.schools({state:'current',rows:schools},noon).cards.map(r=>r.id));
  assert.equal(sorted[0].id,'early');assert.equal(sorted.at(-1).id,'tomorrow');
+});
+
+// Mandatory default-run Hub renewal cases. Normal auth verification remains
+// the authority; the port is synthetic and no real browser session is changed.
+test('HUB_SESSION_REFRESH cached same-owner bearer renewal preserves controls',async()=>{
+ const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=async()=>{
+  const next={...f.session(),token:'synthetic-renewed-token',expires_at:'2030-01-02T00:00:00.000Z'};f.setSession(next);return next;
+ };}});
+ assert.equal(f.node('schedule-link').hidden,false);assert.match(f.node('schedule-link').href,/device=fixture-device/);
+ assert.equal(f.node('hub-status').textContent,'Access current.');f.emit('pagehide');
+});
+test('HUB_SESSION_REFRESH observed same-owner session is reverified before restoring links',async()=>{
+ const calls=[],pending=homeDeferred();let force=false;
+ const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=async opts=>{calls.push(opts);return opts.forceRefresh?pending.promise:f.session();};}});
+ const original=f.session(),renewed={...original,token:'synthetic-observed-renewal'};f.setSession(renewed);f.emit('focus');
+ assertHomeWithdrawn(f);await f.turn();assert.equal(calls.length,2);assert.equal(calls[1].forceRefresh,true);assert.equal(calls[1].interactive,false);
+ pending.release(renewed);await f.turn();await f.turn();assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.node('hub-status').textContent,'Access current.');f.emit('pagehide');
+});
+test('HUB_SESSION_REFRESH expiry uses remembered verification without interactive enrollment',async()=>{
+ const calls=[];const f=await managerHomeFixture({configure:f=>{
+  f.session().expires_at=new Date(f.now()+1000).toISOString();
+  f.auth.readSession=()=>Date.parse(f.session()?.expires_at)>f.now()?f.session():null;
+  f.auth.requireOpsManagerSession=async opts=>{calls.push(opts);if(opts.forceRefresh)f.setSession({...f.session(),token:'synthetic-after-expiry',expires_at:new Date(f.now()+900000).toISOString()});return f.session();};
+ }});
+ f.setNow(f.now()+2000);f.emit('focus');await f.turn();await f.turn();
+ assert.equal(calls.length,2);assert.equal(calls[1].forceRefresh,true);assert.equal(calls[1].interactive,false);
+ assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.navigations.length,0);f.emit('pagehide');
+});
+test('HUB_SESSION_REFRESH unavailable verification recovers through the same remembered owner',async()=>{
+ let forceCalls=0;const f=await managerHomeFixture({configure:f=>{
+  f.auth.requireOpsManagerSession=async opts=>{if(opts.forceRefresh&&++forceCalls===1)throw Object.assign(Error('synthetic temporary failure'),{code:'MANAGER_SESSION_UNAVAILABLE',status:503});return f.session();};
+ }});
+ f.setSession({...f.session(),token:'synthetic-refresh-observed'});f.emit('focus');await f.turn();await f.turn();
+ assertHomeWithdrawn(f);assert.match(f.node('hub-status').textContent,/Retrying/);assert.ok(f.intervals.has(5000));
+ f.intervals.get(5000)();await f.turn();await f.turn();
+ assert.equal(forceCalls,2);assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.navigations.length,0);f.emit('pagehide');
+});
+for(const [name,change]of [
+ ['different manager',s=>({...s,manager_id:'98000000-0000-4000-8000-000000000099'})],
+ ['different credential',s=>({...s,credential_id:'98000000-0000-4000-8000-000000000099'})],
+ ['different permissions',s=>({...s,permissions:{...s.permissions,owner:true}})],
+ ['different claimed manager',s=>({...s,claimed_manager_id:'98000000-0000-4000-8000-000000000099'})],
+])test('HUB_SESSION_REFRESH refuses '+name+' from a renewal response',async()=>{
+ const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=async opts=>{if(opts.forceRefresh)f.setSession(change(f.session()));return f.session();};}});
+ f.setSession({...f.session(),token:'synthetic-observed-bearer'});f.emit('focus');await f.turn();await f.turn();
+ assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
+});
+test('HUB_SESSION_REFRESH late verification after pagehide cannot restore controls',async()=>{
+ const pending=homeDeferred();const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=opts=>opts.forceRefresh?pending.promise:Promise.resolve(f.session());}});
+ const next={...f.session(),token:'synthetic-observed-bearer'};f.setSession(next);f.emit('focus');await f.turn();
+ f.emit('pagehide');pending.release(next);await f.turn();await f.turn();assertHomeWithdrawn(f);assert.equal(f.intervals.size,0);
+});
+test('HUB_SESSION_REFRESH delayed optional weather never blocks links or attendance refresh',async()=>{
+ const pending=homeDeferred();const f=await managerHomeFixture({configure:f=>{f.fetchOverride=url=>url.includes('open-meteo')?pending.promise:homeResponse({ok:true,data:url.includes('current-attendance')?{attendance:1,stale:false,source_timestamp:new Date(f.now()).toISOString()}:{enabled:false}});}});
+ assert.equal(f.node('schedule-link').hidden,false);assert.ok(f.intervals.has(30000));assert.equal(f.node('hub-status').textContent,'Access current.');
+ f.emit('pagehide');assert.equal(f.intervals.size,0);
+});
+
+test('HUB_SESSION_REFRESH ordinary use keeps the verified session without repeated server checks',async()=>{
+ const calls=[];const f=await managerHomeFixture({configure:f=>{f.auth.requireOpsManagerSession=async options=>{calls.push(options);return f.session();};}});
+ for(let i=0;i<100;i++){f.emit('focus');f.emitDocument('visibilitychange');}
+ await f.turn();assert.equal(calls.length,1);assert.equal(f.node('hub-status').textContent,'Access current.');
+ assert.equal(f.node('schedule-link').hidden,false);assert.equal(f.navigations.length,0);f.emit('pagehide');
+});
+
+// Renewal must retain the immutable admitted principal even if the old cached
+// object is mutated before expiry or replaced with a fresh bearer object.
+for(const mode of ['expiry','clone','bfcache'])for(const [name,mutate]of [
+ ['manager',s=>{s.manager_id='98000000-0000-4000-8000-000000000099';}],
+ ['credential',s=>{s.credential_id='98000000-0000-4000-8000-000000000099';}],
+ ['permission',s=>{s.permissions.read=false;}],
+ ['claim',s=>{s.claimed_manager_id='98000000-0000-4000-8000-000000000099';}],
+])test('HUB_SESSION_REFRESH immutable admission refuses '+name+' drift before '+mode,async()=>{
+ let forceCalls=0;
+ const f=await managerHomeFixture({configure:f=>{
+  f.auth.readSession=()=>Date.parse(f.session()?.expires_at)>f.now()?f.session():null;
+  f.auth.requireOpsManagerSession=async opts=>{if(opts.forceRefresh){forceCalls++;f.setSession({...f.session(),token:'synthetic-renewed-drift',expires_at:new Date(f.now()+900000).toISOString()});}return f.session();};
+ }});
+ const admitted=f.session();mutate(admitted);
+ if(mode==='expiry')f.setNow(Date.parse(admitted.expires_at)+1000);
+ if(mode==='clone')f.setSession({...admitted,token:'synthetic-cloned-drift'});
+ if(mode==='bfcache'){f.emit('pagehide',{persisted:true});f.emit('pageshow',{persisted:true});}else f.emit('focus');
+ await f.turn();await f.turn();assertHomeWithdrawn(f);assert.equal(f.node('hub-status').textContent,'Manager access changed or page retired. Reload to verify access.');
+ assert.equal(f.intervals.size,0);if(mode!=='bfcache')assert.equal(forceCalls,0);f.emit('pagehide');
 });

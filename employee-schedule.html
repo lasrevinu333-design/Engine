@@ -27,7 +27,7 @@
     const API='https://memphis-zoo-mcp.onrender.com/schedule-api',PREFIX='mz_employee_schedule_snapshot:',REFRESH_MS=60000;
     const els={times:document.getElementById('employee-times'),employee:document.getElementById('employee'),date:document.getElementById('date'),notice:document.getElementById('notice'),content:document.getElementById('content'),areas:document.getElementById('areas'),lunch:document.getElementById('lunch-content'),lunchAreas:document.getElementById('lunch-areas'),state:document.getElementById('state'),text:document.getElementById('state-text'),retry:document.getElementById('retry')};
     let loading=false,timer=0,boundary=0,lastView=null,loadVersion=0,shownPrincipal='',queued=false,paused=false,activeRequest=null;
-    const volatile=new Map(),unavailableDays=new Map(),presentationFences=new WeakMap();let securityBlocked=false,securityGeneration=0,activeRender=null;
+    const volatile=new Map(),unavailableDays=new Map(),presentationFences=new WeakMap(),persistedScheduleReads=new WeakMap(),volatileScheduleOrigins=new WeakMap(),supplementalMergedViews=new WeakSet();let securityBlocked=false,securityGeneration=0,activeRender=null;
     const esc=(value)=>String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     function healthyStatus(value){try{return value!==null&&typeof value==='object'&&value.ready===true&&value.available===true&&value.quarantined===false;}catch{return false;}}
     let nativeSecurityRequired=false;
@@ -159,15 +159,22 @@
       const memory=volatile.get(principal),live=memory?.data?.service_date===zooNow().date?memory:null;
       const isNative=native(owns);requireOwner();
       if(!isNative){if(live)presentationFences.set(live.data,{principal,date:zooNow().date,fence:observedAvailability});return live;}
-      let row;try{const raw=localStorage.getItem(key(principal));row=raw===null?null:JSON.parse(raw);if(raw!==null&&(!row||typeof row!=='object'||Array.isArray(row)))throw cacheError();}catch{throw cacheError();}
+      let row,persistedText;try{const raw=localStorage.getItem(key(principal));persistedText=raw;row=raw===null?null:JSON.parse(raw);if(raw!==null&&(!row||typeof row!=='object'||Array.isArray(row)))throw cacheError();}catch{throw cacheError();}
       if(row&&(row.schema_version!=='employee-schedule-snapshot.v2'||row.device_id!==deviceId(owns)||row.principal!==principal||!row.data||!matches(row.data,owns)))throw cacheError();
       if(row)window.MemphisRecurringScheduleTarget.assertSnapshot(row);
       if(row?.data?.service_date!==zooNow().date)row=null;
-      const winner=window.MemphisRecurringScheduleTarget.confirmedSnapshot(row,live);
+      let winner=window.MemphisRecurringScheduleTarget.confirmedSnapshot(row,live);
+      winner=basecampSnapshot(winner,row,persistedText,owns);requireOwner();
       window.MemphisRecurringScheduleTarget.assertAvailability(localStorage,principal,zooNow().date,observedAvailability);
       requireOwner();
       if(winner)presentationFences.set(winner.data,{principal,date:zooNow().date,fence:observedAvailability});
-      if(winner)volatile.set(principal,winner); // Observed disk authority becomes a live floor before any later deletion.
+      if(winner){
+        // Keep the actual protected disk observation separate from the live
+        // floor. Equal schedule revisions do not order supplemental parties.
+        persistedScheduleReads.set(winner.data,{text:persistedText,data:row?.data??null});
+        if(!volatileScheduleOrigins.has(winner.data))volatileScheduleOrigins.set(winner.data,persistedText);
+        volatile.set(principal,winner);
+      } // Observed disk authority becomes a live floor before any later deletion.
       return winner;
       }finally{requireOwner();} // Supersession is never ordinary absence/error.
     }
@@ -181,7 +188,11 @@
       if(!principal||identity(owns)!==principal||!matches(data,owns))throw new Error('identity');
       requireCaller(owns);
       const row={schema_version:'employee-schedule-snapshot.v2',device_id:deviceId(owns),principal,saved_at:new Date().toISOString(),data,
-        ...(prepared?{recurring_target:prepared}:{})};
+        ...(prepared?{recurring_target:prepared}:{}),
+        // This existing read-fence observation distinguishes otherwise equal
+        // writes, including a fixed clock. It is not new schedule authority.
+        ...(Object.hasOwn(data,'basecamp_birthday_work')?{supplemental_read_observation:JSON.stringify(observedAvailability)}:{})};
+      let diskBase=null;
       const validate=()=>{
         requireCaller(owns);
         if(!current(principal,version)||!matches(data,owns))throw Object.assign(new Error('schedule_request_invalidated'),{code:'schedule_request_invalidated'});
@@ -189,6 +200,14 @@
         if(data.service_date!==zooNow().date)throw Object.assign(new Error('schedule_target_date'),{code:'schedule_target_date'});
         window.MemphisRecurringScheduleTarget.assertAvailability(localStorage,principal,data.service_date,observedAvailability);
         const prior=snapshot(owns);requireCaller(owns);
+        const observed=persistedScheduleReads.get(prior?.data);
+        const externalCommit=observed?.data&&volatileScheduleOrigins.has(prior?.data)
+          &&volatileScheduleOrigins.get(prior.data)!==observed.text;
+        // A failed optional read cannot undo another page's committed party
+        // list. A newer unsaved local result survives while its disk parent
+        // is still current. Both are checked inside the existing save lock.
+        row.data=retainedBasecampWork(data,externalCommit?observed.data:prior?.data,owns);requireCaller(owns);
+        diskBase=observed?.text??null;
         window.MemphisRecurringScheduleTarget.assertSnapshotProgress(prior,row);
         if(prepared){
           window.MemphisRecurringScheduleTarget.assertMonotonic(prior?.recurring_target??null,prepared);
@@ -206,14 +225,15 @@
       let entered=false;
       try{await atomic(principal,()=>{
         validate();
-        requireCaller(owns);entered=true;volatile.set(principal,{...row,cache_unconfirmed:true});
+        requireCaller(owns);entered=true;volatileScheduleOrigins.set(row.data,diskBase);volatile.set(principal,{...row,cache_unconfirmed:true});
         const encoded=JSON.stringify(row);requireCaller(owns);localStorage.setItem(key(principal),encoded);
         if(localStorage.getItem(key(principal))!==encoded)throw new Error('save');
+        requireCaller(owns);volatileScheduleOrigins.set(row.data,encoded);
         requireCaller(owns);
         if(observedAvailability)window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,data.service_date,'AVAILABLE',observedAvailability);
         requireCaller(owns);volatile.set(principal,row);
       },owns);if(!entered)throw new Error('save');}catch(error){
-        if(!error?.code?.startsWith('schedule_')){validate();volatile.set(principal,{...row,cache_unconfirmed:true});}
+        if(!error?.code?.startsWith('schedule_')){validate();volatileScheduleOrigins.set(row.data,diskBase);volatile.set(principal,{...row,cache_unconfirmed:true});}
         throw error;
       }
     }
@@ -336,6 +356,81 @@
       // Direct invocation adds no mutable call/apply/bind helper after fencing.
       await request('/schedule-api/my-day-summary/application-receipt',options);
     }
+    // Supplemental party work stays outside the hashed recurring area view.
+    // Only the original native employee/credential/date/plan may see its note.
+    function basecampWork(data,owns){
+      if(!owns()||!data||!Object.hasOwn(data,'basecamp_birthday_work'))return null;
+      const admitted=captureSecurity({data,owns});
+      if(!owns()||!admitted?.native||data?.service_date!==zooNow().date||data?.projection_status!=='current'||!data?.shift)return null;
+      let work;try{work=JSON.parse(JSON.stringify(data.basecamp_birthday_work));}catch{return null;}
+      if(!owns()||work?.schema!=='custodial.basecamp-birthday-work.v1'
+        ||!['current','access_note_unavailable','saved_unconfirmed','unavailable'].includes(work.state)
+        ||!Array.isArray(work.items)||work.items.length>32)return null;
+      for(const key of ['service_date','employee_id','publication_id','projection_id','canonical_device_pk','credential_id','assignment_epoch'])
+        if(work[key]!==data[key]||work[key]===null||work[key]===undefined)return null;
+      const p=admitted.status?.principal;
+      if(!p||work.employee_id!==p.employee_id||work.credential_id!==p.credential_id||work.assignment_epoch!==p.assignment_epoch)return null;
+      const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+      const instant=value=>typeof value==='string'&&/(?:Z|[+-]\d{2}:\d{2})$/.test(value)&&Number.isFinite(Date.parse(value));
+      const localDate=value=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(value)).map(p=>[p.type,p.value]));return `${p.year}-${p.month}-${p.day}`;};
+      const text=(value,max)=>typeof value==='string'&&value.length>0&&value.length<=max&&!/[\u0000-\u001f\u007f]/.test(value);
+      const seen=new Set();
+      if(work.state==='unavailable'&&work.items.length)return null;
+      for(const item of work.items){
+        if(!uuid(item.event_id)||seen.has(item.event_id.toLowerCase())||!Number.isSafeInteger(item.event_revision)||item.event_revision<1
+          ||item.display_name!=='Safari Basecamp'||item.honor_based!==true||item.nfc_required!==false
+          ||!instant(item.party_start)||!instant(item.party_end)||Date.parse(item.party_start)>=Date.parse(item.party_end)
+          ||!(item.voice_notice_state==='planned'&&instant(item.voice_notice_at)&&localDate(item.voice_notice_at)===data.service_date||item.voice_notice_state==='withheld'&&item.voice_notice_at===null)||localDate(item.party_start)!==data.service_date
+          ||!text(item.cleaning_instruction,500)||!(item.access_note===null||text(item.access_note,1000)))return null;
+        seen.add(item.event_id.toLowerCase());
+      }
+      const current=captureSecurity({data,owns});
+      if(!owns()||!current?.native||current.principal!==admitted.principal||current.device!==admitted.device
+        ||current.status?.principal?.employee_id!==p.employee_id||current.status?.principal?.credential_id!==p.credential_id
+        ||current.status?.principal?.assignment_epoch!==p.assignment_epoch)return null;
+      return work;
+    }
+    function sameBasecampAssignmentFrame(a,b){
+      return Boolean(a&&b
+        &&['service_date','employee_id','publication_id','projection_id','canonical_device_pk','credential_id','assignment_epoch'].every(key=>a[key]===b[key])
+        &&['projection_status','shift','full_day','raw_items','current_items'].every(key=>canonical(a[key]??null)===canonical(b[key]??null)));
+    }
+    function basecampSnapshot(winner,disk,persistedText,owns){
+      if(!winner||!disk||!volatileScheduleOrigins.has(winner.data)
+        ||volatileScheduleOrigins.get(winner.data)===persistedText
+        ||!sameBasecampAssignmentFrame(winner.data,disk.data)
+        ||!Object.hasOwn(winner.data,'basecamp_birthday_work')&&!Object.hasOwn(disk.data,'basecamp_birthday_work'))return winner;
+      // Both complete records already passed the original snapshot/high-water
+      // checks. Follow the actual disk commit when their authority, receipts
+      // and published work are identical; informational extras may be newer.
+      const same=(a,b)=>canonical(a??null)===canonical(b??null);
+      const sameFrame=same(winner.recurring_target,disk.recurring_target)
+        &&['recurring_delivery','schedule_application','projection_authority_revision','authority_revision',
+          'schedule_delivery_mode','projection_status','shift','full_day','raw_items','current_items'].every(key=>same(winner.data[key],disk.data[key]));
+      if(sameFrame)return window.MemphisRecurringScheduleTarget.confirmedSnapshot(disk,null);
+      // Never downgrade a different main high-water or receipt to follow an
+      // optional list. Reconcile only the same-assignment supplemental observation;
+      // this derived, unpersisted combination remains ineligible for an ACK.
+      const work=basecampWork(disk.data,owns);if(!owns())throw cacheError();
+      const data={...winner.data,basecamp_birthday_work:work??{
+        schema:'custodial.basecamp-birthday-work.v1',state:'unavailable',items:[],
+        ...Object.fromEntries(['service_date','employee_id','publication_id','projection_id','canonical_device_pk','credential_id','assignment_epoch'].map(key=>[key,winner.data[key]]))}};
+      supplementalMergedViews.add(data);volatileScheduleOrigins.set(data,persistedText);
+      return {...winner,data,cache_unconfirmed:true};
+    }
+    function retainedBasecampWork(data,prior,owns){
+      const next=basecampWork(data,owns);if(next?.state!=='unavailable')return data;
+      const previous=basecampWork(prior,owns);if(!previous||previous.state==='unavailable')return data;
+      if(!sameBasecampAssignmentFrame(data,prior))return data;
+      return {...data,basecamp_birthday_work:{...previous,state:'saved_unconfirmed'}};
+    }
+    function basecampMarkup(data,owns){
+      const work=basecampWork(data,owns);if(!owns()||!work)return '';
+      if(work.state==='unavailable'||work.state==='saved_unconfirmed'&&!work.items.length)
+        return '<li class="area"><div class="areaDetail">Birthday assignments could not be checked.</div></li>';
+      const partyTime=value=>new Date(value).toLocaleTimeString('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit'});
+      return work.items.map(item=>`<li class="area"><div class="areaName">Safari Basecamp</div><div class="areaDetail">(${esc(item.access_note||'Key access information is temporarily unavailable.')})</div><div class="areaDetail">${esc(partyTime(item.party_start))}–${esc(partyTime(item.party_end))} · ${esc(item.cleaning_instruction)}</div>${work.state==='saved_unconfirmed'?'<div class="areaDetail">Saved birthday assignment; changes could not be checked.</div>':''}</li>`).join('');
+    }
     function render(data,{offline=false,cacheWarning=false,owns=()=>true}={}){
       const generation=securityGeneration,version=loadVersion;
       const owned=()=>owns()&&!paused&&generation===securityGeneration&&version===loadVersion;
@@ -367,8 +462,10 @@
       els.employee.textContent=String(data?.employee_name||data?.employee?.display_name||'Employee');els.date.textContent=date(data?.service_date)+(sameDay?` · ${friendlyTime(`${Math.floor(zooNow().seconds/3600)}:${String(Math.floor(zooNow().seconds%3600/60)).padStart(2,'0')}`)} Memphis time`:'');
       els.notice.textContent=!offline&&sameDay?String(data?.notice||''):'';els.notice.hidden=!els.notice.textContent;els.content.hidden=false;
       els.areas.innerHTML=regular.length&&zooWideNow(data)?'<li class="area"><div class="areaName">Zoo Wide Coverage</div></li>':regular.length?rows(regular):`<li class="area"><div class="areaName">${!sameDay?'Today’s schedule is unavailable.':offline&&!items.length?'No current areas can be confirmed from the saved schedule.':data?.schedule_status==='off'?'You are not scheduled today.':'No regular areas are active right now.'}</div></li>`;
+      const birthday=basecampMarkup(source,owned);if(!owned())return;if(birthday)els.areas.innerHTML+=birthday;
       els.lunch.hidden=!lunch.length;els.lunchAreas.innerHTML=rows(lunch);
-      state(cacheWarning?'This phone could not save a schedule copy. Phone storage needs repair.':offline?'Showing a saved schedule. Could not check for changes.':data?.stale===true?'Showing the latest saved schedule.':'',offline||cacheWarning);scheduleBoundary(data);
+      const mergedSupplement=supplementalMergedViews.has(source);
+      state(cacheWarning&&!mergedSupplement?'This phone could not save a schedule copy. Phone storage needs repair.':offline||mergedSupplement?'Showing a saved schedule. Could not check for changes.':data?.stale===true?'Showing the latest saved schedule.':'',offline||cacheWarning);scheduleBoundary(data);
       try{const committed=commitDisplayedBinding(selected,source,{owns:owned});if(committed===DISPLAY_SUPERSEDED)return null;reconcileAlerts(owned);return owned()?committed:null;
       }catch{if(!owned())return;clearPresentation();state('Schedule changed during display. Updating…',true);return;}
     }
