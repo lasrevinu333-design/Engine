@@ -11,7 +11,8 @@ import org.junit.Test;
 public final class PhysicalTagOccurrenceTest {
     interface Hook { void run() throws Exception; }
     static final class Preferences {
-        Map<String,Object> disk=new HashMap<>(),durableDisk=new HashMap<>();int commits,applies,clears;boolean fail,persistThenFail,corruptReadback;
+        Map<String,Object> disk=new HashMap<>(),durableDisk=new HashMap<>();int commits,applies,clears,finishProofRefusals;boolean fail,persistThenFail,corruptReadback;
+        Set<String> committingKeys=Set.of();
         private SharedPreferences instance;
         Hook beforeCommit=()->{},afterCommit=()->{};
         SharedPreferences object(){if(instance!=null)return instance;instance=(SharedPreferences)Proxy.newProxyInstance(getClass().getClassLoader(),new Class<?>[]{SharedPreferences.class},(proxy,method,args)->{
@@ -31,7 +32,7 @@ public final class PhysicalTagOccurrenceTest {
                     case "clear":clears++;throw new AssertionError("namespace clear");
                     case "apply":applies++;throw new AssertionError("async persistence");
                     case "commit":
-                        commits++;beforeCommit.run();if(fail)return false;
+                        committingKeys=new HashSet<>(puts.keySet());commits++;beforeCommit.run();if(fail)return false;
                         Map<String,Object> next=new HashMap<>(disk);for(String key:removes)next.remove(key);next.putAll(puts);disk=next;
                         if(corruptReadback)disk.put("stray","unknown preserved bytes");afterCommit.run();
                         if(!persistThenFail)durableDisk=new HashMap<>(disk);return !persistThenFail;
@@ -39,6 +40,12 @@ public final class PhysicalTagOccurrenceTest {
                 }
             });
         });return instance;}
+        void failFinishProofWrites(){
+            beforeCommit=()->{
+                fail=committingKeys.stream().anyMatch(key->key.startsWith("offline_finish_proof_sha256:"));
+                if(fail)finishProofRefusals++;
+            };
+        }
     }
     static final String D="KIOSK_08", S="a".repeat(64), A="nfc-a.v1:04010203040506", B="nfc-a.v1:04010203040507";
     static final class Fixture {
@@ -154,9 +161,9 @@ public final class PhysicalTagOccurrenceTest {
     }
     @Test public void freshEntryRepairsPartialProofWithoutChangingOriginalEnd()throws Exception{
         var f=new Fixture();String start=f.start();f.elapsed+=1000;
-        int failCommit=f.prefs.commits+2;
-        f.prefs.beforeCommit=()->{if(f.prefs.commits==failCommit)f.prefs.fail=true;};
+        f.prefs.failFinishProofWrites();
         refused("custodial_native_offline_occurrence_mismatch",()->f.finish(start,A));
+        assertTrue("The intended finish-proof persistence boundary must be reached",f.prefs.finishProofRefusals>0);
         f.prefs.fail=false;f.prefs.beforeCommit=()->{};f.elapsed+=3600000;f.restart();
         String originalEnd=f.store.loadOccurrence(f.session).completedAt;
         assertFalse(originalEnd.isEmpty());assertEquals("",f.store.loadFinishEntryId(f.store.loadOccurrence(f.session)));
@@ -202,10 +209,10 @@ public final class PhysicalTagOccurrenceTest {
     }
     @Test public void interruptionBetweenEndTimeAndFinishProofKeepsOriginalEndAndIdentity()throws Exception{
         var f=new Fixture();String start=f.start();f.elapsed+=1000;
-        int failCommit=f.prefs.commits+2;
-        f.prefs.beforeCommit=()->{if(f.prefs.commits==failCommit)f.prefs.fail=true;};
+        f.prefs.failFinishProofWrites();
         // Existing finish-proof adapter wraps persistence failure with its occurrence refusal code.
         refused("custodial_native_offline_occurrence_mismatch",()->f.finish(start,A));
+        assertTrue("The intended finish-proof persistence boundary must be reached",f.prefs.finishProofRefusals>0);
         f.prefs.fail=false;f.prefs.beforeCommit=()->{};f.restart();
         var saved=f.store.loadOccurrence(f.session);String originalEnd=saved.completedAt;
         assertFalse(originalEnd.isEmpty());assertEquals(A,saved.nativeTagIdentity);
