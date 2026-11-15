@@ -112,7 +112,8 @@
       state.messages=messages.data||[];state.proposals=repair.data?.proposals||[];state.jobs=repair.data?.jobs||[];renderTranscript();
       await restoreAttachmentRecovery(binding);if(!sameConversationPage(binding))return;
       if(state.attachments.some(item=>['upload_unconfirmed','removal_unconfirmed'].includes(item.status)))setStatus('Saved upload remains unconfirmed. Check the original upload before sending.','error');else setStatus('Ready');
-      await resumeOutbox();
+      await resumeOutbox();if(!sameConversationPage(binding))return;
+      if(state.uploadRecoveryUnavailable)setStatus('An earlier saved upload cannot be reconciled in this access session. Its original is retained; attachment changes and sending are held.','error');
     }catch(error){if(sameManagerSession(binding)&&!sameConversationPage(binding))return;throw error;}
   }
   async function renameConversation(){if(!state.conversation)return;const binding=captureConversationPage();const value=window.prompt('Conversation name',binding.conversation.title||'New chat');if(value==null)return;assertConversationPage(binding);const payload=await managerPageApi(`/conversations/${binding.conversation_id}`,binding,{method:'PATCH',body:JSON.stringify({title:value})});if(!sameConversationPage(binding))return;if(payload.data?.conversation_id!==binding.conversation_id)throw new Error('Conversation rename response did not match the original target.');Object.assign(binding.conversation,payload.data);const listing=await managerPageApi('/conversations?limit=100',binding);if(!sameConversationPage(binding))return;state.conversations=listing.data||[];renderConversations();el.title.textContent=payload.data.title;}
@@ -183,7 +184,7 @@
     if(['uploading','upload_unconfirmed','removal_unconfirmed'].includes(item.status))throw new Error('Original attachment remains unconfirmed. Check its saved status before removal.');
     try{if(item.attachment_id&&item.status==='ready'){
       item.status='removal_unconfirmed';if(attachmentRows.has(item))await saveAttachmentRecovery(item,binding);renderAttachments();
-      const payload=await managerPageApi(`/attachments/${encodeURIComponent(item.attachment_id)}`,binding,{method:'DELETE'});
+      const payload=await managerPageApi(`/attachments/${encodeURIComponent(item.attachment_id)}`,binding,{method:'DELETE'},true);
       if(payload.data?.attachment_id!==item.attachment_id||payload.data?.status!=='deleted')throw Object.assign(new Error('Original attachment deletion receipt is unconfirmed.'),{code:'attachment_deletion_unconfirmed'});
       if(attachmentRows.has(item)){attachmentReleaseProofs.add(item);await retireAttachmentRecovery(item,binding);}
     }}
@@ -243,11 +244,28 @@
     },()=>sameManagerSession(binding));
     attachmentRows.delete(item);
   }
+  async function dispatchProtectedAttachment(binding,initiate){
+    let pending;
+    try{
+      await mutateOutbox(()=>{
+        assertConversationPage(binding);pending=Promise.resolve(initiate());
+        // Observe immediately even if the admission's terminal owner check
+        // fails after fetch initiation. Never replay or compensate that request.
+        pending.catch(()=>{});
+      },()=>sameConversationPage(binding));
+    }catch(error){
+      if(pending){const response=await pending.catch(()=>null);try{await response?.body?.cancel?.();}catch{}}
+      throw error;
+    }
+    return pending;
+  }
   async function originalUploadApi(binding,body,dispatch){
     assertConversationPage(binding);const requestHeaders=await headers(true);assertConversationPage(binding);
     if(requestHeaders.Authorization!==`Bearer ${binding.token}`||requestHeaders['X-Device-Id']!==binding.device_id)throw originalManagerChanged();
-    dispatch.started=true;
-    const response=await fetch(`${API}/conversations/${encodeURIComponent(binding.conversation_id)}/attachments`,{method:'POST',cache:'no-store',credentials:'include',headers:requestHeaders,body:JSON.stringify(body)});
+    const response=await dispatchProtectedAttachment(binding,()=>{
+      dispatch.started=true;
+      return fetch(`${API}/conversations/${encodeURIComponent(binding.conversation_id)}/attachments`,{method:'POST',cache:'no-store',credentials:'include',headers:requestHeaders,body:JSON.stringify(body)});
+    });
     // A view switch cannot discard the receipt for the original in-flight
     // upload. Only its unchanged admitted manager may save it to that row.
     if(!sameManagerSession(binding))throw originalManagerChanged();
@@ -262,7 +280,13 @@
       for(const raw of rows){
         if(raw?.record_kind!==ATTACHMENT_RECOVERY_KIND)continue;
         validateAttachmentRecovery(raw);
-        if(!attachmentOwnerMatches(raw,binding)||raw.conversation_id!==binding.conversation_id||state.attachments.some(item=>item.attachment_id===raw.attachment_id))continue;
+        if(raw.conversation_id!==binding.conversation_id)continue;
+        if(!attachmentOwnerMatches(raw,binding)){
+          // A new valid access tuple cannot make a retained original vanish.
+          // Hold without displaying or adopting the earlier session's data.
+          state.uploadRecoveryUnavailable=true;continue;
+        }
+        if(state.attachments.some(item=>item.attachment_id===raw.attachment_id))continue;
         const item={...raw,localId:raw.client_message_id,status:raw.status==='removal_unconfirmed'?'removal_unconfirmed':'upload_unconfirmed'};
         attachmentRows.set(item,Object.freeze({...raw}));state.attachments.push(item);renderAttachments();
         try{await reconcileAttachment(item,binding);}catch(error){if(!sameConversationPage(binding))return;item.error=error.message;}
@@ -319,11 +343,12 @@
   function sameConversationPage(binding){return Boolean(sameManagerSession(binding)&&state.conversation===binding.conversation
     &&state.conversation?.conversation_id===binding.conversation_id&&state.selectedConversationGeneration===binding.generation);}
   function assertConversationPage(binding){if(!sameConversationPage(binding))throw originalManagerChanged();}
-  async function managerPageApi(path,binding,options={}){
+  async function managerPageApi(path,binding,options={},protectedAttachmentDispatch=false){
     assertConversationPage(binding);const requestHeaders=await headers(Boolean(options.body));assertConversationPage(binding);
     const finalHeaders={...requestHeaders,...(options.headers||{})};
     if(finalHeaders.Authorization!==`Bearer ${binding.token}`||finalHeaders['X-Device-Id']!==binding.device_id)throw originalManagerChanged();
-    const response=await fetch(`${API}${path}`,{cache:'no-store',credentials:'include',...options,headers:finalHeaders});
+    const initiate=()=>{assertConversationPage(binding);return fetch(`${API}${path}`,{cache:'no-store',credentials:'include',...options,headers:finalHeaders});};
+    const response=protectedAttachmentDispatch?await dispatchProtectedAttachment(binding,initiate):await initiate();
     assertConversationPage(binding);const payload=await response.json().catch(()=>null);assertConversationPage(binding);
     if(!response.ok||!payload?.ok){const error=Object.assign(new Error(payload?.error||`HTTP ${response.status}`),{status:response.status,code:payload?.code,data:payload?.data});if(response.status===401||response.status===403)lock(error);throw error;}return payload;
   }
