@@ -7,8 +7,8 @@ import { resolve } from 'node:path';
 const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const read = (path, encoding = 'utf8') => readFile(resolve(mobileRoot, path), encoding);
 const editions = {
-  manager: { path: '/manager/', name: 'Memphis Zoo Custodial Manager', color: '#081422' },
-  viewer: { path: '/viewer/', name: 'Memphis Zoo Custodial Viewer', color: '#0b3d3a' },
+  manager: { path: '/manager/', name: 'Memphis Zoo Custodial Manager', color: '#A45434' },
+  viewer: { path: '/viewer/', name: 'Memphis Zoo Custodial Viewer', color: '#A45434' },
 };
 
 function pngDimensions(bytes) {
