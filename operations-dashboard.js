@@ -21,7 +21,12 @@
     let boardToken=null,priorHistory=null,boardFingerprint='',lastMinute=null,nearbyIds=null,fallbackInert=null;
     let owner=null,currentRead=null,cleaning=null,lastAttendance=null,lastWeather=null;
     let tickerFrame=null,tickerTime=null,returnedTicker=null,mapScrollSize='';const tickerMotion=new Map();
-    const delayedFeeds=new Set();
+    const delayedFeeds=new Set(),pendingFeeds=new Set(['summary','operations','attendance','weather']);
+    const feedNames={activity:'Custodial tickets',tickets:'Custodial tickets',locations:'cleaning records',events:'events',schools:'school groups',spiceworks:'Spiceworks notices',city:'city work orders'};
+    const feedSource=kind=>['activity','tickets','locations'].includes(kind)?'summary':'operations';
+    const pending=kind=>pendingFeeds.has(feedSource(kind));
+    const received=kind=>feedSource(kind)==='summary'?!!summary:kind==='events'?!!ops
+      :['current','snapshot'].includes(ops?.[kind==='spiceworks'?'spiceworks_activity':kind]?.state);
     const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const txt=(id,value)=>{const node=el(id);if(node&&node.textContent!==String(value))node.textContent=value;};
     const make=(tag,value,klass)=>{const node=document.createElement(tag);if(value!=null)node.textContent=value;if(klass)node.className=klass;return node;};
@@ -84,8 +89,11 @@
     }catch{return false;}}
     function approved(){return pins().map(p=>({id:p.dataset.locationId,name:p.dataset.approvedLocationName}));}
     function locationBoard(){const v=cleaning||cleaningView(null,approved(),now());
-      return{...v,title:nearbyIds?'Nearby locations':v.title,cards:v.cards.filter(p=>!nearbyIds||nearbyIds.includes(p.id))};}
+      const loading=pending('locations')&&!summary;
+      return{...v,...(loading?{note:'Loading cleaning records…',pending:true}:{}),title:nearbyIds?'Nearby locations':v.title,
+        cards:v.cards.filter(p=>!nearbyIds||nearbyIds.includes(p.id)).map(card=>loading?{...card,lines:['Loading cleaning record…']}:card)};}
     function view(kind){if(kind==='locations')return locationBoard();
+      if(pending(kind)&&!received(kind))return{title:feedNames[kind],cards:[],note:`Loading ${feedNames[kind]}…`,pending:true};
       if(kind==='activity'){const feeds=activityKinds.map(kind=>view(kind));return{title:publicRead?'Open tickets':'Activity',cards:feeds.flatMap((feed,index)=>feed.cards.filter(card=>index!==1||card.active)),note:feeds.map(feed=>feed.note).join('\n')};}
       if(kind==='tickets')return {...DATA.tickets(summary,null),note:!summary?'Internal Custodial tickets unavailable.':publicRead?'Read-only internal Custodial tickets.':'Open the Dashboard to resolve eligible internal Custodial tickets.'};
       if(kind==='events')return ops?DATA.events(ops.events,now()):{title:'Events',cards:[],note:'Structured event feed unavailable.'};
@@ -93,7 +101,9 @@
       if(kind==='city')return DATA.cityWorkOrders(ops?.city);
       return DATA.schools(ops?.schools,now());}
     function renderBoard(force=false){if(!board)return;
-      const v=DATA.operationalView(board,view(board));
+      const original=view(board),v=DATA.operationalView(board,original);
+      if(original.pending||(!original.cards.length&&/unavailable/i.test(original.note)))v.note=original.note;
+      if(pending(board)&&received(board))v.note+=' Updating… Showing the last received records.';
       if(delayedFeeds.has(board))v.note+=' Update delayed. Showing the last received records.';
       const fingerprint=JSON.stringify(v);if(!force&&fingerprint===boardFingerprint)return;
       boardFingerprint=fingerprint;const top=content.scrollTop,focused=document.activeElement?.dataset?.locationSelect;
@@ -105,13 +115,13 @@
         if(card.location){const button=make('button','Show on map');button.type='button';button.dataset.locationSelect=card.id;article.append(button);}
         return article;
       };
-      const nodes=v.cards.length?v.cards.map(cardNode):[make('p','No active rows to display. Check the source status above.','boardCard')];
+      const nodes=v.cards.length?v.cards.map(cardNode):[make('p',v.pending?v.note:'No active rows to display. Check the source status above.','boardCard')];
       if(v.history?.length){const history=make('details');history.append(make('summary',`${board==='schools'?'Daily visit history':'Event history'} · ${v.history.length} records (not active)`),...v.history.map(cardNode));nodes.push(history);}
       content.replaceChildren(...nodes);
       content.scrollTop=top;
       if(focused)Array.from(content.querySelectorAll('[data-location-select]')).find(n=>n.dataset.locationSelect===focused)?.focus({preventScroll:true});
     }
-    function renderHighLow(){txt('ops-weather-high-low',lastWeather?.day===DATA.localDate(now())?lastWeather.highLow:'High/low unavailable.');}
+    function renderHighLow(){txt('ops-weather-high-low',lastWeather?.day===DATA.localDate(now())?lastWeather.highLow:pendingFeeds.has('weather')?'Loading high/low…':'High/low unavailable.');}
     function tick(){if(!active||closed)return;
       if(!bound()){unavailable();return;}
       renderHighLow();
@@ -125,20 +135,20 @@
     function renderActivity(){
       const expected=DATA.dailyExpected(ops,now());
       for(const kind of ['schools','events']){
-        txt('ops-'+kind+'-expected',expected[kind].value);
-        txt('ops-'+kind+'-expected-note',expected[kind].note+(delayedFeeds.has(kind)?' Update delayed; showing last received records.':''));
+        txt('ops-'+kind+'-expected',pending(kind)&&!received(kind)?'Loading…':expected[kind].value);
+        txt('ops-'+kind+'-expected-note',pending(kind)&&!received(kind)?`Loading ${feedNames[kind]}…`:expected[kind].note+(delayedFeeds.has(kind)?' Update delayed; showing last received records.':''));
       }
       const labels={tickets:'TICKETS'};
       const activity=activityKinds.flatMap(kind=>{const feed=view(kind),cards=feed.cards.filter(card=>kind!=='events'||card.active);
-        return (cards.length?cards.map(card=>card.title):[summary?'No open tickets':'Tickets unavailable']).map(text=>labels[kind]+': '+text);});
+        return (cards.length?cards.map(card=>card.title):[feed.pending?feed.note:summary?'No open tickets':'Tickets unavailable']).map(text=>labels[kind]+': '+text);});
       recordTicker('ops-activity-ticker',activity,'Tickets unavailable');
       const events=ops?DATA.events(ops.events,now(),{labelToday:true}).cards.filter(card=>card.active):[];
-      recordTicker('ops-events-ticker',events.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]} · ${card.lines[2]}`),ops?'No upcoming events loaded':'Events unavailable');
+      recordTicker('ops-events-ticker',events.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]} · ${card.lines[2]}`),pending('events')&&!ops?'Loading events…':ops?'No upcoming events loaded':'Events unavailable');
       const schoolRows=DATA.orderedSchools(ops?.schools).filter(row=>!['CANCELLED','SUPERSEDED'].includes(row.status)&&row.date>=DATA.localDate(now()));
       const count=value=>DATA.count(value)===null?'Unknown':String(value);
-      recordTicker('ops-schools-ticker',schoolRows.map(row=>`${DATA.text(row.name)} · ${DATA.calendarDate(row.date,DATA.localDate(now()))} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`),ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable');
+      recordTicker('ops-schools-ticker',schoolRows.map(row=>`${DATA.text(row.name)} · ${DATA.calendarDate(row.date,DATA.localDate(now()))} · Expected ${DATA.clock(row.arrival_at)} · ${count(row.buses)} buses · ${count(DATA.count(row.students)!==null&&DATA.count(row.adults)!==null?row.students+row.adults:null)} planned people`),view('schools').pending?'Loading school groups…':ops?.schools?.state==='snapshot'||ops?.schools?.state==='current'?'No upcoming school visits loaded':'School visits unavailable');
       const internal=view('tickets');
-      recordTicker('ops-tickets-ticker',internal.cards.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]}`),summary?'No open Custodial tickets':'Custodial tickets unavailable');
+      recordTicker('ops-tickets-ticker',internal.cards.map(card=>`${card.title} · ${card.lines[0]} · ${card.lines[1]}`),internal.pending?internal.note:summary?'No open Custodial tickets':'Custodial tickets unavailable');
       const spice=view('spiceworks'),city=view('city');
       recordTicker('ops-spiceworks-ticker',spice.cards.map(card=>card.title),spice.note);
       recordTicker('ops-city-ticker',city.cards.map(card=>`${card.title} · ${card.status} · ${card.lines[1]}`),city.note);
@@ -150,10 +160,12 @@
       measureTickers();
     }
     function renderFeeds(){
+      txt('ops-source-status',pendingFeeds.size?'Updating dashboard… Each source is loading; displayed records are the last received until its response arrives.':'Dashboard requests finished. Source notes identify any unavailable or delayed data.');
+      if(el('ops-source-status'))el('ops-source-status').hidden=pendingFeeds.size===0;
       if(el('ops-mod-card'))el('ops-mod-card').hidden=false;
-      txt('ops-mod',DATA.managerOnDuty(ops?.manager_on_duty,now()));
+      txt('ops-mod',pendingFeeds.has('operations')?'Loading…':DATA.managerOnDuty(ops?.manager_on_duty,now()));
       renderActivity();const locations=view('locations');
-      const labels={okay:'Cleaned',in_progress:'In progress',due_soon:'Due soon',overdue:'Overdue',not_cleaned:'Not cleaned',pending_submit:'Saved pending',unknown:'Unavailable'};
+      const labels={okay:'Cleaned',in_progress:'In progress',due_soon:'Due soon',overdue:'Overdue',not_cleaned:'Not cleaned',pending_submit:'Saved pending',unknown:pending('locations')&&!summary?'Loading…':'Unavailable'};
       const ticker=el('ops-locations-ticker');
       if(ticker){
         const fingerprint=JSON.stringify(locations.cards.map(card=>[card.id,card.title,card.state,card.lines[0]]));
@@ -170,28 +182,33 @@
       measureTickers();
       const counts=new Map();for(const card of (cleaning||cleaningView(null,approved(),now())).cards)
         counts.set(card.state,(counts.get(card.state)||0)+1);
-      el('ops-status-counts')?.replaceChildren(...[...counts].map(([status,n])=>{const node=make('span',`${n} ${status.replaceAll('_',' ')}`);node.dataset.status=status;return node;}));
+      el('ops-status-counts')?.replaceChildren(...(pending('locations')&&!summary?[make('span','Loading cleaning status…')]:[...counts].map(([status,n])=>{const node=make('span',`${n} ${status.replaceAll('_',' ')}`);node.dataset.status=status;return node;})));
       renderBoard();
     }
     function cancel(){epoch++;abort?.abort();abort=null;if(requestTimer!==null)window.clearTimeout(requestTimer);requestTimer=null;}
     function beginRefresh({isCurrent}){
       cancel();currentRead={epoch,isCurrent};
       if(typeof isCurrent!=='function'||!bound()){unavailable();return false;}
+      pendingFeeds.add('summary');renderFeeds();
       return true;
     }
-    function summaryUnavailable(){summary=null;cleaning=null;renderFeeds();}
+    function summaryUnavailable(){pendingFeeds.delete('summary');summary=null;cleaning=null;renderFeeds();}
     function updateSummary({summary:next,isCurrent}){
       if(typeof isCurrent!=='function'||!isCurrent()||!bound())return false;
-      summary=next;cleaning=cleaningView(next,approved(),now());renderFeeds();return true;
+      pendingFeeds.delete('summary');summary=next;cleaning=cleaningView(next,approved(),now());renderFeeds();return true;
     }
     async function refresh({headers,fetchImpl,isCurrent,summary:next,preserveSummary=false}){
       if(!active||closed)return;cancel();const generation=epoch;abort=new AbortController();const signal=abort.signal;
       currentRead={epoch:generation,isCurrent};
       if(typeof isCurrent!=='function'||!bound()){unavailable();return;}
+      for(const kind of ['operations','attendance','weather'])pendingFeeds.add(kind);
       requestTimer=window.setTimeout(()=>{if(generation===epoch)abort?.abort();},10000);
       // Snapshot the safe record presentation at admission, not from mutable
       // caller rows after an unrelated awaited feed. Never infer from pin text.
-      if(!preserveSummary){summary=next;cleaning=cleaningView(next,approved(),now());}
+      if(!preserveSummary){pendingFeeds.delete('summary');summary=next;cleaning=cleaningView(next,approved(),now());}
+      txt('ops-attendance',lastAttendance?lastAttendance.value:'Loading…');txt('ops-attendance-note',lastAttendance?`${lastAttendance.note} · Updating… Last received count.`:'Loading gate count…');
+      txt('ops-weather',lastWeather?lastWeather.value:'Loading…');txt('ops-weather-note',lastWeather?`${lastWeather.note} · Updating… Last received forecast.`:'Loading weather…');
+      txt('ops-hour',lastWeather?`${lastWeather.hour} · Updating…`:'Loading next-hour forecast…');
       renderFeeds();
       const load=async(url,privateFeed=true)=>{const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(publicRead?{credentials:'omit'}:privateFeed?{headers}:{})});
         if(!response.ok)throw new Error('feed_unavailable');return response.json();};
@@ -203,22 +220,24 @@
       // must not suppress an available forecast or turn unknown facts into zero.
       const tasks=[
         load(`${API}/dashboard-api/current-attendance`).catch(()=>null).then(value=>{
-          if(!publish())return;const attendance=DATA.attendance(value);
+          if(!publish())return;pendingFeeds.delete('attendance');const attendance=DATA.attendance(value);
           if(attendance.value!=='Unavailable')lastAttendance=attendance;
           txt('ops-attendance',attendance.value==='Unavailable'&&lastAttendance?lastAttendance.value:attendance.value);
           txt('ops-attendance-note',attendance.value==='Unavailable'&&lastAttendance?`${lastAttendance.note} · Update delayed`:attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);
+          renderFeeds();
         }),
         load(WEATHER,false).catch(()=>null).then(value=>{
-          if(!publish())return;const weather=DATA.weather(value,now());
+          if(!publish())return;pendingFeeds.delete('weather');const weather=DATA.weather(value,now());
           if(weather.value!=='Unavailable')lastWeather=weather;renderHighLow();
           txt('ops-weather',weather.value==='Unavailable'&&lastWeather?lastWeather.value:weather.value);
           txt('ops-weather-note',weather.value==='Unavailable'&&lastWeather?`${lastWeather.note} · Update delayed`:weather.note);el('ops-weather-note').dataset.stale=String(weather.stale);txt('ops-hour',weather.value==='Unavailable'&&lastWeather?lastWeather.hour:weather.hour);
+          renderFeeds();
         })
       ];
       // Public tickers use only the existing sanitized viewer projection.
       // No manager headers, source mail, or schedule reads are used there.
       tasks.push(load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`).catch(()=>null).then(value=>{
-        if(!publish())return;let replacement=null;try{replacement=DATA.operations(value);}catch{}
+        if(!publish())return;pendingFeeds.delete('operations');let replacement=null;try{replacement=DATA.operations(value);}catch{}
         delayedFeeds.clear();
         if(replacement){
           for(const [field,kind] of [['schools','schools'],['spiceworks_activity','spiceworks'],['city','city']]){
@@ -279,13 +298,15 @@
     async function exitMap(){const target=page;fsEpoch++;mapExpanded=false;target.classList.remove('dashboard-expanded');
       if(document.fullscreenElement===target)await document.exitFullscreen?.().catch(()=>{});
       el('operations-map-fullscreen').setAttribute('aria-pressed','false');el('operations-map-fullscreen').title='';txt('operations-map-fullscreen','⛶ Full screen');}
-    function unavailable({preserveBoard=false,preserveMap=false}={}){cancel();currentRead=null;summary=null;cleaning=null;ops=null;delayedFeeds.clear();lastAttendance=null;lastWeather=null;
+    function unavailable({preserveBoard=false,preserveMap=false}={}){cancel();currentRead=null;pendingFeeds.clear();summary=null;cleaning=null;ops=null;delayedFeeds.clear();lastAttendance=null;lastWeather=null;
       const preserveOwner=active&&!closed&&sameOwner();
       if(!preserveBoard||!preserveOwner)closeBoard({history:false,focus:false});
       if(!preserveMap||!preserveOwner)void exitMap();
       txt('ops-attendance','Unavailable');txt('ops-attendance-note','Current gate count unavailable.');txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderHighLow();renderFeeds();}
     function suspend(){active=false;if(tickerFrame!==null)window.cancelAnimationFrame(tickerFrame);tickerFrame=null;tickerTime=null;unavailable();panel.hidden=true;el('ops-locations-button').hidden=true;}
     function activate(renderer){if(closed)return;map=renderer;owner=publicRead?null:session();active=publicRead||!!owner;
+      if(active){for(const kind of ['summary','operations','attendance','weather'])pendingFeeds.add(kind);
+        txt('ops-attendance','Loading…');txt('ops-attendance-note','Loading gate count…');txt('ops-weather','Loading…');txt('ops-weather-note','Loading weather…');txt('ops-hour','Loading next-hour forecast…');}
       panel.hidden=!active;el('ops-locations-button').hidden=!active;if(active)tick();else unavailable();}
     function stop(){if(closed)return;suspend();closed=true;for(const [target,event,fn,options]of listeners)target?.removeEventListener(event,fn,options);listeners.length=0;map=null;}
     for(const trigger of document.querySelectorAll('[data-board]'))listen(trigger,'click',()=>openBoard(trigger.dataset.board,trigger));
