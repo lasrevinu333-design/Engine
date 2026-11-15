@@ -1,7 +1,7 @@
 {
   "schema": "custodial.provider-source-protocol-evidence.v1",
   "scope": "Source repair qualification only; no deployed SQL/runtime, provider-send, build, install or physical acceptance",
-  "backend_source_commit": "3e9f2bd578c33bdb5c6f97feb1c6f6480b7f6d61",
+  "backend_source_commit": "99aadbf7b1da876dc76a1b7fd9b1ebd812ebedba",
   "sources": [
     {
       "path": "src/native-message-dispatch.js",
@@ -15,14 +15,19 @@
     },
     {
       "path": "supabase/migrations/20261115133604_native_alert_generation_pending.sql",
-      "bytes": 18995,
-      "sha256": "4b182e45b7e78d460d57d2a948da920c288fe0b29d34671069a395eb5c7db0cb"
+      "bytes": 19748,
+      "sha256": "79dc01a924668455a4438e11fc644a290e7caad8f39bdacf211548b363c99e8b"
     }
   ],
   "root_checks": {
     "message_event_dispatch": 95,
-    "postgres_function_boundary": 71,
-    "canonical_319_or_production_427_storage_restore": false
+    "postgres_function_boundary": 84,
+    "canonical_319_or_production_427_storage_restore": false,
+    "S81_01_actual_claim_paths": 2,
+    "S81_01_max_attempt_controls": [
+      1,
+      12
+    ]
   },
   "retained_test_evidence": [
     {
@@ -34,13 +39,19 @@
       "path": "NATIVE_ALERT_PENDING_REHEARSAL_RUN04.json",
       "bytes": 10535,
       "sha256": "8cea03fdc5a5c9843c4869b682c62ac83fba8cf231b32d393c9732c6a8e73ede"
+    },
+    {
+      "path": "r82/NATIVE_ALERT_PENDING_REHEARSAL_R82.json",
+      "bytes": 12937,
+      "sha256": "bc7dff243f2b465f6ec5bdbb37fa15ddcfb82a8d6799de24cf7b0cc400a1dc41"
     }
   ],
   "preserved_contracts": [
     "no token or expected tuple while initial generation pending",
     "all original recipient and lease checks before pending",
     "true supersession stays terminal",
-    "original job/message/work unchanged; no replay",
-    "atomic exact retained-definition rebind; ALWAYS capture guard and separate global fence preserved"
+    "Migration leaves existing job/message/work rows unchanged; runtime retains exact identity/payload/source and changes only its deferred lease metadata",
+    "atomic exact retained-definition rebind; ALWAYS capture guard and separate global fence preserved",
+    "Exact waiting lease released and its single claim refunded atomically; existing lease expiry retained, prior real attempts/max/payload/source unchanged; duplicate lease cannot refund again"
   ]
 }

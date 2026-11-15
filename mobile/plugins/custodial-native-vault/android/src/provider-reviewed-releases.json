@@ -5,7 +5,7 @@
     {
       "version_code": 81,
       "version_name": "1.0.0",
-      "backend_protocol_evidence_sha256": "a98876651d9a4f4b0654ab06f787b29422d0f8807346acf4ed128d1bac70d004",
+      "backend_protocol_evidence_sha256": "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952",
       "composition_evidence_sha256": "10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878",
       "profile": {
         "id": "android-elapsed-best-effort.karen-api36.v1",
