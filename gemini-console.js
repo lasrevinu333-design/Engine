@@ -5,6 +5,8 @@
   const MAX_ATTACHMENTS=8;
   const DB_NAME='memphis-gemini-console';
   const DB_STORE='outbox';
+  const ATTACHMENT_RECOVERY_KIND='custodial.console-attachment-recovery.v1';
+  const attachmentRows=new WeakMap(),attachmentReleaseProofs=new WeakSet();
   // Local operation capabilities, never reconstructed from persisted queued
   // labels. Reload/another tab cannot prove an original was never attempted.
   const freshOutboxOriginals=new WeakSet(),admittedOutboxDispatches=new WeakSet();
@@ -107,7 +109,9 @@
         managerPageApi(`/conversations/${encodeURIComponent(id)}/repair-state`,binding),
       ]);
       if(!sameConversationPage(binding))return;
-      state.messages=messages.data||[];state.proposals=repair.data?.proposals||[];state.jobs=repair.data?.jobs||[];renderTranscript();setStatus('Ready');
+      state.messages=messages.data||[];state.proposals=repair.data?.proposals||[];state.jobs=repair.data?.jobs||[];renderTranscript();
+      await restoreAttachmentRecovery(binding);if(!sameConversationPage(binding))return;
+      if(state.attachments.some(item=>['upload_unconfirmed','removal_unconfirmed'].includes(item.status)))setStatus('Saved upload remains unconfirmed. Check the original upload before sending.','error');else setStatus('Ready');
       await resumeOutbox();
     }catch(error){if(sameManagerSession(binding)&&!sameConversationPage(binding))return;throw error;}
   }
@@ -136,28 +140,155 @@
 
   async function addFiles(files){
     if(!state.conversation||!files.length)return;
+    if(state.uploadRecoveryUnavailable||state.attachments.some(item=>['upload_unconfirmed','removal_unconfirmed'].includes(item.status))){showError(new Error('Check the saved original upload before adding another file.'));return;}
     const binding=captureConversationPage(),target=binding.conversation,attachments=state.attachments;
     for(const file of files){
       if(!sameConversationPage(binding))return;
+      if(state.uploadRecoveryUnavailable||attachments.some(item=>['upload_unconfirmed','removal_unconfirmed'].includes(item.status))){showError(new Error('Check the saved original upload before adding another file.'));break;}
       if(attachments.length>=MAX_ATTACHMENTS){showError(new Error(`Maximum ${MAX_ATTACHMENTS} attachments.`));break;}
       if(file.size<1||file.size>MAX_FILE_BYTES){showError(new Error(`${file.name} must be between 1 byte and 6 MB.`));continue;}
-      const local={localId:uuid(),name:file.name,size:file.size,status:'uploading',attachment_id:null,conversation_id:binding.conversation_id};attachments.push(local);renderAttachments();
-      try{const base64=await fileBase64(file);assertConversationPage(binding);const payload=await managerPageApi(`/conversations/${encodeURIComponent(binding.conversation_id)}/attachments`,binding,{method:'POST',body:JSON.stringify({filename:file.name,mime_type:file.type||mimeFallback(file.name),data_base64:base64})});if(!sameConversationPage(binding))return;Object.assign(local,payload.data,{status:'ready'});}
-      catch(error){if(!sameConversationPage(binding))return;local.status='failed';local.error=error.message;}
+      const localId=uuid(),local={localId,name:file.name,size:file.size,status:'uploading',attachment_id:localId,conversation_id:binding.conversation_id,created_at:new Date().toISOString(),storage_upload:'not_attempted',metadata_insert:'not_attempted'};attachments.push(local);renderAttachments();
+      let persistenceAttempted=false;const dispatch={started:false};
+      try{
+        const base64=await fileBase64(file);assertConversationPage(binding);
+        const bytes=Uint8Array.from(atob(base64),character=>character.charCodeAt(0));
+        local.sha256=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),byte=>byte.toString(16).padStart(2,'0')).join('');
+        assertConversationPage(binding);if(bytes.length!==local.size)throw new Error('Original file size changed before upload.');
+        persistenceAttempted=true;await saveAttachmentRecovery(local,binding);assertConversationPage(binding);
+        const payload=await originalUploadApi(binding,{filename:file.name,mime_type:file.type||mimeFallback(file.name),data_base64:base64,client_attachment_id:localId},dispatch);
+        if(payload.data?.attachment_id!==localId||payload.data?.sha256!==local.sha256||payload.data?.size_bytes!==local.size)throw new Error('Original upload receipt is unconfirmed.');
+        await saveAttachmentRecovery(local,binding,{status:'ready',storage_upload:'confirmed',metadata_insert:'confirmed'});
+        Object.assign(local,payload.data,{status:'ready',storage_upload:'confirmed',metadata_insert:'confirmed'});
+      }catch(error){
+        local.error=error.message;
+        if(persistenceAttempted){
+          local.status='upload_unconfirmed';
+          const notStarted=!dispatch.started||(error.code==='attachment_upload_not_started'&&error.data?.attachment_id===localId
+            &&error.data?.conversation_id===binding.conversation_id&&error.data?.storage_upload==='not_attempted'&&error.data?.metadata_insert==='not_attempted');
+          if(notStarted&&sameManagerSession(binding)&&attachmentRows.has(local)){
+            try{attachmentReleaseProofs.add(local);await retireAttachmentRecovery(local,binding);local.status='failed';local.attachment_id=null;}catch{if(sameConversationPage(binding))state.uploadRecoveryUnavailable=true;}
+          }
+          if(error.code==='attachment_upload_unconfirmed'&&error.data?.attachment_id===localId){
+            for(const key of ['storage_upload','metadata_insert'])if(['not_attempted','unconfirmed','confirmed'].includes(error.data[key]))local[key]=error.data[key];
+          }
+          if(sameManagerSession(binding)&&attachmentRows.has(local)){try{await saveAttachmentRecovery(local,binding);}catch{if(sameConversationPage(binding))state.uploadRecoveryUnavailable=true;}}
+        }else{local.status='failed';local.attachment_id=null;}
+      }
       if(!sameConversationPage(binding))return;renderAttachments();
     }
   }
-  function renderAttachments(){el.attachmentList.replaceChildren();state.attachments.forEach(item=>{const chip=document.createElement('div');chip.className=`attachment-chip ${item.status}`;const name=document.createElement('span');name.textContent=`${item.name||item.original_filename} · ${formatBytes(item.size||item.size_bytes)}${item.status==='removal_unconfirmed'?' · Removal unconfirmed':''}`;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.disabled=item.status==='removal_unconfirmed';remove.setAttribute('aria-label',`Remove ${item.name||item.original_filename}`);remove.addEventListener('click',()=>removeAttachment(item).catch(showError));chip.append(name,remove);el.attachmentList.append(chip);});}
+  function renderAttachments(){el.attachmentList.replaceChildren();state.attachments.forEach(item=>{const chip=document.createElement('div');chip.className=`attachment-chip ${item.status}`;const name=document.createElement('span');const label=item.status==='upload_unconfirmed'?' · Upload unconfirmed':item.status==='removal_unconfirmed'?' · Removal unconfirmed':item.status==='uploading'?' · Uploading…':'';name.textContent=`${item.name||item.original_filename} · ${formatBytes(item.size||item.size_bytes)}${label}`;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.disabled=['uploading','upload_unconfirmed','removal_unconfirmed'].includes(item.status);remove.setAttribute('aria-label',`Remove ${item.name||item.original_filename}`);remove.addEventListener('click',()=>removeAttachment(item).catch(showError));chip.append(name,remove);if(['upload_unconfirmed','removal_unconfirmed'].includes(item.status)){const check=document.createElement('button');check.type='button';check.className='attachment-check';check.textContent='Check saved upload';check.disabled=item.checking===true;check.addEventListener('click',()=>reconcileAttachment(item).catch(showError));chip.append(check);}el.attachmentList.append(chip);});}
   async function removeAttachment(item){
     const binding=captureConversationPage(),attachments=state.attachments;if(!attachments.includes(item))return;
-    if(item.status==='removal_unconfirmed')throw new Error('Attachment removal remains unconfirmed. The original attachment is retained for review.');
+    if(['uploading','upload_unconfirmed','removal_unconfirmed'].includes(item.status))throw new Error('Original attachment remains unconfirmed. Check its saved status before removal.');
     try{if(item.attachment_id&&item.status==='ready'){
+      item.status='removal_unconfirmed';if(attachmentRows.has(item))await saveAttachmentRecovery(item,binding);renderAttachments();
       const payload=await managerPageApi(`/attachments/${encodeURIComponent(item.attachment_id)}`,binding,{method:'DELETE'});
       if(payload.data?.attachment_id!==item.attachment_id||payload.data?.status!=='deleted')throw Object.assign(new Error('Original attachment deletion receipt is unconfirmed.'),{code:'attachment_deletion_unconfirmed'});
+      if(attachmentRows.has(item)){attachmentReleaseProofs.add(item);await retireAttachmentRecovery(item,binding);}
     }}
     catch(error){if(sameConversationPage(binding)&&state.attachments===attachments&&(error?.code==='attachment_deletion_unconfirmed'||error?.status>=500||error?.status==null)){item.status='removal_unconfirmed';renderAttachments();}throw error;}
     if(!sameConversationPage(binding)||state.attachments!==attachments||!attachments.includes(item))return;
     state.attachments=attachments.filter(row=>row!==item);renderAttachments();
+  }
+
+  function attachmentOwnerMatches(row,binding){return row.manager_id===binding.manager_id&&row.credential_id===binding.credential_id
+    &&row.device_id===binding.device_id&&row.claimed_manager_id===binding.claimed_manager_id&&row.auth_mode===binding.auth_mode;}
+  function validateAttachmentRecovery(row){
+    const fields=['record_kind','client_message_id','conversation_id','manager_id','credential_id','device_id','claimed_manager_id','auth_mode','attachment_id','name','size','sha256','created_at','status','storage_upload','metadata_insert'];
+    const validId=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
+    if(!row||Object.keys(row).length!==fields.length||Object.keys(row).some(key=>!fields.includes(key))
+      ||row.record_kind!==ATTACHMENT_RECOVERY_KIND||['client_message_id','conversation_id','manager_id','credential_id','attachment_id'].some(key=>!validId(row[key]))
+      ||row.client_message_id!==row.attachment_id||typeof row.device_id!=='string'||!row.device_id||row.device_id.length>160
+      ||typeof row.auth_mode!=='string'||typeof row.claimed_manager_id!=='string'||(row.claimed_manager_id!==''&&!validId(row.claimed_manager_id))
+      ||(row.auth_mode==='custodial_leadership_pin'&&!validId(row.claimed_manager_id))
+      ||typeof row.name!=='string'||!row.name||row.name.length>1024||!Number.isInteger(row.size)||row.size<1||row.size>MAX_FILE_BYTES
+      ||typeof row.sha256!=='string'||!/^[a-f0-9]{64}$/.test(row.sha256)||typeof row.created_at!=='string'||!Number.isFinite(Date.parse(row.created_at))
+      ||!['ready','upload_unconfirmed','removal_unconfirmed'].includes(row.status)
+      ||['storage_upload','metadata_insert'].some(key=>!['not_attempted','unconfirmed','confirmed'].includes(row[key])))throw outboxError('gemini_attachment_original_invalid');
+    return row;
+  }
+  function sameAttachmentRow(actual,expected){return actual&&expected&&Object.keys(actual).length===Object.keys(expected).length
+    &&Object.keys(expected).every(key=>Object.hasOwn(actual,key)&&actual[key]===expected[key]);}
+  async function saveAttachmentRecovery(item,binding,patch={}){
+    const row=validateAttachmentRecovery({record_kind:ATTACHMENT_RECOVERY_KIND,client_message_id:item.localId,
+      conversation_id:item.conversation_id,manager_id:binding.manager_id,credential_id:binding.credential_id,device_id:binding.device_id,
+      claimed_manager_id:binding.claimed_manager_id,auth_mode:binding.auth_mode,attachment_id:item.attachment_id,name:item.name,size:item.size,
+      sha256:item.sha256,created_at:item.created_at,status:item.status==='uploading'?'upload_unconfirmed':item.status,
+      storage_upload:item.storage_upload,metadata_insert:item.metadata_insert,...patch});
+    const expected=attachmentRows.get(item);
+    await mutateOutbox(async owner=>{
+      const database=await db(owner);
+      try{await txPromise(database,'readwrite',(store,abort)=>{
+        const request=store.get(row.client_message_id);request.onsuccess=()=>{
+          if(expected){if(!sameAttachmentRow(request.result,expected))throw outboxError('gemini_attachment_original_changed');}
+          else if(request.result!==undefined)throw outboxError('gemini_attachment_original_conflict');
+          watchOutboxWrite(expected?store.put(row):store.add(row),owner,abort);
+        };return request;
+      },owner);}finally{database.close();}
+    },()=>sameManagerSession(binding));
+    attachmentRows.set(item,Object.freeze({...row}));
+  }
+  async function retireAttachmentRecovery(item,binding){
+    if(!attachmentReleaseProofs.delete(item))throw outboxError('gemini_attachment_original_held');
+    const expected=attachmentRows.get(item);if(!expected||!attachmentOwnerMatches(expected,binding))throw originalManagerChanged();
+    await mutateOutbox(async owner=>{
+      const database=await db(owner);
+      try{await txPromise(database,'readwrite',(store,abort)=>{
+        const request=store.get(expected.client_message_id);request.onsuccess=()=>{
+          if(!sameAttachmentRow(request.result,expected))throw outboxError('gemini_attachment_original_changed');
+          watchOutboxWrite(store.delete(expected.client_message_id),owner,abort);
+        };return request;
+      },owner);}finally{database.close();}
+    },()=>sameManagerSession(binding));
+    attachmentRows.delete(item);
+  }
+  async function originalUploadApi(binding,body,dispatch){
+    assertConversationPage(binding);const requestHeaders=await headers(true);assertConversationPage(binding);
+    if(requestHeaders.Authorization!==`Bearer ${binding.token}`||requestHeaders['X-Device-Id']!==binding.device_id)throw originalManagerChanged();
+    dispatch.started=true;
+    const response=await fetch(`${API}/conversations/${encodeURIComponent(binding.conversation_id)}/attachments`,{method:'POST',cache:'no-store',credentials:'include',headers:requestHeaders,body:JSON.stringify(body)});
+    // A view switch cannot discard the receipt for the original in-flight
+    // upload. Only its unchanged admitted manager may save it to that row.
+    if(!sameManagerSession(binding))throw originalManagerChanged();
+    const payload=await response.json().catch(()=>null);if(!sameManagerSession(binding))throw originalManagerChanged();
+    if(!response.ok||!payload?.ok){const error=Object.assign(new Error(payload?.error||`HTTP ${response.status}`),{status:response.status,code:payload?.code,data:payload?.data});if(response.status===401||response.status===403)lock(error);throw error;}
+    return payload;
+  }
+  async function restoreAttachmentRecovery(binding){
+    state.uploadRecoveryUnavailable=false;
+    try{
+      const rows=await outboxAll();assertConversationPage(binding);
+      for(const raw of rows){
+        if(raw?.record_kind!==ATTACHMENT_RECOVERY_KIND)continue;
+        validateAttachmentRecovery(raw);
+        if(!attachmentOwnerMatches(raw,binding)||raw.conversation_id!==binding.conversation_id||state.attachments.some(item=>item.attachment_id===raw.attachment_id))continue;
+        const item={...raw,localId:raw.client_message_id,status:raw.status==='removal_unconfirmed'?'removal_unconfirmed':'upload_unconfirmed'};
+        attachmentRows.set(item,Object.freeze({...raw}));state.attachments.push(item);renderAttachments();
+        try{await reconcileAttachment(item,binding);}catch(error){if(!sameConversationPage(binding))return;item.error=error.message;}
+      }
+    }catch(error){if(sameConversationPage(binding))state.uploadRecoveryUnavailable=true;throw error;}
+  }
+  async function reconcileAttachment(item,binding=captureConversationPage()){
+    assertConversationPage(binding);const attachments=state.attachments;
+    if(!attachments.includes(item)||!attachmentRows.has(item)||item.checking)return;
+    item.checking=true;renderAttachments();
+    try{
+      const payload=await managerPageApi(`/conversations/${encodeURIComponent(binding.conversation_id)}/attachments/${encodeURIComponent(item.attachment_id)}`,binding),data=payload.data;
+      if(data?.schema!=='custodial.console-attachment-original.v1'||data.attachment_id!==item.attachment_id
+        ||data.conversation_id!==item.conversation_id||data.manager_id!==binding.manager_id)throw outboxError('gemini_attachment_original_changed');
+      if(data.state==='UNCONFIRMED_ORIGINAL_RETAINED'){setStatus('Saved upload remains unconfirmed. Its original is retained; no replacement was sent.','error');return;}
+      if(data.sha256!==item.sha256||data.size_bytes!==item.size)throw outboxError('gemini_attachment_original_changed');
+      if(data.state==='PENDING_ORIGINAL_CONFIRMED'){
+        if(item.status==='removal_unconfirmed')return; // pending does not undo an uncertain removal
+        await saveAttachmentRecovery(item,binding,{status:'ready',storage_upload:'confirmed',metadata_insert:'confirmed'});
+        if(!sameConversationPage(binding))return;
+        Object.assign(item,{status:'ready',storage_upload:'confirmed',metadata_insert:'confirmed'});setStatus('Original saved upload confirmed.');
+      }else if(['ATTACHED_ORIGINAL_CONFIRMED','REMOVED_ORIGINAL_CONFIRMED'].includes(data.state)){
+        attachmentReleaseProofs.add(item);await retireAttachmentRecovery(item,binding);
+        if(sameConversationPage(binding)&&state.attachments===attachments)state.attachments=attachments.filter(row=>row!==item);
+      }else throw outboxError('gemini_attachment_original_unconfirmed');
+    }finally{item.checking=false;if(sameConversationPage(binding))renderAttachments();}
   }
 
   function captureManagerIdentity(){
@@ -167,7 +298,7 @@
       ||!Number.isFinite(Date.parse(session.expires_at))||Date.parse(session.expires_at)<=Date.now()
       ||session.access_level!=='full_access'||session.read_only!==false
       ||permissions?.schema!=='custodial.manager-permissions.v1'||permissions.read!==true||!(permissions.owner===true||window.MemphisAuth.isCustodialManagementAdmin?.(session)===true))throw originalManagerChanged();
-    return Object.freeze({auth:window.MemphisAuth,session,role:session.role,manager_id:session.manager_id,
+    return Object.freeze({auth:window.MemphisAuth,session,role:session.role,manager_id:session.manager_id,claimed_manager_id:session.claimed_manager_id||'',auth_mode:session.auth_mode||'',
       credential_id:session.credential_id,device_id:session.device_id,token:session.token,expires_at:session.expires_at,
       access_level:session.access_level,read_only:session.read_only,permission_schema:permissions.schema,permission_read:permissions.read,permission_write:permissions.owner,permission_admin:window.MemphisAuth.isCustodialManagementAdmin?.(session)===true});
   }
@@ -179,6 +310,7 @@
     const session=window.MemphisAuth.readSession(),p=session?.permissions;
     return Boolean(!pageClosed&&binding&&session&&session===binding.session&&state.session===binding.session&&session.role===binding.role
       &&session.manager_id===binding.manager_id&&session.credential_id===binding.credential_id&&session.device_id===binding.device_id
+      &&(session.claimed_manager_id||'')===binding.claimed_manager_id&&(session.auth_mode||'')===binding.auth_mode
       &&session.token===binding.token&&session.expires_at===binding.expires_at&&Number.isFinite(Date.parse(session.expires_at))
       &&Date.parse(session.expires_at)>Date.now()&&session.access_level===binding.access_level&&session.access_level==='full_access'
       &&session.read_only===binding.read_only&&session.read_only===false&&p?.schema===binding.permission_schema
@@ -239,6 +371,7 @@
     if(existing){setStatus('Saved original retained; exact outcome is unconfirmed. Retry is held until original status proof is available.','error');return;}
     const binding=captureOriginalManager();
     const body=existing?.body||el.input.value.trim();if(!body)return;
+    if(state.uploadRecoveryUnavailable||state.attachments.some(item=>item.status==='upload_unconfirmed')){setStatus('Saved upload remains unconfirmed. Check the original upload before sending.','error');return;}
     if(state.attachments.some(item=>item.status==='uploading')){setStatus('Wait for attachments to finish uploading.','error');return;}
     if(state.attachments.some(item=>item.status==='removal_unconfirmed')){setStatus('Attachment removal is unconfirmed. Sending is held; original attachment details are retained.','error');return;}
     if(state.attachments.some(item=>item.status==='failed')){setStatus('Remove failed attachments before sending.','error');return;}
@@ -312,6 +445,7 @@
     const binding=captureOriginalManager(),rows=await outboxAll();assertOriginalManager(binding);
     let completed=0,held=0;
     for(const row of rows){
+      if(row?.record_kind==='custodial.console-attachment-recovery.v1'){validateAttachmentRecovery(row);continue;}
       if(row?.conversation_id!==binding.conversation_id){held++;continue;}
       try{if(await recoverOriginalOutcome(row,binding))completed++;else held++;}
       catch(error){if(error?.code==='gemini_original_manager_changed')throw error;held++;}
