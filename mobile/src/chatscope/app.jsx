@@ -105,9 +105,9 @@ window.MemphisMessengerRoute = {
 };
 
 function safe(value) { return value instanceof Error ? value.message : String(value || 'Unknown error'); }
-function displayName(value) { return String(value || '').replace(/\s*\(shared PIN(?:; self-asserted)?\)\s*$/i, '').trim(); }
+function displayName(value) { return String(value || '').replace(/[ \t]*\(shared PIN(?:; self-asserted)?\)/gi, '').trim(); }
 function roleTitle(user = {}) {
-  const explicit = String(user.role_title || user.job_title || '').trim();
+  const explicit = displayName(user.role_title || user.job_title || '');
   if (explicit) return explicit;
   const role = String(user.role || '').trim().toLowerCase();
   return role === 'manager' ? 'Operations Leadership' : (role === 'bot' ? 'Memphis' : 'Employee');
@@ -128,7 +128,8 @@ function normalizedThread(row = {}) {
     id: String(row.id || row.thread_id || ''),
     title: memphis ? 'Memphis AI' : displayName(row.thread_title || row.title || 'Conversation'),
     type: String(row.thread_type || 'direct').toLowerCase(),
-    participantNames: String(row.participant_names || ''),
+    participantNames: displayName(row.participant_names || ''),
+    last_sender_name: displayName(row.last_sender_name || ''),
     canSend: row.viewer_can_send !== false,
     shared: row.is_ops_manager_shared === true || row.system_key === 'ops_manager_shared_chat_v1',
     unread: Number(row.unread_count || 0),
@@ -1163,13 +1164,13 @@ function NewConversation({ currentUserId, currentDeviceId, getCurrentIdentity, o
       <div className="mz-chat-new-list">
         {users.map((user) => EMPLOYEE_CONTEXT
           ? <button className="mz-chat-user" type="button" key={user.id} disabled={busy} onClick={() => void create(String(user.id))}>
-            {messengerAvatar(user.display_name || 'User')}
-            <div className="mz-chat-user-copy"><strong>{user.display_name}</strong><span>{roleTitle(user)}</span></div>
+            {messengerAvatar(displayName(user.display_name) || 'User')}
+            <div className="mz-chat-user-copy"><strong>{displayName(user.display_name)}</strong><span>{roleTitle(user)}</span></div>
           </button>
           : <label className="mz-chat-user" key={user.id}>
             <input type="checkbox" disabled={busy || hasPendingGroup} checked={selected.has(String(user.id))} onChange={() => toggle(String(user.id))} />
-            {messengerAvatar(user.display_name || 'User')}
-            <div className="mz-chat-user-copy"><strong>{user.display_name}</strong><span>{roleTitle(user)}</span></div>
+            {messengerAvatar(displayName(user.display_name) || 'User')}
+            <div className="mz-chat-user-copy"><strong>{displayName(user.display_name)}</strong><span>{roleTitle(user)}</span></div>
           </label>)}
         {!users.length && !status && <div className="mz-chat-empty">No available recipients.</div>}
       </div>
@@ -1234,6 +1235,8 @@ function MessengerApp() {
   const assistantClick = useRef(false);
   const accessEpoch = useRef(0);
   const messageLoadSequence = useRef(0);
+  const threadListLoadSequence = useRef(0);
+  const threadSelectionEpoch = useRef(0);
   const draftKey = `${identity?.msg_user_id || ''}:${selectedId}`;
   const updateDraft = useCallback((key, html, assertOriginal) => {
     assertOriginal?.();
@@ -1420,6 +1423,8 @@ function MessengerApp() {
   }, [currentDeviceId]);
 
   const loadThreads = useCallback(async ({ preferId = '', assertCurrent, preserveNotice = false } = {}) => {
+    const selectionEpoch = threadSelectionEpoch.current;
+    const listSequence = ++threadListLoadSequence.current;
     assertCurrent?.();
     const originalMapped = identityRef.current, originalEpoch = accessEpoch.current;
     const assertManager = !EMPLOYEE_CONTEXT ? originalManagerOutboxOwner(originalMapped,currentDeviceId,identityRef,accessEpoch,mounted,true) : () => {};
@@ -1437,6 +1442,7 @@ function MessengerApp() {
     const envelope = await api(`/threads?user_id=${encodeURIComponent(userId)}&device_id=${encodeURIComponent(currentDeviceId)}`, {assertCurrent:assertReadCurrent});
     assertReadCurrent?.();
     if (!mounted.current || epoch !== accessEpoch.current || identityRef.current !== mapped) return [];
+    if (listSequence !== threadListLoadSequence.current) return threadsRef.current;
     const rows = (envelope.data || [])
       .filter((row) => !isRetiredThread(row))
       .map(normalizedThread).map(row => ({...row,canSend:row.canSend && !mapped.read_only}))
@@ -1444,9 +1450,15 @@ function MessengerApp() {
       .sort(compareThreads);
     if (!mounted.current) return rows;
     assertReadCurrent?.();
+    // A list requested before a new choice cannot establish that the chosen
+    // conversation disappeared. Keep the last list until a current read can.
+    if (selectionEpoch !== threadSelectionEpoch.current && selectedRef.current
+        && !rows.some(thread => thread.id === selectedRef.current)) return threadsRef.current;
     threadsRef.current = rows;
     setThreads(rows);
-    const desired = preferId || selectedRef.current || new URL(location.href).searchParams.get('thread_id') || '';
+    // A list refresh may retain its data, but cannot undo a later user choice.
+    const desired = (selectionEpoch === threadSelectionEpoch.current ? preferId : '')
+      || selectedRef.current || new URL(location.href).searchParams.get('thread_id') || '';
     const next = rows.find((thread) => thread.id === desired)
       || (!desired && !EMPLOYEE_CONTEXT ? rows[0] : null)
       || null;
@@ -1659,7 +1671,9 @@ function MessengerApp() {
       if (!isCurrentMessageLoad()) return [];
       throw error;
     } finally {
-      if (showLoading && isCurrentMessageLoad()) setLoadingMessages(false);
+      // A newer background read owns the same view and must also retire a
+      // spinner started by the foreground read it superseded.
+      if (isCurrentMessageLoad()) setLoadingMessages(false);
     }
   }, [currentDeviceId, loadIdentity, markRead]);
 
@@ -1747,6 +1761,7 @@ function MessengerApp() {
 
   const selectThread = useCallback((id) => {
     homeAssistantEntry.current.cancel();
+    threadSelectionEpoch.current += 1;
     const changed = id !== selectedRef.current;
     selectedRef.current = id;
     setEmojiOpen(false); emojiRange.current = null;
@@ -2530,8 +2545,7 @@ function MessengerApp() {
   }, [identity, ensureCurrentIdentity, setNotice]);
 
   useEffect(() => {
-    if (!selectedId) return;
-    selectedRef.current = selectedId;
+    if (!selectedId || selectedRef.current !== selectedId) return;
     void loadMessages(selectedId, { showLoading: true }).catch((error) => setNotice(safe(error), 'error'));
   }, [selectedId, loadMessages, setNotice]);
 
@@ -2729,10 +2743,10 @@ function MessengerApp() {
     return <Message type="text" key={row.id || `${row.sent_at}-${index}`} model={{
       message: row.failed ? `${row.body}  (saved)` : String(row.body || ''),
       sentTime: formatTime(row.sent_at),
-      sender: row.sender_display_name || 'Unknown',
+      sender: displayName(row.sender_display_name) || 'Unknown',
       direction: mine ? 'outgoing' : 'incoming',
       position: 'single',
-    }}><Message.Header sender={row.sender_display_name || (mine ? identity?.display_name : 'Unknown')} sentTime={formatTime(row.sent_at)} />{mine && <Message.Footer>{row.recovery_state === 'permanent' ? 'Needs recovery — not sent' : row.confirmationPending ? 'Server confirmation pending' : row.locallyQueued || row.optimistic || row.failed ? (row.failed || navigator.onLine === false ? 'Saved on this device' : 'Sending…') : 'Sent'}</Message.Footer>}</Message>;
+    }}><Message.Header sender={displayName(row.sender_display_name || (mine ? identity?.display_name : 'Unknown'))} sentTime={formatTime(row.sent_at)} />{mine && <Message.Footer>{row.recovery_state === 'permanent' ? 'Needs recovery — not sent' : row.confirmationPending ? 'Server confirmation pending' : row.locallyQueued || row.optimistic || row.failed ? (row.failed || navigator.onLine === false ? 'Saved on this device' : 'Sending…') : 'Sent'}</Message.Footer>}</Message>;
   });
 
   const appClass = `mz-chat-shell${mobileThread ? ' mobile-thread' : ''}`;
@@ -2741,7 +2755,7 @@ function MessengerApp() {
     <header className={`mz-chat-toolbar${mobileThread ? ' thread-toolbar' : ''}`}>
       <button className="mz-button" type="button" aria-label={mobileThread ? 'Back to conversations' : 'Back'} title={mobileThread ? 'Back to conversations' : 'Back to Home'} data-mz-global-back={!mobileThread || undefined} onClick={() => { if (mobileThread) { mobileThreadRef.current = false; setMobileThread(false); } else void navigateBack(); }}>{mobileThread ? 'Chats' : 'Back'}</button>
       <div className="mz-chat-brand"><img src={ZOO_LOGO} alt="Memphis Zoo" /><div className="mz-chat-brand-text"><strong>{EMPLOYEE_CONTEXT ? 'Messages' : 'Memphis Messenger'}</strong><span>{identity?.display_name ? (EMPLOYEE_CONTEXT ? displayName(identity.display_name) : `${displayName(identity.display_name)} · ${roleTitle(identity)}`) : 'Memphis Zoo'}</span></div></div>
-      {!mobileThread && <button className="mz-button primary" type="button" disabled={!identity?.msg_user_id || identity.read_only || accessBlocked} onClick={() => void openNewConversation()}>New</button>}
+      <button className="mz-button primary" type="button" disabled={!identity?.msg_user_id || identity.read_only || accessBlocked} onClick={() => void openNewConversation()}>New</button>
       <button className="mz-ask-memphis" type="button" aria-label="Ask Memphis" title="Ask Memphis" disabled={!identity?.msg_user_id||identity.read_only||accessBlocked||assistantOpening} onClick={()=>void openAssistant()}><img src={MEMPHIS_AVATAR} alt=""/><span>Ask Memphis</span></button>
     </header>
     <section className="mz-chat-stage">

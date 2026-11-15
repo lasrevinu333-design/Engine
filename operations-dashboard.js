@@ -17,7 +17,7 @@
     const page=document.documentElement||document.querySelector('main');
     const listeners=[],listen=(target,event,fn,options)=>{target?.addEventListener(event,fn,options);listeners.push([target,event,fn,options]);};
     let active=false,closed=false,epoch=0,abort=null,requestTimer=null,map=null,summary=null,ops=null,board=null,opener=null;
-    let frame=null,lastFrame=null,hold=false,paused=false,motionPaused=false,mapExpanded=false,fsEpoch=0;
+    let frame=null,lastFrame=null,hold=false,paused=false,touching=false,keyboardMode=false,mapExpanded=false,fsEpoch=0;
     let boardToken=null,priorHistory=null,boardFingerprint='',lastMinute=null,nearbyIds=null,fallbackInert=null;
     let owner=null,currentRead=null,cleaning=null,lastAttendance=null,lastWeather=null;
     let tickerFrame=null,tickerTime=null,returnedTicker=null,mapScrollSize='';const tickerMotion=new Map();
@@ -53,7 +53,7 @@
     function scrollTickers(time){
       tickerFrame=null;if(!active||closed)return;
       const dt=tickerTime===null?0:Math.max(0,Math.min(100,time-tickerTime));tickerTime=time;
-      if(!motionPaused&&!motion?.matches&&!document.hidden&&!board)for(const item of tickerMotion.values()){
+      if(!motion?.matches&&!document.hidden&&!board)for(const item of tickerMotion.values()){
         const band=item.viewport.parentElement;
         // Restoring the opener's focus after a modal is navigation, not a new
         // request to pause. Keep keyboard focus without stranding its ticker.
@@ -235,14 +235,13 @@
     }
     function animate(time){frame=null;if(!board||!active||closed)return;
       const dt=lastFrame==null?0:Math.min(100,time-lastFrame);lastFrame=time;
-      if(!paused&&!hold&&!motionPaused&&!motion?.matches&&!document.hidden){
+      if(!paused&&!hold&&!touching&&!motion?.matches&&!document.hidden){
         const bottom=Math.max(0,content.scrollHeight-content.clientHeight);
         if(bottom>0){const step=Number(el('operations-board-speed').value)*dt/1000;
           content.scrollTop=content.scrollTop>=bottom-1?0:Math.min(bottom,content.scrollTop+step);}
       }
       frame=window.requestAnimationFrame(animate);
     }
-    function syncPause(){el('operations-board-pause').setAttribute('aria-pressed',String(paused));txt('operations-board-pause',paused?'Resume scrolling':'Pause scrolling');}
     function closeBoard({history=true,focus=true}={}){
       if(!board)return;board=null;nearbyIds=null;boardFingerprint='';lastFrame=null;fsEpoch++;
       if(frame!==null)window.cancelAnimationFrame(frame);frame=null;
@@ -261,7 +260,7 @@
       if(publicRead&&!['activity','tickets','events','schools','spiceworks','city','locations'].includes(kind))return;
       if(!active||closed||!KINDS.includes(kind))return;
       if(board)closeBoard({history:false,focus:false});
-      board=kind;opener=trigger||document.activeElement;nearbyIds=ids;paused=motion?.matches===true;hold=false;syncPause();
+      board=kind;opener=trigger||document.activeElement;nearbyIds=ids;paused=false;hold=false;touching=false;
       renderBoard(true);content.scrollTop=0;
       if(dialog.showModal)dialog.showModal();else {fallbackInert=document.querySelector('main').inert;document.querySelector('main').inert=true;dialog.setAttribute('open','');}
       priorHistory=window.history?.state;boardToken=`operations-${epoch}-${now()}`;
@@ -273,8 +272,7 @@
       if(target===page&&mapExpanded){await exitMap();return;}
       try{if(!document.fullscreenEnabled||!target.requestFullscreen)throw new Error('fallback');await target.requestFullscreen();}
       catch{if(!active||closed||expected!==fsEpoch)return;
-        if(target===dialog)txt('operations-board-note',`${view(board).note}\nNative fullscreen unavailable; this board fills the browser window.`);
-        else {target.classList.add('dashboard-expanded');el('operations-map-fullscreen').title='Browser fullscreen is unavailable. The dashboard fills the page.';}}
+        target.classList.add('dashboard-expanded');el('operations-map-fullscreen').title='Browser fullscreen is unavailable. The dashboard fills the page.';}
       if(!active||closed||expected!==fsEpoch){if(document.fullscreenElement===target)void document.exitFullscreen?.().catch(()=>{});return;}
       if(target===page){mapExpanded=true;el('operations-map-fullscreen').setAttribute('aria-pressed','true');txt('operations-map-fullscreen',document.fullscreenElement===page?'Exit full screen':'Exit expanded view');}
     }
@@ -301,21 +299,25 @@
     });
     listen(content,'click',event=>{const button=event.target.closest?.('[data-location-select]');if(!button)return;
       const id=button.dataset.locationSelect;closeBoard();map?.selectLocation?.(id);pins().find(p=>p.dataset.locationId===id)?.focus({preventScroll:true});});
-    listen(content,'mouseenter',()=>{hold=true;});listen(content,'mouseleave',()=>{hold=false;});
-    listen(content,'focusin',()=>{paused=true;syncPause();});listen(content,'wheel',()=>{paused=true;syncPause();},{passive:true});
-    listen(content,'touchstart',()=>{paused=true;syncPause();},{passive:true});
-    listen(el('operations-board-pause'),'click',()=>{paused=!paused;syncPause();});
+    listen(content,'mouseenter',event=>{if(event.sourceCapabilities?.firesTouchEvents!==true)hold=true;});listen(content,'mouseleave',()=>{hold=false;});
+    // Reading pauses last only as long as the interaction, never as a hidden latch.
+    listen(document,'keydown',()=>{keyboardMode=true;});
+    listen(document,'pointerdown',()=>{keyboardMode=false;paused=false;});
+    listen(content,'focusin',()=>{paused=keyboardMode;});
+    listen(content,'focusout',event=>{if(!content.contains?.(event.relatedTarget))paused=false;});
+    listen(content,'keydown',()=>{paused=true;});
+    listen(content,'touchstart',()=>{touching=true;hold=false;paused=false;keyboardMode=false;},{passive:true});
+    const releaseTouch=()=>{touching=false;lastFrame=null;};
+    listen(content,'touchend',releaseTouch,{passive:true});
+    listen(content,'touchcancel',releaseTouch,{passive:true});
     listen(panel,'focusin',event=>{if(event.target!==returnedTicker)returnedTicker=null;});
     listen(panel,'pointerdown',()=>{returnedTicker=null;});
-    listen(el('operations-motion'),'click',()=>{motionPaused=!motionPaused;document.body.classList.toggle('motionPaused',motionPaused);
-      el('operations-motion').setAttribute('aria-pressed',String(motionPaused));txt('operations-motion',motionPaused?'Resume motion':'Pause motion');});
-    listen(el('operations-board-fullscreen'),'click',()=>void fullscreen(dialog));
     listen(el('operations-map-fullscreen'),'click',()=>void fullscreen(page));
     listen(document,'fullscreenchange',()=>{if(mapExpanded&&document.fullscreenElement!==page&&!page.classList.contains('dashboard-expanded'))void exitMap();});
     listen(document,'keydown',event=>{if(event.key==='Escape'&&!board&&mapExpanded){event.preventDefault();void exitMap();}});
     listen(window,'popstate',()=>{if(board)closeBoard({history:false});});
     listen(window,'resize',measureTickers);
-    listen(motion,'change',()=>{if(motion.matches){paused=true;syncPause();}});
+    listen(motion,'change',()=>{lastFrame=null;tickerTime=null;});
     const viewport=el('dashboard-map').querySelector('[data-map-viewport]');
     listen(viewport,'click',event=>{const pin=event.target.closest?.('.mzMapPin');if(!pin||!active)return;
       const candidates=nearby(pins().map(p=>{const r=p.getBoundingClientRect();return{id:p.dataset.locationId,x:r.left+r.width/2,y:r.top+r.height/2,radius:Math.max(r.width,r.height)/2};}),pin.dataset.locationId);
