@@ -402,7 +402,7 @@ assert.match(phoneAssignmentsJs, /Activate \/ recover phone/);
 assert.match(phoneAssignmentsJs, /assigned-activation-operations/);
 assert.match(phoneAssignmentsJs, /trusted maintenance computer/);
 assert.doesNotMatch(phoneAssignmentsJs, /Generate App Code|enrollment-code/);
-assert.match(insightsHtml, /<h1>Operational Insights<\/h1>/);
+assert.match(insightsHtml, /<h1\b[^>]*>Operational Insights<\/h1>/);
 assert.match(insightsHtml, /no new inspection entry is recorded/i,'Existing historical results remain read-only');
 assert.doesNotMatch(insightsHtml, /<form\b|<textarea\b|type=["']submit["']/i,'No new inspection entry control');
 assert.match(insightsJs, /Inspection score unavailable/,'Missing historical evidence is not invented');
