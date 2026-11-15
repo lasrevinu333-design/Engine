@@ -343,8 +343,8 @@ const requiredRoutesAndAssets = [
   'Background1_optimized.webp',
   'chatscope-messenger.css',
   'chatscope-messenger.js',
-  // The manager hub now uses this illustration for Guest Issues and Feedback.
-  'Guest_Issues_Icon_ui.webp',
+  // Guest Issues and Feedback share the current Trail illustration.
+  'assets/trail-v1/feedback-320.webp',
   'chatscope-mobile-overrides.css',
   'dashboard-bg_optimized.webp',
   'dashboard_tiger_icon.svg',
