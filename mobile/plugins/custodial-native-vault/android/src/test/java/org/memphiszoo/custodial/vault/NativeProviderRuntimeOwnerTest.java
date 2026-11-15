@@ -11,6 +11,37 @@ import static org.junit.Assert.*;
 /** Actual enrollment/principal/encrypted provider owners; synthetic storage, transport
  * and OS surface. These tests grant no clock profile or provider effect admission. */
 public final class NativeProviderRuntimeOwnerTest {
+    @Test public void foregroundWakeArmsPendingRegistrationWithoutTokenNetworkOrJournalMutation()throws Exception {
+        var x=new NativeProviderCompositionTest.Composition(false);x.owner.reconcile();
+        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());
+        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);
+        int commits=x.f.provider.storage.memory.commits;
+        for(int n=0;n<20;n++)x.owner.requestPendingWork();
+        assertEquals(1,x.jobs.scheduled);assertEquals(20,x.jobs.inspected);
+        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(commits,x.f.provider.storage.memory.commits);
+        assertEquals(0,x.tokens);assertTrue(x.paths.isEmpty());assertTrue(x.requests.isEmpty());
+        assertEquals(0,x.surface.shows);assertEquals(0,x.surface.cancels);
+    }
+    @Test public void foregroundWakeCannotPromoteUnqualifiedOrMissingDelivery()throws Exception {
+        var x=new NativeProviderCompositionTest.Composition(false);x.profile=null;
+        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);
+        x.owner.requestPendingWork();
+        var localOnly=new NativeProviderRuntimeOwner(x.f.engine,x.f.principalJournal,x.f.legacyJournal,
+            x.journal,x.f.provider.storage.lock,x.surface);
+        localOnly.requestPendingWork();
+        assertEquals(0,x.jobs.inspected);assertEquals(0,x.jobs.scheduled);
+        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(0,x.tokens);assertTrue(x.paths.isEmpty());
+    }
+    @Test public void foregroundWakeDoesNotInventRecoveryForAlreadyDrainedGeneration()throws Exception {
+        var x=new NativeProviderCompositionTest.Composition(false);
+        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());
+        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.owner.pendingWork());
+        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);
+        int scheduled=x.jobs.scheduled,inspected=x.jobs.inspected,paths=x.paths.size(),tokens=x.tokens;
+        for(int n=0;n<5;n++)x.owner.requestPendingWork();
+        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(scheduled,x.jobs.scheduled);
+        assertEquals(inspected,x.jobs.inspected);assertEquals(paths,x.paths.size());assertEquals(tokens,x.tokens);
+    }
     /** Compose ONLY the new overload with existing original Composition owners
      * and its SYNTHETIC clock/profile. No new admission/profile or network is
      * supplied: any attempted transport, nonce or refresh fails this case. */

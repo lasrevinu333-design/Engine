@@ -1,0 +1,56 @@
+{
+  "schema": "custodial.provider-source-composition-evidence.v1",
+  "scope": "Actual current native Java plus synthetic host JVM unit checks; no Android app/Gradle/APK build, device admission or physical acceptance",
+  "sources": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java",
+      "bytes": 97540,
+      "sha256": "653b17e2a2182762a496f4e0ea05adfac1749edb8e4a20739c633df3df080d67"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java",
+      "bytes": 90148,
+      "sha256": "d0b337a375dc5780f76b9627ddcd2aef36c82f6765aad48ea41fb1398879a972"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "bytes": 49420,
+      "sha256": "f2adc613a5f2f530140a6a38985643f2ec8945c7f0148596b31dc715bfde5088"
+    }
+  ],
+  "root_checks": {
+    "current_main_java_compiled": 194,
+    "current_test_java_compiled": 209,
+    "affected_native_junit": 137,
+    "foreground_cases": 15,
+    "foreground_assertions": 63
+  },
+  "retained_test_evidence": [
+    {
+      "path": "NATIVE_CURRENT_MAIN_COMPILE_R2_RECEIPT.json",
+      "bytes": 61430,
+      "sha256": "ccbfe005dfabf8b2f0cfe5d2264374d55bd0a7abed72fd6b284aa83732d51355"
+    },
+    {
+      "path": "NATIVE_CURRENT_TEST_COMPILE_RECEIPT.json",
+      "bytes": 66167,
+      "sha256": "bde108ee6991fd8e996a65d589fb437a84cf193790f49ed3147c4527ba7e90a8"
+    },
+    {
+      "path": "NATIVE_AFFECTED_JUNIT_RESULTS.json",
+      "bytes": 2132,
+      "sha256": "f676debfc6d0bbd23dfa8aacb9de4b8a76bbb077eaa520d19923a5dcea6d0a14"
+    },
+    {
+      "path": "provider-foreground-current-final.log",
+      "bytes": 171,
+      "sha256": "4bd5fef8d1394978b6b15c7d98e16a0f6ac55d07f928f2b18c5df8e111b1b808"
+    }
+  ],
+  "preserved_contracts": [
+    "only actual current native foreground epoch may request existing pending job",
+    "no token retrieval, HTTP, direct provider send or recovery epoch mutation in resume",
+    "unchanged persisted job coalescer and job/time/audio authority",
+    "unqualified owner stays suspended; no duplicate worker"
+  ]
+}

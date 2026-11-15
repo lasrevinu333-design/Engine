@@ -96,6 +96,12 @@ function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(.
  const read=()=>principal(w,now(),true);
  const message=(text,old=false)=>{status.textContent=text;page.dataset.stale=String(old);};
  const pauseLabel=()=>{el('events-pause').textContent=paused?'Resume scrolling':'Pause scrolling';el('events-pause').setAttribute('aria-pressed',String(paused));};
+ const employeeView=()=>owner?.kind==='employee'||isNative(w);
+ function presentation(){const employee=employeeView();
+  for(const id of['events-pause','events-speed-control','events-fullscreen'])el(id).hidden=employee;
+  el('events-back').textContent=employee?'Back to Home':'Back to Map';
+ }
+ presentation();
  const node=(tag,text,cls)=>{const n=d.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
  function cancel(){seq++;controller?.abort();controller=null;if(deadline!==null)w.clearTimeout(deadline);deadline=null;}
  function halt(){active=false;initializing=false;cancel();fsSeq++;for(const id of[poll,guard])if(id!==null)w.clearInterval(id);poll=guard=null;
@@ -209,7 +215,7 @@ function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(.
   }finally{if(seq===attempt){if(deadline!==null)w.clearTimeout(deadline);deadline=null;controller=null;}}
  }
 
- function animate(time){frame=null;if(!active||closed)return;const dt=lastFrame===null?0:Math.min(100,Math.max(0,time-lastFrame));lastFrame=time;
+ function animate(time){frame=null;if(!active||closed||employeeView())return;const dt=lastFrame===null?0:Math.min(100,Math.max(0,time-lastFrame));lastFrame=time;
   if(owner&&!paused&&!hover&&!motion?.matches&&!d.hidden){const bottom=Math.max(0,content.scrollHeight-content.clientHeight),speed=Number(el('events-speed').value);
    if(bottom>0&&[18,32,48].includes(speed))content.scrollTop=content.scrollTop>=bottom-1?0:Math.min(bottom,content.scrollTop+speed*dt/1000);}
   frame=w.requestAnimationFrame(animate);}
@@ -218,22 +224,22 @@ function create({window:w=root,document:d=w.document,fetchImpl=(...a)=>w.fetch(.
    else await w.MemphisAuth?.requireOpsManagerSession?.({interactive:false,redirect:false});
    if(closed||seq!==attempt)return false;const p=read();if(!p||(owner&&!same(owner,p))){deny();return false;}
    owner=p;active=true;page.dataset.denied='false';d.body.dataset.memphisContext=p.kind;
-   el('events-back').textContent=p.kind==='employee'?'Back to Home':'Back to Map';pauseLabel();
+   presentation();pauseLabel();
    poll=w.setInterval(()=>void refresh(),30000);guard=w.setInterval(()=>{
     if(owner?.kind==='manager'&&!principal(w,now())){content.replaceChildren();fingerprint='';if(controller===null&&now()-lastAttempt>=30000)void refresh();return;}
     if(!current())return;
     // Re-evaluate expiration even offline and while scrolling is paused.
     render();
    },1000);
-   frame=w.requestAnimationFrame(animate);await refresh();return true;
+   if(!employeeView())frame=w.requestAnimationFrame(animate);await refresh();return true;
   }catch{if(seq===attempt)deny();return false;}finally{initializing=false;}}
  function stop(){if(closed)return;halt();closed=true;owner=null;feed=null;content.replaceChildren();for(const[t,e,fn,o]of listeners)t?.removeEventListener?.(e,fn,o);listeners.length=0;}
  listen(el('events-back'),'click',()=>w.location.assign(returnTarget(w,owner)));
- listen(el('events-pause'),'click',()=>{paused=!paused;pauseLabel();});
+ listen(el('events-pause'),'click',()=>{if(employeeView())return;paused=!paused;pauseLabel();});
  for(const e of['wheel','touchstart','focusin','keydown'])listen(content,e,()=>{paused=true;pauseLabel();},{passive:true});
  listen(content,'mouseenter',()=>{hover=true;});listen(content,'mouseleave',()=>{hover=false;});
  listen(motion,'change',()=>{if(motion.matches){paused=true;pauseLabel();}});
- listen(el('events-fullscreen'),'click',async()=>{if(!active||!current())return;const expected=++fsSeq;
+ listen(el('events-fullscreen'),'click',async()=>{if(!active||employeeView()||!current())return;const expected=++fsSeq;
   try{if(d.fullscreenElement===page)await d.exitFullscreen();else{if(!page.requestFullscreen)throw Error('unavailable');await page.requestFullscreen();}
    if((!active||closed||expected!==fsSeq)&&d.fullscreenElement===page)await d.exitFullscreen?.();}
   catch{if(active&&!closed&&expected===fsSeq)message('Events fill this window; native full-screen control is unavailable.');}});

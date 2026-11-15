@@ -423,6 +423,12 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
         requireDelivery();synchronized(engine){synchronized(coordinator){currentLocked();journal.requestRecovery();}}
         NativeProviderJobSchedule.request(NativeProviderJobLifecycle.Result.RETRY,delivery.jobs);
     }
+    /** Foreground wake of existing admitted work only. Cached Firebase tokens
+     * need not emit onNewToken after an in-place update. Do not increment a
+     * recovery epoch, request a token or run HTTP from this lifecycle callback. */
+    void requestPendingWork() throws VaultFailure {
+        if(delivery!=null)NativeProviderJobSchedule.request(pendingWork(),delivery.jobs);
+    }
     /** One bounded pass, never a detached thread or polling loop. Every network
      * call receives the exact system invocation budget and neither monitor is held.
      * A next pass is the same persisted system job, not a second FCM attempt. */

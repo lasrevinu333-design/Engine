@@ -1052,6 +1052,18 @@ final class CustodialNativeRuntime {
             if (localProviderOwner != null) localProviderOwner.detach(attachment);
         } }
     }
+    /** Actual foreground attachment may wake only this already-created owner's
+     * pending native work. Classification and the system job run outside the
+     * Runtime monitors; ordinary job admission still owns every later effect. */
+    void requestPendingProviderWork(CustodialNativeVaultPlugin attachment,Object expectedEpoch)throws VaultFailure {
+        if(expectedEpoch==null||currentProviderAttachmentEpoch(attachment)!=expectedEpoch)throw NativeProviderMirrorAttachment.invalid();
+        final NativeProviderRuntimeOwner owner;
+        synchronized(engine){synchronized(providerCoordinator){
+            if(currentProviderAttachmentEpoch(attachment)!=expectedEpoch)throw NativeProviderMirrorAttachment.invalid();
+            owner=localProviderOwner;
+        }}
+        if(owner!=null&&currentProviderAttachmentEpoch(attachment)==expectedEpoch)owner.requestPendingWork();
+    }
     void detachProviderLocal(CustodialNativeVaultPlugin attachment,Object expectedEpoch) {
         if(attachment==null||expectedEpoch==null)return;
         synchronized(engine){synchronized(providerCoordinator){

@@ -13,7 +13,7 @@ function fixture({employee=false,reduced=false,noIdentity=false}={}){
  class N{constructor(tag='div'){this.tag=tag;this.children=[];this.dataset={};this.attrs={};this.listeners=new Map();this.textContent='';this.scrollTop=0;this.scrollHeight=1000;this.clientHeight=200;this.value='32';all.push(this);}
   addEventListener(t,f){if(!this.listeners.has(t))this.listeners.set(t,new Set());this.listeners.get(t).add(f);}removeEventListener(t,f){this.listeners.get(t)?.delete(f);if(!this.listeners.get(t)?.size)this.listeners.delete(t);}
   emit(t,e={}){e.preventDefault??=()=>{};for(const f of [...(this.listeners.get(t)||[])])f(e);}setAttribute(k,v){this.attrs[k]=v;}append(...n){this.children.push(...n);}replaceChildren(...n){this.children=[...n];}querySelector(s){return s==='details'?this.children.find(n=>n.tag==='details'):null;}}
- const d=new N('document'),w=new N('window'),els={};for(const x of['shared-events-page','events-content','events-status','events-pause','events-speed','events-back','events-fullscreen'])els[x]=new N();
+ const d=new N('document'),w=new N('window'),els={};for(const x of['shared-events-page','events-content','events-status','events-pause','events-speed','events-speed-control','events-back','events-fullscreen'])els[x]=new N();
  d.getElementById=x=>els[x];d.createElement=t=>new N(t);d.body=new N('body');d.hidden=false;
  w.document=d;w.MemphisOperationsData=data;w.location={href:'https://example.invalid/events.html?hub=manager&return=https://evil.invalid',assign:u=>nav.push(u)};
  w.setInterval=f=>{const n=++id;intervals.set(n,f);return n;};w.clearInterval=n=>intervals.delete(n);w.setTimeout=f=>{const n=++id;timeouts.set(n,f);return n;};w.clearTimeout=n=>timeouts.delete(n);w.requestAnimationFrame=f=>{const n=++id;frames.set(n,f);return n;};w.cancelAnimationFrame=n=>frames.delete(n);
@@ -59,6 +59,24 @@ test('query parameter does not grant employee authority',async()=>{const f=fixtu
 test('employee denied before identity readiness',async()=>{const f=fixture({employee:true,noIdentity:true});await f.app.init();assert.equal(f.calls.length,0);f.finish();});
 test('only manager request has manager bearer',async()=>{for(const employee of[false,true]){const f=fixture({employee});await f.app.init();assert.equal(Boolean(f.calls[0].options.headers.Authorization),!employee);f.finish();}});
 test('normal speed, manual pause and reduced motion',async()=>{const f=fixture();await f.app.init();f.step(0);f.step(100);assert.equal(f.els['events-content'].scrollTop,3.2);f.els['events-content'].emit('wheel');f.step(200);assert.equal(f.els['events-content'].scrollTop,3.2);f.finish();const g=fixture({reduced:true});await g.app.init();g.step(0);g.step(100);assert.equal(g.els['events-content'].scrollTop,0);g.finish();});
+test('employee Events is manual with only the Home board control, including before readiness',async()=>{
+ const f=fixture({employee:true});let fullscreen=0;f.els['shared-events-page'].requestFullscreen=()=>{fullscreen++;};
+ for(const id of['events-pause','events-speed-control','events-fullscreen'])assert.equal(f.els[id].hidden,true);
+ assert.equal(f.els['events-back'].textContent,'Back to Home');assert.equal(f.frames.size,0);
+ await f.app.init();assert.equal(f.frames.size,0);f.els['events-content'].scrollTop=420;
+ f.step(0);f.step(100);f.els['events-pause'].emit('click');f.els['events-fullscreen'].emit('click');
+ f.els['events-content'].emit('touchstart');f.els['events-content'].emit('wheel');
+ f.payload.feed.rows[0].revision=2;await f.app.refresh();
+ assert.equal(f.els['events-content'].scrollTop,420);assert.equal(f.frames.size,0);assert.equal(fullscreen,0);
+ f.w.emit('pagehide',{persisted:true});f.w.emit('pageshow',{persisted:true});await Promise.resolve();await Promise.resolve();
+ assert.equal(f.frames.size,0);for(const id of['events-pause','events-speed-control','events-fullscreen'])assert.equal(f.els[id].hidden,true);
+ f.finish();
+});
+test('manager board controls remain available with automatic scrolling',async()=>{
+ const f=fixture();for(const id of['events-pause','events-speed-control','events-fullscreen'])assert.equal(f.els[id].hidden,false);
+ await f.app.init();assert.equal(f.els['events-back'].textContent,'Back to Map');assert.equal(f.frames.size,1);
+ f.step(0);f.step(100);assert.equal(f.els['events-content'].scrollTop,3.2);f.finish();
+});
 test('hostile source text is never HTML',async()=>{const f=fixture();f.payload.feed.rows[0].name='<img src=x onerror=bad()>';await f.app.init();assert.match(f.text(f.els['events-content']),/<img/);assert.equal(f.els['events-content'].children[0].children.some(n=>n.tag==='img'),false);f.finish();});
 test('cancellations and same-day ending move into shared history',async()=>{const f=fixture();await f.app.init();f.payload.feed.rows[0].status='CANCELLED';f.payload.feed.rows[0].revision=2;await f.app.refresh();assert.match(f.text(f.els['events-content']),/Cancelled/);assert.ok(f.els['events-content'].querySelector('details'));f.payload.feed.rows[0].status='SCHEDULED';f.setNow(Date.parse('2026-10-06T17:00:00Z'));await f.app.refresh();assert.match(f.text(f.els['events-content']),/Scheduled to have ended/);f.finish();});
 test('overnight event is not ended at midnight',async()=>{const f=fixture();f.payload.feed.rows[0].end_at='2026-10-07T07:00:00Z';f.setNow(Date.parse('2026-10-07T06:00:00Z'));f.setSession({role:'ops_manager',manager_id:M,credential_id:C,device_id:'manager-browser',token:'SYNTHETIC_TOKEN',expires_at:'2026-10-08T00:00:00Z'});await f.app.init();assert.equal(f.els['events-content'].children[0].tag,'article');f.finish();});

@@ -43,6 +43,14 @@ let readinessConnected = navigator.onLine === true;
 const ownerTestReadinessSupport = typeof __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__ !== 'undefined'
   && __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__ === true;
 function readinessPrincipal() { return window.MemphisMobile?.principalIdentity?.() || ''; }
+function canInspectProtectedReadiness(current, principal) {
+  const device = String(current.deviceId || '').trim().toUpperCase();
+  return security.native === true && typeof security.mutateProtectedWork === 'function'
+    && current.state === 'enrolled' && current.ready === true && current.available === true && current.quarantined === false
+    && Number.isSafeInteger(current.generation) && current.generation >= 1
+    && /^KIOSK_\d{2}$/.test(device) && current.deviceId === device
+    && current.principal?.device_id === device && typeof principal === 'string' && principal.length > 0;
+}
 function paintReadiness(input) {
   const result = readinessPresentation(classifyReadiness(input), input);
   for (const id of ['home-readiness', 'lock-readiness', 'boot-readiness', 'assignment-readiness']) {
@@ -70,12 +78,17 @@ async function refreshReadiness() {
   const sequence = ++readinessReadSequence;
   const principal = readinessPrincipal();
   const token = readinessObservation.token(principal);
-  const securityGeneration = security.getStatus().generation;
+  const initialSecurity = security.getStatus(), securityGeneration = initialSecurity.generation;
   let queue = null, nativeState = null, localReadinessUnavailable = false;
+  // Checking/resuming is not an inspection failure. Protected read methods
+  // intentionally refuse until their existing owner is established.
+  const localOwnerReady = canInspectProtectedReadiness(initialSecurity, principal);
   try {
-    if (await window.MemphisScanSync?.ready === true && typeof window.MemphisScanSync?.listActions === 'function') queue = await window.MemphisScanSync.listActions();
+    if (localOwnerReady && await window.MemphisScanSync?.ready === true && typeof window.MemphisScanSync?.listActions === 'function') queue = await window.MemphisScanSync.listActions();
+    // The native observation can independently report an authoritative hard
+    // refusal even while the browser owner is still checking.
     nativeState = await window.MemphisMobile?.getReadinessObservation?.(deviceId());
-  } catch { localReadinessUnavailable = true; /* Read-only local verification failed; no recovery mutation. */ }
+  } catch { localReadinessUnavailable = localOwnerReady; /* Expected owner-pending refusal is unknown, never Ready. */ }
   const currentSecurity = security.getStatus(), currentPrincipal = readinessPrincipal();
   if (sequence !== readinessReadSequence || securityGeneration !== currentSecurity.generation
     || !readinessObservation.current(token, currentPrincipal)) return;
@@ -83,12 +96,7 @@ async function refreshReadiness() {
   // The resolver's conservative refusal also covers an owner still being
   // verified, before any saved record can be read. Observe that as unknown;
   // only an established protected owner can inspect saved-store integrity.
-  const canInspectSession = security.native === true && typeof security.mutateProtectedWork === 'function'
-    && currentSecurity.ready === true && currentSecurity.available === true && currentSecurity.quarantined === false
-    && Number.isSafeInteger(currentSecurity.generation) && currentSecurity.generation >= 1
-    && /^KIOSK_\d{2}$/.test(currentDevice) && currentSecurity.deviceId === currentDevice
-    && currentSecurity.principal?.device_id === currentDevice
-    && typeof currentPrincipal === 'string' && currentPrincipal.length > 0;
+  const canInspectSession = canInspectProtectedReadiness(currentSecurity, currentPrincipal);
   const sessionState = canInspectSession ? window.MemphisUI?.resolveOpenScanSession?.(currentDevice)?.state : undefined;
   paintReadiness({ ...(readinessObservation.read(token, principal) || {}), security: currentSecurity,
     principalPresent: Boolean(principal), connected: readinessConnected,

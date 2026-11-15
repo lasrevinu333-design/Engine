@@ -1,0 +1,46 @@
+{
+  "schema": "custodial.provider-source-protocol-evidence.v1",
+  "scope": "Source repair qualification only; no deployed SQL/runtime, provider-send, build, install or physical acceptance",
+  "backend_source_commit": "3e9f2bd578c33bdb5c6f97feb1c6f6480b7f6d61",
+  "sources": [
+    {
+      "path": "src/native-message-dispatch.js",
+      "bytes": 10974,
+      "sha256": "51ea7225f159b19f45cec9809c4df4fa4a518def2dd40c55d6b50b23e00b2176"
+    },
+    {
+      "path": "src/native-event-dispatch.js",
+      "bytes": 11022,
+      "sha256": "9bc60ad652465cf10c26ef7f989745a6b051df32a9150d5efe245fe365ae6d52"
+    },
+    {
+      "path": "supabase/migrations/20261115133604_native_alert_generation_pending.sql",
+      "bytes": 18995,
+      "sha256": "4b182e45b7e78d460d57d2a948da920c288fe0b29d34671069a395eb5c7db0cb"
+    }
+  ],
+  "root_checks": {
+    "message_event_dispatch": 95,
+    "postgres_function_boundary": 71,
+    "canonical_319_or_production_427_storage_restore": false
+  },
+  "retained_test_evidence": [
+    {
+      "path": "native-alert-pending-node-tests.log",
+      "bytes": 18109,
+      "sha256": "e9ab53606267717f283ecfd960fb2ab735933a50abe28ebc04b1c6bc4039d0b5"
+    },
+    {
+      "path": "NATIVE_ALERT_PENDING_REHEARSAL_RUN04.json",
+      "bytes": 10535,
+      "sha256": "8cea03fdc5a5c9843c4869b682c62ac83fba8cf231b32d393c9732c6a8e73ede"
+    }
+  ],
+  "preserved_contracts": [
+    "no token or expected tuple while initial generation pending",
+    "all original recipient and lease checks before pending",
+    "true supersession stays terminal",
+    "original job/message/work unchanged; no replay",
+    "atomic exact retained-definition rebind; ALWAYS capture guard and separate global fence preserved"
+  ]
+}

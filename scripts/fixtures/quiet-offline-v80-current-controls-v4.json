@@ -1,0 +1,47 @@
+{
+  "schema": "custodial.quiet-approved-current-controls.v4",
+  "source_commit": "bab9cd3d1b6390fda89a5741000a89cf96f626ea",
+  "prior_controls_sha256": "d548865f9e95399008ed9fc3782a1b96ef3a545f8f2ddfb1eae24459600330cd",
+  "provenance": "r66 accepted reviewed v80 source; tests only, no runtime admission",
+  "historical_pins_rewritten": false,
+  "release_admission": false,
+  "files": [
+    {
+      "path": "memphis-scan-sync.js",
+      "bytes": 255456,
+      "sha256": "fd01838fec6754ace69bfa1f7b5b814b900152f992d29fc5a2d25dd6dfe8a5c0"
+    },
+    {
+      "path": "mobile/src/chatscope/app.jsx",
+      "bytes": 162604,
+      "sha256": "effc267cfbde925359024912db2d031d6b0c1ca2c7a2f8b4387f8e93f7c1f3dc"
+    },
+    {
+      "path": "mobile/src/custodial/readiness.js",
+      "bytes": 11450,
+      "sha256": "330d4ff21e37e516a338f2d8fccfe7050311e7ad689800d67cf6fe593acf1126"
+    }
+  ],
+  "functions": [
+    {
+      "path": "mobile/src/custodial/app.js",
+      "name": "restoreNow",
+      "sha256": "fa952046f82674433c1f87182dfe9b5add84392f1704ce2b1d114803a2b8662f"
+    },
+    {
+      "path": "index.html",
+      "name": "getScanStateSafe",
+      "sha256": "5623957f1d7e1040a4b51802d8ec8bbed58711f823378110fd0395cad215e0fa"
+    },
+    {
+      "path": "index.html",
+      "name": "startSessionMaybeQueued",
+      "sha256": "51846833949dd0c79ab1061376b6ed15136e401c42274816123cd985d3aa174d"
+    },
+    {
+      "path": "index.html",
+      "name": "completeSessionMaybeQueued",
+      "sha256": "62a3a9888148b69d587f01426d388653d5e0c703886be515336afcc623fbd0f7"
+    }
+  ]
+}

@@ -1139,8 +1139,11 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                 try {
                     if(!providerLifecycleCurrent(runtime,epoch))return;
                     runtime.recoverPendingPrivateCustodyOwnerIfPresent();
-                    if(providerLifecycleCurrent(runtime,epoch)&&startupRefusal==null)
+                    if(providerLifecycleCurrent(runtime,epoch)&&startupRefusal==null){
                         runtime.attachProviderLocal(this,epoch);
+                        if(providerLifecycleCurrent(runtime,epoch)&&startupRefusal==null)
+                            runtime.requestPendingProviderWork(this,epoch);
+                    }
                 } catch(VaultFailure|RuntimeException unavailable) {
                     Log.w(LOG_TAG,"provider_local_recovery_pending");
                 } finally {

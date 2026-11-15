@@ -197,6 +197,26 @@ await check('local verification failure warns but retains ordinary cached work',
   const bytes=f.queueBytes();await f.flush();assert.equal(f.elements.get('home-readiness').hidden,false);
   assert.match(f.elements.get('home-readiness').textContent,/^Saved work verification needed/);assert.equal(f.queueBytes(),bytes);
 });
+await check('foreground owner checking does not turn an expected unread-store refusal into a repair warning',async()=>{
+  const f=fixture({localReadinessFailure:true,pending:[{type:'start_session',payload:{immutable:'original'}}]});
+  await f.flush();const bytes=f.queueBytes();
+  assert.match(f.elements.get('home-readiness').textContent,/^Saved work verification needed/);
+  f.setOwner({state:'checking',reason:'custodial_security_state_checking',ready:false});
+  const before=f.calls.length;await f.observeNow();
+  assert.equal(f.calls.slice(before).filter(c=>c==='readonly-queue').length,0);
+  assert.equal(f.calls.slice(before).filter(c=>c==='readonly-native').length,1);
+  assert.equal(f.elements.get('home-readiness').hidden,true);
+  assert.match(f.elements.get('home-readiness').className,/needs_internet/);
+  assert.equal(f.queueBytes(),bytes);
+  f.setOwner({state:'enrolled',reason:'',ready:true});await f.observeNow();
+  assert.match(f.elements.get('home-readiness').textContent,/^Saved work verification needed/);
+  for(const patch of [{state:'unavailable',ready:false,available:false},{state:'quarantined',ready:false,available:true,quarantined:true}]){
+    f.setOwner(patch);const start=f.calls.length;await f.observeNow();
+    assert.match(f.elements.get('home-readiness').textContent,/^Do not use/);
+    assert.equal(f.calls.slice(start).filter(c=>c==='readonly-queue').length,0);
+  }
+  assert.equal(f.queueBytes(),bytes);
+});
 await check('actual auth rejection and startup recovery need manager', async () => {
   for (const options of [{ authReject: true }, { startup: 'manager_required' }]) {
     const f = fixture(options); await f.flush(); assert.match(f.elements.get('boot-readiness').textContent, /^Phone repair needed/);
