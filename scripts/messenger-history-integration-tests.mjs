@@ -11,7 +11,7 @@ function fixture(){
  let messages=[],earlier=false,reads=0;const requests=[];
  const mapped={msg_user_id:id(999),read_only:false};
  const state={identityRef:{current:mapped},accessEpoch:{current:1},selectedRef:{current:id(888)},mounted:{current:true},historyRef:{current:null},messageLoadSequence:{current:0},threadsRef:{current:[]},mobileThreadRef:{current:false},currentDeviceId:'synthetic-device',EMPLOYEE_CONTEXT:false,
-  useCallback:fn=>fn,createMessageHistory,loadIdentity:async()=>mapped,originalManagerOutboxOwner:()=>()=>{},custodialWorkUnavailable:()=>Error('Stale actor'),
+  useCallback:fn=>fn,createMessageHistory,loadIdentity:async()=>mapped,loadThreads:async()=>[],setNotice(){},originalManagerOutboxOwner:()=>()=>{},custodialWorkUnavailable:()=>Error('Stale actor'),
   setMessages:value=>{messages=typeof value==='function'?value(messages):value;},setLoadingMessages:()=>{},setLoadingOlderMessages:()=>{},setHasOlderMessages:value=>{earlier=value;},mergePendingMessages:rows=>rows,
   markRead:async()=>{reads++;},window:{matchMedia:()=>({matches:false})},document:{visibilityState:'hidden'},encodeURIComponent,
   api:async path=>{requests.push(path);return {data:path.includes('before=')?all.slice(0,1):all.slice(1)};},

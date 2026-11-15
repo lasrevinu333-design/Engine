@@ -473,7 +473,7 @@ export function fixture({reduced=false,legacyDialog=false,audience='manager'}={}
  for(const match of html.matchAll(/<(\w+)\b[^>]*\bid="([^"]+)"[^>]*>/g)){const node=new Node(match[1]);elements[match[2]]=node;node.id=match[2];}
  const main=new Node('main'),viewport=new Node(),map=elements['dashboard-map'],dialog=elements['operations-board'],content=elements['operations-board-content'];
  doc.body=new Node('body');doc.append(doc.documentElement);doc.documentElement.append(main,dialog);main.append(elements['operations-panels'],map);doc.querySelector=selector=>selector==='main'?main:null;
- dialog.append(elements['operations-board-pause'],elements['operations-board-speed'],elements['operations-board-fullscreen'],elements['operations-board-close'],content);content.attrs.tabindex='0';map.append(viewport);
+ dialog.append(elements['operations-board-speed'],elements['operations-board-close'],content);content.attrs.tabindex='0';map.append(viewport);
  const triggers=['tickets','events','schools','locations','activity'].map(kind=>{const node=new Node('button');node.dataset.board=kind;main.append(node);return node;});
  for(let i=0;i<47;i++){const node=new Node('button');node.pin=true;node.x=i*100;node.dataset={locationId:`location-${i}`,status:i<9?'overdue':'clean'};node.attrs['aria-label']=`Location ${i} — ${node.dataset.status}`;viewport.append(node);}
  if(legacyDialog){dialog.showModal=null;dialog.close=null;}
@@ -525,13 +525,13 @@ test('auth headers go only to existing backend; forecast receives none',async()=
 test('board speed/pause/reduced motion and Escape work without dropping true alerts',()=>{
  const f=fixture();f.triggers[3].emit('click');assert.equal(f.content.children.length,47);f.step(0);f.step(100);assert.equal(f.content.scrollTop,3.2);
  f.elements['operations-board-speed'].value='48';f.step(200);assert.equal(f.content.scrollTop,8);
- f.elements['operations-board-pause'].emit('click');f.step(300);assert.equal(f.content.scrollTop,8);
+ f.content.emit('mouseenter');f.step(300);assert.equal(f.content.scrollTop,8);f.content.emit('mouseleave');f.step(400);assert.equal(f.content.scrollTop,12.8);
  f.dialog.emit('keydown',{key:'Escape'});assert.equal(f.frames.size,0);f.clean();
  const reduced=fixture({reduced:true});reduced.triggers[3].emit('click');reduced.step(0);reduced.step(100);assert.equal(reduced.content.scrollTop,0);reduced.clean();
 });
-test('fullscreen refusal stays a readable viewport board; fallback isolates focus; Back closes',async()=>{
+test('readable viewport board has no fullscreen control; fallback isolates focus; Back closes',async()=>{
  const f=fixture({legacyDialog:true});f.triggers[0].emit('click');assert.equal(f.main.inert,true);
- f.elements['operations-board-fullscreen'].emit('click');await Promise.resolve();assert.match(f.elements['operations-board-note'].textContent,/fills the browser window/);
+ assert.equal(f.elements['operations-board-fullscreen'],undefined);assert.doesNotMatch(f.elements['operations-board-note'].textContent,/Native fullscreen/);
  f.window.emit('popstate');assert.equal(f.dialog.open,false);assert.equal(f.main.inert,false);f.clean();
 });
 test('map fullscreen fallback exits and never alters pins',async()=>{
@@ -1270,7 +1270,7 @@ test('DASHBOARD_REFRESH_bound leadership permission reaches actual ticket-contro
  assert.equal(f.capabilityRequests.length,1);
 });
 
-test('returning from a board resumes the focused ticker and preserves explicit pause and reduced motion',async()=>{
+test('returning from a board resumes the focused ticker and preserves reduced motion',async()=>{
  for(const reduced of [false,true]){
   const f=fixture({reduced,audience:'public_readonly'}),track=f.elements['ops-tickets-ticker'],band=f.triggers[0];
   band.closest=selector=>selector==='.tickerBand'?band:null;
@@ -1281,18 +1281,12 @@ test('returning from a board resumes the focused ticker and preserves explicit p
    await loaded(f);f.step(0);f.step(100);assert.equal(track.parentElement.scrollLeft,reduced?0:4.2);
    for(let cycle=0;cycle<3;cycle++){
     band.emit('click');f.step(200+cycle*400);const at=track.parentElement.scrollLeft;
-    if(cycle===1)f.elements['operations-board-pause'].emit('click');
     f.elements['operations-board-close'].emit('click');
     assert.equal(f.doc.activeElement,band);f.step(300+cycle*400);f.step(400+cycle*400);
     assert.equal(track.parentElement.scrollLeft,reduced?at:at+4.2);
    }
-   f.elements['operations-motion'].emit('click');const pausedAt=track.parentElement.scrollLeft;
-   band.emit('click');f.elements['operations-board-close'].emit('click');f.step(1600);f.step(1700);
-   assert.equal(track.parentElement.scrollLeft,pausedAt,'intentional map pause survives detail return');
-   f.elements['operations-motion'].emit('click');f.step(1800);
-   assert.equal(track.parentElement.scrollLeft,reduced?pausedAt:pausedAt+4.2,'resume respects reduced motion');
-   f.elements['operations-panels'].emit('pointerdown');f.step(1900);
-   assert.equal(track.parentElement.scrollLeft,reduced?pausedAt:pausedAt+4.2,'new direct focus interaction can hold ticker');
+   const at=track.parentElement.scrollLeft;f.elements['operations-panels'].emit('pointerdown');f.step(1900);
+   assert.equal(track.parentElement.scrollLeft,at,'new direct focus interaction can hold ticker');
   }finally{f.clean();}
  }
 });
