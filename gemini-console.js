@@ -85,7 +85,7 @@
     const response=await fetch(`${API}${path}`,{cache:'no-store',credentials:'include',...options,headers:{...authenticated,...(options.headers||{})}});
     assertDisplayAuthority(owner);
     const payload=await response.json().catch(()=>null);assertDisplayAuthority(owner);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`HTTP ${response.status}`);error.status=response.status;throw error;}
+    if(!response.ok||!payload?.ok){const error=Object.assign(new Error(payload?.error||`HTTP ${response.status}`),{status:response.status,code:payload?.code,data:payload?.data});if(response.status===401||response.status===403)lock(error);throw error;}
     return payload;
   }
 
@@ -147,8 +147,18 @@
       if(!sameConversationPage(binding))return;renderAttachments();
     }
   }
-  function renderAttachments(){el.attachmentList.replaceChildren();state.attachments.forEach(item=>{const chip=document.createElement('div');chip.className=`attachment-chip ${item.status}`;const name=document.createElement('span');name.textContent=`${item.name||item.original_filename} · ${formatBytes(item.size||item.size_bytes)}`;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label',`Remove ${item.name||item.original_filename}`);remove.addEventListener('click',()=>removeAttachment(item).catch(showError));chip.append(name,remove);el.attachmentList.append(chip);});}
-  async function removeAttachment(item){const binding=captureConversationPage(),attachments=state.attachments;if(!attachments.includes(item))return;if(item.attachment_id&&item.status==='ready')await managerPageApi(`/attachments/${encodeURIComponent(item.attachment_id)}`,binding,{method:'DELETE'});if(!sameConversationPage(binding)||state.attachments!==attachments||!attachments.includes(item))return;state.attachments=attachments.filter(row=>row!==item);renderAttachments();}
+  function renderAttachments(){el.attachmentList.replaceChildren();state.attachments.forEach(item=>{const chip=document.createElement('div');chip.className=`attachment-chip ${item.status}`;const name=document.createElement('span');name.textContent=`${item.name||item.original_filename} · ${formatBytes(item.size||item.size_bytes)}${item.status==='removal_unconfirmed'?' · Removal unconfirmed':''}`;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.disabled=item.status==='removal_unconfirmed';remove.setAttribute('aria-label',`Remove ${item.name||item.original_filename}`);remove.addEventListener('click',()=>removeAttachment(item).catch(showError));chip.append(name,remove);el.attachmentList.append(chip);});}
+  async function removeAttachment(item){
+    const binding=captureConversationPage(),attachments=state.attachments;if(!attachments.includes(item))return;
+    if(item.status==='removal_unconfirmed')throw new Error('Attachment removal remains unconfirmed. The original attachment is retained for review.');
+    try{if(item.attachment_id&&item.status==='ready'){
+      const payload=await managerPageApi(`/attachments/${encodeURIComponent(item.attachment_id)}`,binding,{method:'DELETE'});
+      if(payload.data?.attachment_id!==item.attachment_id||payload.data?.status!=='deleted')throw Object.assign(new Error('Original attachment deletion receipt is unconfirmed.'),{code:'attachment_deletion_unconfirmed'});
+    }}
+    catch(error){if(sameConversationPage(binding)&&state.attachments===attachments&&(error?.code==='attachment_deletion_unconfirmed'||error?.status>=500||error?.status==null)){item.status='removal_unconfirmed';renderAttachments();}throw error;}
+    if(!sameConversationPage(binding)||state.attachments!==attachments||!attachments.includes(item))return;
+    state.attachments=attachments.filter(row=>row!==item);renderAttachments();
+  }
 
   function captureManagerIdentity(){
     const session=window.MemphisAuth.readSession(),permissions=session?.permissions;
@@ -183,7 +193,7 @@
     if(finalHeaders.Authorization!==`Bearer ${binding.token}`||finalHeaders['X-Device-Id']!==binding.device_id)throw originalManagerChanged();
     const response=await fetch(`${API}${path}`,{cache:'no-store',credentials:'include',...options,headers:finalHeaders});
     assertConversationPage(binding);const payload=await response.json().catch(()=>null);assertConversationPage(binding);
-    if(!response.ok||!payload?.ok){const error=new Error(payload?.error||`HTTP ${response.status}`);error.status=response.status;throw error;}return payload;
+    if(!response.ok||!payload?.ok){const error=Object.assign(new Error(payload?.error||`HTTP ${response.status}`),{status:response.status,code:payload?.code,data:payload?.data});if(response.status===401||response.status===403)lock(error);throw error;}return payload;
   }
 
   function captureOriginalManager(){
@@ -230,6 +240,7 @@
     const binding=captureOriginalManager();
     const body=existing?.body||el.input.value.trim();if(!body)return;
     if(state.attachments.some(item=>item.status==='uploading')){setStatus('Wait for attachments to finish uploading.','error');return;}
+    if(state.attachments.some(item=>item.status==='removal_unconfirmed')){setStatus('Attachment removal is unconfirmed. Sending is held; original attachment details are retained.','error');return;}
     if(state.attachments.some(item=>item.status==='failed')){setStatus('Remove failed attachments before sending.','error');return;}
     state.submitting=true;toggleBusy(true);
     try{
