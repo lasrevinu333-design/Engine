@@ -38,7 +38,7 @@ for(const [name,hash] of Object.entries({
  'CustodialNativeRuntime.java':'c78871f54e2a85f06f90fa89685c0e7c11f88510e50e2ffd5af05fc2c117686c',
  'VaultEngine.java':'4b9c70608bcbd98fd5c26668f1202cf7fd8014c96c5319bba00f7c1cca8c72d5',
  'OfflineAuthorityTime.java':'0ae5be7fa6c106a900a81bcf75c30c8ae87332da248fb6dd9bc9dc36b534f407',
-}))equal(sha(withoutProviderEventDecisions(name,withoutReleaseAdmission(name,readFileSync(java+name,'utf8')))),hash,'whole unaffected authority outside exact F6 and qualified-release deltas '+name);
+}))equal(sha(withoutProviderEventDecisions(java+name,withoutReleaseAdmission(java+name,readFileSync(java+name,'utf8')))),hash,'whole unaffected authority outside exact F6 and qualified-release deltas '+name);
 equal(sha(normalizeCurrentNativeAudioSequence('AndroidManifest.xml',readFileSync('mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml','utf8'))),'5714fc43190e46dfe043749b8a5b9bf2903bed60cd2bc86ef2077875248c854a','baseline manifest outside verified private-audio declaration');
 const claims=readFileSync(java+'NativeProviderClaims.java','utf8'),mirror=readFileSync('mobile/src/custodial/provider-mirror.js','utf8');
 assert.match(claims,/NativeProviderTime\.reached\(observation.bounds, payload.validUntil\)/);checks++;

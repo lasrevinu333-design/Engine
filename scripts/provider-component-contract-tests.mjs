@@ -20,7 +20,7 @@ for (const name of ['OfflineAuthorityTime.java', 'AndroidOfflineAuthorityTimeSto
   assertNativeBaseline(base,directory+name,normalize(read(name)));
 }
 assertNativeBaseline(base,directory+'VaultEngine.java',withoutProviderRegistration(read('VaultEngine.java')),'provider-registration-removal');
-const runtime = withoutReleaseAdmission('CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
+const runtime = withoutReleaseAdmission(directory+'CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
 assert.match(runtime, /static NativeProviderComponentRuntime providerComponents\(Context context\)\s*\{\s*return NativeProviderComponentRuntime\.SUSPENDED;\s*\}/);
 assertLocalProviderBoundary(runtime);
 const service = read('CustodialProviderSyncJobService.java');

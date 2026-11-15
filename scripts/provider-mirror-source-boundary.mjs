@@ -13,12 +13,12 @@ const sha=value=>createHash('sha256').update(value).digest('hex');
 // deltas. Works in a shallow checkout without any unpublished Git objects.
 export function withoutProviderMirror(name,source){
  source=normalizeCurrentFirstAudio(name,source);
- const known=providerMirrorBytePins.find(value=>value.name===name&&value.origin);
+ const known=providerMirrorBytePins.find(value=>(value.name===name||value.path===name)&&value.origin);
  if(known&&sha(source)===known.base_sha256)return source; // Already normalized exact archived bytes.
  if(!known||sha(source)!==known.current_sha256)
   source=withoutRequiredKinds(name,withoutReleaseAdmission(name,withoutRetainedNativeBridge(name,withoutQualifiedProviderSchema(name,source))));
  source=withoutProviderMaintenance(name,source);
- const row=providerMirrorBytePins.find(value=>value.name===name&&value.origin);if(!row)return source;
+ const row=providerMirrorBytePins.find(value=>(value.name===name||value.path===name)&&value.origin);if(!row)return source;
  if(sha(source)===row.base_sha256)return source;
  assert.equal(sha(source),row.current_sha256,'exact finite mirror source: '+name);
  const lines=source.split('\n');

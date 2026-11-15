@@ -27,7 +27,7 @@ export function withoutLocalProviderLifecycle(source) {
 }
 
 export function assertLocalProviderBoundary(runtime) {
-  runtime = withoutProviderComposition('CustodialNativeRuntime.java',runtime);
+  runtime = withoutProviderComposition('mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java',runtime);
   const constructor = runtime.slice(runtime.indexOf('    private CustodialNativeRuntime('), runtime.indexOf('    NativeProviderPrincipal readProviderPrincipal('));
   assert.doesNotMatch(constructor, /new AndroidProviderStore|new NativeProviderJournal|AndroidProviderCipher/,
     'constructing the cleaning runtime never creates provider preferences or key');

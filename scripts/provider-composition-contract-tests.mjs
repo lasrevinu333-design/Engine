@@ -7,12 +7,12 @@ import {withoutProviderMirror} from './provider-mirror-source-boundary.mjs';
 import {normalizeCurrentNativeAudioSequence} from './native-audio-sequence-source-boundary.mjs';
 
 const dir='mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/';
-const read=name=>withoutProviderMirror(name,readFileSync(dir+name,'utf8')),sha=value=>createHash('sha256').update(value).digest('hex');
+const read=name=>withoutProviderMirror(dir+name,readFileSync(dir+name,'utf8')),sha=value=>createHash('sha256').update(value).digest('hex');
 let checks=0;
 for(const row of providerCompositionBytePins){
  const source=read(row.name);assert.equal(sha(source),row.current_sha256);checks++;
- if(row.origin){assert.equal(sha(withoutProviderComposition(row.name,source)),row.base_sha256);checks++;
-  assert.throws(()=>withoutProviderComposition(row.name,source+'\n// unknown delta'));checks++;
+ if(row.origin){assert.equal(sha(withoutProviderComposition(dir+row.name,source)),row.base_sha256);checks++;
+  assert.throws(()=>withoutProviderComposition(dir+row.name,source+'\n// unknown delta'));checks++;
  }else{assertNewProviderCompositionSource(row.name,source);assert.throws(()=>assertNewProviderCompositionSource(row.name,source+' '));checks+=2;}
 }
 for(const [name,hash] of Object.entries({

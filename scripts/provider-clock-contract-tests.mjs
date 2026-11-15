@@ -13,7 +13,7 @@ const read=name=>readFileSync(dir+name,'utf8');
 let checks=0;
 for(const name of ['VaultEngine.java','NativeProviderJournal.java','OfflineAuthorityTime.java','AndroidOfflineAuthorityTimeStore.java',
  'CustodialNativeRuntime.java','CustodialNativeVaultPlugin.java','NativeAttestation.java','RequestPolicy.java']){
- assertNativeBaseline(base,dir+name,withoutProviderInterval(name,read(name)));checks++;
+ assertNativeBaseline(base,dir+name,withoutProviderInterval(dir+name,read(name)));checks++;
 }
 for(const row of providerIntervalBytePins){
  if(row.origin)withoutProviderInterval(row.name,read(row.name));else assertNewProviderIntervalSource(row.name,read(row.name));checks++;
@@ -37,7 +37,7 @@ const java=readdirSync(dir).filter(f=>f.endsWith('.java')).map(read);
 assert.equal(java.filter(s=>/new NativeProviderRegistrationCoordinator\(/.test(s)).length,1);checks++;
 assert.equal(java.filter(s=>/new NativeProviderClockOwner\(/.test(s)).length,1);checks++;
 assert.match(read('NativeProviderRuntimeOwner.java'),/new NativeProviderClockOwner\(engine,coordinator,journal,principals,legacy,delivery.profiles/);checks++;
-const historicalRuntime=withoutReleaseAdmission('CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
+const historicalRuntime=withoutReleaseAdmission(dir+'CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
 assert.match(historicalRuntime,/new NativeProviderRuntimeOwner.Delivery\(NativeProviderTime.Profiles.NONE,/);checks++;
 assert.equal(java.filter(s=>/new NativeProviderTime.Profile\(/.test(s)).length,0);checks++;
 for(const factory of ['NativeProviderIngressRuntime','NativeProviderComponentRuntime']){assert.match(historicalRuntime,new RegExp('return '+factory+'\\.SUSPENDED;'));checks++;}

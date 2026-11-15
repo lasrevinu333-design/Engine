@@ -15,10 +15,10 @@ const read = name => readFileSync(directory + name, 'utf8');
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
 const actualRuntime = read('CustodialNativeRuntime.java'), plugin = read('CustodialNativeVaultPlugin.java');
-assertBoundCurrentProviderSource('CustodialNativeRuntime.java',actualRuntime);
+assertBoundCurrentProviderSource(directory+'CustodialNativeRuntime.java',actualRuntime);
 // Preserve these older lifecycle mutations in their exact qualified-comparison context.
 // Current constructor behavior is also checked by provider-runtime-construction-tests.
-const runtime = normalizeCurrentNativeAudioSequence('CustodialNativeRuntime.java',actualRuntime);
+const runtime = normalizeCurrentNativeAudioSequence(directory+'CustodialNativeRuntime.java',actualRuntime);
 assertLocalProviderBoundary(runtime); checks++;
 assertNativeBaseline(base, directory+'CustodialNativeVaultPlugin.java', withoutLocalProviderLifecycle(plugin)); checks++;
 for (const name of ['VaultEngine.java', 'RemovalCoordinator.java', 'NativeProviderJournal.java', 'OfflineAuthorityTime.java',

@@ -44,7 +44,7 @@ const observationUsers=all.filter(([,source])=>/\.providerObservation\s*\(/.test
 assert.deepEqual(observationUsers,[],'retired cleaning point adapter has no provider consumer');checks++;
 const manifest=readFileSync('mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml','utf8');
 assert.doesNotMatch(manifest,/MESSAGING_EVENT/,'provider ingress is not activated by component registration');checks++;
-const historicalRuntime=withoutReleaseAdmission('CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
+const historicalRuntime=withoutReleaseAdmission(directory+'CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
 assert.match(historicalRuntime, /static NativeProviderComponentRuntime providerComponents\(Context context\)\s*\{\s*return NativeProviderComponentRuntime\.SUSPENDED;\s*\}/,
   'registered components remain fail-closed without production provider authority');checks++;
 assert.match(historicalRuntime, /static NativeProviderIngressRuntime providerIngress\(Context context\)\s*\{\s*return NativeProviderIngressRuntime\.SUSPENDED;\s*\}/,

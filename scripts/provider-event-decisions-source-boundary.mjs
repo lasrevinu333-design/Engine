@@ -13,7 +13,7 @@ export const providerEventDecisionPins=freeze(validateProviderEventDecisionPins(
 // contract additionally requires every current hash and rejects a removed caller.
 export function withoutProviderEventDecisions(name,source){
  source=normalizeCurrentFirstAudio(name,source);
- const row=providerEventDecisionPins.files.find(value=>value.name===name);if(!row)return source;
+ const row=providerEventDecisionPins.files.find(value=>value.name===name||value.path===name);if(!row)return source;
  if(sha(source)===row.prior_sha256)return source;
  assert.equal(sha(source),row.current_sha256,'exact full event-decision source: '+name);
  const lines=source.split('\n');

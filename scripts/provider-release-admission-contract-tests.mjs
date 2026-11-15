@@ -11,11 +11,11 @@ equal(pins.base,'dffd34ca2691a0a6fc7d2fa6bda8387c55328beb','exact393 consumer pr
 equal(pins.production_profile,false,'no manufactured release admission');
 equal(pins.files.map(r=>r.name),['CustodialNativeRuntime.java','NativeProviderCompositionTest.java'],'one existing runtime and one actually invoked test owner');
 for(const row of pins.files){
- const current=read(row.path),prior=withoutReleaseAdmission(row.name,current);
+ const current=read(row.path),prior=withoutReleaseAdmission(row.path,current);
  equal(sha(current),row.current_sha256,'whole current source');equal(sha(prior),row.prior_sha256,'every original byte restored');
- equal(withoutReleaseAdmission(row.name,prior),prior,'exact prior idempotent');
+ equal(withoutReleaseAdmission(row.path,prior),prior,'exact prior idempotent');
  for(const hostile of [current+'\n// extra',current.slice(1),current.replace(row.hunks[0].after[0],row.hunks[0].after[0]+' '),prior+' ']){
-  assert.throws(()=>withoutReleaseAdmission(row.name,hostile));checks++;
+  assert.throws(()=>withoutReleaseAdmission(row.path,hostile));checks++;
  }
 }
 for(const mutate of [p=>p.extra=true,p=>p.production_profile=true,p=>p.files.pop(),p=>p.files.reverse(),p=>p.files.push(p.files[0]),
@@ -35,11 +35,11 @@ function route(source){
  assert.match(source,/localProviderOwner == null && \(admitted \|\| AndroidProviderStore.hasRetainedState\(application\)\)/);
 }
 route(runtime);checks++;
-assert.throws(()=>route(withoutReleaseAdmission('CustodialNativeRuntime.java',runtime)));checks++; // actual predecessor fail-before source route
+assert.throws(()=>route(withoutReleaseAdmission(pins.files[0].path,runtime)));checks++; // actual predecessor fail-before source route
 for(const mutate of [s=>s.replace('get(context)','get(null)'),s=>s.replace('profiles -> {','profiles -> { unsafe();'),
  s=>s.replace('if (!NativeProviderReleaseAdmission.hasCompiledInputs()) return null;',''),
  s=>s.replace('admitted || AndroidProviderStore.hasRetainedState(application)','true')]){
- assert.throws(()=>withoutReleaseAdmission('CustodialNativeRuntime.java',mutate(runtime)));checks++;
+ assert.throws(()=>withoutReleaseAdmission(pins.files[0].path,mutate(runtime)));checks++;
 }
 assert.match(admission,/private static final Release\[\] REVIEWED_RELEASES = new Release\[0\];/);checks++;
 assert.match(admission,/if \(selected == null\) return null;[\s\S]*factory.create\(selected.profiles\(\)\)/);checks++;

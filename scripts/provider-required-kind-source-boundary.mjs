@@ -12,7 +12,7 @@ const freeze=value=>{if(value&&typeof value==='object'){for(const child of Objec
 export const requiredKindPins=freeze(validateRequiredKindPins(JSON.parse(readFileSync(new URL('./fixtures/provider-required-kind-byte-deltas.json',import.meta.url),'utf8'))));
 export function withoutRequiredKinds(name,source){
  source=normalizeCurrentNativeScheduleWire(name,source);
- const row=requiredKindPins.files.find(value=>value.name===name);if(!row)return source;
+ const row=requiredKindPins.files.find(value=>value.name===name||value.path===name);if(!row)return source;
  if(sha(source)===row.prior_sha256)return source;
  // An exact already-normalized historical predecessor is handled above.
  // Only current successor bytes enter the newer, separately pinned delta.

@@ -24,19 +24,19 @@ const sha=value=>createHash('sha256').update(value).digest('hex');
 for(const row of providerMirrorBytePins){
  // Compare the exact historical mirror after separately validated, whole-byte
  // successor deltas. The imported release suite tests the REAL guarded route.
- const source=withoutProviderMaintenance(row.name,withoutRequiredKinds(row.name,withoutReleaseAdmission(row.name,withoutRetainedNativeBridge(row.name,withoutQualifiedProviderSchema(row.name,normalizeCurrentNativeAudioSequence(row.path,readFileSync(row.path,'utf8')))))));check(sha(source),row.current_sha256,'exact owned mirror source '+row.name);
- if(row.origin){check(sha(withoutProviderMirror(row.name,source)),row.base_sha256,'exact full preserved baseline '+row.name);
-  assert.throws(()=>withoutProviderMirror(row.name,source+'\n// mutation'));checks++;}
+ const source=withoutProviderMaintenance(row.path,withoutRequiredKinds(row.path,withoutReleaseAdmission(row.path,withoutRetainedNativeBridge(row.path,withoutQualifiedProviderSchema(row.path,normalizeCurrentNativeAudioSequence(row.path,readFileSync(row.path,'utf8')))))));check(sha(source),row.current_sha256,'exact owned mirror source '+row.name);
+ if(row.origin){check(sha(withoutProviderMirror(row.path,source)),row.base_sha256,'exact full preserved baseline '+row.name);
+  assert.throws(()=>withoutProviderMirror(row.path,source+'\n// mutation'));checks++;}
 }
 const dir='mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/';
-const read=name=>normalizeCurrentNativeAudioSequence(name,readFileSync(dir+name,'utf8'));
+const read=name=>normalizeCurrentNativeAudioSequence(dir+name,readFileSync(dir+name,'utf8'));
 for(const [name,hash] of Object.entries({
  'VaultEngine.java':'4b9c70608bcbd98fd5c26668f1202cf7fd8014c96c5319bba00f7c1cca8c72d5',
  'OfflineAuthorityTime.java':'0ae5be7fa6c106a900a81bcf75c30c8ae87332da248fb6dd9bc9dc36b534f407',
  'NativeNfcScanHandoff.java':'674d7abe36779a7341e16f63588b6452596db23348397287a991f1138991aa77',
 }))check(sha(withoutProviderEventDecisions(name,read(name))),hash,'unchanged whole protected source outside exact F6 delta '+name);
 check(sha(normalizeCurrentNativeAudioSequence('AndroidManifest.xml',readFileSync('mobile/plugins/custodial-native-vault/android/src/main/AndroidManifest.xml','utf8'))),'5714fc43190e46dfe043749b8a5b9bf2903bed60cd2bc86ef2077875248c854a','baseline manifest preserved outside exact private-audio source declaration');
-const plugin=read('CustodialNativeVaultPlugin.java'),runtime=withoutReleaseAdmission('CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
+const plugin=read('CustodialNativeVaultPlugin.java'),runtime=withoutReleaseAdmission(dir+'CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
 const actualPlugin=readFileSync(dir+'CustodialNativeVaultPlugin.java','utf8');assertBoundCurrentProviderSource('CustodialNativeVaultPlugin.java',actualPlugin);
 check([...actualPlugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,'actual current plugin matches the actual compiled verifier allowlist');
 check([...plugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.filter(name=>name!=='checkRemovalAdmission'),'historical additive method set before separately checked current removal admission');

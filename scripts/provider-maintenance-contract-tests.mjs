@@ -11,7 +11,7 @@ import {withoutReleaseAdmission} from './provider-release-admission-source-bound
 const dir='mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/';
 // Historical maintenance assertions compare the exact pre-release seam;
 // nested release assertions still read the actual qualified successor.
-const read=name=>{const source=withoutProviderEventDecisions(name,readFileSync(dir+name,'utf8'));return name==='CustodialNativeRuntime.java'?withoutReleaseAdmission(name,source):source;},sha=v=>createHash('sha256').update(v).digest('hex');let checks=0;
+const read=name=>{const source=withoutProviderEventDecisions(dir+name,readFileSync(dir+name,'utf8'));return name==='CustodialNativeRuntime.java'?withoutReleaseAdmission(dir+name,source):source;},sha=v=>createHash('sha256').update(v).digest('hex');let checks=0;
 for(const row of pins.files){
  const source=withoutProviderClassification(row.name,readFileSync(row.path,'utf8'));assert.equal(sha(source),row.current_sha256);checks++;
  if(row.origin){assert.equal(sha(withoutProviderMaintenance(row.name,source)),row.base_sha256);checks++;

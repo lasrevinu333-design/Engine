@@ -7,12 +7,12 @@ const sha=value=>createHash('sha256').update(value).digest('hex');
 // Restore only exact pinned maintenance deltas before older accepted mirror,
 // composition, interval and cleaning guards. No Git object required at runtime.
 export function withoutProviderMaintenance(name,source){
- const row=providerMaintenancePins.files.find(value=>value.name===name&&value.origin);
+ const row=providerMaintenancePins.files.find(value=>(value.name===name||value.path===name)&&value.origin);
  if(row&&sha(source)===row.base_sha256)return source;
  source=withoutProviderClassification(name,source);if(!row)return source;
  assert.equal(sha(source),row.current_sha256,'exact bounded maintenance source: '+name);
  if(row.action_freshness_delta){
-  assert.equal(name,'NativeProviderJournal.java','freshness delta owns only Journal');
+  assert.equal(row.name,'NativeProviderJournal.java','freshness delta owns only Journal');
   const delta=row.action_freshness_delta,added=delta.added_lines.join('\n')+'\n';
   assert.equal(source.split(added).length,2,'exact unique new-action freshness delta');
   source=source.replace(added,'');

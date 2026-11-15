@@ -15,7 +15,7 @@ const freeze=value=>{if(value&&typeof value==='object'){for(const child of Objec
 export const providerClassificationPins=freeze(validateProviderClassificationPins(JSON.parse(readFileSync(new URL('./fixtures/provider-classification-byte-deltas.json',import.meta.url),'utf8'))));
 export function withoutProviderClassification(name,source){
  source=normalizeCurrentFirstAudio(name,source);
- const row=providerClassificationPins.files.find(value=>value.name===name);
+ const row=providerClassificationPins.files.find(value=>value.name===name||value.path===name);
  if(row&&sha(source)===row.prior_sha256)return source;
  source=withoutProviderEventDecisions(name,source);if(!row)return source;
  source=withoutProviderRetainedSchedule(name,source);

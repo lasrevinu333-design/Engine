@@ -104,7 +104,7 @@ for(const kind of ['employee_event','employee_message']){
  for(const data of [{...payload,schema:'custodial.native-provider-payload.v1'},{...payload,route:'https://elsewhere.invalid/'}])
   check(context.showAcceptedNotification({notification:{...event.notification,data}},action),false,'renderer rejects schema/route drift');
 }
-const runtime=withoutReleaseAdmission('CustodialNativeRuntime.java',readFileSync(new URL('../mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java',import.meta.url),'utf8'));
+const runtime=withoutReleaseAdmission('mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java',readFileSync(new URL('../mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeRuntime.java',import.meta.url),'utf8'));
 assert.match(runtime,/Delivery\(NativeProviderTime.Profiles.NONE,/);checks++;
 for(const type of ['NativeProviderIngressRuntime','NativeProviderComponentRuntime']){assert.match(runtime,new RegExp('return '+type+'\\.SUSPENDED;'));checks++;}
 console.log(JSON.stringify({status:'REQUIRED_KIND_CONDITIONAL_CONSUMER_PASS',checks,synthetic:true,qualifiedClock:false,productionActivation:false,legacyAdmission:false}));

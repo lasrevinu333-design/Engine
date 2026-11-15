@@ -11,7 +11,7 @@ export const providerIntervalBytePins=JSON.parse(readFileSync(new URL('./fixture
 const sha=value=>createHash('sha256').update(value).digest('hex');
 export function withoutProviderInterval(name,source){
  source=withoutProviderComposition(name,source);
- const row=providerIntervalBytePins.find(x=>x.name===name&&x.origin);if(!row)return source;
+ const row=providerIntervalBytePins.find(x=>(x.name===name||'mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/'+x.name===name)&&x.origin);if(!row)return source;
  const digest=sha(source);if(digest===row.base_sha256)return source;
  assert.equal(digest,row.current_sha256,'exact owned interval source bytes: '+name);
  const lines=source.split('\n');

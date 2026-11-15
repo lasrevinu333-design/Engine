@@ -8,7 +8,7 @@ export const providerCompositionBytePins=JSON.parse(readFileSync(new URL('./fixt
 const sha=v=>createHash('sha256').update(v).digest('hex');
 export function withoutProviderComposition(name,source){
  source=withoutProviderMirror(name,source);
- const row=providerCompositionBytePins.find(r=>r.name===name&&r.origin);if(!row)return source;
+ const row=providerCompositionBytePins.find(r=>(r.name===name||'mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/'+r.name===name)&&r.origin);if(!row)return source;
  if(sha(source)===row.base_sha256)return source;
  assert.equal(sha(source),row.current_sha256,'exact conditional composition source: '+name);
  const lines=source.split('\n');

@@ -15,7 +15,7 @@ let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
 // Preserve this original registration-only comparison while the imported
 // current-route suite verifies actual qualified-only construction and refusal.
-const runtime = withoutReleaseAdmission('CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
+const runtime = withoutReleaseAdmission(directory+'CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
 for (const [factory, type] of [['providerComponents', 'NativeProviderComponentRuntime'], ['providerIngress', 'NativeProviderIngressRuntime']]) {
   check(new RegExp(`static ${type} ${factory}\\(Context context\\)\\s*\\{\\s*return ${type}\\.SUSPENDED;\\s*\\}`).test(runtime), factory + ' hard suspended');
 }
