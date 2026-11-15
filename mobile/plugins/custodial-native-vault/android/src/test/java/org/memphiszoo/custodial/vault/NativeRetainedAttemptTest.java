@@ -214,18 +214,33 @@ public final class NativeRetainedAttemptTest {
 
     @Test public void COORD_ordinaryWriteEpochBeforeFalseThrowAndHold()throws Exception {
         var disk=new Disk();var work=new AndroidProtectedWorkPreferences(disk.preferences());
+        var payload=Map.<String,Object>of("original.saved.work","opaque original payload");
+        disk.memory.putAll(payload);disk.durable.putAll(payload);
         var original=work.observeReadOnly();int[] calls={0};
         assertFalse(work.withOrdinaryWriteAdmission(()->{calls[0]++;return false;}));
         assertEquals(1,calls[0]);assertFalse(work.matchesReadOnly(original));
+        var expected=new HashMap<>(payload);expected.put(AndroidProtectedWorkPreferences.MUTATION_KEY,"1");
+        assertEquals(1,disk.commits);assertEquals(expected,disk.memory);assertEquals(expected,disk.durable);
+        assertEquals(Map.of(AndroidProtectedWorkPreferences.MUTATION_KEY,"1"),disk.candidates.get(0));
         original=work.observeReadOnly();
-        denied(()->work.withOrdinaryWriteAdmission(()->{calls[0]++;throw new VaultFailure("synthetic_unknown");}));
+        var failure=assertThrows(VaultFailure.class,()->work.withOrdinaryWriteAdmission(()->{calls[0]++;throw new VaultFailure("synthetic_unknown");}));
+        assertEquals("synthetic_unknown",failure.code);
         assertEquals(2,calls[0]);assertFalse(work.matchesReadOnly(original));
+        expected.put(AndroidProtectedWorkPreferences.MUTATION_KEY,"2");
+        assertEquals(2,disk.commits);assertEquals(expected,disk.memory);assertEquals(expected,disk.durable);
+        assertEquals(Map.of(AndroidProtectedWorkPreferences.MUTATION_KEY,"2"),disk.candidates.get(1));
         original=work.observeReadOnly();work.withOrdinaryWorkAdmission(()->null);
         assertTrue(work.matchesReadOnly(original)); // encryption admission alone is not a write
+        assertEquals(2,disk.commits);assertEquals(expected,disk.memory);assertEquals(expected,disk.durable);
         disk.memory.put(AndroidProtectedWorkPreferences.FENCE_KEY,"original opaque hold");
-        original=work.observeReadOnly();denied(()->work.withOrdinaryWriteAdmission(()->{calls[0]++;return true;}));
-        denied(()->work.withOrdinaryWriteAdmission(null));assertEquals(2,calls[0]);assertTrue(work.matchesReadOnly(original));
-        assertEquals(0,disk.commits);
+        var held=new HashMap<>(disk.memory);
+        original=work.observeReadOnly();
+        failure=assertThrows(VaultFailure.class,()->work.withOrdinaryWriteAdmission(()->{calls[0]++;return true;}));
+        assertEquals(AndroidProtectedWorkPreferences.FAILURE,failure.code);
+        failure=assertThrows(VaultFailure.class,()->work.withOrdinaryWriteAdmission(null));
+        assertEquals(AndroidProtectedWorkPreferences.FAILURE,failure.code);
+        assertEquals(2,calls[0]);assertTrue(work.matchesReadOnly(original));
+        assertEquals(2,disk.commits);assertEquals(held,disk.memory);assertEquals(expected,disk.durable);
     }
     @Test public void COORD_singleMonitorAndUntypedBackingRefusal()throws Exception {
         assertSame(AndroidProviderCipher.STORE_LOCK,AndroidProtectedWorkPreferences.retainedCommitLock());
@@ -376,11 +391,17 @@ public final class NativeRetainedAttemptTest {
     }
     @Test public void falseMemoryOnlyDispatchReturnsNoCapabilityAndNeverResendsVolatileUnknown() throws Exception {
         var f=new Fixture();try(var a=f.attempt(40,0)) { var j=f.journal();j.prepare(a);f.disk.memoryOnly=true;denied(()->j.fenceDispatch(a));
+            var unknownCandidate=new HashMap<>(f.disk.candidates.get(1));int encrypts=f.cipher.existing;
             assertEquals(NativeRetainedAttemptJournal.UNKNOWN,j.observe().state);f.disk.memoryOnly=false;denied(()->f.journal().fenceDispatch(a));
-            f.disk.restart();assertEquals(NativeRetainedAttemptJournal.PREPARED,f.journal().observe().state);
-            // No transport handle was released in the failed attempt. A real
-            // durable restart may safely fence this same original prepared body.
-            try(var dispatch=f.journal().fenceDispatch(a)) { assertNotNull(dispatch.takeRequest()); } }
+            // Recovery persists the exact UNKNOWN candidate, without minting a
+            // dispatch handle. Restart cannot downgrade it back to PREPARED.
+            assertEquals(unknownCandidate,f.disk.candidates.get(2));assertEquals(unknownCandidate,f.disk.durable);
+            assertEquals(encrypts,f.cipher.existing);assertEquals(3,f.disk.commits);
+            f.disk.restart();var restarted=f.journal();assertEquals(NativeRetainedAttemptJournal.UNKNOWN,restarted.observe().state);
+            denied(()->restarted.prepare(a));denied(()->restarted.fenceDispatch(a));
+            assertEquals(unknownCandidate,f.disk.memory);assertEquals(unknownCandidate,f.disk.durable);assertEquals(3,f.disk.commits);
+            try(var restored=f.restore(restarted.observe())) { assertEquals(a.attestationDigest,restored.attestationDigest);assertArrayEquals(a.body(),restored.body()); }
+            assertEquals(encrypts,f.cipher.existing);assertEquals(0,f.cipher.creates+f.cipher.destroys); }
     }
     @Test public void durableUnknownSurvivesRestartAndLossOfResponseWithoutRewrite() throws Exception {
         var f=new Fixture();try(var a=f.attempt(40,0)) { var j=f.journal();j.prepare(a);try(var dispatch=j.fenceDispatch(a)) { dispatch.takeRequest(); }
@@ -390,7 +411,16 @@ public final class NativeRetainedAttemptTest {
     }
     @Test public void dispatchCommitFailureBeforeWriteReleasesNoHandle() throws Exception {
         var f=new Fixture();try(var a=f.attempt(40,0)) { var j=f.journal();j.prepare(a);f.disk.fail=true;denied(()->j.fenceDispatch(a));assertEquals(NativeRetainedAttemptJournal.PREPARED,j.observe().state);
-            f.disk.fail=false;try(var d=j.fenceDispatch(a)) { assertNotNull(d.takeRequest()); } }
+            var unknownCandidate=new HashMap<>(f.disk.candidates.get(1));int encrypts=f.cipher.existing;
+            // The saved candidate is recovered exactly, but an ambiguous
+            // dispatch fence must never release a capability on its retry.
+            f.disk.fail=false;denied(()->j.fenceDispatch(a));assertEquals(NativeRetainedAttemptJournal.UNKNOWN,j.observe().state);
+            assertEquals(unknownCandidate,f.disk.candidates.get(2));assertEquals(unknownCandidate,f.disk.memory);assertEquals(unknownCandidate,f.disk.durable);
+            assertEquals(3,f.disk.commits);assertEquals(encrypts,f.cipher.existing);
+            denied(()->j.prepare(a));denied(()->j.fenceDispatch(a));
+            assertEquals(3,f.disk.commits);assertEquals(unknownCandidate,f.disk.durable);
+            try(var restored=f.restore(j.observe())) { assertEquals(a.attestationDigest,restored.attestationDigest);assertArrayEquals(a.body(),restored.body()); }
+            assertEquals(encrypts,f.cipher.existing);assertEquals(0,f.cipher.creates+f.cipher.destroys); }
     }
     @Test public void existingAttemptCannotBeReplacedByFreshNonceOrChunk() throws Exception {
         var f=new Fixture();try(var first=f.attempt(40,0);var otherNonce=f.attempt(41,0);var otherChunk=f.attempt(42,1)) {
