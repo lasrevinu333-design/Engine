@@ -263,7 +263,7 @@
       const dispatched=await mutateOutbox(()=>({response:fetch(`${API}/conversations/${record.conversation_id}/messages/stream`,{method:'POST',cache:'no-store',credentials:'include',headers:authenticatedHeaders,signal:controller.signal,body:JSON.stringify(record)})}),()=>sameOriginalManager(binding));
       const response=await dispatched.response;
       assertOriginalManager(binding,controller);
-      if(!response.ok||!response.body)throw new Error(`Request failed: HTTP ${response.status}`);
+      if(!response.ok||!response.body)throw Object.assign(new Error(`Request failed: HTTP ${response.status}`),{status:response.status});
       await readEventStream(response.body,event=>{
         assertOriginalManager(binding,controller);
         if(event.type==='status')setStatus(event.data.label||event.data.state,'working');
@@ -284,7 +284,7 @@
       guard();setStatus(completed?'Persisted completed turn confirmed. Original local request reconciled.':
         'Response received. Saved original retained; its exact outcome remains unconfirmed.',completed?'':'error');
     }catch(error){
-      if(error?.code==='gemini_original_manager_changed'||!sameOriginalManager(binding)){controller.abort();if(state.session===binding.session)lock(error);}
+      if(error?.status===401||error?.status===403||error?.code==='gemini_original_manager_changed'||!sameOriginalManager(binding)){controller.abort();if(state.session===binding.session)lock(error);}
       else{if(error.name==='AbortError')setStatus('Response stopped.','error');else setStatus(error.message||'Response failed.','error');
         assistant.message.state=error.name==='AbortError'?'cancelled':'failed';assistant.node.classList.add('failed');assistant.meta.textContent=assistant.message.state;}
     }finally{if(state.abort===controller){state.busy=false;state.abort=null;state.streamBinding=null;if(sameOriginalManager(binding))toggleBusy(false);}}
