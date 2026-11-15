@@ -4,3 +4,5 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 .gemini-global-back{position:fixed;z-index:60;top:max(10px,env(safe-area-inset-top));left:12px}.auth-gate{padding:76px 24px 24px}.sidebar{padding:76px 18px 18px}
 @media(max-width:760px){.gemini-global-back{left:62px;top:max(8px,env(safe-area-inset-top));min-height:42px;padding:.58rem .78rem;font-size:.82rem}.sidebar{padding-top:72px}.main .topbar{padding-top:58px}}
+
+.attachment-chip.upload_unconfirmed,.attachment-chip.removal_unconfirmed{border-color:var(--danger);flex-wrap:wrap}.attachment-chip .attachment-check{min-height:44px;padding:6px 10px;color:var(--text);border:1px solid var(--line);border-radius:8px}.attachment-chip button:disabled{cursor:not-allowed;opacity:.55}
