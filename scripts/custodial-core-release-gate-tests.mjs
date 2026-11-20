@@ -138,7 +138,10 @@ test('dispatcher invokes exact Node and complete ordered source inventory', () =
     assert.deepEqual(call.args, [resolve(CORE_ROOT, CORE_SUITES[index])]);
     assert.equal(call.options.cwd, CORE_ROOT);
     assert.equal(call.options.shell, false);
-    assert.equal(call.options.timeout, CORE_SUITE_TIMEOUT_MS);
+    const expectedTimeout = CORE_SUITES[index] === 'scripts/provider-maintenance-contract-tests.mjs'
+      ? 60_000
+      : CORE_SUITE_TIMEOUT_MS;
+    assert.equal(call.options.timeout, expectedTimeout);
     assert.equal(call.options.killSignal, 'SIGKILL');
     assert.equal(call.options.maxBuffer, 4 * 1024 * 1024);
     assert.deepEqual(call.options.env, coreChildEnvironment());

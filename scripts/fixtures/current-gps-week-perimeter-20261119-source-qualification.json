@@ -2668,13 +2668,13 @@
     },
     {
       "path": "scripts/custodial-core-release-gate-tests.mjs",
-      "bytes": 15602,
-      "sha256": "c01679c7895b900fc54563fabaacb8920ee23217aa30dec5681d1755a7d6125d"
+      "bytes": 15743,
+      "sha256": "525040e6ce6a5a7dacb7fa3ed6243c569f805c3cbb7b8d3da6ba85d827cc61f1"
     },
     {
       "path": "scripts/custodial-core-release-gate.mjs",
-      "bytes": 6599,
-      "sha256": "a7c429f429bf4bfe092f2c301b51b3a99534dbf3ef8f95d08f8096409ee73ce1"
+      "bytes": 7015,
+      "sha256": "cd53076ff19c8c704cfc968faa26554b489b6fba328cf3c21519c9560752e40a"
     },
     {
       "path": "scripts/custodial-dex-semantic-verifier-tests.mjs",
@@ -39720,8 +39720,8 @@
     },
     {
       "path": "scripts/custodial-core-release-gate.mjs",
-      "bytes": 6599,
-      "sha256": "a7c429f429bf4bfe092f2c301b51b3a99534dbf3ef8f95d08f8096409ee73ce1"
+      "bytes": 7015,
+      "sha256": "cd53076ff19c8c704cfc968faa26554b489b6fba328cf3c21519c9560752e40a"
     },
     {
       "path": "scripts/custodial-employee-experience-contract-tests.mjs",

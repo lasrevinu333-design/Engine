@@ -90,6 +90,10 @@ export const CORE_SUITES = Object.freeze([
 ].map(name => `scripts/${name}.mjs`));
 export const CORE_SUITE_TIMEOUT_MS = 45_000;
 export const CORE_TOTAL_TIMEOUT_MS = 600_000;
+// Maintenance executes the mirror and composition proofs as nested processes.
+// That complete check measured 44 seconds locally and exceeded 45 under load.
+const PROVIDER_MAINTENANCE_SUITE = 'scripts/provider-maintenance-contract-tests.mjs';
+const PROVIDER_MAINTENANCE_TIMEOUT_MS = 60_000;
 export function coreChildEnvironment(environment = process.env) {
   // Do not inherit baseline, optional database, npm, or Node preload overrides.
   return {
@@ -114,12 +118,15 @@ export function runCoreReleaseGate({ execute = spawnSync, log = console.log,
       throw new Error(`Core regression time budget exhausted before ${suite}`);
     }
     log(`CORE_SUITE ${index + 1}/${CORE_SUITES.length} ${suite}`);
+    const suiteTimeout = suite === PROVIDER_MAINTENANCE_SUITE
+      ? PROVIDER_MAINTENANCE_TIMEOUT_MS
+      : CORE_SUITE_TIMEOUT_MS;
     let result;
     try {
       result = execute(process.execPath, [resolve(CORE_ROOT, suite)], {
         cwd: CORE_ROOT, shell: false, encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'], env: coreChildEnvironment(),
-        timeout: Math.min(CORE_SUITE_TIMEOUT_MS, Math.ceil(remaining)),
+        timeout: Math.min(suiteTimeout, Math.ceil(remaining)),
         killSignal: 'SIGKILL', maxBuffer: 4 * 1024 * 1024,
       });
     } catch (error) {
