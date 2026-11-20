@@ -76,12 +76,12 @@ public final class NativeProviderCompositionTest {
         return new NativeProviderJobLifecycle(new NativeProviderJobLifecycle.Effects(){public void release(Object owner){}public void finished(Object owner,boolean retry){}}).begin(new Object(),()->100);
     }
     static final class Surface implements NativeProviderDisplayDriver.Surface {
-        final Map<String,String> active=new HashMap<>();int shows,cancels;boolean enabled=true;NativeProviderHttpTest.Hook onShow;
+        final Map<String,String> active=new HashMap<>(),pending=new HashMap<>();int shows,cancels;boolean enabled=true,visibleAfterShow=true;NativeProviderHttpTest.Hook onShow;
         public boolean enabled(NativeProviderPayload payload){return enabled;}
         public NativeProviderDisplayDriver.Active active(NativeProviderJournal.OsDisplayIntent intent){
             return !active.containsKey(intent.tag)?NativeProviderDisplayDriver.Active.ABSENT:intent.attemptId.equals(active.get(intent.tag))?NativeProviderDisplayDriver.Active.MATCH:NativeProviderDisplayDriver.Active.CONFLICT;
         }
-        public void show(NativeProviderJournal.OsDisplayIntent intent)throws Exception{shows++;active.put(intent.tag,intent.attemptId);if(onShow!=null)onShow.run();}
+        public void show(NativeProviderJournal.OsDisplayIntent intent)throws Exception{shows++;(visibleAfterShow?active:pending).put(intent.tag,intent.attemptId);if(onShow!=null)onShow.run();}
         public void cancel(String tag){cancels++;active.remove(tag);}
         public boolean absent(String tag){return !active.containsKey(tag);}
     }

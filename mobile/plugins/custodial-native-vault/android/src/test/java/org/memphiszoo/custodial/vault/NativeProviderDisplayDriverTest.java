@@ -73,18 +73,39 @@ public final class NativeProviderDisplayDriverTest {
         assertEquals("PENDING_DISPLAY", f.f.record().getString("display_state")); assertEquals(1, f.f.events());
         f.f.action("displayed"); assertEquals(2, f.f.events()); assertTrue(f.f.record().getBoolean("mirror_rendered"));
     }
-    @Test public void notifySuccessWithoutActiveItemIsNotDisplayAndIsCanceledWithUncertaintyPreserved() throws Exception {
+    @Test public void delayedAndroidPostingKeepsOriginalAttemptUntilExactActiveObservation() throws Exception {
         Fixture f = new Fixture(); f.surface.visibleAfterShow = false;
-        ProviderRecordStoreTest.failure("custodial_provider_os_display_unconfirmed", f::show);
-        assertEquals(1, f.surface.shows); assertEquals(1, f.surface.cancellations); assertEquals(1, f.f.events());
-        assertTrue(f.f.record().getBoolean("os_cancel_pending")); assertEquals("DISPLAY_UNCERTAIN", f.f.record().getString("display_state"));
-        assertEquals(1, f.driver.cancelPending(32)); assertEquals("PENDING_DISPLAY", f.f.record().getString("display_state"));
+        assertFalse(f.show());
+        assertEquals(1, f.surface.shows); assertEquals(0, f.surface.cancellations); assertEquals(1, f.f.events());
+        assertFalse(f.f.record().getBoolean("os_cancel_pending")); assertEquals("DISPLAY_UNCERTAIN", f.f.record().getString("display_state"));
+        String attempt=f.f.record().getString("os_attempt_id");
+        assertTrue(f.f.record().isNull("displayed_event_id"));assertEquals("PENDING",f.f.record().getString("audio_state"));
+        // Android finishes posting after notify returned and after the first readback.
+        f.surface.active=NativeProviderDisplayDriver.Active.MATCH;
+        assertTrue(new NativeProviderDisplayDriver(f.f.journal(),f.surface).display(f.f.principal,f.f.presentation,f.guard()));
+        assertEquals(attempt,f.f.record().getString("os_attempt_id"));assertEquals(1,f.surface.shows);assertEquals(0,f.surface.cancellations);
+        assertEquals(2,f.f.events());assertEquals("DISPLAYED",f.f.record().getString("display_state"));
     }
     @Test public void processRestartReconcilesExistingExactItemWithoutAnotherNotify() throws Exception {
         Fixture f = new Fixture(); f.f.journal().prepareOsDisplay(f.f.principal, f.f.presentation, NativeProviderPresentationTest.observed());
         f.surface.active = NativeProviderDisplayDriver.Active.MATCH;
         assertTrue(new NativeProviderDisplayDriver(f.f.journal(), f.surface).display(f.f.principal, f.f.presentation, f.guard()));
         assertEquals(0, f.surface.shows); assertEquals(2, f.f.events());
+    }
+    @Test public void missingObservationAfterNotifyStillFailsClosedAndCancelsExactItem()throws Exception {
+        Fixture f=new Fixture();f.surface.onShow=()->f.surface.active=null;
+        ProviderRecordStoreTest.failure("custodial_provider_os_display_unconfirmed",f::show);
+        assertEquals(1,f.surface.shows);assertEquals(1,f.surface.cancellations);
+        assertTrue(f.f.record().isNull("displayed_event_id"));assertEquals("PENDING",f.f.record().getString("audio_state"));
+    }
+    @Test public void delayedActiveItemCannotGainDisplayReceiptAfterItsOriginalExpiry()throws Exception {
+        Fixture f=new Fixture();f.surface.visibleAfterShow=false;assertFalse(f.show());
+        f.surface.active=NativeProviderDisplayDriver.Active.MATCH;
+        NativeProviderJournal.Observation expired=NativeProviderIngressTest.observation("2026-09-24T20:00:00Z",101,7);
+        ProviderRecordStoreTest.failure("custodial_provider_display_time_unavailable",()->f.driver.display(f.f.principal,f.f.presentation,
+            ()->expired));
+        assertTrue(f.f.record().isNull("displayed_event_id"));assertEquals("PENDING",f.f.record().getString("audio_state"));
+        assertEquals(1,f.surface.shows);
     }
     @Test public void wrongActiveContentCannotBecomeDisplayedAndCancellationMustBeObserved() throws Exception {
         Fixture f = new Fixture(); f.surface.active = NativeProviderDisplayDriver.Active.CONFLICT; f.surface.cancelWorks = false;

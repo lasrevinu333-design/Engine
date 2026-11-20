@@ -5,6 +5,7 @@ import android.app.job.JobService;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.Log;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -49,7 +50,10 @@ public final class CustodialProviderSyncJobService extends JobService {
         try {
             NativeProviderJobLifecycle.Invocation invocation = lifecycle.begin(parameters, SystemClock::elapsedRealtime);
             Run run = new Run(parameters, runtime, invocation); active = run;
-            run.deadline = () -> lifecycle.deadline(invocation);
+            run.deadline = () -> {
+                if (active == run) diagnostic("native_sync_deadline", null);
+                lifecycle.deadline(invocation);
+            };
             if (!main.postDelayed(run.deadline, NativeProviderJobBudget.MAX_MILLIS)) {
                 lifecycle.stop(parameters, NativeProviderJobLifecycle.Result.RETRY); return false;
             }
@@ -60,17 +64,27 @@ public final class CustodialProviderSyncJobService extends JobService {
                     result = runtime.synchronize(invocation);
                     if (result == null) result = NativeProviderJobLifecycle.Result.RETRY;
                 } catch (Exception failure) {
+                    diagnostic("native_sync_refused", failure);
                     result = runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND
                         ? NativeProviderJobLifecycle.Result.SUSPEND : NativeProviderJobLifecycle.Result.RETRY;
                 }
+                if (result == NativeProviderJobLifecycle.Result.SUSPEND) diagnostic("native_sync_suspended", null);
                 final NativeProviderJobLifecycle.Result completion = result;
                 main.post(() -> lifecycle.complete(invocation, completion));
             });
             return true;
         } catch (RuntimeException | VaultFailure unavailable) {
+            diagnostic("native_sync_start_refused", unavailable);
             // No successful start was returned: Android owns this callback's completion.
             lifecycle.stop(parameters, NativeProviderJobLifecycle.Result.RETRY); return false;
         }
+    }
+
+    private static void diagnostic(String event, Throwable failure) {
+        // Only private constant call sites supply event. Diagnostic loss cannot
+        // change the original completion, cancellation, retry or storage state.
+        try { Log.w("CustodialProvider", event + (failure == null ? "" : " " + NativeProviderFailureDisposition.diagnostic(failure))); }
+        catch (RuntimeException unavailable) { }
     }
 
     @Override public boolean onStopJob(JobParameters parameters) {

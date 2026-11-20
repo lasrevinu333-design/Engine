@@ -11,6 +11,31 @@ import static org.junit.Assert.*;
 /** Actual enrollment/principal/encrypted provider owners; synthetic storage, transport
  * and OS surface. These tests grant no clock profile or provider effect admission. */
 public final class NativeProviderRuntimeOwnerTest {
+    @Test public void delayedOsDisplayRemainsScheduledAndDoesNotConsumeAudioBeforeConfirmation()throws Exception {
+        var x=new NativeProviderCompositionTest.Composition(false);x.surface.visibleAfterShow=false;
+        NativeProviderAudioSequenceTest.Fixture sdk=new NativeProviderAudioSequenceTest.Fixture();x.audioSurface=sdk;x.audioScheduler=sdk;x.owner=x.reconstruct();
+        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);x.inventoryRows=new NativeProviderPayload[]{payload};
+        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.sync());
+        JSONObject pending=x.inbox(payload.recordId);String attempt=pending.getString("os_attempt_id");
+        assertEquals("DISPLAY_UNCERTAIN",pending.getString("display_state"));assertTrue(pending.isNull("displayed_event_id"));
+        assertEquals("PENDING",pending.getString("audio_state"));assertFalse(pending.getBoolean("os_cancel_pending"));
+        assertEquals(1,x.surface.shows);assertEquals(0,x.surface.cancels);
+        assertTrue(sdk.effects.isEmpty());
+        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());
+        x.surface.active.putAll(x.surface.pending);x.owner=x.reconstruct();x.sync();
+        assertEquals(attempt,x.inbox(payload.recordId).getString("os_attempt_id"));
+        assertEquals("DISPLAYED",x.inbox(payload.recordId).getString("display_state"));
+        assertFalse(x.inbox(payload.recordId).isNull("displayed_event_id"));assertEquals(1,x.surface.shows);assertEquals(0,x.surface.cancels);
+        assertEquals(java.util.List.of("tone"),sdk.effects);sdk.full();
+        assertEquals("COMPLETED",x.inbox(payload.recordId).getString("audio_state"));x.sync();assertEquals(2,sdk.texts.size());
+    }
+    @Test public void disabledDisplayCannotConsumePendingAudioOrCreateAReceipt()throws Exception {
+        var x=new NativeProviderCompositionTest.Composition(false);x.surface.enabled=false;
+        NativeProviderAudioSequenceTest.Fixture sdk=new NativeProviderAudioSequenceTest.Fixture();x.audioSurface=sdk;x.audioScheduler=sdk;x.owner=x.reconstruct();
+        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);x.inventoryRows=new NativeProviderPayload[]{payload};x.sync();
+        assertTrue(sdk.effects.isEmpty());assertTrue(x.inbox(payload.recordId).isNull("displayed_event_id"));
+        assertEquals("PENDING",x.inbox(payload.recordId).getString("audio_state"));assertEquals(0,x.surface.shows);
+    }
     @Test public void foregroundWakeArmsPendingRegistrationWithoutTokenNetworkOrJournalMutation()throws Exception {
         var x=new NativeProviderCompositionTest.Composition(false);x.owner.reconcile();
         assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());

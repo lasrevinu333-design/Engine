@@ -161,10 +161,13 @@ await test('map tile inherits sibling components with the established Trail map 
   // Current contextual pages include the integrated leadership/weather fixes.
   // Pin their exact existing bytes rather than applying an obsolete map-only
   // ancestor to this complete candidate or requiring hidden local Git history.
-  const pinBytes=readFileSync(new URL('scripts/fixtures/dashboard-map-current-context-pins-v3.json',root));
-  assert.equal(createHash('sha256').update(pinBytes).digest('hex'),'b539ca8d2fe167ff3f4b99b400f8e1da837d8abd196d062c3bbe8d73f5aaac0d');
+  const pinBytes=readFileSync(new URL('scripts/fixtures/dashboard-map-current-context-pins-v4.json',root));
+  assert.equal(createHash('sha256').update(pinBytes).digest('hex'),'86ee63359a9356503a929bc10b407ee1f9adad6d9a8e63c6164279ffbb7aa890');
   const pins=JSON.parse(pinBytes);
-  assert.equal(pins.schema,'custodial.dashboard-map-current-context-pins.v3');
+  assert.equal(pins.schema,'custodial.dashboard-map-current-context-pins.v4');
+  assert.equal(pins.parent_sha256,'b539ca8d2fe167ff3f4b99b400f8e1da837d8abd196d062c3bbe8d73f5aaac0d');
+  assert.equal(createHash('sha256').update(readFileSync(new URL('scripts/fixtures/dashboard-map-current-context-pins-v3.json',root))).digest('hex'),pins.parent_sha256);
+  assert.equal(pins.runtime_admission,false);assert.equal(pins.release_admission,false);
   assert.equal(Object.keys(pins.files).length,8);
   for(const [name,digest]of Object.entries(pins.files))
     assert.equal(createHash('sha256').update(readFileSync(new URL(name,root))).digest('hex'),digest,'exact frozen current map context: '+name);
@@ -175,12 +178,17 @@ await test('actual Hub link builder gives map the same manager/device/origin con
   const els=new Proxy({}, {get:(target,key)=>target[key]??=( {href:''})});
   const session={...principal,device_id:'manager-device'};
   const auth={readSession:()=>session,isOpsManager:value=>value===session&&value.role==='ops_manager'};
-  const state={currentDeviceId:'manager-device',generation:7,retired:false,session,auth,sessionBinding:JSON.stringify(session)};
+  const bindingSource=source.slice(source.indexOf('  function sessionBinding(session){'),source.indexOf('  function resumeBinding('));
+  const methodGuardSource=source.slice(source.indexOf('  function originalAuthMethods('),source.indexOf('  function stopRefreshes('));
+  const methodNamesSource=source.match(/  const authMethodNames=\[[^;]+;/)?.[0];assert.ok(methodNamesSource);
+  const binding=vm.runInNewContext('('+bindingSource.trim()+')');
+  const state={currentDeviceId:'manager-device',generation:7,retired:false,suspended:false,verifying:false,session,auth,
+    sessionBinding:binding(session),authMethods:Object.freeze({...auth})};
   const currentSource=source.slice(source.indexOf('  function current(generation){'),source.indexOf('  function every(',source.indexOf('  function current(generation){')));
   const context={URL,window:{location:{href:'https://example.org/Engine/start_page1.html'},MemphisAuth:auth},state,els,
     managerLinks:[],coverageLink:null,coverageHref:'',resolveDeviceId:()=> 'manager-device',
-    sessionBinding:value=>JSON.stringify(value),retire:()=>{state.retired=true;}};
-  vm.runInNewContext(`${currentSource}\n${body}\nupdateLinks();`,context);
+    sessionBinding:binding,retire:()=>{state.retired=true;}};
+  vm.runInNewContext(`${methodNamesSource}\n${methodGuardSource}\n${currentSource}\n${body}\nupdateLinks();`,context);
   const mapUrl=new URL(els.dashboardMapLink.href),dashboardUrl=new URL(els.dashboardLink.href);
   assert.equal(mapUrl.pathname,'/Engine/operations-dashboard.html');assert.equal(mapUrl.search,dashboardUrl.search);
   assert.equal(mapUrl.searchParams.get('hub'),'manager');assert.equal(mapUrl.searchParams.get('device'),'manager-device');

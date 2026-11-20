@@ -1,0 +1,96 @@
+{
+  "schema": "custodial.notification-posting-byte-deltas.v1",
+  "scope": "Exact reversible two-file repair; no release or hardware admission",
+  "files": [
+    {
+      "name": "NativeProviderDisplayDriver.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderDisplayDriver.java",
+      "marker": "Android enqueues notify asynchronously.",
+      "before_sha256": "a7ecd17959a4c70a078b690071cd667e293101d2af674c762c8d49e423766978",
+      "after_sha256": "58d65378ba4839dab51465eb079872e15844019ba9e9f4418891c1ad45cac212",
+      "hunks": [
+        {
+          "start": 31,
+          "after": [
+            "            if (!surface.enabled(presentation.payload))"
+          ],
+          "before": [
+            "            if (!surface.enabled(presentation.payload) || surface.active(intent) != Active.MATCH)"
+          ]
+        },
+        {
+          "start": 33,
+          "after": [
+            "            Active observed = surface.active(intent);",
+            "            if (observed == Active.CONFLICT) throw new VaultFailure(\"custodial_provider_os_item_conflict\");",
+            "            // Android enqueues notify asynchronously. ABSENT is not failure or",
+            "            // displayed: retain the exact durable attempt for the next bounded",
+            "            // system pass, without cancelling the item still being posted.",
+            "            if (observed == Active.ABSENT) return false;",
+            "            if (observed != Active.MATCH) throw new VaultFailure(\"custodial_provider_os_display_unconfirmed\");",
+            "            observation = guard.current(); journal.requirePresentationCurrent(principal, presentation);"
+          ],
+          "before": []
+        }
+      ]
+    },
+    {
+      "name": "NativeProviderRuntimeOwner.java",
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "marker": "private boolean unconfirmedDisplayLocked",
+      "before_sha256": "f2adc613a5f2f530140a6a38985643f2ec8945c7f0148596b31dc715bfde5088",
+      "after_sha256": "3e73a0da03444c0a1fbd3280f85fa2ccdb84e16eaaf87a175f18556442452bf2",
+      "hunks": [
+        {
+          "start": 404,
+          "after": [
+            "            if(work.networkPending()||!work.quarantined.isEmpty()||unconfirmedDisplayLocked(current.principal)||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;"
+          ],
+          "before": [
+            "            if(work.networkPending()||!work.quarantined.isEmpty()||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;"
+          ]
+        },
+        {
+          "start": 407,
+          "after": [
+            "    }",
+            "    /** Read-only scheduling hint for an existing exact notify attempt only.",
+            "     * No new clock interval, display receipt, audio acquisition or OS effect. */",
+            "    private boolean unconfirmedDisplayLocked(NativeProviderPrincipal principal)throws VaultFailure {",
+            "        NativeProviderJournal.Observation now=clock.observe();",
+            "        for(String id:journal.admittedRecordIds(principal)){",
+            "            NativeProviderJournal.Presentation presentation=journal.presentation(principal,id);",
+            "            if(!NativeProviderTime.live(now.bounds,presentation.payload.reservedAt,presentation.payload.validUntil))continue;",
+            "            try{org.json.JSONObject row=presentation.record();",
+            "                if(\"DISPLAY_UNCERTAIN\".equals(row.getString(\"display_state\"))&&!row.isNull(\"os_attempt_id\")",
+            "                    &&row.isNull(\"displayed_event_id\")&&!row.getBoolean(\"os_cancel_pending\")",
+            "                    &&!row.getBoolean(\"card_dismissed\")&&row.isNull(\"opened_event_id\")&&row.isNull(\"acknowledged_event_id\"))return true;",
+            "            }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure(\"custodial_provider_audio_invalid\",invalid);}",
+            "        }",
+            "        return false;"
+          ],
+          "before": []
+        },
+        {
+          "start": 512,
+          "after": [
+            "                        if(!\"DISPLAYED\".equals(row.getString(\"display_state\"))||row.isNull(\"displayed_event_id\")",
+            "                            ||!\"PENDING\".equals(row.getString(\"audio_state\"))||row.getBoolean(\"card_dismissed\")||!row.isNull(\"acknowledged_event_id\")"
+          ],
+          "before": [
+            "                        if(!\"PENDING\".equals(row.getString(\"audio_state\"))||row.getBoolean(\"card_dismissed\")||!row.isNull(\"acknowledged_event_id\")"
+          ]
+        },
+        {
+          "start": 524,
+          "after": [
+            "                return remaining.networkPending()||quarantineWaiting||unconfirmedDisplayLocked(current.principal)||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())"
+          ],
+          "before": [
+            "                return remaining.networkPending()||quarantineWaiting||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())"
+          ]
+        }
+      ]
+    }
+  ]
+}

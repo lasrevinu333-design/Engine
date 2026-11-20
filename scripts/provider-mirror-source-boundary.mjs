@@ -7,12 +7,14 @@ import {withoutRequiredKinds} from './provider-required-kind-source-boundary.mjs
 import {withoutRetainedNativeBridge} from './retained-native-bridge-source-boundary.mjs';
 import {withoutQualifiedProviderSchema} from './qualified-provider-schema-source-boundary.mjs';
 import {normalizeCurrentFirstAudio} from './native-first-audio-source-boundary.mjs';
+import {withoutNotificationPostingRepair} from './provider-notification-posting-source-boundary.mjs';
 export const providerMirrorBytePins=JSON.parse(readFileSync(new URL('./fixtures/provider-mirror-byte-deltas.json',import.meta.url),'utf8'));
 const sha=value=>createHash('sha256').update(value).digest('hex');
 // Exact FULL current bytes and FULL archived bytes, with pinned reversible
 // deltas. Works in a shallow checkout without any unpublished Git objects.
 export function withoutProviderMirror(name,source){
  source=normalizeCurrentFirstAudio(name,source);
+ source=withoutNotificationPostingRepair(name,source);
  const known=providerMirrorBytePins.find(value=>(value.name===name||value.path===name)&&value.origin);
  if(known&&sha(source)===known.base_sha256)return source; // Already normalized exact archived bytes.
  if(!known||sha(source)!==known.current_sha256)

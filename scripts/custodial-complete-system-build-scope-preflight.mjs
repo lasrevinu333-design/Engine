@@ -3,8 +3,10 @@
 // Source-only stop gate for the owner's complete-system candidate. This does
 // not build an APK or assert that any enabled module works end to end.
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { CUSTODIAL_RELEASE_CAPABILITIES, deferredCustodialFeature } from '../mobile/src/custodial/release-scope.js';
 import { custodialInitialReleaseHome } from '../mobile/scripts/custodial-initial-release-pages.mjs';
+import { isCleaningScope, readCustodialBuildScope } from '../mobile/scripts/custodial-new-producer-scope-policy.mjs';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const required = ['cleaning', 'schedule', 'messenger', 'events', 'feedback'];
@@ -27,19 +29,26 @@ for (const page of ['messages.html', 'events.html', 'employee-feedback.html', 'e
     findings.push(`home_entry_missing:${page}`);
   }
 }
-if (!home.includes('class="memphisHome"')) findings.push('memphis_home_entry_missing');
-if (!build.includes("html = custodialInitialReleaseHome(html)")) findings.push('unexpected_home_build_transform');
+if (!build.includes('html = custodialInitialReleaseHome(html,{cleaningFirst:isCleaningScope(newProducerScope)})')) {
+  findings.push('unexpected_home_build_transform');
+}
+let profile = null;
 try {
-  const generatedHome = custodialInitialReleaseHome(home);
+  const scope = readCustodialBuildScope(fileURLToPath(new URL('../mobile/', import.meta.url)));
+  profile = scope.profile;
+  const cleaningFirst = isCleaningScope(scope);
+  if (cleaningFirst) findings.push('source_scope_defers_complete_system');
+  const generatedHome = custodialInitialReleaseHome(home, { cleaningFirst });
   if (generatedHome.includes('deferredFeature')) findings.push('generated_home_has_disabled_entries');
-  if (!generatedHome.includes('class="memphisHome"')) findings.push('generated_home_omits_memphis');
+  if (generatedHome !== home) findings.push('generated_home_changes_complete_system_menu');
 } catch (error) {
-  findings.push(`home_build_transform_rejects_complete_scope:${String(error?.message || error)}`);
+  findings.push(`build_source_rejects_complete_scope:${String(error?.message || error)}`);
 }
 
 const result = {
   status: findings.length ? 'HOLD_COMPLETE_SYSTEM_BUILD_SCOPE' : 'PASS_COMPLETE_SYSTEM_BUILD_SCOPE_SOURCE_ONLY',
   findings,
+  profile,
   checked: { capabilities: required.length, employeePages: employeePages.length, homeEntries: 5 },
   limits: 'Source derivation only; no web output, APK, module runtime, provider, mail, phone or physical acceptance.',
 };

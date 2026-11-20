@@ -138,19 +138,34 @@
   z-index:-1;border-radius:9px;background:#0d1f2f;box-shadow:0 0 0 1px var(--ux-line);pointer-events:none;
 }
 
+/* Assigned phones need the complete sourced perimeter, including land beyond
+   the artwork crop. The public cleaning map retains its approved crop. */
+.operationsPage .commandPage .commandMap.mzMapStage[data-map-coverage="zoo-perimeter"]{
+  width:100%;overflow:visible;
+}
+.operationsPage .commandMap[data-map-coverage="zoo-perimeter"] .mapArtworkFrame{
+  min-width:0;aspect-ratio:var(--map-frame-aspect);
+}
+.operationsPage .commandMap[data-map-coverage="zoo-perimeter"] .mapArtworkFrame .mzMapViewport{
+  left:0;top:0;width:100%;height:100%;aspect-ratio:auto;
+}
+.operationsPage .commandMap[data-map-coverage="zoo-perimeter"] .mzMapSurface::before{
+  inset:0;
+}
+
 /* Daily planned counts share the existing telemetry card, not the map. */
 .dailyExpected{display:grid;gap:4px;margin-top:8px}
 .dailyExpected strong{font-size:18px;line-height:1.2;overflow-wrap:anywhere}
 .dailyExpected .eyebrow{white-space:normal}
 
 /* Independent cards keep planned attendance out of the clock and gate cards. */
-.telemetry.separateTelemetry{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:stretch;grid-auto-rows:1fr;border:0;border-radius:0;background:transparent;overflow:visible}
+.telemetry.separateTelemetry{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:stretch;grid-auto-rows:1fr;border:0;border-radius:0;background:transparent;overflow:visible}
 .telemetry.separateTelemetry>section{border:0;box-shadow:inset 0 0 0 1px var(--ux-line);border-radius:16px;background:var(--ux-panel-soft);margin:0}
 .telemetry.separateTelemetry .weatherCard{grid-column:auto}
 .telemetry.separateTelemetry .expectedCard{align-content:start}
 @media(max-width:699px){.telemetry.separateTelemetry{grid-template-columns:1fr}.telemetry.separateTelemetry .weatherCard{grid-column:auto}}
 
-.telemetry.separateTelemetry.hasMod{grid-template-columns:repeat(6,minmax(0,1fr))}
+.telemetry.separateTelemetry.hasMod{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:1350px){.telemetry.separateTelemetry,.telemetry.separateTelemetry.hasMod{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:699px){.telemetry.separateTelemetry,.telemetry.separateTelemetry.hasMod{grid-template-columns:1fr}}
 
@@ -196,6 +211,7 @@
 @media(min-width:1400px){
   :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels{grid-template-columns:repeat(3,minmax(0,1fr))}
   :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>.telemetry,
+  :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>.tickerBand,
   :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>#dashboard-map,
   :is(:root:fullscreen,:root.dashboard-expanded) #operations-panels>.dashboardTools{grid-column:1/-1}
   :is(:root:fullscreen,:root.dashboard-expanded) .commandPage:has(>.publicViewNav){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-content:start}
@@ -210,3 +226,9 @@
   :is(:root:fullscreen,:root.dashboard-expanded) .telemetry.separateTelemetry>section>.eyebrow{min-height:1.5em}
   :is(:root:fullscreen,:root.dashboard-expanded) .telemetry.separateTelemetry .telemetryValue{gap:2px}
 }
+
+/* Next scheduled details occupy the existing fixed label; ticker width/motion stay unchanged. */
+.operationsPage .tickerBand .tickerLabel.hasNext{flex-direction:column;align-items:stretch;justify-content:center;gap:4px}
+.tickerLabel.hasNext .tickerNext{display:grid;gap:4px;min-width:0;text-transform:none;letter-spacing:normal}
+.tickerLabel.hasNext .tickerNextTitle{font-size:14px;line-height:1.3;font-weight:720;overflow-wrap:anywhere}
+.tickerLabel.hasNext .metricNote{color:inherit;font-weight:400;letter-spacing:normal;overflow-wrap:anywhere}

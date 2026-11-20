@@ -7,7 +7,7 @@
 
   // History is supplied by an existing named-manager read boundary. Nothing
   // here polls, collects a phone, interpolates missing samples or joins actors.
-  function path({ registration, observations, session, now = Date.now(), maximumGapMs = 90000 }) {
+  function path({ registration, observations, session, now = Date.now(), maximumGapMs = 90000, perimeter=null }) {
     if (!registration?.project || !Array.isArray(observations) || !session?.uuid ||
         !session.locationCode || !session.deviceIdentifier || !session.employeeId ||
         !['active', 'offline-provisional'].includes(session.status) ||
@@ -38,7 +38,12 @@
       if (![p.client_latitude, p.client_longitude, p.accuracy_m].every(finite)) {
         rejected.push({ eventId: item?.id ?? null, reason: 'missing_measured_position', observed }); continue;
       }
-      const projected = registration.project(p.client_latitude, p.client_longitude, p.accuracy_m);
+      if(perimeter&&!perimeter.contains?.(p.client_latitude,p.client_longitude)){
+        rejected.push({eventId:item?.id??null,reason:'outside_zoo_perimeter',observed});continue;
+      }
+      const projected = perimeter&&registration.projectPhone
+        ?registration.projectPhone(p.client_latitude,p.client_longitude,p.accuracy_m)
+        :registration.project(p.client_latitude,p.client_longitude,p.accuracy_m);
       if (!projected.ok) { rejected.push({ eventId: item?.id ?? null, reason: projected.reason, observed }); continue; }
       accepted.push({ eventId: item?.id ?? null, observed, ...projected });
     }
@@ -65,12 +70,16 @@
   }
 
   function phone({registration,phone,now=Date.now()}){
+    const perimeter=root.MemphisZooPerimeter||(typeof require==='function'?require('./memphis-zoo-perimeter.js'):null);
     const p=phone?.position,observed=captureTime(p?.observedAt),received=captureTime(p?.receivedAt);
     if(!registration?.project||!phone?.deviceIdentifier||!phone?.employeeId||!finite(now)
       ||!Number.isSafeInteger(phone.assignmentEpoch)||phone.assignmentEpoch<1
       ||!finite(observed)||!finite(received)||observed>now||observed>received||received>now
       ||![p.latitude,p.longitude,p.accuracyM].every(finite))return {state:'unavailable',position:null};
-    const projected=registration.project(p.latitude,p.longitude,p.accuracyM);
+    if(!perimeter?.contains)return {state:'unavailable',position:null,reason:'zoo_perimeter_unavailable'};
+    if(!perimeter.contains(p.latitude,p.longitude))return {state:'unavailable',position:null,reason:'outside_zoo_perimeter'};
+    if(typeof registration.projectPhone!=='function')return {state:'unavailable',position:null,reason:'phone_projection_unavailable'};
+    const projected=registration.projectPhone(p.latitude,p.longitude,p.accuracyM);
     if(!projected.ok)return {state:'unavailable',position:null,reason:projected.reason};
     return {state:now-observed<=120000?'live':'stale',position:{...projected,observed},
       label:phone.employeeName||phone.deviceIdentifier,deviceIdentifier:phone.deviceIdentifier};

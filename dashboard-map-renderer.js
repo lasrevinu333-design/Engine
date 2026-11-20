@@ -109,8 +109,10 @@
   function create({section,auth,audience='manager',fetchImpl:fetch=root.fetch.bind(root),document=root.document,window=root}){
     const publicRead=audience==='public_readonly';
     const horizontal=section?.dataset?.mapPresentation==='original-horizontal';
-    const displayPoint=point=>horizontal?FIT.rasterToNative(point):point;
-    const displayWidth=horizontal?1282:FIT.WIDTH,displayHeight=horizontal?550:FIT.HEIGHT;
+    const perimeter=root.MemphisZooPerimeter||(typeof require==='function'?require('./memphis-zoo-perimeter.js'):null);
+    const baseWidth=horizontal?1282:FIT.WIDTH,baseHeight=horizontal?550:FIT.HEIGHT;
+    let frame={left:0,top:0,right:baseWidth,bottom:baseHeight},displayWidth=baseWidth,displayHeight=baseHeight;
+    const displayPoint=point=>{const p=horizontal?FIT.rasterToNative(point):point;return {x:p.x-frame.left,y:p.y-frame.top};};
     if(!MAP||!FIT?.transformAnchors||!section||(!publicRead&&!auth?.readSession))throw new Error('Map staging requires the exact source bridge and accepted overall fit');
     const viewport=section.querySelector('[data-map-viewport]');
     const surface=section.querySelector('[data-map-surface]');
@@ -130,6 +132,19 @@
     const options=new Map();
     let lastGps=null,gpsAgeTimer=null,gpsCaptions=[],captionLayer=null,captionObserver=null,captionFrame=null;
     const gpsUnavailable='Assigned phone locations unavailable. Map position is an estimate; no cleaning session is required.';
+    function frameWholePerimeter(){
+      if(publicRead||!horizontal||!perimeter?.record||!perimeter.contains)return;
+      const registration=FIT.admit({anchors}),points=perimeter.record.geometry.coordinates[0].map(([longitude,latitude])=>{
+        const p=registration.projectPhone(latitude,longitude,1);if(!p.ok)throw Error('Zoo perimeter display projection unavailable');
+        return horizontal?FIT.rasterToNative(p.canvas):p.canvas;
+      });
+      // Five display units keep a boundary dot visible; no geographic buffer.
+      frame={left:Math.min(0,...points.map(p=>p.x))-5,top:Math.min(0,...points.map(p=>p.y))-5,
+        right:Math.max(baseWidth,...points.map(p=>p.x))+5,bottom:Math.max(baseHeight,...points.map(p=>p.y))+5};
+      displayWidth=frame.right-frame.left;displayHeight=frame.bottom-frame.top;
+      section.setAttribute?.('data-map-coverage','zoo-perimeter');
+      section.style?.setProperty('--map-frame-aspect',`${displayWidth} / ${displayHeight}`);
+    }
     function clearGps(message=gpsUnavailable){if(captionFrame!==null){window.cancelAnimationFrame?.(captionFrame);captionFrame=null;}lastGps=null;gpsCaptions=[];captionLayer=null;if(gpsAgeTimer!=null){window.clearInterval(gpsAgeTimer);gpsAgeTimer=null;}gpsLayer?.replaceChildren();if(gpsStatus)gpsStatus.textContent=message;}
     // Captions are presentation, not geographic observations. Keep them outside
     // the sealed inverse-fit group, in screen-sized units, with leaders back to
@@ -233,11 +248,13 @@
       surface.style.width=`${fit.width}px`;
       surface.style.height=`${fit.height}px`;
       artwork.src=horizontal?ASSETS.horizontalArtwork:ASSETS.artwork;
-      artwork.setAttribute?.('width',String(displayWidth));artwork.setAttribute?.('height',String(displayHeight));
+      artwork.setAttribute?.('width',String(baseWidth));artwork.setAttribute?.('height',String(baseHeight));
+      Object.assign(artwork.style,{position:'absolute',width:`${baseWidth*fit.fitScale}px`,height:`${baseHeight*fit.fitScale}px`,
+        left:`${-frame.left*fit.fitScale}px`,top:`${-frame.top*fit.fitScale}px`});
       gpsLayer?.setAttribute('viewBox',`0 0 ${displayWidth} ${displayHeight}`);
       const urgent=[];
       const screenPoints=markers.map(marker=>({id:marker.locationId,...MAP.screenPoint(displayPoint(marker.canvasPoint),{fitScale:fit.fitScale,zoom:1})}));
-      const spaced=horizontal?separatePins(screenPoints,{width:fit.width,left:55*fit.fitScale,right:1141*fit.fitScale,top:55*fit.fitScale,bottom:431*fit.fitScale}):null;
+      const spaced=horizontal?separatePins(screenPoints,{width:fit.width,left:(55-frame.left)*fit.fitScale,right:(1141-frame.left)*fit.fitScale,top:(55-frame.top)*fit.fitScale,bottom:(431-frame.top)*fit.fitScale}):null;
       for(const marker of markers){
         const button=buttons.get(marker.locationId),view=MAP.presentation(marker,{interaction,
           reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true});
@@ -288,11 +305,19 @@
         const registration=FIT.admit({anchors});
         if(!context||typeof context!=='object')throw new Error('GPS context unavailable');
         const now=Date.now(),svg='http://www.w3.org/2000/svg',nodes=[],captions=[];
+        if(perimeter?.record&&registration.projectPhone){
+          const outline=document.createElementNS(svg,'polygon');
+          outline.setAttribute('points',perimeter.record.geometry.coordinates[0].map(([longitude,latitude])=>{
+            const p=registration.projectPhone(latitude,longitude,1);if(!p.ok)throw Error('Zoo perimeter projection unavailable');return `${p.canvas.x},${p.canvas.y}`;
+          }).join(' '));
+          outline.setAttribute('fill','none');outline.setAttribute('stroke','#075e96');outline.setAttribute('stroke-width','1.5');
+          outline.setAttribute('data-zoo-perimeter',perimeter.id);nodes.push(outline);
+        }
         let tracks=0,current=0,stale=0,missing=0,discarded=0,unknownChronology=0;const phoneLabels=[];
         for(const work of Array.isArray(context.work)?context.work:[]){
           if(work?.truncated || work?.incomplete){discarded++;continue;}
           let result;
-          try{result=PATH.path({registration,observations:work?.observations,session:work?.session,now});}
+          try{result=PATH.path({registration,observations:work?.observations,session:work?.session,now,perimeter});}
           catch{discarded++;continue;}
           discarded+=result.rejected.length;
           if(result.chronologyUnknown)unknownChronology++;
@@ -324,7 +349,7 @@
           if(!result.position){missing++;phoneLabels.push(`${entry?.employeeName||entry?.deviceIdentifier||'Assigned phone'}: location unavailable`);continue;}
           const point=result.position,color=result.state==='live'?'#075e96':'#685d4a';
           if(result.state==='live')current++;else stale++;
-          const label=`${result.label}: ${result.state==='live'?'live':'last known; no fresh update'} · ${new Date(point.observed).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`;
+            const label=`${result.label}: ${result.state==='live'?'live':'last known; no fresh update'} · ${new Date(point.observed).toLocaleTimeString([], {timeZone:'America/Chicago',hour:'numeric',minute:'2-digit'})}`;
           phoneLabels.push(label);
           const ring=document.createElementNS(svg,'circle');
           ring.setAttribute('cx',String(point.canvas.x));ring.setAttribute('cy',String(point.canvas.y));
@@ -345,8 +370,10 @@
           // and accuracy ring. The sealed geographic registration is unchanged.
           const zero=FIT.rasterToNative({x:0,y:0}),x=FIT.rasterToNative({x:1,y:0}),y=FIT.rasterToNative({x:0,y:1});
           const group=document.createElementNS(svg,'g');
-          group.setAttribute('transform',`matrix(${x.x-zero.x} ${x.y-zero.y} ${y.x-zero.x} ${y.y-zero.y} ${zero.x} ${zero.y})`);
+          group.setAttribute('transform',`matrix(${x.x-zero.x} ${x.y-zero.y} ${y.x-zero.x} ${y.y-zero.y} ${zero.x-frame.left} ${zero.y-frame.top})`);
           group.append(...nodes);gpsLayer.replaceChildren(group);
+        }else if(nodes.length&&(frame.left||frame.top)){
+          const group=document.createElementNS(svg,'g');group.setAttribute('transform',`translate(${-frame.left} ${-frame.top})`);group.append(...nodes);gpsLayer.replaceChildren(group);
         }else gpsLayer.replaceChildren(...nodes);
         gpsCaptions=captions;captionLayer=null;
         if(captions.length){captionLayer=document.createElementNS(svg,'g');
@@ -397,7 +424,7 @@
       if(!response.ok)throw new Error('Approved map anchors unavailable');
       const parsed=await MAP.parseApprovedAnchors(new Uint8Array(await response.arrayBuffer()),{subtle:window.crypto?.subtle});
       if(closed||suspended||expected!==lifecycleGeneration)return false;
-      anchors=FIT.transformAnchors(parsed);
+      anchors=FIT.transformAnchors(parsed);frameWholePerimeter();
       for(const anchor of anchors.locations)addPin(anchor);
       if(locations){
         for(const anchor of anchors.locations){

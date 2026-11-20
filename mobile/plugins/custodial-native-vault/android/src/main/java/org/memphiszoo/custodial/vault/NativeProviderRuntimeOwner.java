@@ -402,9 +402,24 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
         if(!supportedProfile())return NativeProviderJobLifecycle.Result.SUSPEND;
         try { synchronized(engine){synchronized(coordinator){
             NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Work work=journal.pendingWork(current.principal);
-            if(work.networkPending()||!work.quarantined.isEmpty()||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;
+            if(work.networkPending()||!work.quarantined.isEmpty()||unconfirmedDisplayLocked(current.principal)||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;
             return journal.pendingOsCancellations().isEmpty()?NativeProviderJobLifecycle.Result.DRAINED:NativeProviderJobLifecycle.Result.RETRY;
         }}} catch(VaultFailure|RuntimeException unavailable){return NativeProviderJobLifecycle.Result.SUSPEND;}
+    }
+    /** Read-only scheduling hint for an existing exact notify attempt only.
+     * No new clock interval, display receipt, audio acquisition or OS effect. */
+    private boolean unconfirmedDisplayLocked(NativeProviderPrincipal principal)throws VaultFailure {
+        NativeProviderJournal.Observation now=clock.observe();
+        for(String id:journal.admittedRecordIds(principal)){
+            NativeProviderJournal.Presentation presentation=journal.presentation(principal,id);
+            if(!NativeProviderTime.live(now.bounds,presentation.payload.reservedAt,presentation.payload.validUntil))continue;
+            try{org.json.JSONObject row=presentation.record();
+                if("DISPLAY_UNCERTAIN".equals(row.getString("display_state"))&&!row.isNull("os_attempt_id")
+                    &&row.isNull("displayed_event_id")&&!row.getBoolean("os_cancel_pending")
+                    &&!row.getBoolean("card_dismissed")&&row.isNull("opened_event_id")&&row.isNull("acknowledged_event_id"))return true;
+            }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure("custodial_provider_audio_invalid",invalid);}
+        }
+        return false;
     }
     @Override public long captureToken(String token) throws VaultFailure { requireDelivery();return registration.captureToken(token); }
     @Override public void receive(NativeProviderPayload payload) throws VaultFailure {
@@ -495,7 +510,8 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
                 if(audio!=null){audio.reconcile();if(!audio.busy())for(String id:journal.admittedRecordIds(current.principal)){
                     invocation.attempt.check();NativeProviderJournal.Presentation presentation=journal.presentation(current.principal,id);
                     try{org.json.JSONObject row=presentation.record();
-                        if(!"PENDING".equals(row.getString("audio_state"))||row.getBoolean("card_dismissed")||!row.isNull("acknowledged_event_id")
+                        if(!"DISPLAYED".equals(row.getString("display_state"))||row.isNull("displayed_event_id")
+                            ||!"PENDING".equals(row.getString("audio_state"))||row.getBoolean("card_dismissed")||!row.isNull("acknowledged_event_id")
                             ||!NativeProviderTime.live(clock.observe().bounds,presentation.payload.reservedAt,presentation.payload.validUntil))continue;
                     }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure("custodial_provider_audio_invalid",invalid);}
                     if(audio.start(presentation.payload.get("body"),audioOwner(presentation)))break;
@@ -506,7 +522,7 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
                 invocation.attempt.check();current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();
                 if(cleanup.bounds!=null)journal.compactSettledRecords(current.principal,cleanup,16);
                 NativeProviderJournal.Work remaining=journal.pendingWork(current.principal);
-                return remaining.networkPending()||quarantineWaiting||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())
+                return remaining.networkPending()||quarantineWaiting||unconfirmedDisplayLocked(current.principal)||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())
                     ?NativeProviderJobLifecycle.Result.RETRY:NativeProviderJobLifecycle.Result.DRAINED;
             }}
         } catch(VaultFailure|RuntimeException failure) {

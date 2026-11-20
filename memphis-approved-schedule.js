@@ -253,12 +253,17 @@ function civilDate(value){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.tes
 const sevenEnd=value=>new Date(Date.parse(value+'T12:00:00Z')+6*86400000).toISOString().slice(0,10);
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const exactFields=(value,fields)=>plain(value)&&Object.keys(value).length===fields.length&&fields.every(k=>Object.hasOwn(value,k));
+const acceptedSevenUpdate=value=>value?.operationKind==='ACCEPTED_SEVEN_UPDATE_REUSE_EXISTING_CAPACITY'
+ &&value.manualDataDigest==='fe0257dbd8cb4dd2f63c4da1997342067945e87a6ce516aee0698debef5d9a58'
+ &&value.acceptedArtifactSha256==='22d067bd595e2450bb32cd36903df94628eb6df055a44f992b3aba9f242bbee7';
+const hasUpdateMarker=value=>['operationKind','manualDataDigest','acceptedArtifactSha256'].some(key=>Object.hasOwn(value||{},key));
 function validateManualOptions(roster){
  const value=roster?.approvedManualActivation;
  if(value?.schema!=='custodial.approved-manual-activation-options.v2'||!civilDate(value.serviceDate)||!Number.isSafeInteger(value.authorityRevision)||value.authorityRevision<0
   ||roster.serviceDate!==value.serviceDate||roster.authorityRevision!==value.authorityRevision||!Array.isArray(value.choices)||value.choices.length>256)
   error('Current approved activation choices are unavailable. No activation was sent.');
- const seen=new Set();for(const row of value.choices){if(!exactFields(row,['packetId','label','serviceDate','windowEnd','expectedRevision','activationEligible'])
+ const seen=new Set();for(const row of value.choices){if(!exactFields(row,['packetId','label','serviceDate','windowEnd','expectedRevision','activationEligible',
+   ...(acceptedSevenUpdate(row)?['operationKind','manualDataDigest','acceptedArtifactSha256']:[])])
   ||!UUID.test(row.packetId||'')||typeof row.label!=='string'||!row.label.trim()||row.label.length>400||row.serviceDate!==value.serviceDate
   ||row.windowEnd!==sevenEnd(row.serviceDate)||row.expectedRevision!==value.authorityRevision||row.activationEligible!==true||seen.has(row.packetId))
   error('The server-listed activation selection is invalid.');seen.add(row.packetId);}
@@ -271,12 +276,14 @@ function validateManualOptions(roster){
 function validateManualPreview(value,choice,managerId){
  if(value?.status==='CURRENT_TYPED_EMPLOYMENT_PACKET_REQUIRED'&&value.activationEligible===false)
   error('A current employment-aware approved packet is required. The original packet remains preserved; nothing was activated.');
+ const validPositions=acceptedSevenUpdate(value)?value.currentPositions===30&&value.additionalCapacityPositions===0
+  :!hasUpdateMarker(value)&&value?.currentPositions===22&&value.additionalCapacityPositions===8;
  if(value?.schema!=='custodial.approved-manual-activation-preview.v2'||value.status!=='PREVIEW_ONLY'||value.published!==false
   ||value.managerId!==managerId||value.packetId!==choice.packetId||value.expectedRevision!==choice.expectedRevision
   ||value.serviceDate!==choice.serviceDate||value.windowEnd!==choice.windowEnd||!UUID.test(value.sourceId||'')
   ||!HASH.test(value.previewDigest||'')||!HASH.test(value.sourceDigest||'')||!HASH.test(value.packetPreviewDigest||'')||!HASH.test(value.packetFingerprint||'')
   ||value.operationIdRequired!==true||value.activationKind!=='INITIAL_EMPLOYMENT_OPERATIONALIZATION'||value.normalPatternSolverInvoked!==false
-  ||value.operationalAdjustmentPending!==true||value.atomicRosterAndPublication!==true||value.currentPositions!==22||value.additionalCapacityPositions!==8
+  ||value.operationalAdjustmentPending!==true||value.atomicRosterAndPublication!==true||!validPositions||acceptedSevenUpdate(value)!==acceptedSevenUpdate(choice)
   ||value.prospectivePositions!==30||value.newEmployees!==0||!Array.isArray(value.employmentRevisionVector)||value.employmentRevisionVector.length!==14)
   error('The actual approved activation preview is incomplete or changed. Nothing was activated.');
  const seen=new Set();for(const row of value.employmentRevisionVector){const id=row?.serviceDate+':'+row?.employeeId;
@@ -327,7 +334,7 @@ function createManualActivation({api,auth=root.MemphisAuth,managerId,baseUrl,sto
   current();try{const value=await api(path,{...options,expectedManagerId:managerId});current();return value;}catch(e){current();throw e;}}
  return Object.freeze({pending,isBlocked:()=>broken||!!read(),
   async load(){choices=validateManualOptions(await bound(manualPath+'/roster',{method:'GET'}));reviewed=null;return COPY(choices);},
-  async preview(packetId){if(busy||read()||broken||otherPending())error('Resolve the saved scheduler operation first.');const choice=choices?.choices.find(x=>x.packetId===packetId);if(!choice||choices.active)error('Select a current server-listed approved activation packet.');busy=true;
+  async preview(packetId){if(busy||read()||broken||otherPending())error('Resolve the saved scheduler operation first.');const choice=choices?.choices.find(x=>x.packetId===packetId);if(!choice||(choices.active&&!acceptedSevenUpdate(choice)))error('Select a current server-listed approved activation packet.');busy=true;
    try{const value=await bound(manualPath+'/preview',{method:'POST',body:JSON.stringify({packet_id:choice.packetId,expected_revision:choice.expectedRevision})});reviewed=validateManualPreview(value,choice,managerId);return COPY(reviewed);}finally{busy=false;}},
   async confirm(preview){if(busy||read()||broken||otherPending()||!reviewed||JSON.stringify(preview)!==JSON.stringify(reviewed))error('Review the current original activation preview first.');
    const operation=nonce(),idempotency=nonce();if(!UUID.test(operation)||!UUID.test(idempotency)||operation===idempotency)error('Distinct original activation identities are required.');
@@ -369,21 +376,22 @@ function mountManualActivation({container,before,api,auth,managerId,baseUrl,stor
  let options=null,preview=null,busy=false,record=null;
  const controller=createManualActivation({api,auth,managerId,baseUrl,storage,nonce,otherPending,onState:r=>{record=r;onState(r);refreshControls();}});
  function allowed(){try{return available()&&root.MemphisSchedulerActions.principal(auth)?.managerId===managerId&&root.MemphisSchedulerActions.permissions(auth).management===true;}catch{return false;}}
- function refreshControls(){panel.hidden=!allowed();const held=busy||otherPending()||!allowed(),locked=!!options?.active;select.hidden=locked;label.hidden=locked;select.disabled=held||!!record;
+ function refreshControls(){panel.hidden=!allowed();const held=busy||otherPending()||!allowed(),locked=!!options?.active&&!options.choices.some(acceptedSevenUpdate);select.hidden=locked;label.hidden=locked;select.disabled=held||!!record;
   refresh.disabled=busy||!allowed();previewButton.hidden=locked;previewButton.disabled=held||!!record||!select.value;
   confirmButton.hidden=locked||!preview;confirmButton.disabled=held||!!record||!preview;recover.hidden=!record;recover.disabled=busy||!allowed();dismiss.hidden=record?.state!=='REJECTED';dismiss.disabled=busy||!allowed();
   if(record)status.textContent=record.state==='ACCEPTED'?'The original activation was accepted. Its receipt is saved until current schedule readback.':record.state==='REJECTED'?'The original activation was conclusively rejected. Its request is preserved; refresh before dismissing.':'The original activation outcome is unresolved. Read its exact outcome; confirmation will not be resent.';
  }
  async function run(work){if(busy)return;busy=true;onBusy(true);refreshControls();try{await work();}catch(e){status.textContent=(record?.state==='ACCEPTED'?'Accepted receipt remains saved. ':'')+String(e.message||e);}finally{busy=false;onBusy(false);refreshControls();}}
  async function load(){preview=null;options=await controller.load();select.replaceChildren();const empty=node('option','Select an approved staffing plan');empty.value='';select.append(empty);
-  for(const choice of options.choices){const o=node('option',choice.label+' · '+choice.serviceDate+' through '+choice.windowEnd);o.value=choice.packetId;select.append(o);}
-  if(options.active){const a=options.active;title.textContent='Active approved normal source — locked';status.textContent=a.projectionStatus==='current'&&a.projectionId?'The approved normal source is active and locked. Current dated coverage is available.':'The approved normal source is locked. Current dated coverage: '+a.projectionStatus+'. Refresh the current schedule before relying on coverage.';summary.textContent='The seven normal views remain read-only. Use the existing absence/PTO workflow for dated changes; no normal schedule is regenerated here.';}
+  for(const choice of options.choices.filter(c=>!options.active||acceptedSevenUpdate(c))){const o=node('option',choice.label+' · '+choice.serviceDate+' through '+choice.windowEnd);o.value=choice.packetId;select.append(o);}
+  if(options.active&&options.choices.some(acceptedSevenUpdate)){title.textContent='Approved normal schedule update';status.textContent='An approved seven-person update is available for review. The current schedule remains active until confirmation succeeds.';summary.textContent='The seven normal views remain read-only. Review the approved update before confirming.';}
+  else if(options.active){const a=options.active;title.textContent='Active approved normal source — locked';status.textContent=a.projectionStatus==='current'&&a.projectionId?'The approved normal source is active and locked. Current dated coverage is available.':'The approved normal source is locked. Current dated coverage: '+a.projectionStatus+'. Refresh the current schedule before relying on coverage.';summary.textContent='The seven normal views remain read-only. Use the existing absence/PTO workflow for dated changes; no normal schedule is regenerated here.';}
   else{title.textContent='Approved normal schedule activation';status.textContent=options.choices.length?'Select the current server-approved staffing plan, then review before activation.':'No current approved activation packet is available. Nothing can be activated.';summary.textContent='Only current approved choices are listed. Staffing, employment and the operational schedule are validated together during activation.';}
   refreshControls();return options;
  }
  async function accept(work){const receipt=await work();preview=null;status.textContent='Activation accepted. Reading the current schedule…';const snapshot=await onAccepted(receipt);controller.acknowledge(snapshot);await load();}
  refresh.addEventListener('click',()=>run(load));select.addEventListener('change',()=>{preview=null;controller.clearPreview();summary.textContent='Review the selected approved plan before activation.';refreshControls();});
- previewButton.addEventListener('click',()=>run(async()=>{preview=await controller.preview(select.value);summary.textContent='Approved staffing basis for '+preview.serviceDate+' through '+preview.windowEnd+' · '+preview.currentPositions+' existing positions + '+preview.additionalCapacityPositions+' approved capacity positions; no new employees. The normal pattern stays fixed. Final operational placement is prepared and validated atomically on confirmation.';status.textContent='Preview only — nothing activated. Review the staffing basis before confirming.';}));
+ previewButton.addEventListener('click',()=>run(async()=>{preview=await controller.preview(select.value);summary.textContent=acceptedSevenUpdate(preview)?'Approved seven-person schedule for '+preview.serviceDate+' through '+preview.windowEnd+' · '+preview.currentPositions+' existing positions; no new positions or employees. Schedule history is preserved. Coverage is validated on confirmation.':'Approved staffing basis for '+preview.serviceDate+' through '+preview.windowEnd+' · '+preview.currentPositions+' existing positions + '+preview.additionalCapacityPositions+' approved capacity positions; no new employees. The normal pattern stays fixed. Final operational placement is prepared and validated atomically on confirmation.';status.textContent='Preview only — nothing activated. Review the staffing basis before confirming.';}));
  confirmButton.addEventListener('click',()=>run(()=>accept(()=>controller.confirm(preview))));recover.addEventListener('click',()=>run(()=>accept(()=>controller.recover())));
  dismiss.addEventListener('click',()=>run(async()=>{await load();controller.discardRejected();await load();}));
  controller.pending();refreshControls();

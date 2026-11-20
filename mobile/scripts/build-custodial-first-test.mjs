@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 import {verifyAndroidApkBackupSecurity} from './verify-android-apk-backup.mjs';
 import {assertCustodialReleaseManifest,resolveCustodialAndroidTools} from './verify-custodial-android-release.mjs';
 import {readCustodialBuildScope} from './custodial-new-producer-scope-policy.mjs';
+import {readReviewedProviderRelease} from './custodial-provider-release-policy.mjs';
 const mobile=resolve(fileURLToPath(new URL('..',import.meta.url))),root=resolve(mobile,'..');
 const env={...process.env,MZ_APP_EDITION:'custodial',MZ_SHELL_START:'1',MZ_CUSTODIAL_OWNER_TEST_SUPPORT:'1'};
 assert.match(env.MZ_BUILD_NUMBER||'',/^[1-9]\d*$/,'Set the explicitly allocated MZ_BUILD_NUMBER');
@@ -16,6 +17,14 @@ assert.equal(env.MZ_RELEASE_VERSION,'1.0.0','Use the maintained Custodial versio
 assert.ok(!env.PROJECT_BUILD_NUMBER&&!env.BUILD_NUMBER,'Use only MZ_BUILD_NUMBER for this test artifact');
 assert.ok(!env.MZ_CUSTODIAL_BROWSER_TEST,'Native test artifacts cannot use browser test fixtures');
 assert.equal(readCustodialBuildScope(mobile).profile,'full-system');
+const signingKeys=['CM_KEYSTORE_PATH','CM_KEYSTORE_PASSWORD','CM_KEY_ALIAS','CM_KEY_PASSWORD'];
+const signingConfigured=signingKeys.some(key=>env[key]);
+if(signingConfigured){
+ assert.ok(signingKeys.every(key=>env[key]),'Existing fleet keystore signing inputs must be complete');
+ readReviewedProviderRelease(join(mobile,'plugins','custodial-native-vault'),{
+  versionCode:Number(env.MZ_BUILD_NUMBER),versionName:env.MZ_RELEASE_VERSION,required:true,
+ });
+}
 function run(command,args,cwd=mobile,capture=false){return execFileSync(command,args,{cwd,env,stdio:capture?['ignore','pipe','pipe']:'inherit',encoding:capture?'utf8':undefined,maxBuffer:32*1024*1024});}
 function node(script,args=[]){return run(process.execPath,[join(mobile,'scripts',script),...args]);}
 const sourceCommit=run('git',['rev-parse','HEAD'],root,true).trim();
@@ -47,9 +56,7 @@ const output=join(root,'build/first-test');mkdirSync(output,{recursive:true});
 const unsigned=join(output,`custodial-first-test-${env.MZ_BUILD_NUMBER}-unsigned.apk`);
 copyFileSync(join(mobile,'android/app/build/outputs/apk/release/app-release-unsigned.apk'),unsigned);
 let artifact=unsigned,signer=null;
-const signingKeys=['CM_KEYSTORE_PATH','CM_KEYSTORE_PASSWORD','CM_KEY_ALIAS','CM_KEY_PASSWORD'];
-if(signingKeys.some(k=>env[k])){
- assert.ok(signingKeys.every(k=>env[k]),'Existing fleet keystore signing inputs must be complete');
+if(signingConfigured){
  artifact=join(output,`custodial-first-test-${env.MZ_BUILD_NUMBER}.apk`);
  run(tool('zipalign'),['-f','-p','4',unsigned,artifact]);
  run(tool('apksigner'),['sign','--ks',env.CM_KEYSTORE_PATH,'--ks-key-alias',env.CM_KEY_ALIAS,'--ks-pass','env:CM_KEYSTORE_PASSWORD','--key-pass','env:CM_KEY_PASSWORD',artifact]);

@@ -8,6 +8,13 @@ public final class NativeProviderFailureDispositionTest {
         for(Throwable failure:new Throwable[]{new RuntimeException("credential=synthetic-secret"),new VaultFailure("HTTP401"),
             new VaultFailure("HTTP403"),new VaultFailure("REVOKED"),new VaultFailure("<html>expired token</html>"),null})
             assertEquals(NativeProviderFailureDisposition.UNCLASSIFIED_PRESERVED,NativeProviderFailureDisposition.of(failure));
+        for (Throwable failure : new Throwable[]{null, new VaultFailure("credential=private\nsecret"), new RuntimeException("private transport body"),
+            new RuntimeException() { @Override public String getMessage() { throw new AssertionError("diagnostic read private message"); } }})
+            assertEquals("code=unclassified_preserved disposition=UNCLASSIFIED_PRESERVED", NativeProviderFailureDisposition.diagnostic(failure));
+        for (String code : new String[]{"custodial_provider_job_budget_exhausted", "custodial_provider_os_display_unconfirmed", "custodial_provider_event_receipt_invalid", "custodial_provider_network_unavailable"}) {
+            assertTrue(NativeProviderFailureDisposition.diagnostic(new VaultFailure(code)).startsWith("code=" + code + " disposition="));
+            assertEquals("code=unclassified_preserved disposition=UNCLASSIFIED_PRESERVED", NativeProviderFailureDisposition.diagnostic(new VaultFailure(code + " private")));
+        }
         assertEquals(NativeProviderFailureDisposition.TRANSPORT_UNCERTAIN,NativeProviderFailureDisposition.of(new VaultFailure("custodial_provider_network_unavailable")));
         for(String code:new String[]{"custodial_provider_registration_receipt_invalid","custodial_provider_event_receipt_invalid",
             "custodial_provider_inventory_invalid","custodial_provider_clock_context_invalid"}){

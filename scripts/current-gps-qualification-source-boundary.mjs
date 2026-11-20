@@ -26,11 +26,12 @@ const AUDIT_R44B_PROFILE_SHA='8a924201806837329c1aca9b36de6155c8e80374ba85c1413a
 const AUDIT_R61_PROFILE_SHA='f8471dc55a01ca9ecf3ebe19740371f02bf0ff32587d2726071c3c67ec7e2e10';
 const AUDIT_R63_PROFILE_SHA='1a358efdbb52fc2bee116ee1c9ac8bc0d55f844b4c1c96a924e546f4ccd5fe15';
 const REPAIR_R79_PROFILE_SHA='534db852fd98c629009207c260ceab485739c2aba5798da55d7cb6fe686baf0f';
+const WEEK_PERIMETER_PROFILE_SHA='0ef273df2f9104ac34c9d2f250a00296511d6a1d3abe7cad26c84ad8a86fd443';
 const BASECAMP_R34_PROFILE_SHA='113e0647421cfbb6b3dc8cfc2a21757e15446f27bd65c64bc150ba41af4a2f36';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
- assert.ok([PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact separately reviewed GPS or additive diagnostic profile');
+ assert.ok([PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact registered source profile; independent review and runtime admission remain separate');
  assert.equal(value.schema,'custodial.current-gps-source-qualification.v1');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
  for(const rows of [value.main_java,value.test_java,value.auxiliary,value.legacy_proofs,value.core_sources,...(value.presentation_sources?[value.presentation_sources]:[])]){
@@ -38,8 +39,8 @@ export function validateCurrentGpsQualification(value){
   for(const row of rows){assert.ok(!isAbsolute(row.path)&&!row.path.split('/').some(x=>!x||x==='.'||x==='..'));
    assert.match(row.sha256,/^[0-9a-f]{64}$/);assert.ok(Number.isSafeInteger(row.bytes)&&row.bytes>0);}
  }
- assert.equal(value.main_java.length,194);assert.equal(value.test_java.length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA].includes(sha(JSON.stringify(value)))?209:208);
- assert.equal(value.deltas.filter(row=>row.kind==='added'&&row.path.endsWith('.java')).length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA].includes(sha(JSON.stringify(value)))?2:1);
+ assert.equal(value.main_java.length,194);assert.equal(value.test_java.length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA].includes(sha(JSON.stringify(value)))?209:208);
+ assert.equal(value.deltas.filter(row=>row.kind==='added'&&row.path.endsWith('.java')).length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA].includes(sha(JSON.stringify(value)))?2:1);
  return value;
 }
 const originalProfile=JSON.parse(readFileSync(new URL('./fixtures/current-gps-source-qualification.json',import.meta.url),'utf8'));
@@ -84,7 +85,9 @@ const auditR63Profile=JSON.parse(readFileSync(new URL('./fixtures/current-audit-
 assert.equal(sha(JSON.stringify(auditR63Profile)),AUDIT_R63_PROFILE_SHA,'Exact additive canonical comparison caller repair; every historical profile and ancestor retained');
 const repairR79Profile=JSON.parse(readFileSync(new URL('./fixtures/current-phone-repairs-r79-source-qualification.json',import.meta.url),'utf8'));
 assert.equal(sha(JSON.stringify(repairR79Profile)),REPAIR_R79_PROFILE_SHA,'Exact additive root-repaired candidate; no independent audit or runtime admission');
-export const currentGpsQualification=freeze(validateCurrentGpsQualification(repairR79Profile));
+const weekPerimeterProfile=JSON.parse(readFileSync(new URL('./fixtures/current-gps-week-perimeter-20261119-source-qualification.json',import.meta.url),'utf8'));
+assert.equal(sha(JSON.stringify(weekPerimeterProfile)),WEEK_PERIMETER_PROFILE_SHA,'Exact Root-authored source-only Map, Messenger, phone and perimeter successor; historical pins retained');
+export const currentGpsQualification=freeze(validateCurrentGpsQualification(weekPerimeterProfile));
 const all=[...currentGpsQualification.main_java,...currentGpsQualification.test_java,...currentGpsQualification.auxiliary,...currentGpsQualification.core_sources,...(currentGpsQualification.presentation_sources||[])];
 const byPath=new Map(all.map(row=>[row.path,row]));
 const aliases=new Map(Object.entries(currentGpsQualification.basename_aliases));

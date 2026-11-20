@@ -29,8 +29,16 @@ final class NativeProviderDisplayDriver {
             if (active == Active.CONFLICT) throw new VaultFailure("custodial_provider_os_item_conflict");
             if (active == Active.ABSENT) surface.show(intent);
             observation = guard.current(); journal.requirePresentationCurrent(principal, presentation);
-            if (!surface.enabled(presentation.payload) || surface.active(intent) != Active.MATCH)
+            if (!surface.enabled(presentation.payload))
                 throw new VaultFailure("custodial_provider_os_display_unconfirmed");
+            Active observed = surface.active(intent);
+            if (observed == Active.CONFLICT) throw new VaultFailure("custodial_provider_os_item_conflict");
+            // Android enqueues notify asynchronously. ABSENT is not failure or
+            // displayed: retain the exact durable attempt for the next bounded
+            // system pass, without cancelling the item still being posted.
+            if (observed == Active.ABSENT) return false;
+            if (observed != Active.MATCH) throw new VaultFailure("custodial_provider_os_display_unconfirmed");
+            observation = guard.current(); journal.requirePresentationCurrent(principal, presentation);
             journal.confirmOsDisplayed(principal, intent, observation); return true;
         } catch (Exception error) {
             if (intent != null) {
