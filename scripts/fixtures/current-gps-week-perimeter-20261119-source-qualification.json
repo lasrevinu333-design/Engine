@@ -40085,8 +40085,8 @@
     },
     {
       "path": "scripts/public-dashboard-view-tests.mjs",
-      "bytes": 16695,
-      "sha256": "a3085efe0f442ed2534d66185b2b79e83352e40293cfeb160b7c8a0a75ef3243"
+      "bytes": 16860,
+      "sha256": "6bf71f70f36db8ecd17969ee961d9a25f92e03a353f3845614ab3c2a0d4f591f"
     },
     {
       "path": "scripts/removal-resume-witness-tests.mjs",

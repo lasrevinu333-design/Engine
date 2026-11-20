@@ -115,7 +115,10 @@ test('requested separate tickers preserve public viewing and exclude manager acc
 });
 test('public ticket board has no event or school feed and does not fabricate unavailable rows',async()=>{
  const f=fixture({audience:'public_readonly'});try{
-  f.triggers[4].emit('click');assert.equal(f.dialog.open,true);assert.equal(f.elements['operations-board-title'].textContent,'Open tickets');
+  await f.controller.refresh({summary:null,isCurrent:()=>true,fetchImpl:async()=>({ok:false,status:503})});
+  f.triggers.find(trigger=>trigger.dataset.board==='tickets').emit('click');
+  assert.equal(f.dialog.open,true);
+  assert.equal(f.elements['operations-board-title'].textContent,'Custodial tickets');
   assert.equal(f.content.children.length,1);assert.doesNotMatch(f.text(f.content),/EVENTS:|SCHOOLS:/);
   assert.match(f.elements['operations-board-note'].textContent,/unavailable/);
   assert.equal(f.navigations.length,0);
