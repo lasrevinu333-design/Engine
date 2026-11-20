@@ -634,13 +634,13 @@
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
-      "bytes": 1166,
-      "sha256": "6d70e0727e54affde1ab6638ba6196291c4bbba91febf07122c45c2a47193a0a"
+      "bytes": 1699,
+      "sha256": "faa999096582e8b651401813fb15ae39b808828ab61da4d6cf213dbc49a33b67"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
-      "bytes": 1239,
-      "sha256": "bfe9843588153541e5cafbc2bb729b7eb4a441ca8e5052bc27a17d6b8663950e"
+      "bytes": 1858,
+      "sha256": "38def1262fe7e9d25b52d0e011cc594b23633f7d221d5e553ad98234afefa919"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
@@ -2034,7 +2034,7 @@
     {
       "path": "codemagic.yaml",
       "bytes": 48025,
-      "sha256": "e3573ed94ee0a8e2c2a325748de22b9a406bf7181726bc0ee82ed4d0dee2e060"
+      "sha256": "1012f3d4c2c57a60c7105f81849526f1077b5b4486ffde381cef3e031abcb6ee"
     },
     {
       "path": "custodial-gps-approved-overall-fit.js",
@@ -2173,13 +2173,13 @@
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
-      "bytes": 837,
-      "sha256": "46bd0a410b7aa5c8b25f8766debb01d067d45a4dc693e2273ac49fbbbd3dbc6c"
+      "bytes": 1537,
+      "sha256": "c638f4c8eb9289744b0fb836cd1599c8447c0252404b5bb2c360fc4196eb61e7"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
-      "bytes": 881,
-      "sha256": "0e158846a0935b9f7be5be875bdf29005ef5f58f1a631098a8efbb9c5a199e62"
+      "bytes": 1631,
+      "sha256": "257ba7063e1f389356e03bc5f631169e6ff0cbc1beddfd425e70b940979f9d5e"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
@@ -2205,6 +2205,11 @@
       "path": "mobile/release-evidence/provider-v81-protocol.json",
       "bytes": 2291,
       "sha256": "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v82-composition.json",
+      "bytes": 48446,
+      "sha256": "70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602"
     },
     {
       "path": "mobile/release-policies/custodial-android-build-tools-35.0.1-macos.json",
@@ -2658,8 +2663,8 @@
     },
     {
       "path": "scripts/current-provider-comparison-source-tests.mjs",
-      "bytes": 6645,
-      "sha256": "a89ca9f4e1e899ffa445bd76f91f8ece35fc25f393d8469a433e9f4de06f89ad"
+      "bytes": 6703,
+      "sha256": "2cba2857da824e6d87256ba456113272babe6e39cc80c7710085bcf1934c4737"
     },
     {
       "path": "scripts/custodial-android-manifest-security-contract-tests.mjs",
@@ -3003,13 +3008,13 @@
     },
     {
       "path": "scripts/provider-audio-release-policy-tests.mjs",
-      "bytes": 9130,
-      "sha256": "997a82a97c52fbf2284a93536f80eaa5268d8b28ffb2c0124ea1e044a7cc52c4"
+      "bytes": 9252,
+      "sha256": "9820e0774c21090b86d97a5e8de8f46ab39301cbf6a781dc84a27cfc5d8cf973"
     },
     {
       "path": "scripts/provider-best-effort-release-tests.mjs",
-      "bytes": 3308,
-      "sha256": "7cd8750f54b81d4fd343b9e7bd82533bda99a8a56075a248485e4f2f36b7529e"
+      "bytes": 4285,
+      "sha256": "ed1dc24dc610ce5446eb772d68cd3238e7aedef295b273244833f01e6fb5edba"
     },
     {
       "path": "scripts/provider-classification-contract-tests.mjs",
@@ -4103,7 +4108,8 @@
     "web-install-manager-offline.css": "trail-pages/web-install-manager-offline.css",
     "web-install-viewer-offline.css": "trail-pages/web-install-viewer-offline.css",
     "xlsx-0.20.3.full.min.js": "vendor/xlsx-0.20.3.full.min.js",
-    "zoo-perimeter-phone-coverage-tests.mjs": "scripts/zoo-perimeter-phone-coverage-tests.mjs"
+    "zoo-perimeter-phone-coverage-tests.mjs": "scripts/zoo-perimeter-phone-coverage-tests.mjs",
+    "provider-v82-composition.json": "mobile/release-evidence/provider-v82-composition.json"
   },
   "deltas": [
     {
@@ -4136,7 +4142,7 @@
       "prior_bytes": 47967,
       "prior_sha256": "6f0a4bc6a9f3968995082e8ba33d5132a4887d225669456af24b336450d24445",
       "current_bytes": 48025,
-      "current_sha256": "e3573ed94ee0a8e2c2a325748de22b9a406bf7181726bc0ee82ed4d0dee2e060",
+      "current_sha256": "1012f3d4c2c57a60c7105f81849526f1077b5b4486ffde381cef3e031abcb6ee",
       "hunks": [
         {
           "old_start": 187,
@@ -4157,7 +4163,7 @@
             "        MZ_BUILD_NUMBER: '78'"
           ],
           "after": [
-            "        MZ_BUILD_NUMBER: '81'"
+            "        MZ_BUILD_NUMBER: '82'"
           ]
         }
       ]
@@ -16624,14 +16630,14 @@
       "kind": "modified",
       "prior_bytes": 510,
       "prior_sha256": "c2e86842901efe30576f2c772a7c6afb267545bfaf2ffa5c866c41ff7871188d",
-      "current_bytes": 1166,
-      "current_sha256": "6d70e0727e54affde1ab6638ba6196291c4bbba91febf07122c45c2a47193a0a",
+      "current_bytes": 1699,
+      "current_sha256": "faa999096582e8b651401813fb15ae39b808828ab61da4d6cf213dbc49a33b67",
       "hunks": [
         {
           "old_start": 8,
           "old_count": 1,
           "new_start": 8,
-          "new_count": 7,
+          "new_count": 10,
           "before": [
             "        return new NativeProviderAudioAdmission.Entry[0];"
           ],
@@ -16640,6 +16646,9 @@
             "            return new NativeProviderAudioAdmission.Entry[] {",
             "                new NativeProviderAudioAdmission.Entry(81L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
             "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(82L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
             "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"))",
             "            };",
             "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }"
@@ -16652,14 +16661,14 @@
       "kind": "modified",
       "prior_bytes": 497,
       "prior_sha256": "a44c8fba6dd520ddb1219684dd3518ac7c7e88b0fd5581d889ab3522a1a742e1",
-      "current_bytes": 1239,
-      "current_sha256": "bfe9843588153541e5cafbc2bb729b7eb4a441ca8e5052bc27a17d6b8663950e",
+      "current_bytes": 1858,
+      "current_sha256": "38def1262fe7e9d25b52d0e011cc594b23633f7d221d5e553ad98234afefa919",
       "hunks": [
         {
           "old_start": 8,
           "old_count": 1,
           "new_start": 8,
-          "new_count": 7,
+          "new_count": 10,
           "before": [
             "        return new NativeProviderReleaseAdmission.Release[0];"
           ],
@@ -16668,7 +16677,10 @@
             "            return new NativeProviderReleaseAdmission.Release[] {",
             "                new NativeProviderReleaseAdmission.Release(81L, \"1.0.0\",",
             "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
-            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\")",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\"),",
+            "                new NativeProviderReleaseAdmission.Release(82L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\")",
             "            };",
             "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }"
           ]
@@ -17136,14 +17148,14 @@
       "kind": "modified",
       "prior_bytes": 135,
       "prior_sha256": "d48e25b21dedffbc4797680cf03d11482f07f5c148aa9fe12f74849fd5eb87bd",
-      "current_bytes": 837,
-      "current_sha256": "46bd0a410b7aa5c8b25f8766debb01d067d45a4dc693e2273ac49fbbbd3dbc6c",
+      "current_bytes": 1537,
+      "current_sha256": "c638f4c8eb9289744b0fb836cd1599c8447c0252404b5bb2c360fc4196eb61e7",
       "hunks": [
         {
           "old_start": 4,
           "old_count": 1,
           "new_start": 4,
-          "new_count": 16,
+          "new_count": 30,
           "before": [
             "  \"releases\": []"
           ],
@@ -17154,6 +17166,20 @@
             "      \"version_name\": \"1.0.0\",",
             "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
             "      \"composition_evidence_sha256\": \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 82,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
             "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
             "      \"policy\": {",
             "        \"engine\": \"com.google.android.tts\",",
@@ -17173,14 +17199,14 @@
       "kind": "modified",
       "prior_bytes": 129,
       "prior_sha256": "4dac90e171c456601b2eaf0cda78498fc16c2b5b51a7f5f544de9439e5ea8fcb",
-      "current_bytes": 881,
-      "current_sha256": "0e158846a0935b9f7be5be875bdf29005ef5f58f1a631098a8efbb9c5a199e62",
+      "current_bytes": 1631,
+      "current_sha256": "257ba7063e1f389356e03bc5f631169e6ff0cbc1beddfd425e70b940979f9d5e",
       "hunks": [
         {
           "old_start": 4,
           "old_count": 1,
           "new_start": 4,
-          "new_count": 16,
+          "new_count": 30,
           "before": [
             "  \"releases\": []"
           ],
@@ -17191,6 +17217,20 @@
             "      \"version_name\": \"1.0.0\",",
             "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
             "      \"composition_evidence_sha256\": \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 82,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
             "      \"profile\": {",
             "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
             "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
@@ -31032,14 +31072,14 @@
       "kind": "modified",
       "prior_bytes": 4365,
       "prior_sha256": "8203cc7a2f08572c62dc3d7d32fe6dad72e503ae6c12e4fb4fdc7441b3b00d3c",
-      "current_bytes": 6645,
-      "current_sha256": "a89ca9f4e1e899ffa445bd76f91f8ece35fc25f393d8469a433e9f4de06f89ad",
+      "current_bytes": 6703,
+      "current_sha256": "2cba2857da824e6d87256ba456113272babe6e39cc80c7710085bcf1934c4737",
       "hunks": [
         {
           "old_start": 24,
           "old_count": 1,
           "new_start": 24,
-          "new_count": 42,
+          "new_count": 43,
           "before": [
             "assert.equal(currentGpsQualification.deltas.filter(row=>row.kind==='added').length,1);"
           ],
@@ -31054,6 +31094,7 @@
             " 'mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java',",
             " 'mobile/release-evidence/provider-v81-composition.json',",
             " 'mobile/release-evidence/provider-v81-protocol.json',",
+            " 'mobile/release-evidence/provider-v82-composition.json',",
             " 'mobile/scripts/custodial-native-observation-regression-tests.mjs',",
             " 'mobile/scripts/custodial-provider-foreground-wake-tests.mjs',",
             " 'operations-dashboard-data.js',",
@@ -31091,7 +31132,7 @@
         {
           "old_start": 30,
           "old_count": 3,
-          "new_start": 71,
+          "new_start": 72,
           "new_count": 3,
           "before": [
             " assert.equal(assertBoundCurrentProviderSource(row.name,actual),actual);checks++;",
@@ -31107,7 +31148,7 @@
         {
           "old_start": 35,
           "old_count": 2,
-          "new_start": 76,
+          "new_start": 77,
           "new_count": 2,
           "before": [
             "  assert.notEqual(changed,actual);assert.throws(()=>assertBoundCurrentProviderSource(row.name,changed));",
@@ -31121,7 +31162,7 @@
         {
           "old_start": 38,
           "old_count": 1,
-          "new_start": 79,
+          "new_start": 80,
           "new_count": 1,
           "before": [
             " assert.throws(()=>assertBoundCurrentProviderSource(row.name,historical),'Removed actual current caller cannot be accepted as the current owner');checks++;"
@@ -34963,31 +35004,34 @@
       "kind": "modified",
       "prior_bytes": 9043,
       "prior_sha256": "75b2a6477b9a200d8f8a7312bffbb05c5b80fab5dd628c214b619ba77d91fc28",
-      "current_bytes": 9130,
-      "current_sha256": "997a82a97c52fbf2284a93536f80eaa5268d8b28ffb2c0124ea1e044a7cc52c4",
+      "current_bytes": 9252,
+      "current_sha256": "9820e0774c21090b86d97a5e8de8f46ab39301cbf6a781dc84a27cfc5d8cf973",
       "hunks": [
         {
           "old_start": 36,
           "old_count": 1,
           "new_start": 36,
-          "new_count": 1,
+          "new_count": 4,
           "before": [
             "equal(audio.parseReviewedProviderAudioReleases(real).releases,[]);"
           ],
           "after": [
-            "equal(audio.parseReviewedProviderAudioReleases(real).releases.map(r=>[r.version_code,r.version_name,r.policy.voice]),[[81,'1.0.0','en-us-x-iol-local']]);"
+            "const releaseAudio=audio.parseReviewedProviderAudioReleases(real).releases;",
+            "equal(releaseAudio.map(r=>[r.version_code,r.version_name]),[[81,'1.0.0'],[82,'1.0.0']]);",
+            "equal(releaseAudio[0].policy.voice,'en-us-x-iol-local');",
+            "equal(releaseAudio[1].policy,releaseAudio[0].policy);"
           ]
         },
         {
           "old_start": 67,
           "old_count": 1,
-          "new_start": 67,
+          "new_start": 70,
           "new_count": 1,
           "before": [
             "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:0,realAudioProfiles:0,synthetic:true,apk:false,device:false,independentReview:false}));"
           ],
           "after": [
-            "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:1,realAudioProfiles:1,synthetic:true,apk:false,device:false,independentReview:false}));"
+            "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:2,realAudioProfiles:2,synthetic:true,apk:false,device:false,independentReview:false}));"
           ]
         }
       ]
@@ -34995,8 +35039,8 @@
     {
       "path": "scripts/provider-best-effort-release-tests.mjs",
       "kind": "added",
-      "current_bytes": 3308,
-      "current_sha256": "7cd8750f54b81d4fd343b9e7bd82533bda99a8a56075a248485e4f2f36b7529e"
+      "current_bytes": 4285,
+      "current_sha256": "ed1dc24dc610ce5446eb772d68cd3238e7aedef295b273244833f01e6fb5edba"
     },
     {
       "path": "scripts/provider-classification-contract-tests.mjs",
@@ -39276,6 +39320,12 @@
       "kind": "added",
       "current_bytes": 9136,
       "current_sha256": "b4932fe0194bc87081f022fd6738511b487193b4e2001ed592c81814035c87a6"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v82-composition.json",
+      "kind": "added",
+      "current_bytes": 48446,
+      "current_sha256": "70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602"
     }
   ],
   "legacy_proofs": [

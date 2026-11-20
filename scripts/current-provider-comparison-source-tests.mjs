@@ -31,6 +31,7 @@ const expectedAdditions=[
  'mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java',
  'mobile/release-evidence/provider-v81-composition.json',
  'mobile/release-evidence/provider-v81-protocol.json',
+ 'mobile/release-evidence/provider-v82-composition.json',
  'mobile/scripts/custodial-native-observation-regression-tests.mjs',
  'mobile/scripts/custodial-provider-foreground-wake-tests.mjs',
  'operations-dashboard-data.js',
