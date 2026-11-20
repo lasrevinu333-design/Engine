@@ -21,7 +21,48 @@ const historicalInventory=assertGpsHistoricalInventoryProjection(approvedPreserv
 assert.equal(historicalInventory.actual_main,currentInventory.main);
 assert.equal(historicalInventory.historical_main,193);
 assert.equal(currentInventory.main-historicalInventory.historical_main,1);
-assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),["manager-test-record-archive-preview.mjs","mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java","mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java","mobile/release-evidence/provider-v81-composition.json","mobile/release-evidence/provider-v81-protocol.json","mobile/scripts/custodial-native-observation-regression-tests.mjs","mobile/scripts/custodial-provider-foreground-wake-tests.mjs","scripts/css-distribution-reference-tests.mjs","scripts/fixtures/quiet-offline-v80-current-controls-v4.json","scripts/fixtures/runtime-sanitation-predecessor/moxie-decommission-tests.mjs","scripts/insights-session-withdrawal-tests.mjs","scripts/messenger-session-renewal-browser-tests.mjs","scripts/operations-dashboard-rendered-browser-tests.mjs","scripts/provider-best-effort-release-tests.mjs","scripts/test-record-archive-preview-tests.mjs","vendor/LICENSE.sheetjs","vendor/xlsx-0.20.3.full.min.js"]);
+// The historical projections above stay fixed. Keep the complete additions
+// check in sync with the approved web, perimeter and notification sources.
+const expectedAdditions=[
+ 'manager-test-record-archive-preview.mjs',
+ 'manager-ux.css',
+ 'memphis-zoo-perimeter.js',
+ 'mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java',
+ 'mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java',
+ 'mobile/release-evidence/provider-v81-composition.json',
+ 'mobile/release-evidence/provider-v81-protocol.json',
+ 'mobile/scripts/custodial-native-observation-regression-tests.mjs',
+ 'mobile/scripts/custodial-provider-foreground-wake-tests.mjs',
+ 'operations-dashboard-data.js',
+ 'operations-dashboard.js',
+ 'ops-hub.css',
+ 'scripts/css-distribution-reference-tests.mjs',
+ 'scripts/dashboard-loading-state-tests.mjs',
+ 'scripts/dashboard-map-web-fit-tests.mjs',
+ 'scripts/fixtures/dashboard-map-current-context-pins-v3.json',
+ 'scripts/fixtures/dashboard-map-current-context-pins-v4.json',
+ 'scripts/fixtures/provider-notification-posting-byte-deltas.json',
+ 'scripts/fixtures/quiet-offline-v80-current-controls-v4.json',
+ 'scripts/fixtures/runtime-sanitation-predecessor/moxie-decommission-tests.mjs',
+ 'scripts/insights-session-withdrawal-tests.mjs',
+ 'scripts/manager-phone-perimeter-rendered-tests.mjs',
+ 'scripts/messenger-direct-create-lifecycle-tests.mjs',
+ 'scripts/messenger-direct-mounted-tests.mjs',
+ 'scripts/messenger-selection-race-tests.mjs',
+ 'scripts/messenger-session-renewal-browser-tests.mjs',
+ 'scripts/operations-dashboard-rendered-browser-tests.mjs',
+ 'scripts/operations-motion-controls-tests.mjs',
+ 'scripts/operations-next-rendered-tests.mjs',
+ 'scripts/operations-next-scheduled-tests.mjs',
+ 'scripts/provider-best-effort-release-tests.mjs',
+ 'scripts/provider-notification-posting-source-boundary.mjs',
+ 'scripts/provider-notification-posting-source-tests.mjs',
+ 'scripts/test-record-archive-preview-tests.mjs',
+ 'scripts/zoo-perimeter-phone-coverage-tests.mjs',
+ 'vendor/LICENSE.sheetjs',
+ 'vendor/xlsx-0.20.3.full.min.js',
+];
+assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),expectedAdditions);
 assert.ok(currentGpsQualification.main_java.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));
 assert.ok(!approvedPreservationComparisonPins.current_java_inventory.some(row=>row.path.endsWith('/CustodialPhoneLocationService.java')));
 checks+=9;

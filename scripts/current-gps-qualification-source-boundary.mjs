@@ -26,7 +26,7 @@ const AUDIT_R44B_PROFILE_SHA='8a924201806837329c1aca9b36de6155c8e80374ba85c1413a
 const AUDIT_R61_PROFILE_SHA='f8471dc55a01ca9ecf3ebe19740371f02bf0ff32587d2726071c3c67ec7e2e10';
 const AUDIT_R63_PROFILE_SHA='1a358efdbb52fc2bee116ee1c9ac8bc0d55f844b4c1c96a924e546f4ccd5fe15';
 const REPAIR_R79_PROFILE_SHA='534db852fd98c629009207c260ceab485739c2aba5798da55d7cb6fe686baf0f';
-const WEEK_PERIMETER_PROFILE_SHA='0ef273df2f9104ac34c9d2f250a00296511d6a1d3abe7cad26c84ad8a86fd443';
+const WEEK_PERIMETER_PROFILE_SHA='570e023ad82fe5ac46d31c1ecba7b6b2bc777fe37799ebb49dbb10ced8b18e6f';
 const BASECAMP_R34_PROFILE_SHA='113e0647421cfbb6b3dc8cfc2a21757e15446f27bd65c64bc150ba41af4a2f36';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
