@@ -12,7 +12,7 @@ const A='thread-karen',B='thread-eric';
 function fixture(){
  const mapped={msg_user_id:'synthetic-manager',read_only:false};const requests=[],state={loading:false,messages:[],selected:A,threads:[]};
  const c={useCallback:fn=>fn,EMPLOYEE_CONTEXT:false,currentDeviceId:'synthetic-device',mounted:{current:true},identityRef:{current:mapped},accessEpoch:{current:1},selectedRef:{current:A},
-  threadSelectionEpoch:{current:0},threadListLoadSequence:{current:0},messageLoadSequence:{current:0},historyRef:{current:null},threadsRef:{current:[]},mobileThreadRef:{current:true},
+  threadSelectionEpoch:{current:0},threadListLoadSequence:{current:0},directOpenListRead:{current:null},messageLoadSequence:{current:0},historyRef:{current:null},threadsRef:{current:[]},mobileThreadRef:{current:true},
   originalManagerOutboxOwner:()=>()=>{},custodialWorkUnavailable:()=>Error('stale profile'),loadIdentity:async()=>mapped,createMessageHistory,mergePendingMessages:rows=>rows,
   setMessages:rows=>{state.messages=rows;},setLoadingMessages:value=>{state.loading=value;},setLoadingOlderMessages(){},setHasOlderMessages(){},setThreads:rows=>{state.threads=rows;},setSelectedId:id=>{state.selected=id;},setMobileThread(){},setNotice(){},
   isRetiredThread:()=>false,normalizedThread:row=>row,pendingDeletedThreadIds:()=>new Set(),compareThreads:()=>0,location:{href:'https://fixture.invalid/messages.html'},URL,encodeURIComponent,
@@ -20,7 +20,7 @@ function fixture(){
   homeAssistantEntry:{current:{cancel(){}}},setEmojiOpen(){},emojiRange:{current:null},draftsRef:{current:{}},setComposerTooLong(){},messageLength:s=>s.length,htmlMessageBody:s=>s,MAX_MESSAGE_LENGTH:2000,messageCursor:{current:{}},ZERO_TIME:'',ZERO_ID:'',history:{replaceState(){}},safe:String,
  };
  vm.createContext(c);
- vm.runInContext(callback('loadThreads','flushReadOutbox')+callback('loadMessages','loadEarlierMessages')+callback('selectThread','resolveHomeAssistant')+'\nglobalThis.callbacks={loadThreads,loadMessages,selectThread};',c);
+ vm.runInContext(callback('readThreadList','flushReadOutbox')+callback('loadMessages','loadEarlierMessages')+callback('selectThread','resolveHomeAssistant')+'\nglobalThis.callbacks={loadThreads,loadMessages,selectThread};',c);
  return {c,state,requests,...c.callbacks};
 }
 const rows=[{id:A},{id:B}];let passed=0;const failures=[];
@@ -37,6 +37,20 @@ await check('A/B/A intent defeats a captured B preference, including repeated sa
 await check('older thread-list result cannot replace a later reconciled list',async()=>{
  const f=fixture(),old=f.loadThreads(),fresh=f.loadThreads();f.requests[1].resolve({data:[{id:A,title:'current'}]});await fresh;
  f.requests[0].resolve({data:[{id:B,title:'stale'}]});await old;assert.equal(f.state.threads[0].title,'current');assert.equal(f.c.selectedRef.current,A);
+});
+await check('a sidebar poll cannot supersede the list confirming a new direct open',async()=>{
+ const f=fixture(),confirm=f.loadThreads({preferId:B,confirmingDirectOpen:true}),poll=f.loadThreads();
+ assert.equal(f.requests.length,1,'poll waits for the explicit list reconciliation');
+ f.requests[0].resolve({data:rows});assert.ok((await confirm).some(row=>row.id===B));assert.equal(f.state.selected,B);
+ assert.equal(f.requests.length,2,'poll still reads after the direct open');
+ f.requests[1].resolve({data:rows});await poll;assert.equal(f.state.selected,B);
+});
+await check('failed direct confirmation releases polling without republishing a foreign identity',async()=>{
+ const f=fixture(),confirm=f.loadThreads({preferId:B,confirmingDirectOpen:true}),poll=f.loadThreads();
+ const rejected=assert.rejects(confirm,/list read failed/);
+ f.c.accessEpoch.current+=1;f.c.identityRef.current={msg_user_id:'new-owner'};
+ f.requests[0].reject(Error('list read failed'));await rejected;
+ assert.equal((await poll).length,0);assert.equal(f.requests.length,1);assert.equal(f.c.directOpenListRead.current,null);
 });
 await check('list begun before a choice cannot erase the newly chosen conversation',async()=>{
  const f=fixture();f.c.threadsRef.current=rows;f.state.threads=rows;

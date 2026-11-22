@@ -1247,6 +1247,7 @@ function MessengerApp() {
   const accessEpoch = useRef(0);
   const messageLoadSequence = useRef(0);
   const threadListLoadSequence = useRef(0);
+  const directOpenListRead = useRef(null);
   const threadSelectionEpoch = useRef(0);
   const draftKey = `${identity?.msg_user_id || ''}:${selectedId}`;
   const updateDraft = useCallback((key, html, assertOriginal) => {
@@ -1433,7 +1434,7 @@ function MessengerApp() {
     return mapped;
   }, [currentDeviceId]);
 
-  const loadThreads = useCallback(async ({ preferId = '', assertCurrent, preserveNotice = false } = {}) => {
+  const readThreadList = useCallback(async ({ preferId = '', assertCurrent, preserveNotice = false } = {}) => {
     const selectionEpoch = threadSelectionEpoch.current;
     const listSequence = ++threadListLoadSequence.current;
     assertCurrent?.();
@@ -1494,6 +1495,25 @@ function MessengerApp() {
     if (!preserveNotice) setNotice('');
     return rows;
   }, [currentDeviceId, loadIdentity, setNotice]);
+
+  const loadThreads = useCallback(async (options = {}) => {
+    if (directOpenListRead.current) {
+      const mapped = identityRef.current, epoch = accessEpoch.current;
+      // Reopening a thread can wake the sidebar poll. Let the explicit open
+      // reconcile its list first so the poll cannot supersede that response.
+      await directOpenListRead.current.catch(() => {});
+      options.assertCurrent?.();
+      if (!mounted.current || identityRef.current !== mapped || accessEpoch.current !== epoch) return [];
+    }
+    const request = readThreadList(options);
+    if (!options.confirmingDirectOpen) return request;
+    directOpenListRead.current = request;
+    try {
+      return await request;
+    } finally {
+      if (directOpenListRead.current === request) directOpenListRead.current = null;
+    }
+  }, [readThreadList]);
 
   const flushReadOutbox = useCallback(async () => {
     const mapped = identityRef.current;
@@ -2842,7 +2862,7 @@ function MessengerApp() {
     </section>}
     {heldReadOriginals && <div className="mz-chat-status error" role="status">A saved read acknowledgement cannot be verified. Its original data remains held; no read was sent or cleared for that record.</div>}
     {status && <div className={`mz-chat-status ${statusKind}`} role="status" aria-live="polite">{status}</div>}
-    {newConversation && identity?.msg_user_id && <NewConversation key={`${identity.msg_user_id}:${currentDeviceId}:${accessEpoch.current}`} currentUserId={String(identity.msg_user_id)} currentDeviceId={currentDeviceId} getCurrentIdentity={() => mounted.current && !accessBlocked ? identityRef.current : null} onClose={() => setNewConversation(false)} onCreated={async (id,assertCurrent,retireOriginal) => { assertCurrent(); const rows = await loadThreads({ preferId:id, assertCurrent }); assertCurrent(); if (!rows.some(row => row.id === id)) throw Object.assign(new Error('Conversation is not in the current list.'), {code:'conversation_not_visible'}); if (retireOriginal) { if (!rows.some(row => row.id === id && row.type === 'group')) throw new Error('confirmed group is not currently available'); await retireOriginal(); assertCurrent(); } selectThread(id); setNewConversation(false); }} />}
+    {newConversation && identity?.msg_user_id && <NewConversation key={`${identity.msg_user_id}:${currentDeviceId}:${accessEpoch.current}`} currentUserId={String(identity.msg_user_id)} currentDeviceId={currentDeviceId} getCurrentIdentity={() => mounted.current && !accessBlocked ? identityRef.current : null} onClose={() => setNewConversation(false)} onCreated={async (id,assertCurrent,retireOriginal) => { assertCurrent(); const rows = await loadThreads({ preferId:id, assertCurrent, confirmingDirectOpen:!retireOriginal }); assertCurrent(); if (!rows.some(row => row.id === id)) throw Object.assign(new Error('Conversation is not in the current list.'), {code:'conversation_not_visible'}); if (retireOriginal) { if (!rows.some(row => row.id === id && row.type === 'group')) throw new Error('confirmed group is not currently available'); await retireOriginal(); assertCurrent(); } selectThread(id); setNewConversation(false); }} />}
   </div>;
 }
 
