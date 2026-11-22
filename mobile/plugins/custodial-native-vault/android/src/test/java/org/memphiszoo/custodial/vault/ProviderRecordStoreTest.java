@@ -87,8 +87,8 @@ public final class ProviderRecordStoreTest {
     }
     static final class Keys implements ProviderEnvelopeCrypto.Keys {
         SecretKey value;
-        int creations;
-        @Override public SecretKey existing() { return value; }
+        int creations, reads;
+        @Override public SecretKey existing() { reads++; return value; }
         @Override public SecretKey createInEmptyNamespace() throws Exception {
             creations++; value = KeyGenerator.getInstance("AES").generateKey(); return value;
         }
@@ -129,6 +129,38 @@ public final class ProviderRecordStoreTest {
         ProviderRecordStore.Snapshot restarted = f.store().load();
         assertEquals(1, restarted.revision); assertEquals(2, restarted.keys().size());
         assertArrayEquals(writes.get(inbox), restarted.read(inbox)); assertArrayEquals(writes.get(event), restarted.read(event));
+    }
+    @Test public void repeatedOrdinaryReadsAuthenticateIndexWithoutRedecryptingIdenticalRecords() throws Exception {
+        Fixture f = new Fixture();
+        ProviderRecordStore store = f.store();
+        Map<ProviderRecordStore.Key, char[]> writes = new HashMap<>();
+        for (int n = 0; n < 32; n++) writes.put(key(INBOX, "retained-" + n), "synthetic".toCharArray());
+        store.commit(0, writes, Collections.emptySet());
+        int reads = f.keys.reads;
+        for (int n = 0; n < 8; n++) assertEquals(writes.keySet(), store.load().keys());
+        assertEquals(16, f.keys.reads - reads); // One existing-key check and one authenticated index per load.
+        reads = f.keys.reads;
+        assertEquals(writes.keySet(), store.loadDurableRetained().keys());
+        assertEquals(33, f.keys.reads - reads); // A retained witness still verifies every envelope independently.
+    }
+    @Test public void ordinaryReadReuseCannotMaskCurrentKeyOrCiphertextChanges() throws Exception {
+        Fixture f = new Fixture();
+        ProviderRecordStore store = f.store();
+        ProviderRecordStore.Key record = key(INBOX, "test");
+        store.commit(0, values(record, "synthetic"), Collections.emptySet());
+        assertEquals(1, store.load().revision);
+        SecretKey originalKey = f.keys.value;
+        f.keys.value = null;
+        failure("custodial_provider_key_missing_preserved", store::load);
+        f.keys.value = KeyGenerator.getInstance("AES").generateKey();
+        failure("custodial_provider_corrupt_preserved", store::load);
+        f.keys.value = originalKey;
+        Object originalEnvelope = f.memory.raw.put(record.storageName(), "00");
+        failure("custodial_provider_corrupt_preserved", store::load);
+        f.memory.raw.put(record.storageName(), originalEnvelope);
+        assertEquals(1, store.load().revision);
+        assertEquals(1, f.memory.commits);
+        assertEquals(1, f.keys.creations);
     }
     @Test public void staleRevisionNeverWritesAndSnapshotsStayImmutable() throws Exception {
         Fixture f = new Fixture(); ProviderRecordStore store = f.store(); ProviderRecordStore.Snapshot before = store.load();

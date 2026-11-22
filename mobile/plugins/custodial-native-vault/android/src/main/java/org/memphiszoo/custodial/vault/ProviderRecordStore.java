@@ -74,6 +74,8 @@ final class ProviderRecordStore {
     private final Backend backend;
     private final Crypto crypto;
     private final Object lock;
+    private Map<String, String> verifiedOrdinaryBytes;
+    private Snapshot verifiedOrdinarySnapshot;
     private static final Object RETAINED_STATE_LOCK = new Object();
     private static final Map<Object,Long> RETAINED_EPOCHS = new java.util.IdentityHashMap<>();
     private static final Set<Object> RETAINED_UNCERTAIN = Collections.newSetFromMap(new java.util.IdentityHashMap<>());
@@ -85,7 +87,17 @@ final class ProviderRecordStore {
     Snapshot load() throws VaultFailure {
         synchronized (lock) {
             crypto.initialize(); // Missing key with ANY retained preferences must fail closed.
-            return decode(readRaw());
+            Map<String, String> raw = readRaw();
+            // Still authenticate the index with today's key. Its digest binds
+            // every envelope, and reuse requires exact bytes already verified
+            // together under that same authenticated index.
+            if (!raw.isEmpty() && raw.equals(verifiedOrdinaryBytes)) {
+                return decode(raw, verifiedOrdinarySnapshot);
+            }
+            Snapshot checked = decode(raw);
+            verifiedOrdinaryBytes = raw;
+            verifiedOrdinarySnapshot = checked;
+            return checked;
         }
     }
 
@@ -214,6 +226,8 @@ final class ProviderRecordStore {
             Snapshot accepted = decode(readback); // Authenticate index AND every record before caller effects.
             if (accepted.revision != expectedRevision + 1) throw new VaultFailure("custodial_provider_readback_failed_preserved");
             confirmRetainedAttempt(retainedSource);
+            verifiedOrdinaryBytes = readback;
+            verifiedOrdinarySnapshot = accepted;
             return accepted;
         }
     }
@@ -234,6 +248,9 @@ final class ProviderRecordStore {
         catch (Exception error) { throw new VaultFailure("custodial_provider_corrupt_preserved", error); }
     }
     private Snapshot decode(Map<String, String> raw) throws VaultFailure {
+        return decode(raw, null);
+    }
+    private Snapshot decode(Map<String, String> raw, Snapshot previouslyVerified) throws VaultFailure {
         if (raw.isEmpty()) return new Snapshot(0, Collections.emptyMap(), crypto);
         char[] plain = null;
         try {
@@ -247,6 +264,11 @@ final class ProviderRecordStore {
                 || !(index.get("digest") instanceof String)) throw new IllegalArgumentException("invalid index");
             Map<String, String> records = new TreeMap<>(raw); records.remove(INDEX);
             if (!digest(records).equals(index.getString("digest"))) throw new IllegalArgumentException("index binding mismatch");
+            if (previouslyVerified != null) {
+                if (previouslyVerified.revision != ((Number) revision).longValue())
+                    throw new IllegalArgumentException("verified revision mismatch");
+                return new Snapshot(previouslyVerified.revision, previouslyVerified.encrypted, crypto);
+            }
             Map<Key, String> values = new TreeMap<>();
             for (Map.Entry<String, String> entry : records.entrySet()) {
                 int boundary = entry.getKey().indexOf(':');

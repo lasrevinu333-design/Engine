@@ -1,0 +1,785 @@
+{
+  "main_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
+      "bytes": 3298,
+      "sha256": "600d23edea5eba54428e2913f02f796057ba8ff13ae481dd4332e2120918d29e"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
+      "bytes": 3715,
+      "sha256": "0f331dbfc71b92541ca811ed9f55d8efa3555365b55a48ee1fcee5325b2554c5"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/ProviderRecordStore.java",
+      "bytes": 20386,
+      "sha256": "173c006916f0090ac23f7c4ebc219495263f682eb0a615f6815ff9fde798042b"
+    }
+  ],
+  "test_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/ProviderRecordStoreTest.java",
+      "bytes": 19682,
+      "sha256": "85a3b64fc257e46bd18c6a0c788ac85ef98efeb7359b16667e49678bc1ea92c8"
+    }
+  ],
+  "auxiliary": [
+    {
+      "path": "codemagic.yaml",
+      "bytes": 48025,
+      "sha256": "7c1b2b696d61fce6becacc442962268e5434ef797d5a34b17e9381ef5d9b9eba"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+      "bytes": 3637,
+      "sha256": "c7a97f99335c7947b6291137bad9c26f39a87c10cc690245312d89191ed08fe2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
+      "bytes": 3881,
+      "sha256": "fcbbc43c55518d22a0ab3b9ae86952c42e28cf0d5393b43292f2ab0e66af1265"
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "bytes": 10307,
+      "sha256": "947295db17229d182d30d5abb0041c55eeaa1ecf705822b319364a9c11fb43c7"
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "bytes": 6877,
+      "sha256": "b1eacfb0fa4d6f1480733f16068fe7f2a2f58fafbf47321f65c8bd7c2ff5b023"
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "bytes": 9489,
+      "sha256": "d2da9f740bc4f4a2151f0367fa16676fc6ed3fe5c49c29736837ef33b62c12ab"
+    },
+    {
+      "path": "scripts/provider-best-effort-release-tests.mjs",
+      "bytes": 5254,
+      "sha256": "3ff41c05bdcb558aa3f06ab4528bd130489e15dc503e9b69acbc5f926453d8db"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v85-composition.json",
+      "bytes": 48155,
+      "sha256": "3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e"
+    }
+  ],
+  "core_sources": [],
+  "deltas": [
+    {
+      "path": "codemagic.yaml",
+      "kind": "modified",
+      "prior_bytes": 47967,
+      "prior_sha256": "6f0a4bc6a9f3968995082e8ba33d5132a4887d225669456af24b336450d24445",
+      "current_bytes": 48025,
+      "current_sha256": "7c1b2b696d61fce6becacc442962268e5434ef797d5a34b17e9381ef5d9b9eba",
+      "hunks": [
+        {
+          "old_start": 187,
+          "old_count": 0,
+          "new_start": 188,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        node scripts/css-distribution-reference-tests.mjs"
+          ]
+        },
+        {
+          "old_start": 976,
+          "old_count": 1,
+          "new_start": 977,
+          "new_count": 1,
+          "before": [
+            "        MZ_BUILD_NUMBER: '78'"
+          ],
+          "after": [
+            "        MZ_BUILD_NUMBER: '85'"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
+      "kind": "modified",
+      "prior_bytes": 510,
+      "prior_sha256": "c2e86842901efe30576f2c772a7c6afb267545bfaf2ffa5c866c41ff7871188d",
+      "current_bytes": 3298,
+      "current_sha256": "600d23edea5eba54428e2913f02f796057ba8ff13ae481dd4332e2120918d29e",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 1,
+          "new_start": 8,
+          "new_count": 19,
+          "before": [
+            "        return new NativeProviderAudioAdmission.Entry[0];"
+          ],
+          "after": [
+            "        try {",
+            "            return new NativeProviderAudioAdmission.Entry[] {",
+            "                new NativeProviderAudioAdmission.Entry(81L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(82L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(83L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(84L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(85L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"))",
+            "            };",
+            "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
+      "kind": "modified",
+      "prior_bytes": 497,
+      "prior_sha256": "a44c8fba6dd520ddb1219684dd3518ac7c7e88b0fd5581d889ab3522a1a742e1",
+      "current_bytes": 3715,
+      "current_sha256": "0f331dbfc71b92541ca811ed9f55d8efa3555365b55a48ee1fcee5325b2554c5",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 1,
+          "new_start": 8,
+          "new_count": 19,
+          "before": [
+            "        return new NativeProviderReleaseAdmission.Release[0];"
+          ],
+          "after": [
+            "        try {",
+            "            return new NativeProviderReleaseAdmission.Release[] {",
+            "                new NativeProviderReleaseAdmission.Release(81L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\"),",
+            "                new NativeProviderReleaseAdmission.Release(82L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\"),",
+            "                new NativeProviderReleaseAdmission.Release(83L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\"),",
+            "                new NativeProviderReleaseAdmission.Release(84L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\"),",
+            "                new NativeProviderReleaseAdmission.Release(85L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e\")",
+            "            };",
+            "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/ProviderRecordStore.java",
+      "kind": "modified",
+      "prior_bytes": 19173,
+      "prior_sha256": "60d2b39fef7eaa6f4901105f3f17cca836a295aecda183b1187731a65b28cd64",
+      "current_sha256": "173c006916f0090ac23f7c4ebc219495263f682eb0a615f6815ff9fde798042b",
+      "hunks": [
+        {
+          "old_start": 76,
+          "old_count": 0,
+          "new_start": 77,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "    private Map<String, String> verifiedOrdinaryBytes;",
+            "    private Snapshot verifiedOrdinarySnapshot;"
+          ]
+        },
+        {
+          "old_start": 88,
+          "old_count": 1,
+          "new_start": 90,
+          "new_count": 11,
+          "before": [
+            "            return decode(readRaw());"
+          ],
+          "after": [
+            "            Map<String, String> raw = readRaw();",
+            "            // Still authenticate the index with today's key. Its digest binds",
+            "            // every envelope, and reuse requires exact bytes already verified",
+            "            // together under that same authenticated index.",
+            "            if (!raw.isEmpty() && raw.equals(verifiedOrdinaryBytes)) {",
+            "                return decode(raw, verifiedOrdinarySnapshot);",
+            "            }",
+            "            Snapshot checked = decode(raw);",
+            "            verifiedOrdinaryBytes = raw;",
+            "            verifiedOrdinarySnapshot = checked;",
+            "            return checked;"
+          ]
+        },
+        {
+          "old_start": 216,
+          "old_count": 0,
+          "new_start": 229,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "            verifiedOrdinaryBytes = readback;",
+            "            verifiedOrdinarySnapshot = accepted;"
+          ]
+        },
+        {
+          "old_start": 236,
+          "old_count": 0,
+          "new_start": 251,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "        return decode(raw, null);",
+            "    }",
+            "    private Snapshot decode(Map<String, String> raw, Snapshot previouslyVerified) throws VaultFailure {"
+          ]
+        },
+        {
+          "old_start": 249,
+          "old_count": 0,
+          "new_start": 267,
+          "new_count": 5,
+          "before": [],
+          "after": [
+            "            if (previouslyVerified != null) {",
+            "                if (previouslyVerified.revision != ((Number) revision).longValue())",
+            "                    throw new IllegalArgumentException(\"verified revision mismatch\");",
+            "                return new Snapshot(previouslyVerified.revision, previouslyVerified.encrypted, crypto);",
+            "            }"
+          ]
+        }
+      ],
+      "current_bytes": 20386
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+      "kind": "modified",
+      "prior_bytes": 135,
+      "prior_sha256": "d48e25b21dedffbc4797680cf03d11482f07f5c148aa9fe12f74849fd5eb87bd",
+      "current_bytes": 3637,
+      "current_sha256": "c7a97f99335c7947b6291137bad9c26f39a87c10cc690245312d89191ed08fe2",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 1,
+          "new_start": 4,
+          "new_count": 72,
+          "before": [
+            "  \"releases\": []"
+          ],
+          "after": [
+            "  \"releases\": [",
+            "    {",
+            "      \"version_code\": 81,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 82,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 83,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 84,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 85,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    }",
+            "  ]"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
+      "kind": "modified",
+      "prior_bytes": 129,
+      "prior_sha256": "4dac90e171c456601b2eaf0cda78498fc16c2b5b51a7f5f544de9439e5ea8fcb",
+      "current_bytes": 3881,
+      "current_sha256": "fcbbc43c55518d22a0ab3b9ae86952c42e28cf0d5393b43292f2ab0e66af1265",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 1,
+          "new_start": 4,
+          "new_count": 72,
+          "before": [
+            "  \"releases\": []"
+          ],
+          "after": [
+            "  \"releases\": [",
+            "    {",
+            "      \"version_code\": 81,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 82,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 83,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 84,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 85,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    }",
+            "  ]"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/ProviderRecordStoreTest.java",
+      "kind": "modified",
+      "prior_bytes": 17724,
+      "prior_sha256": "cfae38c18b1d9300f3ffc8e609739f7280d10fd80281bd9fc5c73dba6c1a392f",
+      "current_sha256": "85a3b64fc257e46bd18c6a0c788ac85ef98efeb7359b16667e49678bc1ea92c8",
+      "hunks": [
+        {
+          "old_start": 90,
+          "old_count": 2,
+          "new_start": 90,
+          "new_count": 2,
+          "before": [
+            "        int creations;",
+            "        @Override public SecretKey existing() { return value; }"
+          ],
+          "after": [
+            "        int creations, reads;",
+            "        @Override public SecretKey existing() { reads++; return value; }"
+          ]
+        },
+        {
+          "old_start": 131,
+          "old_count": 0,
+          "new_start": 132,
+          "new_count": 32,
+          "before": [],
+          "after": [
+            "    }",
+            "    @Test public void repeatedOrdinaryReadsAuthenticateIndexWithoutRedecryptingIdenticalRecords() throws Exception {",
+            "        Fixture f = new Fixture();",
+            "        ProviderRecordStore store = f.store();",
+            "        Map<ProviderRecordStore.Key, char[]> writes = new HashMap<>();",
+            "        for (int n = 0; n < 32; n++) writes.put(key(INBOX, \"retained-\" + n), \"synthetic\".toCharArray());",
+            "        store.commit(0, writes, Collections.emptySet());",
+            "        int reads = f.keys.reads;",
+            "        for (int n = 0; n < 8; n++) assertEquals(writes.keySet(), store.load().keys());",
+            "        assertEquals(16, f.keys.reads - reads); // One existing-key check and one authenticated index per load.",
+            "        reads = f.keys.reads;",
+            "        assertEquals(writes.keySet(), store.loadDurableRetained().keys());",
+            "        assertEquals(33, f.keys.reads - reads); // A retained witness still verifies every envelope independently.",
+            "    }",
+            "    @Test public void ordinaryReadReuseCannotMaskCurrentKeyOrCiphertextChanges() throws Exception {",
+            "        Fixture f = new Fixture();",
+            "        ProviderRecordStore store = f.store();",
+            "        ProviderRecordStore.Key record = key(INBOX, \"test\");",
+            "        store.commit(0, values(record, \"synthetic\"), Collections.emptySet());",
+            "        assertEquals(1, store.load().revision);",
+            "        SecretKey originalKey = f.keys.value;",
+            "        f.keys.value = null;",
+            "        failure(\"custodial_provider_key_missing_preserved\", store::load);",
+            "        f.keys.value = KeyGenerator.getInstance(\"AES\").generateKey();",
+            "        failure(\"custodial_provider_corrupt_preserved\", store::load);",
+            "        f.keys.value = originalKey;",
+            "        Object originalEnvelope = f.memory.raw.put(record.storageName(), \"00\");",
+            "        failure(\"custodial_provider_corrupt_preserved\", store::load);",
+            "        f.memory.raw.put(record.storageName(), originalEnvelope);",
+            "        assertEquals(1, store.load().revision);",
+            "        assertEquals(1, f.memory.commits);",
+            "        assertEquals(1, f.keys.creations);"
+          ]
+        }
+      ],
+      "current_bytes": 19682
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 7247,
+      "prior_sha256": "12b64d33b7641bc9801e7b71c5f28e0638238daf55f55263c4e5ed7d1cfa1e7c",
+      "current_bytes": 10307,
+      "current_sha256": "947295db17229d182d30d5abb0041c55eeaa1ecf705822b319364a9c11fb43c7",
+      "hunks": [
+        {
+          "old_start": 11,
+          "old_count": 1,
+          "new_start": 11,
+          "new_count": 1,
+          "before": [
+            "const counts=assertCurrentGpsInventory();assert.equal(counts.main,194);assert.equal(counts.tests,208);pass('actual current 194 main and 208 native tests bound without unknown callers');"
+          ],
+          "after": [
+            "const counts=assertCurrentGpsInventory();assert.equal(counts.main,194);assert.equal(counts.tests,209);pass('actual current 194 main and 209 native tests bound without unknown callers');"
+          ]
+        },
+        {
+          "old_start": 16,
+          "old_count": 1,
+          "new_start": 16,
+          "new_count": 7,
+          "before": [
+            " const actual=readFileSync(join(root,row.path),'utf8');assert.equal(assertBoundCurrentGpsSource(row.path,actual),actual);assert.equal(assertBoundCurrentGpsSource(basename(row.path),actual),actual);"
+          ],
+          "after": [
+            " const actual=readFileSync(join(root,row.path),'utf8');assert.equal(assertBoundCurrentGpsSource(row.path,actual),actual);",
+            " // A root path such as index.html is already canonical. A nested file with",
+            " // the same basename must never borrow that root file's source identity.",
+            " const short=basename(row.path),bound=[...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.core_sources,...profile.presentation_sources];",
+            " const shortTarget=bound.some(x=>x.path===short)?short:profile.basename_aliases[short];",
+            " if(shortTarget===row.path)assert.equal(assertBoundCurrentGpsSource(short,actual),actual);",
+            " else assert.throws(()=>assertBoundCurrentGpsSource(short,actual));"
+          ]
+        },
+        {
+          "old_start": 36,
+          "old_count": 2,
+          "new_start": 42,
+          "new_count": 7,
+          "before": [
+            " const paths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.legacy_proofs,...profile.core_sources].map(row=>row.path));",
+            " paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');"
+          ],
+          "after": [
+            " const paths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.legacy_proofs,...profile.core_sources,...profile.presentation_sources].map(row=>row.path));",
+            " // Profiles are validator inputs copied explicitly; putting the selected",
+            " // profile in its own hashed inventory would introduce a self-hash cycle.",
+            " paths.add('scripts/fixtures/current-gps-notification-deadline-v83-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-notification-presentation-v84-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-provider-storage-v85-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-week-perimeter-20261119-source-qualification.json');paths.add('scripts/fixtures/current-phone-repairs-r79-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r63-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r61-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44b-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r42-source-qualification.json');paths.add('scripts/fixtures/current-manager-home-bfcache-r34-source-qualification.json');paths.add('scripts/fixtures/current-hub-entry-contract-r33-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-assignment-r32-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-display-r31-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-cache-r30-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-hub-r29-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r22-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r21-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-source-qualification.json');paths.add('scripts/fixtures/current-web-readiness-source-qualification.json');paths.add('scripts/fixtures/current-reminder-timing-source-qualification.json');paths.add('scripts/fixtures/current-terracotta-departure-source-qualification.json');paths.add('scripts/fixtures/current-v80-presentation-source-qualification.json');paths.add('scripts/fixtures/current-schedule-diagnostic-source-qualification.json');paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');"
+          ]
+        },
+        {
+          "old_start": 39,
+          "old_count": 1,
+          "new_start": 50,
+          "new_count": 2,
+          "before": [
+            " writeFileSync(join(temporary,'package.json'),'{\"type\":\"module\"}\\n');"
+          ],
+          "after": [
+            " // The exact package is now a bound dependency input; retain its actual bytes.",
+            " // This validator and its profiles are .mjs and need no replacement package."
+          ]
+        },
+        {
+          "old_start": 42,
+          "old_count": 1,
+          "new_start": 54,
+          "new_count": 1,
+          "before": [
+            " const changeRows=[...profile.deltas,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0]];"
+          ],
+          "after": [
+            " const changeRows=[...profile.deltas,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];"
+          ]
+        },
+        {
+          "old_start": 52,
+          "old_count": 0,
+          "new_start": 65,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            " for(const folder of profile.presentation_namespace_roots){const p=join(temporary,folder,'unlisted.css');writeFileSync(p,'body{}');assert.throws(()=>isolated.assertCurrentGpsInventory());rmSync(p);}",
+            " pass('unlisted presentation files rejected');"
+          ]
+        },
+        {
+          "old_start": 63,
+          "old_count": 1,
+          "new_start": 77,
+          "new_count": 1,
+          "before": [
+            "console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:194,current_tests:208,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));"
+          ],
+          "after": [
+            "console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:194,current_tests:209,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 4365,
+      "prior_sha256": "8203cc7a2f08572c62dc3d7d32fe6dad72e503ae6c12e4fb4fdc7441b3b00d3c",
+      "current_bytes": 6877,
+      "current_sha256": "b1eacfb0fa4d6f1480733f16068fe7f2a2f58fafbf47321f65c8bd7c2ff5b023",
+      "hunks": [
+        {
+          "old_start": 24,
+          "old_count": 1,
+          "new_start": 24,
+          "new_count": 46,
+          "before": [
+            "assert.equal(currentGpsQualification.deltas.filter(row=>row.kind==='added').length,1);"
+          ],
+          "after": [
+            "// The historical projections above stay fixed. Keep the complete additions",
+            "// check in sync with the approved web, perimeter and notification sources.",
+            "const expectedAdditions=[",
+            " 'manager-test-record-archive-preview.mjs',",
+            " 'manager-ux.css',",
+            " 'memphis-zoo-perimeter.js',",
+            " 'mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java',",
+            " 'mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java',",
+            " 'mobile/release-evidence/provider-v81-composition.json',",
+            " 'mobile/release-evidence/provider-v81-protocol.json',",
+            " 'mobile/release-evidence/provider-v82-composition.json',",
+            " 'mobile/release-evidence/provider-v83-composition.json',",
+            " 'mobile/release-evidence/provider-v84-composition.json',",
+            " 'mobile/release-evidence/provider-v85-composition.json',",
+            " 'mobile/scripts/custodial-native-observation-regression-tests.mjs',",
+            " 'mobile/scripts/custodial-provider-foreground-wake-tests.mjs',",
+            " 'operations-dashboard-data.js',",
+            " 'operations-dashboard.js',",
+            " 'ops-hub.css',",
+            " 'scripts/css-distribution-reference-tests.mjs',",
+            " 'scripts/dashboard-loading-state-tests.mjs',",
+            " 'scripts/dashboard-map-web-fit-tests.mjs',",
+            " 'scripts/fixtures/dashboard-map-current-context-pins-v3.json',",
+            " 'scripts/fixtures/dashboard-map-current-context-pins-v4.json',",
+            " 'scripts/fixtures/provider-notification-posting-byte-deltas.json',",
+            " 'scripts/fixtures/quiet-offline-v80-current-controls-v4.json',",
+            " 'scripts/fixtures/runtime-sanitation-predecessor/moxie-decommission-tests.mjs',",
+            " 'scripts/insights-session-withdrawal-tests.mjs',",
+            " 'scripts/manager-phone-perimeter-rendered-tests.mjs',",
+            " 'scripts/messenger-direct-create-lifecycle-tests.mjs',",
+            " 'scripts/messenger-direct-mounted-tests.mjs',",
+            " 'scripts/messenger-selection-race-tests.mjs',",
+            " 'scripts/messenger-session-renewal-browser-tests.mjs',",
+            " 'scripts/operations-dashboard-rendered-browser-tests.mjs',",
+            " 'scripts/operations-motion-controls-tests.mjs',",
+            " 'scripts/operations-next-rendered-tests.mjs',",
+            " 'scripts/operations-next-scheduled-tests.mjs',",
+            " 'scripts/provider-best-effort-release-tests.mjs',",
+            " 'scripts/provider-notification-posting-source-boundary.mjs',",
+            " 'scripts/provider-notification-posting-source-tests.mjs',",
+            " 'scripts/test-record-archive-preview-tests.mjs',",
+            " 'scripts/zoo-perimeter-phone-coverage-tests.mjs',",
+            " 'vendor/LICENSE.sheetjs',",
+            " 'vendor/xlsx-0.20.3.full.min.js',",
+            "];",
+            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),expectedAdditions);"
+          ]
+        },
+        {
+          "old_start": 30,
+          "old_count": 3,
+          "new_start": 75,
+          "new_count": 3,
+          "before": [
+            " assert.equal(assertBoundCurrentProviderSource(row.name,actual),actual);checks++;",
+            " const historical=normalizeBoundProviderComparison(row.name,actual);assert.equal(sha(historical),row.comparison_sha256);checks++;",
+            " const normalized=withoutRequiredKinds(row.name,withoutProviderDecisionWire(row.current_path,withoutReleaseAdmission(row.current_path,withoutQualifiedProviderSchema(row.current_path,withoutRetainedNativeBridge(row.current_path,normalizeCurrentFirstAudio(row.name,actual))))));"
+          ],
+          "after": [
+            " assert.equal(assertBoundCurrentProviderSource(row.current_path,actual),actual);checks++;",
+            " const historical=normalizeBoundProviderComparison(row.current_path,actual);assert.equal(sha(historical),row.comparison_sha256);checks++;",
+            " const normalized=withoutRequiredKinds(row.current_path,withoutProviderDecisionWire(row.current_path,withoutReleaseAdmission(row.current_path,withoutQualifiedProviderSchema(row.current_path,withoutRetainedNativeBridge(row.current_path,normalizeCurrentFirstAudio(row.current_path,actual))))));"
+          ]
+        },
+        {
+          "old_start": 35,
+          "old_count": 2,
+          "new_start": 80,
+          "new_count": 2,
+          "before": [
+            "  assert.notEqual(changed,actual);assert.throws(()=>assertBoundCurrentProviderSource(row.name,changed));",
+            "  assert.equal(normalizeBoundProviderComparison(row.name,changed),changed,'Unknown source cannot obtain a historical view');checks+=3;"
+          ],
+          "after": [
+            "  assert.notEqual(changed,actual);assert.throws(()=>assertBoundCurrentProviderSource(row.current_path,changed));",
+            "  assert.equal(normalizeBoundProviderComparison(row.current_path,changed),changed,'Unknown source cannot obtain a historical view');checks+=3;"
+          ]
+        },
+        {
+          "old_start": 38,
+          "old_count": 1,
+          "new_start": 83,
+          "new_count": 1,
+          "before": [
+            " assert.throws(()=>assertBoundCurrentProviderSource(row.name,historical),'Removed actual current caller cannot be accepted as the current owner');checks++;"
+          ],
+          "after": [
+            " assert.throws(()=>assertBoundCurrentProviderSource(row.current_path,historical),'Removed actual current caller cannot be accepted as the current owner');checks++;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 9043,
+      "prior_sha256": "75b2a6477b9a200d8f8a7312bffbb05c5b80fab5dd628c214b619ba77d91fc28",
+      "current_bytes": 9489,
+      "current_sha256": "d2da9f740bc4f4a2151f0367fa16676fc6ed3fe5c49c29736837ef33b62c12ab",
+      "hunks": [
+        {
+          "old_start": 36,
+          "old_count": 1,
+          "new_start": 36,
+          "new_count": 7,
+          "before": [
+            "equal(audio.parseReviewedProviderAudioReleases(real).releases,[]);"
+          ],
+          "after": [
+            "const releaseAudio=audio.parseReviewedProviderAudioReleases(real).releases;",
+            "equal(releaseAudio.map(r=>[r.version_code,r.version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0'],[85,'1.0.0']]);",
+            "equal(releaseAudio[0].policy.voice,'en-us-x-iol-local');",
+            "equal(releaseAudio[1].policy,releaseAudio[0].policy);",
+            "equal(releaseAudio[2].policy,releaseAudio[1].policy);",
+            "equal(releaseAudio[3].policy,releaseAudio[2].policy);",
+            "equal(releaseAudio[4].policy,releaseAudio[3].policy);"
+          ]
+        },
+        {
+          "old_start": 67,
+          "old_count": 1,
+          "new_start": 73,
+          "new_count": 1,
+          "before": [
+            "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:0,realAudioProfiles:0,synthetic:true,apk:false,device:false,independentReview:false}));"
+          ],
+          "after": [
+            "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:releaseAudio.length,realAudioProfiles:releaseAudio.length,synthetic:true,apk:false,device:false,independentReview:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-best-effort-release-tests.mjs",
+      "kind": "added",
+      "current_bytes": 5254,
+      "current_sha256": "3ff41c05bdcb558aa3f06ab4528bd130489e15dc503e9b69acbc5f926453d8db"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v85-composition.json",
+      "kind": "added",
+      "current_bytes": 48155,
+      "current_sha256": "3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e"
+    }
+  ],
+  "basename_aliases": {
+    "provider-v85-composition.json": "mobile/release-evidence/provider-v85-composition.json"
+  }
+}
