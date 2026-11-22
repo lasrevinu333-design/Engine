@@ -25,16 +25,31 @@ try {
   window.MemphisAuth={getDeviceId:()=>restored?session.device_id:id(99),readSession:()=>restored?session:null,requireOpsManagerSession:async()=>{restored=true;return session;},isReadOnlySession:()=>false,
    opsManagerAuthHeaders:async()=>({Authorization:'Bearer '+session.token,'X-Device-Id':session.device_id,'X-CSRF-Token':'synthetic-current-csrf'})};
   const thread=id(4),user=id(5),rows=Array.from({length:201},(_,i)=>({id:id(1000+i),thread_id:thread,sender_user_id:id(6),sender_display_name:'Synthetic peer',body:i===0?'Oldest retained fixture':`Retained fixture ${i+1}`,message_type:'text',sent_at:'2026-10-31T12:00:00.123456Z',created_at:'2026-10-31T12:00:00.123456Z',updated_at:'2026-10-31T12:00:00.123456Z',is_deleted:false}));
+  const reopened={id:id(7),thread_type:'direct',thread_title:'Recovered conversation',participant_names:'Recovered peer',viewer_can_send:true};
+  const reopenIntent=id(8),reopenPeer={id:id(9),display_name:'Recovered peer',role:'manager',is_active:true};
   window.__calls=[];window.__rows=rows;window.__releaseUpdates=null;
   // Replace fetch before the unchanged shipped bundle executes. No API request
   // reaches networking; the context blocks every non-fixture navigation/asset.
   window.fetch=async(url,options={})=>{
-   const u=new URL(url);window.__calls.push({path:u.pathname+u.search,method:options.method,headers:options.headers});
+   const u=new URL(url);
+   const body=options.body?JSON.parse(options.body):null;
+   window.__calls.push({path:u.pathname+u.search,method:options.method,headers:options.headers,body});
    let data=[];
    if(u.pathname.endsWith('/me/by-device'))data={msg_user_id:user,display_name:'Synthetic name (shared PIN)',role:'manager',canonical_device_id:session.device_id,read_only:false};
-   else if(u.pathname.endsWith('/threads'))data=[{id:thread,thread_type:'direct',thread_title:'Synthetic conversation',participant_names:'Synthetic peer',viewer_can_send:true}];
-   else if(u.pathname.endsWith('/users'))data=[{id:id(6),display_name:'Synthetic peer',role:'manager',is_active:true}];
-   else if(u.pathname.endsWith('/messages'))data=u.searchParams.has('before')?rows.slice(0,1):rows.slice(-200);
+   else if(u.pathname.endsWith('/threads')){
+    data=[{id:thread,thread_type:'direct',thread_title:'Synthetic conversation',participant_names:'Synthetic peer',viewer_can_send:true}];
+    if(window.__reopenVisible)data.push(reopened);
+   }
+   else if(u.pathname.endsWith('/users'))data=[{id:id(6),display_name:'Synthetic peer',role:'manager',is_active:true},reopenPeer];
+   else if(u.pathname.endsWith('/thread/direct-intent')){
+    if(body?.open_protocol!==2||body?.other_user_id!==reopenPeer.id)throw Error('Unexpected direct intent');
+    return Response.json({ok:true,data:{intent_id:reopenIntent,request_id:body.request_id},meta:{open_protocol:2}});
+   }
+   else if(u.pathname.endsWith('/thread/direct')){
+    if(body?.open_protocol!==2||body?.open_intent_id!==reopenIntent||body?.other_user_id!==reopenPeer.id)throw Error('Unexpected direct open');
+    data={id:reopened.id};
+   }
+   else if(u.pathname.endsWith('/messages'))data=u.pathname.includes(reopened.id)?[]:u.searchParams.has('before')?rows.slice(0,1):rows.slice(-200);
    else if(u.pathname.endsWith('/updates'))return new Promise((resolve,reject)=>{
     const aborted=()=>reject(new DOMException('Synthetic request closed','AbortError'));options.signal?.addEventListener('abort',aborted,{once:true});
     if(u.pathname.includes('/thread/'))window.__releaseUpdates=()=>{const row={...rows.at(-1),id:id(1201),body:'New live fixture',sent_at:'2026-10-31T12:00:01Z',updated_at:'2026-10-31T12:00:01Z'};rows.push(row);resolve(new Response(JSON.stringify({ok:true,data:[row],meta:{next_cursor:{after:row.updated_at,after_id:row.id}}})));};
@@ -78,5 +93,21 @@ try {
  assert.ok((await page.locator('.cs-conversation-header__content').boundingBox()).width>220,'conversation title has readable phone width');
  assert.equal((await page.evaluate(()=>window.__calls)).filter(c=>c.method==='POST'&&!c.path.endsWith('/read')).length,0,'inspection sends no message or creates a conversation');
  if(process.env.MZ_SYNTHETIC_SCREENSHOT)await page.screenshot({path:process.env.MZ_SYNTHETIC_SCREENSHOT});
- console.log(JSON.stringify({status:'PASS',scope:'Unmodified generated Messenger JS/CSS in local headless Chromium; synthetic auth/fetch, no real API/provider/device',bundle_sha256:createHash('sha256').update(bundle).digest('hex'),messagesAfterHistory:201,messagesAfterLiveUpdate:202,csrfOnEveryRequest:true,historyDidNotAck:true,pageErrors:errors,networkRequestsIntercepted:intercepted.length}));
+ await page.getByRole('button',{name:'New',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Start conversation'});
+ await dialog.getByText('Recovered peer',{exact:true}).click();
+ const open=dialog.getByRole('button',{name:'Open conversation',exact:true});
+ await open.click();
+ await dialog.getByText('This conversation is not available in your current list. It was not opened.').waitFor();
+ await page.evaluate(()=>{window.__reopenVisible=true;});
+ await open.click();
+ await dialog.waitFor({state:'hidden'});
+ await page.locator('.cs-conversation-header').getByText('Recovered conversation',{exact:true}).waitFor();
+ const mutations=(await page.evaluate(()=>window.__calls)).filter(c=>c.method==='POST'&&!c.path.endsWith('/read'));
+ assert.deepEqual(mutations.map(c=>c.path.split('/').at(-1)),['direct-intent','direct','direct']);
+ assert.deepEqual(mutations[1].body,mutations[2].body,'the same intent is reused on explicit retry');
+ assert.ok(mutations.every(c=>c.headers['X-CSRF-Token']==='synthetic-current-csrf'));
+ assert.equal(errors.length,0,errors.join('\n'));
+ assert.ok(intercepted.every(url=>url.startsWith('https://synthetic.invalid/')));
+ console.log(JSON.stringify({status:'PASS',scope:'Unmodified generated Messenger JS/CSS in local headless Chromium; synthetic auth/fetch, no real API/provider/device',bundle_sha256:createHash('sha256').update(bundle).digest('hex'),messagesAfterHistory:201,messagesAfterLiveUpdate:202,csrfOnEveryRequest:true,historyDidNotAck:true,hiddenThreadKeptOpenDialog:true,directRetryReusedIntent:true,pageErrors:errors,networkRequestsIntercepted:intercepted.length}));
 } finally {await context?.close();await browser.close();console.log('OWNED_SYNTHETIC_BROWSER_CLOSED');}

@@ -933,6 +933,7 @@ function NewConversation({ currentUserId, currentDeviceId, getCurrentIdentity, o
   const [selected, setSelected] = useState(new Set(pendingGroup.row?.member_user_ids || []));
   const [title, setTitle] = useState(pendingGroup.row?.title || '');
   const creating = useRef(false);
+  const directAttempt = useRef(null);
   const alive = useRef(true);
   const current = useRef(null);
   current.current = {currentUserId,currentDeviceId,getCurrentIdentity};
@@ -1085,13 +1086,23 @@ function NewConversation({ currentUserId, currentDeviceId, getCurrentIdentity, o
         setPendingGroup({row:groupBody,raw:groupRaw,legacyRaw,held:false});
       }
       assertCurrent();
-      const envelope = memberIds.length === 1
-        ? (await api('/thread/direct', { method: 'POST', body: {
-          created_by_user_id: currentUserId,
-          other_user_id: memberIds[0],
-          device_id: currentDeviceId,
-        }, assertCurrent }))
-        : (await api('/thread/group', { method:'POST', body:groupBody, assertCurrent }));
+      let envelope;
+      if (memberIds.length === 1) {
+        const other = memberIds[0];
+        if (!directAttempt.current || directAttempt.current.other !== other) directAttempt.current = {
+          other,request_id:crypto.randomUUID(),request_at:new Date().toISOString(),intent_id:null,
+        };
+        const attempt=directAttempt.current;
+        // Reuse original issuance envelope and intent on uncertain retry. Never renew automatically.
+        if (Date.parse(attempt.request_at)+15*60*1000 <= Date.now()) throw Object.assign(new Error('Intent expired. Close and reopen New Message.'), {code:'direct_intent_expired'});
+        if (!attempt.intent_id) {
+          const issued=await api('/thread/direct-intent',{method:'POST',body:{created_by_user_id:currentUserId,other_user_id:other,device_id:currentDeviceId,open_protocol:2,request_id:attempt.request_id,request_at:attempt.request_at},assertCurrent});
+          assertCurrent();
+          if (issued?.ok !== true || issued?.meta?.open_protocol !== 2 || issued?.data?.request_id !== attempt.request_id || !isUuid(issued?.data?.intent_id)) throw new Error('Intent not confirmed');
+          attempt.intent_id=issued.data.intent_id;
+        }
+        envelope=await api('/thread/direct',{method:'POST',body:{created_by_user_id:currentUserId,other_user_id:other,device_id:currentDeviceId,open_protocol:2,open_intent_id:attempt.intent_id},assertCurrent});
+      } else envelope=await api('/thread/group',{method:'POST',body:groupBody,assertCurrent});
       assertCurrent();
       if (envelope?.ok !== true) throw new Error('conversation result not confirmed');
       const thread = envelope.data;
@@ -1140,7 +1151,7 @@ function NewConversation({ currentUserId, currentDeviceId, getCurrentIdentity, o
         };
       }
       await onCreated(id,assertCurrent,retireOriginal);
-    } catch {
+    } catch (error) {
       if (alive.current) {
         let durableSaved = false;
         try { durableSaved = groupRaw !== null && localStorage.getItem(groupKey) === groupRaw; } catch {}
@@ -1148,7 +1159,7 @@ function NewConversation({ currentUserId, currentDeviceId, getCurrentIdentity, o
           ? (durableSaved
             ? 'Group result not confirmed. The original group is saved.'
             : 'Group save could not be confirmed. Original requests remain held.')
-          : 'Could not open that person. Try again.');
+          : error?.code === 'conversation_not_visible' ? 'This conversation is not available in your current list. It was not opened.' : error?.code === 'direct_intent_expired' ? 'This open request expired. Close this window and choose the person again.' : 'Could not open that person. Try again.');
         setBusy(false);
       }
     } finally { creating.current = false; }
@@ -2831,7 +2842,7 @@ function MessengerApp() {
     </section>}
     {heldReadOriginals && <div className="mz-chat-status error" role="status">A saved read acknowledgement cannot be verified. Its original data remains held; no read was sent or cleared for that record.</div>}
     {status && <div className={`mz-chat-status ${statusKind}`} role="status" aria-live="polite">{status}</div>}
-    {newConversation && identity?.msg_user_id && <NewConversation key={`${identity.msg_user_id}:${currentDeviceId}:${accessEpoch.current}`} currentUserId={String(identity.msg_user_id)} currentDeviceId={currentDeviceId} getCurrentIdentity={() => mounted.current && !accessBlocked ? identityRef.current : null} onClose={() => setNewConversation(false)} onCreated={async (id,assertCurrent,retireOriginal) => { assertCurrent(); const rows = await loadThreads({ preferId:id, assertCurrent }); assertCurrent(); if (retireOriginal) { if (!rows.some(row => row.id === id && row.type === 'group')) throw new Error('confirmed group is not currently available'); await retireOriginal(); assertCurrent(); } selectThread(id); setNewConversation(false); }} />}
+    {newConversation && identity?.msg_user_id && <NewConversation key={`${identity.msg_user_id}:${currentDeviceId}:${accessEpoch.current}`} currentUserId={String(identity.msg_user_id)} currentDeviceId={currentDeviceId} getCurrentIdentity={() => mounted.current && !accessBlocked ? identityRef.current : null} onClose={() => setNewConversation(false)} onCreated={async (id,assertCurrent,retireOriginal) => { assertCurrent(); const rows = await loadThreads({ preferId:id, assertCurrent }); assertCurrent(); if (!rows.some(row => row.id === id)) throw Object.assign(new Error('Conversation is not in the current list.'), {code:'conversation_not_visible'}); if (retireOriginal) { if (!rows.some(row => row.id === id && row.type === 'group')) throw new Error('confirmed group is not currently available'); await retireOriginal(); assertCurrent(); } selectThread(id); setNewConversation(false); }} />}
   </div>;
 }
 
