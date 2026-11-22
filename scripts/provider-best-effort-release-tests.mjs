@@ -7,10 +7,10 @@ import {providerClockProfileFingerprint,compiledReviewedProviderAudioReleases} f
 const root=new URL('../mobile/plugins/custodial-native-vault/',import.meta.url);
 const bytes=readFileSync(new URL('android/src/provider-reviewed-releases.json',root));
 const audio=readFileSync(new URL('android/src/provider-reviewed-audio-releases.json',root));
-const policy=parseReviewedProviderReleases(bytes),[retained,r]=policy.releases;
-assert.deepEqual(policy.releases.map(({version_code,version_name})=>[version_code,version_name]),[[81,'1.0.0'],[82,'1.0.0']]);
+const policy=parseReviewedProviderReleases(bytes),[retained,installed,r]=policy.releases;
+assert.deepEqual(policy.releases.map(({version_code,version_name})=>[version_code,version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0']]);
 const sha=value=>createHash('sha256').update(value).digest('hex');
-for(const entry of [retained,r]){
+for(const entry of [retained,installed,r]){
  const evidence=new URL('../mobile/release-evidence/',import.meta.url);
  assert.equal(entry.backend_protocol_evidence_sha256,sha(readFileSync(new URL('provider-v81-protocol.json',evidence))));
  assert.equal(entry.composition_evidence_sha256,sha(readFileSync(new URL(`provider-v${entry.version_code}-composition.json`,evidence))));
@@ -18,8 +18,9 @@ for(const entry of [retained,r]){
  assert.equal(admitted.profileCount,1);
  assert.equal(admitted.audioProfileCount,1);
 }
-const composition=JSON.parse(readFileSync(new URL('../mobile/release-evidence/provider-v82-composition.json',import.meta.url)));
-assert.equal(composition.candidate_version_for_validation,82);
+const installedComposition=JSON.parse(readFileSync(new URL('../mobile/release-evidence/provider-v82-composition.json',import.meta.url)));
+const composition=JSON.parse(readFileSync(new URL('../mobile/release-evidence/provider-v83-composition.json',import.meta.url)));
+assert.equal(composition.candidate_version_for_validation,83);
 assert.equal(composition.version_allocated,true);
 assert.equal(composition.release_independent_sources.length,192);
 assert.equal(new Set(composition.release_independent_sources.map(entry=>entry.path)).size,192);
@@ -27,18 +28,27 @@ for(const entry of composition.release_independent_sources){
  assert.match(entry.path,/^mobile\/plugins\/custodial-native-vault\/android\/src\/main\/java\/org\/memphiszoo\/custodial\/vault\/[A-Za-z0-9]+\.java$/);
  assert.equal(sha(readFileSync(new URL('../'+entry.path,import.meta.url))),entry.sha256,entry.path);
 }
+assert.deepEqual(
+  composition.release_independent_sources.map(({path})=>path),
+  installedComposition.release_independent_sources.map(({path})=>path),
+);
+const changed=composition.release_independent_sources.filter((entry,index)=>entry.sha256!==installedComposition.release_independent_sources[index].sha256);
+assert.deepEqual(changed,[{path:composition.repair.source_path,sha256:composition.repair.current_sha256}]);
+assert.match(changed[0].path,/\/CustodialProviderSyncJobService\.java$/);
+assert.equal(composition.repair.prior_sha256,installedComposition.release_independent_sources.find(entry=>entry.path===changed[0].path).sha256);
+assert.deepEqual([composition.repair.job_budget_changed,composition.repair.network_fence_changed,composition.repair.storage_verification_changed],[false,false,false]);
 assert.deepEqual(r.profile,retained.profile,'The forward version retains the measured best-effort clock profile');
 assert.equal(r.profile.timing_model,'android-elapsed-best-effort.v1');
 assert.deepEqual(Object.keys(r.profile).sort(),['id','api','build','device','timing_model','evidence_sha256'].sort());
 assert.equal(providerClockProfileFingerprint(r.profile),createHash('sha256').update([r.profile.id,r.profile.api,r.profile.build,r.profile.device,r.profile.timing_model,r.profile.evidence_sha256].join('\n')).digest('hex'));
-for(const [code,name]of[[80,'1.0.0'],[83,'1.0.0'],[82,'wrong']])assert.throws(()=>readReviewedProviderRelease(root.pathname,{versionCode:code,versionName:name,required:true}),/qualified provider release inputs absent/);
+for(const [code,name]of[[80,'1.0.0'],[84,'1.0.0'],[83,'wrong']])assert.throws(()=>readReviewedProviderRelease(root.pathname,{versionCode:code,versionName:name,required:true}),/qualified provider release inputs absent/);
 let negatives=0;
 for(const mutate of [p=>p.quantization_nanos=0,p=>p.rate_ppm=0,p=>p.max_age_nanos=1,p=>p.timing_model='unknown',p=>p.evidence_sha256='invalid',p=>p.id='',p=>p.api='\nwrong']){
  const v=structuredClone(policy);mutate(v.releases[1].profile);assert.throws(()=>parseReviewedProviderReleases(JSON.stringify(v)));negatives++;
 }
-const input={policyBytes:bytes,compiledSource:compiledReviewedProviderReleases(bytes),audioPolicyBytes:audio,audioCompiledSource:compiledReviewedProviderAudioReleases(audio),versionCode:82,versionName:'1.0.0',required:true};
+const input={policyBytes:bytes,compiledSource:compiledReviewedProviderReleases(bytes),audioPolicyBytes:audio,audioCompiledSource:compiledReviewedProviderAudioReleases(audio),versionCode:83,versionName:'1.0.0',required:true};
 for(const key of ['backend_protocol_evidence_sha256','composition_evidence_sha256']){
- const v=JSON.parse(audio);v.releases[1][key]='f'.repeat(64);const changed=JSON.stringify(v);
+ const v=JSON.parse(audio);v.releases[2][key]='f'.repeat(64);const changed=JSON.stringify(v);
  assert.throws(()=>selectReviewedProviderRelease({...input,audioPolicyBytes:changed,audioCompiledSource:compiledReviewedProviderAudioReleases(changed)}),/paired audio release inputs absent/);negatives++;
 }
-console.log(JSON.stringify({status:'PASS_BEST_EFFORT_RELEASE_INPUTS',negative_controls:negatives,version_code:82,retained_version:81,profile_count:1,build:false,installed:false,physical_audio:false}));
+console.log(JSON.stringify({status:'PASS_BEST_EFFORT_RELEASE_INPUTS',negative_controls:negatives,version_code:83,retained_versions:[81,82],profile_count:1,build:false,installed:false,physical_audio:false}));

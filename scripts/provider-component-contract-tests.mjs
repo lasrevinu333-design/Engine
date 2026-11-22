@@ -29,8 +29,9 @@ assert.match(service, /lifecycle\.begin\(parameters, SystemClock::elapsedRealtim
 assert.match(service, /parameters\.getJobId\(\) != NativeProviderJobSchedule\.ID/);
 assert.match(service, /lifecycle\.stop\(run\.parameters,/);
 assert.match(service, /postDelayed\(run\.deadline, NativeProviderJobBudget\.MAX_MILLIS\)/);
-assert.match(service, /run\.future\.cancel\(true\)/);
-assert.match(service, /run\.executor\.shutdownNow\(\)/);
+assert.match(service, /run\.future\.cancel\(false\)/);
+assert.match(service, /run\.executor\.shutdown\(\)/);
+assert.doesNotMatch(service, /\.cancel\(true\)|\.shutdownNow\(|\.interrupt\(/);
 assert.match(service, /main\.post\(\(\) -> lifecycle\.complete\(invocation, completion\)\)/);
 assert.match(service, /lifecycle\.destroy\(\)/);
 assert.doesNotMatch(service, /startActivity|startForeground|sendNativeProviderEvents|registerNativeProvider/);

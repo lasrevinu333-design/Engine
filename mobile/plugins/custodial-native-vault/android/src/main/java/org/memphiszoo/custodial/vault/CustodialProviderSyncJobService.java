@@ -36,8 +36,12 @@ public final class CustodialProviderSyncJobService extends JobService {
                 if (run == null || run.parameters != owner) return;
                 active = null;
                 if (run.deadline != null) main.removeCallbacks(run.deadline);
-                if (run.future != null) run.future.cancel(true);
-                run.executor.shutdownNow();
+                // The lifecycle has already canceled the attempt and disconnected
+                // its HTTP connection. An interrupt can make an in-flight Android
+                // preferences commit report failure after staging protected data.
+                // Let that write settle; the existing attempt checks still fence later work.
+                if (run.future != null) run.future.cancel(false);
+                run.executor.shutdown();
             }
             @Override public void finished(Object owner, boolean retry) { jobFinished((JobParameters) owner, retry); }
         });
