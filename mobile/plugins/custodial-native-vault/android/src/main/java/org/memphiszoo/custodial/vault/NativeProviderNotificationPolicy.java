@@ -13,6 +13,19 @@ final class NativeProviderNotificationPolicy {
         if ("employee-schedule-ownership".equals(channel)) return "Assignment updates";
         throw new VaultFailure("custodial_provider_channel_invalid");
     }
+    static String speechText(NativeProviderPayload payload, String recipientName) {
+        if (!"employee_message".equals(payload.get("kind"))) return payload.get("body");
+        String recipient = firstName(recipientName);
+        String sender = firstName(payload.get("title"));
+        String greeting = recipient.isEmpty() ? "You" : recipient + ", you";
+        return greeting + " have a new message" + (sender.isEmpty() ? "" : " from " + sender) + ".";
+    }
+    static String firstName(String displayName) {
+        if (displayName == null) return "";
+        String first = displayName.trim().split("[\\s\\p{Z}]+", 2)[0];
+        // Roster name only. Leave out labels such as "(shared PIN)" and malformed text.
+        return first.length() <= 60 && first.matches("[\\p{L}][\\p{L}\\p{M}'’.-]*") ? first : "";
+    }
     static String action(NativeProviderPayload payload) throws VaultFailure {
         if (payload == null) throw new VaultFailure("custodial_provider_payload_invalid");
         channelTitle(payload.get("channel_id"));

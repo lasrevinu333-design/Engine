@@ -11,6 +11,55 @@ import static org.junit.Assert.*;
 /** Actual enrollment/principal/encrypted provider owners; synthetic storage, transport
  * and OS surface. These tests grant no clock profile or provider effect admission. */
 public final class NativeProviderRuntimeOwnerTest {
+    @Test public void messengerAnnouncesAssignedFirstNameAndSenderWithoutSpeakingBody()throws Exception {
+        for (boolean legacy : new boolean[]{false, true}) assertMessengerSpeech(legacy, true);
+    }
+
+    @Test public void messengerUsesPrivateGenericSpeechForAnotherAssignment()throws Exception {
+        assertMessengerSpeech(false, false);
+    }
+
+    @Test public void eventSpeechUsesOriginalReminderBody()throws Exception {
+        NativeProviderPayload event = NativeProviderPayloadTest.accept(NativeProviderPayloadTest.requiredKind(true));
+        assertEquals(event.get("body"), NativeProviderNotificationPolicy.speechText(event, "Karen Robinson"));
+    }
+
+    private void assertMessengerSpeech(boolean legacy, boolean matchingAssignment)throws Exception {
+        var x = new NativeProviderCompositionTest.Composition(legacy);
+        var sdk = new NativeProviderAudioSequenceTest.Fixture();
+        x.audioSurface = sdk;
+        x.audioScheduler = sdk;
+        x.owner = x.reconstruct();
+        JSONObject principal = x.f.principal.json();
+        JSONObject status = new JSONObject()
+            .put("authenticated", true).put("enrollment_required", false).put("recovery_required", false)
+            .put("canonical_device_id", principal.get("device_id")).put("credential_id", principal.get("credential_id"))
+            .put("employee_id", principal.get("employee_id")).put("employee_name", "Karen Robinson")
+            .put("assignment_epoch", principal.getLong("assignment_epoch") + (matchingAssignment ? 0 : 1));
+        JSONObject envelope = new JSONObject().put("ok", true).put("data", status);
+        var request = new AuthorizedRequest("/device-auth/status?device_id=" + principal.getString("device_id"), "GET", Map.of(), new byte[0]);
+        var response = new AuthorizedResponse(200, Map.of(), envelope.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        x.owner.observeMessengerRecipient(request, response, x.f.engine.getState());
+
+        Map<String,String> message = NativeProviderPayloadTest.requiredKind(false);
+        message.put("generation_id", x.f.prepared.generationId);
+        message.put("principal_digest", x.f.prepared.principalDigest);
+        message.put("token_digest", x.f.prepared.tokenDigest);
+        for (String field : new String[]{"credential_id", "employee_id", "device_id", "assignment_epoch"})
+            message.put("receipt_" + field, String.valueOf(principal.get(field)));
+        message.put("title", "Eric Operle (shared PIN)");
+        String privateBody = "Original private message for the fixture.";
+        message.put("body", privateBody);
+        NativeProviderPayload payload = NativeProviderPayloadTest.accept(NativeProviderPayloadTest.signed(message));
+        x.inventoryRows = new NativeProviderPayload[]{payload};
+
+        x.sync();
+        sdk.full();
+        String expected = matchingAssignment ? "Karen, you have a new message from Eric." : "You have a new message from Eric.";
+        assertEquals(java.util.List.of(expected, expected), sdk.texts);
+        assertEquals(privateBody, x.journal.presentation(x.f.principal, payload.recordId).payload.get("body"));
+        assertEquals("COMPLETED", x.inbox(payload.recordId).getString("audio_state"));
+    }
     @Test public void slowReceiptUploadCannotStarveAnAdmittedOsDisplay()throws Exception {
         var x=new NativeProviderCompositionTest.Composition(false);
         NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);

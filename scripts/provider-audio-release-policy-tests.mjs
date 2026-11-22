@@ -34,12 +34,13 @@ rejects(()=>audio.parseReviewedProviderAudioReleases(json([entry]).replace('"rel
 rejects(()=>audio.parseReviewedProviderAudioReleases(json([entry]).replace(clock.PROVIDER_PACKAGE,'foreign.package')));
 const root=new URL('../mobile/plugins/custodial-native-vault/',import.meta.url),real=readFileSync(new URL('android/src/provider-reviewed-audio-releases.json',root));
 const releaseAudio=audio.parseReviewedProviderAudioReleases(real).releases;
-equal(releaseAudio.map(r=>[r.version_code,r.version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0'],[85,'1.0.0']]);
+equal(releaseAudio.map(r=>[r.version_code,r.version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0'],[85,'1.0.0'],[86,'1.0.0']]);
 equal(releaseAudio[0].policy.voice,'en-us-x-iol-local');
 equal(releaseAudio[1].policy,releaseAudio[0].policy);
 equal(releaseAudio[2].policy,releaseAudio[1].policy);
 equal(releaseAudio[3].policy,releaseAudio[2].policy);
 equal(releaseAudio[4].policy,releaseAudio[3].policy);
+equal(releaseAudio[5].policy,releaseAudio[4].policy);
 equal(readFileSync(new URL('android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java',root),'utf8'),audio.compiledReviewedProviderAudioReleases(real));
 equal(clock.readReviewedProviderRelease(root.pathname,{versionCode:999,versionName:'SYNTHETIC_ONLY'}),null);
 rejects(()=>clock.readReviewedProviderRelease(root.pathname,{versionCode:999,versionName:'SYNTHETIC_ONLY',required:true}),/qualified provider release inputs absent/);

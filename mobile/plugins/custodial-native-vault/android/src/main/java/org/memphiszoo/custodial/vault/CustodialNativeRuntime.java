@@ -998,6 +998,16 @@ final class CustodialNativeRuntime {
         }
         return localProviderOwner;
     }
+    void observeMessengerRecipient(AuthorizedRequest request, AuthorizedResponse response, Map<String,Object> statusState) {
+        synchronized (engine) { synchronized (providerCoordinator) {
+            try {
+                NativeProviderRuntimeOwner owner = localOwner();
+                if (owner != null) owner.observeMessengerRecipient(request, response, statusState);
+            } catch (VaultFailure | RuntimeException unavailable) {
+                // The announcement still works without a name. No effect on enrollment or status.
+            }
+        } }
+    }
     void reconcileProviderFence() throws VaultFailure {
         synchronized (engine) { synchronized (providerCoordinator) {
             NativeProviderRuntimeOwner owner = localOwner();

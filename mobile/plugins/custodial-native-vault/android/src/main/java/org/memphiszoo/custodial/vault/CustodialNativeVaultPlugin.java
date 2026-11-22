@@ -1056,6 +1056,8 @@ public final class CustodialNativeVaultPlugin extends Plugin {
                     engine.observeLegacyStatus(new NativeLegacyLineageJournal((NativeLegacyLineageJournal.Store)offlineAuthorityStore),request,response);
                 }else
                     new NativePrincipalJournal((NativePrincipalJournal.Store)offlineAuthorityStore).capture(after,request,response);
+                CustodialNativeRuntime runtime = applicationRuntime;
+                if (runtime != null) runtime.observeMessengerRecipient(request, response, after);
                 queuePhoneLocationStart();
             }
             // Persist server acceptance before exposing it to any mutable WebView state.

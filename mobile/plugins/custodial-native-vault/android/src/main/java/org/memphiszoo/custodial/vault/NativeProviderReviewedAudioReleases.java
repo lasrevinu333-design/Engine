@@ -21,6 +21,9 @@ final class NativeProviderReviewedAudioReleases {
                     new NativeProviderAudioPolicy("com.google.android.tts", "en-us-x-iol-local", 900, "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98", "89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82")),
                 new NativeProviderAudioAdmission.Entry(85L, "1.0.0", "a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785",
                     "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952", "3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e",
+                    new NativeProviderAudioPolicy("com.google.android.tts", "en-us-x-iol-local", 900, "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98", "89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82")),
+                new NativeProviderAudioAdmission.Entry(86L, "1.0.0", "a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785",
+                    "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952", "7a4cf3788e3fd297c38ef762c94b9effdacfe14cee385de0d16b33098c55a75d",
                     new NativeProviderAudioPolicy("com.google.android.tts", "en-us-x-iol-local", 900, "baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98", "89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82"))
             };
         } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }

@@ -51,6 +51,9 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
     private final NativeProviderClockOwner clock;
     private final NativeProviderRegistrationCoordinator registration;
     private final NativeProviderAudioSequence audio;
+    // Presentation only. Both values belong to the same authenticated native assignment.
+    private NativeProviderPrincipal messengerRecipient;
+    private String messengerRecipientName;
     // Retain actual ORIGINAL provider completions only; never a second player.
     // No evictions/overwrites or history reconstruction after process restart.
     private final java.util.LinkedHashMap<String,OriginalJobFact> ordinaryOriginalFacts=new java.util.LinkedHashMap<>();
@@ -59,17 +62,18 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
     private static VaultFailure originalJobUnavailable(){return new VaultFailure("custodial_provider_original_job_unavailable");}
     private final class OriginalJobFact {
         final NativeProviderJournal.Presentation presentation;
+        final String speechText;
         final NativeProviderAudioSequence.Owner actualOwner;
         final NativeProviderAudioSequence.ReleasedCompletion actualRelease;
         final NativeProviderJournal.OriginalAudioState originalAttempt,completed;
         final NativeProviderAudioPolicy policy;final String profileFingerprint;
-        private OriginalJobFact(NativeProviderJournal.Presentation presentation,NativeProviderAudioSequence.Owner actualOwner,
+        private OriginalJobFact(NativeProviderJournal.Presentation presentation,String speechText,NativeProviderAudioSequence.Owner actualOwner,
             NativeProviderAudioSequence.ReleasedCompletion actualRelease,NativeProviderJournal.OriginalAudioState originalAttempt,
             NativeProviderJournal.OriginalAudioState completed,NativeProviderAudioPolicy policy,String profileFingerprint)throws VaultFailure {
             if(presentation==null||actualOwner==null||actualRelease==null||originalAttempt==null||completed==null||policy==null
                 ||originalAttempt.admissionOrdinal!=completed.admissionOrdinal
                 ||!originalAttempt.registrationId.equals(completed.registrationId))throw originalJobUnavailable();
-            this.presentation=presentation;this.actualOwner=actualOwner;this.actualRelease=actualRelease;
+            this.presentation=presentation;this.speechText=speechText;this.actualOwner=actualOwner;this.actualRelease=actualRelease;
             this.originalAttempt=originalAttempt;this.completed=completed;this.policy=policy;this.profileFingerprint=profileFingerprint;
         }
     }
@@ -90,7 +94,7 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
         int size(){return facts.size();}
         String originalBindingJson(int index)throws VaultFailure {index(index);return bindings.get(index);}
         NativeProviderPayload originalPayload(int index)throws VaultFailure {index(index);return facts.get(index).presentation.payload;}
-        String originalSpeechText(int index)throws VaultFailure {return originalPayload(index).get("body");}
+        String originalSpeechText(int index)throws VaultFailure {index(index);return facts.get(index).speechText;}
         String originalAttemptSha256(int index)throws VaultFailure {index(index);return facts.get(index).originalAttempt.recordSha256;}
         String originalCompletedSha256(int index)throws VaultFailure {index(index);return facts.get(index).completed.recordSha256;}
         String originalProfileFingerprint(int index)throws VaultFailure {index(index);return facts.get(index).profileFingerprint;}
@@ -145,7 +149,7 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
                     if(!payload.get(field).equals(b.getString(field)))throw originalJobUnavailable();
                 if(!selected.originalAttempt.registrationId.equals(b.getString("registration_id")))throw originalJobUnavailable();
                 if(!payload.get("kind").equals(b.getString("native_kind"))||!"ORIGINAL_NATIVE_JOB".equals(b.getString("audio_origin"))
-                    ||!NativeProviderPrincipal.hash(payload.get("body")).equals(b.getString("speech_sha256")))throw originalJobUnavailable();
+                    ||!NativeProviderPrincipal.hash(selected.speechText).equals(b.getString("speech_sha256")))throw originalJobUnavailable();
                 facts.add(selected);projected.add(b.toString()); // Fixed nonsecret identity/digest DATA only; no original payload/secret exported.
             }
             OrdinaryOriginalJobRead result=new OrdinaryOriginalJobRead(runtime,expected,readId,semanticDigest,targetDigest,facts,projected);
@@ -385,6 +389,35 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
         } }
     }
 
+    void observeMessengerRecipient(AuthorizedRequest request, AuthorizedResponse response, java.util.Map<String,Object> statusState)
+        throws VaultFailure {
+        if (!NativePrincipalJournal.isStatus(request) || response.status != 200) return;
+        synchronized (engine) { synchronized (coordinator) {
+            java.util.Map<String,Object> state = engine.getState();
+            if (!statusState.get("revision").equals(state.get("revision")) || !Boolean.TRUE.equals(state.get("active"))) return;
+            org.json.JSONObject principalRecord = NativeLegacyLineageJournal.applies(state)
+                ? engine.readLegacyPrincipal(legacy) : principals.readFor(state);
+            if (principalRecord == null) return;
+            try {
+                org.json.JSONObject envelope = ProviderWireJson.object(response.body, 32768);
+                org.json.JSONObject data = envelope.getJSONObject("data");
+                if (!Boolean.TRUE.equals(envelope.opt("ok")) || !Boolean.TRUE.equals(data.opt("authenticated"))
+                    || !Boolean.FALSE.equals(data.opt("enrollment_required")) || !Boolean.FALSE.equals(data.opt("recovery_required"))) return;
+                Object epoch = data.opt("assignment_epoch");
+                if (!(epoch instanceof Integer || epoch instanceof Long)
+                    || ((Number) epoch).longValue() != principalRecord.getLong("assignment_epoch")
+                    || !principalRecord.getString("device_id").equals(data.opt("canonical_device_id"))
+                    || !principalRecord.getString("credential_id").equals(data.opt("credential_id"))
+                    || !principalRecord.getString("employee_id").equals(data.opt("employee_id"))) return;
+                Object label = data.opt("employee_name");
+                messengerRecipient = NativeProviderPrincipal.fromNativeJournal(principalRecord);
+                messengerRecipientName = label instanceof String ? NativeProviderNotificationPolicy.firstName((String) label) : "";
+            } catch (org.json.JSONException invalid) {
+                // A missing presentation label cannot affect the native status response.
+            }
+        } }
+    }
+
     private boolean supportedProfile() {
         if(delivery==null)return false;
         try { NativeProviderTime.Profile p=delivery.profiles.select(delivery.platform);return p!=null&&p.matches(delivery.platform); }
@@ -521,7 +554,9 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
                             ||!"PENDING".equals(row.getString("audio_state"))||row.getBoolean("card_dismissed")||!row.isNull("acknowledged_event_id")
                             ||!NativeProviderTime.live(clock.observe().bounds,presentation.payload.reservedAt,presentation.payload.validUntil))continue;
                     }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure("custodial_provider_audio_invalid",invalid);}
-                    if(audio.start(presentation.payload.get("body"),audioOwner(presentation)))break;
+                    String recipient = current.principal.same(messengerRecipient) ? messengerRecipientName : null;
+                    String speechText = NativeProviderNotificationPolicy.speechText(presentation.payload, recipient);
+                    if(audio.start(speechText,audioOwner(presentation,speechText)))break;
                 }}
             }}
             if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}
@@ -590,7 +625,7 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
     void retireClaim(Object attachment,String claim) throws VaultFailure {
         requireDelivery();synchronized(engine){synchronized(coordinator){claims.retire(attachment,currentLocked().principal,claim);}}
     }
-    private NativeProviderAudioSequence.Owner audioOwner(NativeProviderJournal.Presentation presentation){
+    private NativeProviderAudioSequence.Owner audioOwner(NativeProviderJournal.Presentation presentation,String speechText){
         return new NativeProviderAudioSequence.Owner(){
             private NativeProviderJournal.OriginalAudioState originalAttempt;
             private NativeProviderAuthority.Current exact()throws VaultFailure{
@@ -620,14 +655,14 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
                 try{
                     // Consume actual release fact NOW, before a later legitimate
                     // job starts. Preserve immutable history, not an old live lane.
-                    actual.claimOriginal(audio,this,presentation.payload.get("body"));
+                    actual.claimOriginal(audio,this,speechText);
                     if(delivery==null||delivery.originalAudioPolicy==null||originalAttempt==null)throw originalJobUnavailable();
                     NativeProviderJournal.OriginalAudioState completed=journal.observeOriginalAudioCompletion(exact().principal,presentation,originalJobCurrent(presentation));
                     NativeProviderTime.Profile profile=delivery.profiles.select(delivery.platform);
                     if(profile==null||!profile.matches(delivery.platform))throw originalJobUnavailable();
-                    OriginalJobFact fact=new OriginalJobFact(presentation,this,actual,originalAttempt,completed,delivery.originalAudioPolicy,profile.fingerprint());
+                    OriginalJobFact fact=new OriginalJobFact(presentation,speechText,this,actual,originalAttempt,completed,delivery.originalAudioPolicy,profile.fingerprint());
                     long bytes=NativeProviderPayload.canonical(presentation.payload.data(),false).getBytes(java.nio.charset.StandardCharsets.UTF_8).length
-                        +presentation.payload.get("body").getBytes(java.nio.charset.StandardCharsets.UTF_8).length+4096L;
+                        +speechText.getBytes(java.nio.charset.StandardCharsets.UTF_8).length+4096L;
                     if(ordinaryOriginalUnknown||ordinaryOriginalFacts.size()>=1024||ordinaryOriginalBytes+bytes>8L*1024*1024
                         ||ordinaryOriginalFacts.containsKey(presentation.payload.recordId))throw originalJobUnavailable();
                     ordinaryOriginalFacts.put(presentation.payload.recordId,fact);ordinaryOriginalBytes+=bytes;originalReadChanged();
