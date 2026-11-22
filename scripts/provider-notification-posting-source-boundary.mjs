@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {normalizeNotificationPresentationForComparison} from './current-gps-qualification-source-boundary.mjs';
 export const notificationPostingPins=JSON.parse(readFileSync(new URL('./fixtures/provider-notification-posting-byte-deltas.json',import.meta.url),'utf8'));
 const sha=value=>createHash('sha256').update(value).digest('hex');
 // Legacy contracts still compare their entire original source. Only this exact
 // independently testable repair is reversed; no hash or historical pin changes.
 // This comparison does not grant a clock/audio profile or release admission.
 export function withoutNotificationPostingRepair(name,source){
+ source=normalizeNotificationPresentationForComparison(name,source);
  const row=notificationPostingPins.files.find(row=>row.name===name||row.path===name);
  if(!row||sha(source)===row.before_sha256)return source;
  if(sha(source)!==row.after_sha256){

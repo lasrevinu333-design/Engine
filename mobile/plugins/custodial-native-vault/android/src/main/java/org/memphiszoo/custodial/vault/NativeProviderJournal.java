@@ -638,15 +638,18 @@ final class NativeProviderJournal {
     }
     EventBatch settleEventDecisions(NativeProviderPrincipal current, NativeProviderEventDecisions.Query query, NativeProviderEventReceipts receipts) throws VaultFailure {
         return transition(() -> {
-            if (query == null) throw new VaultFailure("custodial_provider_operation_stale");
+            if (query == null || receipts == null) throw new VaultFailure("custodial_provider_operation_stale");
             ProviderRecordStore.Snapshot snapshot = store.load(); JSONObject meta = metadata(snapshot); requireAvailable(meta, current);
             if (!current.same(query.batch.principal) || query.batch.invalidationEpoch != number(meta, "invalidation_epoch")) throw new VaultFailure("custodial_provider_operation_stale");
             requireConfirmedStatus(snapshot, meta, current, query.current);
-            decisionRemaining(snapshot, current, query.batch); // Validate every original BEFORE any write.
+            Map<String, PendingEvent> remaining = decisionRemaining(snapshot, current, query.batch);
+            receipts.requireBatch(query.batch);
             // Existing settlement permits only exact original positives, including
             // lost durable-return reconciliation. This whole block holds coordinator.
-            settleEvents(current, query.batch, receipts);
-            Map<String, PendingEvent> remaining = decisionRemaining(store.load(), current, query.batch);
+            if (!receipts.admittedIds().isEmpty()) {
+                settleEvents(current, query.batch, receipts);
+                remaining = decisionRemaining(store.load(), current, query.batch);
+            }
             // Do not admit new arrivals into the retry batch: only this query's
             // still-pending immutable originals may proceed to existing /events.
             return new EventBatch(query.batch.invalidationEpoch, current, remaining);

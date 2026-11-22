@@ -1,0 +1,1299 @@
+{
+  "main_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderDisplayDriver.java",
+      "bytes": 6724,
+      "sha256": "f3f34fab901dee875be77c4f5e5620d04cf1ba0222ba0555f0a421136911dc63"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "bytes": 141036,
+      "sha256": "1842d24df22fbdc3586825652d442b60bcbdcb5e15b866a6806147e65f46826d"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
+      "bytes": 2765,
+      "sha256": "19a10c89ae5ccbea98e6ed2ba3d7308896963e233b2ff969936cdcf0395ed75f"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
+      "bytes": 3096,
+      "sha256": "995bcbf722c50e94c48adfedec979b0e66b6e1941954225df44ea8987cff3005"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "bytes": 51329,
+      "sha256": "f448038f632e704a88fb7c1cd026bc25d801b8a4db0f0a461d86fdbecf14d5bd"
+    }
+  ],
+  "test_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "bytes": 50974,
+      "sha256": "249d01aa008db24b2ee6dac07435183829d1e6c58677fbe34e220c0d4af2c1ad"
+    }
+  ],
+  "auxiliary": [
+    {
+      "path": "codemagic.yaml",
+      "bytes": 48025,
+      "sha256": "a40ed8f5fc1e7354e3cce4d0063d4989f9a0165c2cd8c6fa8fcba32cb4d84c99"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+      "bytes": 2937,
+      "sha256": "b7481ad7aa52217c591a7fa718c837876ab989a801a507550979935d6c47b091"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
+      "bytes": 3131,
+      "sha256": "3b4d6db0dadb5baacea69ab237c850110f8dd5d2703ab5a372fb6d5d4f2d82d4"
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "bytes": 10229,
+      "sha256": "d6af9aff31921f17d7c037b5b159f02ab5237e8fc8913e68108918a91c15e8d4"
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "bytes": 6819,
+      "sha256": "ec94f4584862fa7981fd0c088356fd45d8efd8ecc5d7b71db4e21afbf2e196b4"
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "bytes": 9422,
+      "sha256": "04c964c03254843a232aaca7f30ed7f0c5e219ebde142f9abc00d728e218f2df"
+    },
+    {
+      "path": "scripts/provider-best-effort-release-tests.mjs",
+      "bytes": 5309,
+      "sha256": "236cc420cd5c5e2419a1df2d5213efe092fcd3e575607b271d58c3b0f5c77e52"
+    },
+    {
+      "path": "scripts/provider-notification-posting-source-boundary.mjs",
+      "bytes": 1555,
+      "sha256": "f6b11fad6048abada0805b6c66dd9ad0da3c29f40dd9dbb9aec195632c1f6bc8"
+    },
+    {
+      "path": "scripts/provider-notification-posting-source-tests.mjs",
+      "bytes": 2314,
+      "sha256": "43530abf888b70f2af08923442f311d5664159cb2a69600ba6df33036677af49"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v84-composition.json",
+      "bytes": 48824,
+      "sha256": "8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c"
+    }
+  ],
+  "core_sources": [
+    {
+      "path": "scripts/provider-event-decisions-contract-tests.mjs",
+      "bytes": 6463,
+      "sha256": "fea56a03dc9d447d868f6cb14fefe9a7845c7a5c6ca7e6cbc6379bc3d762fb6d"
+    }
+  ],
+  "deltas": [
+    {
+      "path": "codemagic.yaml",
+      "kind": "modified",
+      "prior_bytes": 47967,
+      "prior_sha256": "6f0a4bc6a9f3968995082e8ba33d5132a4887d225669456af24b336450d24445",
+      "current_bytes": 48025,
+      "current_sha256": "a40ed8f5fc1e7354e3cce4d0063d4989f9a0165c2cd8c6fa8fcba32cb4d84c99",
+      "hunks": [
+        {
+          "old_start": 187,
+          "old_count": 0,
+          "new_start": 188,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        node scripts/css-distribution-reference-tests.mjs"
+          ]
+        },
+        {
+          "old_start": 976,
+          "old_count": 1,
+          "new_start": 977,
+          "new_count": 1,
+          "before": [
+            "        MZ_BUILD_NUMBER: '78'"
+          ],
+          "after": [
+            "        MZ_BUILD_NUMBER: '84'"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderDisplayDriver.java",
+      "kind": "modified",
+      "prior_bytes": 5991,
+      "prior_sha256": "a7ecd17959a4c70a078b690071cd667e293101d2af674c762c8d49e423766978",
+      "current_bytes": 6724,
+      "current_sha256": "f3f34fab901dee875be77c4f5e5620d04cf1ba0222ba0555f0a421136911dc63",
+      "hunks": [
+        {
+          "old_start": 20,
+          "old_count": 0,
+          "new_start": 21,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    boolean enabled(NativeProviderPayload payload) throws Exception { return surface.enabled(payload); }"
+          ]
+        },
+        {
+          "old_start": 32,
+          "old_count": 1,
+          "new_start": 33,
+          "new_count": 1,
+          "before": [
+            "            if (!surface.enabled(presentation.payload) || surface.active(intent) != Active.MATCH)"
+          ],
+          "after": [
+            "            if (!surface.enabled(presentation.payload))"
+          ]
+        },
+        {
+          "old_start": 33,
+          "old_count": 0,
+          "new_start": 35,
+          "new_count": 8,
+          "before": [],
+          "after": [
+            "            Active observed = surface.active(intent);",
+            "            if (observed == Active.CONFLICT) throw new VaultFailure(\"custodial_provider_os_item_conflict\");",
+            "            // Android enqueues notify asynchronously. ABSENT is not failure or",
+            "            // displayed: retain the exact durable attempt for the next bounded",
+            "            // system pass, without cancelling the item still being posted.",
+            "            if (observed == Active.ABSENT) return false;",
+            "            if (observed != Active.MATCH) throw new VaultFailure(\"custodial_provider_os_display_unconfirmed\");",
+            "            observation = guard.current(); journal.requirePresentationCurrent(principal, presentation);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "kind": "modified",
+      "prior_bytes": 140053,
+      "prior_sha256": "b8097e4897db9c53594f278af430a435e626c8bfb558d1b5405abd3ebde37ae2",
+      "current_bytes": 141036,
+      "current_sha256": "1842d24df22fbdc3586825652d442b60bcbdcb5e15b866a6806147e65f46826d",
+      "hunks": [
+        {
+          "old_start": 503,
+          "old_count": 0,
+          "new_start": 504,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "            if (bounds != null && bounds.bestEffort) return new JSONObject()",
+            "                .put(\"schema\", \"custodial.provider-best-effort-observation.v1\")",
+            "                .put(\"estimated_at\", bounds.earliest()).put(\"server_observed_at\", NativeProviderTime.canonical(bounds.serverObservedMicros))",
+            "                .put(\"clock_policy_id\", bounds.profileId).put(\"elapsed_realtime_ms\", elapsedRealtimeMillis).put(\"boot_count\", bootCount);"
+          ]
+        },
+        {
+          "old_start": 523,
+          "old_count": 1,
+          "new_start": 527,
+          "new_count": 2,
+          "before": [
+            "            JSONObject value = new JSONObject().put(\"schema\", \"custodial.native-provider-event.v2\");"
+          ],
+          "after": [
+            "            JSONObject value = new JSONObject().put(\"schema\", NativeProviderObservationWire.bestEffort(event.getJSONObject(\"admission_bounds\"))",
+            "                ? \"custodial.native-provider-event.v3\" : \"custodial.native-provider-event.v2\");"
+          ]
+        },
+        {
+          "old_start": 544,
+          "old_count": 2,
+          "new_start": 549,
+          "new_count": 5,
+          "before": [
+            "                org.json.JSONArray list = new org.json.JSONArray(); for (PendingEvent event : events.values()) list.put(event.wire());",
+            "                byte[] bytes = new JSONObject().put(\"schema\", \"custodial.native-provider-events.v2\").put(\"events\", list).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);"
+          ],
+          "after": [
+            "                org.json.JSONArray list = new org.json.JSONArray(); boolean bestEffort = false;",
+            "                for (PendingEvent event : events.values()) { JSONObject wire = event.wire(); list.put(wire);",
+            "                    bestEffort |= \"custodial.native-provider-event.v3\".equals(wire.get(\"schema\")); }",
+            "                byte[] bytes = new JSONObject().put(\"schema\", bestEffort ? \"custodial.native-provider-events.v3\" : \"custodial.native-provider-events.v2\")",
+            "                    .put(\"events\", list).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);"
+          ]
+        },
+        {
+          "old_start": 633,
+          "old_count": 1,
+          "new_start": 641,
+          "new_count": 1,
+          "before": [
+            "            if (query == null) throw new VaultFailure(\"custodial_provider_operation_stale\");"
+          ],
+          "after": [
+            "            if (query == null || receipts == null) throw new VaultFailure(\"custodial_provider_operation_stale\");"
+          ]
+        },
+        {
+          "old_start": 637,
+          "old_count": 1,
+          "new_start": 645,
+          "new_count": 2,
+          "before": [
+            "            decisionRemaining(snapshot, current, query.batch); // Validate every original BEFORE any write."
+          ],
+          "after": [
+            "            Map<String, PendingEvent> remaining = decisionRemaining(snapshot, current, query.batch);",
+            "            receipts.requireBatch(query.batch);"
+          ]
+        },
+        {
+          "old_start": 640,
+          "old_count": 2,
+          "new_start": 649,
+          "new_count": 4,
+          "before": [
+            "            settleEvents(current, query.batch, receipts);",
+            "            Map<String, PendingEvent> remaining = decisionRemaining(store.load(), current, query.batch);"
+          ],
+          "after": [
+            "            if (!receipts.admittedIds().isEmpty()) {",
+            "                settleEvents(current, query.batch, receipts);",
+            "                remaining = decisionRemaining(store.load(), current, query.batch);",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 1136,
+          "old_count": 1,
+          "new_start": 1147,
+          "new_count": 1,
+          "before": [
+            "                    if (NativeProviderTime.reached(observation.bounds, NativeProviderPayload.timestamp(tombstone.getString(\"dedupe_until\")))) { removals.add(key); compacted++; }"
+          ],
+          "after": [
+            "                    if (NativeProviderTime.authoritativelyReached(observation.bounds, NativeProviderPayload.timestamp(tombstone.getString(\"dedupe_until\")))) { removals.add(key); compacted++; }"
+          ]
+        },
+        {
+          "old_start": 1144,
+          "old_count": 1,
+          "new_start": 1155,
+          "new_count": 1,
+          "before": [
+            "                if (!NativeProviderTime.reached(observation.bounds, payload.validUntil) || !\"DISPLAYED\".equals(record.get(\"display_state\"))"
+          ],
+          "after": [
+            "                if (!NativeProviderTime.authoritativelyReached(observation.bounds, payload.validUntil) || !\"DISPLAYED\".equals(record.get(\"display_state\"))"
+          ]
+        },
+        {
+          "old_start": 1523,
+          "old_count": 1,
+          "new_start": 1534,
+          "new_count": 1,
+          "before": [
+            "                    if(profile.fingerprint().equals(old.getString(\"profile_fingerprint\"))){"
+          ],
+          "after": [
+            "                    if(!profile.bestEffort && profile.fingerprint().equals(old.getString(\"profile_fingerprint\"))){"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
+      "kind": "modified",
+      "prior_bytes": 510,
+      "prior_sha256": "c2e86842901efe30576f2c772a7c6afb267545bfaf2ffa5c866c41ff7871188d",
+      "current_bytes": 2765,
+      "current_sha256": "19a10c89ae5ccbea98e6ed2ba3d7308896963e233b2ff969936cdcf0395ed75f",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 1,
+          "new_start": 8,
+          "new_count": 16,
+          "before": [
+            "        return new NativeProviderAudioAdmission.Entry[0];"
+          ],
+          "after": [
+            "        try {",
+            "            return new NativeProviderAudioAdmission.Entry[] {",
+            "                new NativeProviderAudioAdmission.Entry(81L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(82L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(83L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(84L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"))",
+            "            };",
+            "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
+      "kind": "modified",
+      "prior_bytes": 497,
+      "prior_sha256": "a44c8fba6dd520ddb1219684dd3518ac7c7e88b0fd5581d889ab3522a1a742e1",
+      "current_bytes": 3096,
+      "current_sha256": "995bcbf722c50e94c48adfedec979b0e66b6e1941954225df44ea8987cff3005",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 1,
+          "new_start": 8,
+          "new_count": 16,
+          "before": [
+            "        return new NativeProviderReleaseAdmission.Release[0];"
+          ],
+          "after": [
+            "        try {",
+            "            return new NativeProviderReleaseAdmission.Release[] {",
+            "                new NativeProviderReleaseAdmission.Release(81L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\"),",
+            "                new NativeProviderReleaseAdmission.Release(82L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\"),",
+            "                new NativeProviderReleaseAdmission.Release(83L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\"),",
+            "                new NativeProviderReleaseAdmission.Release(84L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\")",
+            "            };",
+            "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "kind": "modified",
+      "prior_bytes": 49032,
+      "prior_sha256": "3424517c43b2e0e35ec6cfa8c00c047cb9d1351d2945880639243d26296836e2",
+      "current_bytes": 51329,
+      "current_sha256": "f448038f632e704a88fb7c1cd026bc25d801b8a4db0f0a461d86fdbecf14d5bd",
+      "hunks": [
+        {
+          "old_start": 405,
+          "old_count": 1,
+          "new_start": 405,
+          "new_count": 1,
+          "before": [
+            "            if(work.networkPending()||!work.quarantined.isEmpty()||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;"
+          ],
+          "after": [
+            "            if(work.networkPending()||!work.quarantined.isEmpty()||unconfirmedDisplayLocked(current.principal)||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;"
+          ]
+        },
+        {
+          "old_start": 407,
+          "old_count": 0,
+          "new_start": 408,
+          "new_count": 17,
+          "before": [],
+          "after": [
+            "    }",
+            "    /** Read-only scheduling hint for a live original awaiting OS display.",
+            "     * No new clock interval, display receipt, audio acquisition or OS effect. */",
+            "    private boolean unconfirmedDisplayLocked(NativeProviderPrincipal principal)throws VaultFailure {",
+            "        NativeProviderJournal.Observation now=clock.observe();",
+            "        for(String id:journal.admittedRecordIds(principal)){",
+            "            NativeProviderJournal.Presentation presentation=journal.presentation(principal,id);",
+            "            if(!NativeProviderTime.live(now.bounds,presentation.payload.reservedAt,presentation.payload.validUntil))continue;",
+            "            try{org.json.JSONObject row=presentation.record();",
+            "                String state=row.getString(\"display_state\");",
+            "                if(!row.isNull(\"displayed_event_id\")||row.getBoolean(\"os_cancel_pending\")",
+            "                    ||row.getBoolean(\"card_dismissed\")||!row.isNull(\"opened_event_id\")||!row.isNull(\"acknowledged_event_id\"))continue;",
+            "                if(\"DISPLAY_UNCERTAIN\".equals(state)&&!row.isNull(\"os_attempt_id\"))return true;",
+            "                if(\"PENDING_DISPLAY\".equals(state)&&display.enabled(presentation.payload))return true;",
+            "            }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure(\"custodial_provider_audio_invalid\",invalid);}",
+            "        }",
+            "        return false;"
+          ]
+        },
+        {
+          "old_start": 424,
+          "old_count": 0,
+          "new_start": 442,
+          "new_count": 6,
+          "before": [],
+          "after": [
+            "    }",
+            "    /** Foreground wake of existing admitted work only. Cached Firebase tokens",
+            "     * need not emit onNewToken after an in-place update. Do not increment a",
+            "     * recovery epoch, request a token or run HTTP from this lifecycle callback. */",
+            "    void requestPendingWork() throws VaultFailure {",
+            "        if(delivery!=null)NativeProviderJobSchedule.request(pendingWork(),delivery.jobs);"
+          ]
+        },
+        {
+          "old_start": 479,
+          "old_count": 2,
+          "new_start": 502,
+          "new_count": 4,
+          "before": [
+            "            if(!batch.events.isEmpty()){requireDelivery();batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);}",
+            "            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}"
+          ],
+          "after": [
+            "            if(!batch.events.isEmpty()){",
+            "                requireDelivery();",
+            "                batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 481,
+          "old_count": 0,
+          "new_start": 507,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "                invocation.attempt.check();"
+          ]
+        },
+        {
+          "old_start": 482,
+          "old_count": 0,
+          "new_start": 509,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "                // Original decisions must succeed before local effects. Uploading",
+            "                // the still-pending originals is independent of OS presentation."
+          ]
+        },
+        {
+          "old_start": 492,
+          "old_count": 1,
+          "new_start": 520,
+          "new_count": 2,
+          "before": [
+            "                        if(!\"PENDING\".equals(row.getString(\"audio_state\"))||row.getBoolean(\"card_dismissed\")||!row.isNull(\"acknowledged_event_id\")"
+          ],
+          "after": [
+            "                        if(!\"DISPLAYED\".equals(row.getString(\"display_state\"))||row.isNull(\"displayed_event_id\")",
+            "                            ||!\"PENDING\".equals(row.getString(\"audio_state\"))||row.getBoolean(\"card_dismissed\")||!row.isNull(\"acknowledged_event_id\")"
+          ]
+        },
+        {
+          "old_start": 496,
+          "old_count": 0,
+          "new_start": 526,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "            }}",
+            "            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}",
+            "            synchronized(engine){synchronized(coordinator){"
+          ]
+        },
+        {
+          "old_start": 500,
+          "old_count": 1,
+          "new_start": 532,
+          "new_count": 1,
+          "before": [
+            "                invocation.attempt.check();current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();"
+          ],
+          "after": [
+            "                invocation.attempt.check();NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();"
+          ]
+        },
+        {
+          "old_start": 503,
+          "old_count": 1,
+          "new_start": 535,
+          "new_count": 1,
+          "before": [
+            "                return remaining.networkPending()||quarantineWaiting||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())"
+          ],
+          "after": [
+            "                return remaining.networkPending()||quarantineWaiting||unconfirmedDisplayLocked(current.principal)||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+      "kind": "modified",
+      "prior_bytes": 135,
+      "prior_sha256": "d48e25b21dedffbc4797680cf03d11482f07f5c148aa9fe12f74849fd5eb87bd",
+      "current_bytes": 2937,
+      "current_sha256": "b7481ad7aa52217c591a7fa718c837876ab989a801a507550979935d6c47b091",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 1,
+          "new_start": 4,
+          "new_count": 58,
+          "before": [
+            "  \"releases\": []"
+          ],
+          "after": [
+            "  \"releases\": [",
+            "    {",
+            "      \"version_code\": 81,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 82,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 83,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 84,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    }",
+            "  ]"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
+      "kind": "modified",
+      "prior_bytes": 129,
+      "prior_sha256": "4dac90e171c456601b2eaf0cda78498fc16c2b5b51a7f5f544de9439e5ea8fcb",
+      "current_bytes": 3131,
+      "current_sha256": "3b4d6db0dadb5baacea69ab237c850110f8dd5d2703ab5a372fb6d5d4f2d82d4",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 1,
+          "new_start": 4,
+          "new_count": 58,
+          "before": [
+            "  \"releases\": []"
+          ],
+          "after": [
+            "  \"releases\": [",
+            "    {",
+            "      \"version_code\": 81,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 82,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 83,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 84,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    }",
+            "  ]"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "kind": "modified",
+      "prior_bytes": 44162,
+      "prior_sha256": "4b76aaa1c76bda79f9eb551c95a8f48d510d20316b52b9fe81803b128f5a5c05",
+      "current_bytes": 50974,
+      "current_sha256": "249d01aa008db24b2ee6dac07435183829d1e6c58677fbe34e220c0d4af2c1ad",
+      "hunks": [
+        {
+          "old_start": 13,
+          "old_count": 0,
+          "new_start": 14,
+          "new_count": 89,
+          "before": [],
+          "after": [
+            "    @Test public void slowReceiptUploadCannotStarveAnAdmittedOsDisplay()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);",
+            "        x.inventoryRows=new NativeProviderPayload[]{payload};",
+            "        var invocation=NativeProviderCompositionTest.invocation();",
+            "        x.duringHttp=()->{",
+            "            if(!x.paths.get(x.paths.size()-1).endsWith(\"/events\"))return;",
+            "            assertTrue(x.paths.contains(NativeProviderEventDecisions.PATH));",
+            "            assertEquals(1,x.surface.shows);",
+            "            invocation.attempt.cancel();",
+            "        };",
+            "        ProviderRecordStoreTest.failure(\"custodial_provider_network_canceled\",()->x.owner.synchronize(invocation));",
+            "        assertEquals(1,x.surface.shows);",
+            "        assertEquals(2,x.journal.pendingEvents(x.f.principal,16).events.size());",
+            "        assertEquals(\"DISPLAYED\",x.inbox(payload.recordId).getString(\"display_state\"));",
+            "        x.duringHttp=null;",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());",
+            "        assertEquals(1,x.surface.shows);",
+            "        assertTrue(x.journal.pendingEvents(x.f.principal,16).events.isEmpty());",
+            "    }",
+            "    @Test public void unpostedLiveAlertStillRequestsWorkAfterReceiptsDrain()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);",
+            "        x.surface.enabled=false;",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);",
+            "        x.inventoryRows=new NativeProviderPayload[]{payload};",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());",
+            "        assertEquals(\"PENDING_DISPLAY\",x.inbox(payload.recordId).getString(\"display_state\"));",
+            "        assertTrue(x.journal.pendingEvents(x.f.principal,16).events.isEmpty());",
+            "        x.surface.enabled=true;",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());",
+            "        x.sync();",
+            "        assertEquals(1,x.surface.shows);",
+            "    }",
+            "    @Test public void delayedOsDisplayRemainsScheduledAndDoesNotConsumeAudioBeforeConfirmation()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);x.surface.visibleAfterShow=false;",
+            "        NativeProviderAudioSequenceTest.Fixture sdk=new NativeProviderAudioSequenceTest.Fixture();x.audioSurface=sdk;x.audioScheduler=sdk;x.owner=x.reconstruct();",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);x.inventoryRows=new NativeProviderPayload[]{payload};",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.sync());",
+            "        JSONObject pending=x.inbox(payload.recordId);String attempt=pending.getString(\"os_attempt_id\");",
+            "        assertEquals(\"DISPLAY_UNCERTAIN\",pending.getString(\"display_state\"));assertTrue(pending.isNull(\"displayed_event_id\"));",
+            "        assertEquals(\"PENDING\",pending.getString(\"audio_state\"));assertFalse(pending.getBoolean(\"os_cancel_pending\"));",
+            "        assertEquals(1,x.surface.shows);assertEquals(0,x.surface.cancels);",
+            "        assertTrue(sdk.effects.isEmpty());",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());",
+            "        x.surface.active.putAll(x.surface.pending);x.owner=x.reconstruct();x.sync();",
+            "        assertEquals(attempt,x.inbox(payload.recordId).getString(\"os_attempt_id\"));",
+            "        assertEquals(\"DISPLAYED\",x.inbox(payload.recordId).getString(\"display_state\"));",
+            "        assertFalse(x.inbox(payload.recordId).isNull(\"displayed_event_id\"));assertEquals(1,x.surface.shows);assertEquals(0,x.surface.cancels);",
+            "        assertEquals(java.util.List.of(\"tone\"),sdk.effects);sdk.full();",
+            "        assertEquals(\"COMPLETED\",x.inbox(payload.recordId).getString(\"audio_state\"));x.sync();assertEquals(2,sdk.texts.size());",
+            "    }",
+            "    @Test public void disabledDisplayCannotConsumePendingAudioOrCreateAReceipt()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);x.surface.enabled=false;",
+            "        NativeProviderAudioSequenceTest.Fixture sdk=new NativeProviderAudioSequenceTest.Fixture();x.audioSurface=sdk;x.audioScheduler=sdk;x.owner=x.reconstruct();",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);x.inventoryRows=new NativeProviderPayload[]{payload};x.sync();",
+            "        assertTrue(sdk.effects.isEmpty());assertTrue(x.inbox(payload.recordId).isNull(\"displayed_event_id\"));",
+            "        assertEquals(\"PENDING\",x.inbox(payload.recordId).getString(\"audio_state\"));assertEquals(0,x.surface.shows);",
+            "    }",
+            "    @Test public void foregroundWakeArmsPendingRegistrationWithoutTokenNetworkOrJournalMutation()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);x.owner.reconcile();",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());",
+            "        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);",
+            "        int commits=x.f.provider.storage.memory.commits;",
+            "        for(int n=0;n<20;n++)x.owner.requestPendingWork();",
+            "        assertEquals(1,x.jobs.scheduled);assertEquals(20,x.jobs.inspected);",
+            "        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(commits,x.f.provider.storage.memory.commits);",
+            "        assertEquals(0,x.tokens);assertTrue(x.paths.isEmpty());assertTrue(x.requests.isEmpty());",
+            "        assertEquals(0,x.surface.shows);assertEquals(0,x.surface.cancels);",
+            "    }",
+            "    @Test public void foregroundWakeCannotPromoteUnqualifiedOrMissingDelivery()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);x.profile=null;",
+            "        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);",
+            "        x.owner.requestPendingWork();",
+            "        var localOnly=new NativeProviderRuntimeOwner(x.f.engine,x.f.principalJournal,x.f.legacyJournal,",
+            "            x.journal,x.f.provider.storage.lock,x.surface);",
+            "        localOnly.requestPendingWork();",
+            "        assertEquals(0,x.jobs.inspected);assertEquals(0,x.jobs.scheduled);",
+            "        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(0,x.tokens);assertTrue(x.paths.isEmpty());",
+            "    }",
+            "    @Test public void foregroundWakeDoesNotInventRecoveryForAlreadyDrainedGeneration()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.owner.pendingWork());",
+            "        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);",
+            "        int scheduled=x.jobs.scheduled,inspected=x.jobs.inspected,paths=x.paths.size(),tokens=x.tokens;",
+            "        for(int n=0;n<5;n++)x.owner.requestPendingWork();",
+            "        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(scheduled,x.jobs.scheduled);",
+            "        assertEquals(inspected,x.jobs.inspected);assertEquals(paths,x.paths.size());assertEquals(tokens,x.tokens);",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 7247,
+      "prior_sha256": "12b64d33b7641bc9801e7b71c5f28e0638238daf55f55263c4e5ed7d1cfa1e7c",
+      "current_bytes": 10229,
+      "current_sha256": "d6af9aff31921f17d7c037b5b159f02ab5237e8fc8913e68108918a91c15e8d4",
+      "hunks": [
+        {
+          "old_start": 11,
+          "old_count": 1,
+          "new_start": 11,
+          "new_count": 1,
+          "before": [
+            "const counts=assertCurrentGpsInventory();assert.equal(counts.main,194);assert.equal(counts.tests,208);pass('actual current 194 main and 208 native tests bound without unknown callers');"
+          ],
+          "after": [
+            "const counts=assertCurrentGpsInventory();assert.equal(counts.main,194);assert.equal(counts.tests,209);pass('actual current 194 main and 209 native tests bound without unknown callers');"
+          ]
+        },
+        {
+          "old_start": 16,
+          "old_count": 1,
+          "new_start": 16,
+          "new_count": 7,
+          "before": [
+            " const actual=readFileSync(join(root,row.path),'utf8');assert.equal(assertBoundCurrentGpsSource(row.path,actual),actual);assert.equal(assertBoundCurrentGpsSource(basename(row.path),actual),actual);"
+          ],
+          "after": [
+            " const actual=readFileSync(join(root,row.path),'utf8');assert.equal(assertBoundCurrentGpsSource(row.path,actual),actual);",
+            " // A root path such as index.html is already canonical. A nested file with",
+            " // the same basename must never borrow that root file's source identity.",
+            " const short=basename(row.path),bound=[...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.core_sources,...profile.presentation_sources];",
+            " const shortTarget=bound.some(x=>x.path===short)?short:profile.basename_aliases[short];",
+            " if(shortTarget===row.path)assert.equal(assertBoundCurrentGpsSource(short,actual),actual);",
+            " else assert.throws(()=>assertBoundCurrentGpsSource(short,actual));"
+          ]
+        },
+        {
+          "old_start": 36,
+          "old_count": 2,
+          "new_start": 42,
+          "new_count": 6,
+          "before": [
+            " const paths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.legacy_proofs,...profile.core_sources].map(row=>row.path));",
+            " paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');"
+          ],
+          "after": [
+            " const paths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.legacy_proofs,...profile.core_sources,...profile.presentation_sources].map(row=>row.path));",
+            " // Profiles are validator inputs copied explicitly; putting the selected",
+            " // profile in its own hashed inventory would introduce a self-hash cycle.",
+            " paths.add('scripts/fixtures/current-gps-notification-deadline-v83-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-notification-presentation-v84-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-week-perimeter-20261119-source-qualification.json');paths.add('scripts/fixtures/current-phone-repairs-r79-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r63-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r61-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44b-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r42-source-qualification.json');paths.add('scripts/fixtures/current-manager-home-bfcache-r34-source-qualification.json');paths.add('scripts/fixtures/current-hub-entry-contract-r33-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-assignment-r32-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-display-r31-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-cache-r30-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-hub-r29-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r22-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r21-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-source-qualification.json');paths.add('scripts/fixtures/current-web-readiness-source-qualification.json');paths.add('scripts/fixtures/current-reminder-timing-source-qualification.json');paths.add('scripts/fixtures/current-terracotta-departure-source-qualification.json');paths.add('scripts/fixtures/current-v80-presentation-source-qualification.json');paths.add('scripts/fixtures/current-schedule-diagnostic-source-qualification.json');paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');"
+          ]
+        },
+        {
+          "old_start": 39,
+          "old_count": 1,
+          "new_start": 49,
+          "new_count": 2,
+          "before": [
+            " writeFileSync(join(temporary,'package.json'),'{\"type\":\"module\"}\\n');"
+          ],
+          "after": [
+            " // The exact package is now a bound dependency input; retain its actual bytes.",
+            " // This validator and its profiles are .mjs and need no replacement package."
+          ]
+        },
+        {
+          "old_start": 42,
+          "old_count": 1,
+          "new_start": 53,
+          "new_count": 1,
+          "before": [
+            " const changeRows=[...profile.deltas,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0]];"
+          ],
+          "after": [
+            " const changeRows=[...profile.deltas,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];"
+          ]
+        },
+        {
+          "old_start": 52,
+          "old_count": 0,
+          "new_start": 64,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            " for(const folder of profile.presentation_namespace_roots){const p=join(temporary,folder,'unlisted.css');writeFileSync(p,'body{}');assert.throws(()=>isolated.assertCurrentGpsInventory());rmSync(p);}",
+            " pass('unlisted presentation files rejected');"
+          ]
+        },
+        {
+          "old_start": 63,
+          "old_count": 1,
+          "new_start": 76,
+          "new_count": 1,
+          "before": [
+            "console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:194,current_tests:208,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));"
+          ],
+          "after": [
+            "console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:194,current_tests:209,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 4365,
+      "prior_sha256": "8203cc7a2f08572c62dc3d7d32fe6dad72e503ae6c12e4fb4fdc7441b3b00d3c",
+      "current_bytes": 6819,
+      "current_sha256": "ec94f4584862fa7981fd0c088356fd45d8efd8ecc5d7b71db4e21afbf2e196b4",
+      "hunks": [
+        {
+          "old_start": 24,
+          "old_count": 1,
+          "new_start": 24,
+          "new_count": 45,
+          "before": [
+            "assert.equal(currentGpsQualification.deltas.filter(row=>row.kind==='added').length,1);"
+          ],
+          "after": [
+            "// The historical projections above stay fixed. Keep the complete additions",
+            "// check in sync with the approved web, perimeter and notification sources.",
+            "const expectedAdditions=[",
+            " 'manager-test-record-archive-preview.mjs',",
+            " 'manager-ux.css',",
+            " 'memphis-zoo-perimeter.js',",
+            " 'mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java',",
+            " 'mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java',",
+            " 'mobile/release-evidence/provider-v81-composition.json',",
+            " 'mobile/release-evidence/provider-v81-protocol.json',",
+            " 'mobile/release-evidence/provider-v82-composition.json',",
+            " 'mobile/release-evidence/provider-v83-composition.json',",
+            " 'mobile/release-evidence/provider-v84-composition.json',",
+            " 'mobile/scripts/custodial-native-observation-regression-tests.mjs',",
+            " 'mobile/scripts/custodial-provider-foreground-wake-tests.mjs',",
+            " 'operations-dashboard-data.js',",
+            " 'operations-dashboard.js',",
+            " 'ops-hub.css',",
+            " 'scripts/css-distribution-reference-tests.mjs',",
+            " 'scripts/dashboard-loading-state-tests.mjs',",
+            " 'scripts/dashboard-map-web-fit-tests.mjs',",
+            " 'scripts/fixtures/dashboard-map-current-context-pins-v3.json',",
+            " 'scripts/fixtures/dashboard-map-current-context-pins-v4.json',",
+            " 'scripts/fixtures/provider-notification-posting-byte-deltas.json',",
+            " 'scripts/fixtures/quiet-offline-v80-current-controls-v4.json',",
+            " 'scripts/fixtures/runtime-sanitation-predecessor/moxie-decommission-tests.mjs',",
+            " 'scripts/insights-session-withdrawal-tests.mjs',",
+            " 'scripts/manager-phone-perimeter-rendered-tests.mjs',",
+            " 'scripts/messenger-direct-create-lifecycle-tests.mjs',",
+            " 'scripts/messenger-direct-mounted-tests.mjs',",
+            " 'scripts/messenger-selection-race-tests.mjs',",
+            " 'scripts/messenger-session-renewal-browser-tests.mjs',",
+            " 'scripts/operations-dashboard-rendered-browser-tests.mjs',",
+            " 'scripts/operations-motion-controls-tests.mjs',",
+            " 'scripts/operations-next-rendered-tests.mjs',",
+            " 'scripts/operations-next-scheduled-tests.mjs',",
+            " 'scripts/provider-best-effort-release-tests.mjs',",
+            " 'scripts/provider-notification-posting-source-boundary.mjs',",
+            " 'scripts/provider-notification-posting-source-tests.mjs',",
+            " 'scripts/test-record-archive-preview-tests.mjs',",
+            " 'scripts/zoo-perimeter-phone-coverage-tests.mjs',",
+            " 'vendor/LICENSE.sheetjs',",
+            " 'vendor/xlsx-0.20.3.full.min.js',",
+            "];",
+            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),expectedAdditions);"
+          ]
+        },
+        {
+          "old_start": 30,
+          "old_count": 3,
+          "new_start": 74,
+          "new_count": 3,
+          "before": [
+            " assert.equal(assertBoundCurrentProviderSource(row.name,actual),actual);checks++;",
+            " const historical=normalizeBoundProviderComparison(row.name,actual);assert.equal(sha(historical),row.comparison_sha256);checks++;",
+            " const normalized=withoutRequiredKinds(row.name,withoutProviderDecisionWire(row.current_path,withoutReleaseAdmission(row.current_path,withoutQualifiedProviderSchema(row.current_path,withoutRetainedNativeBridge(row.current_path,normalizeCurrentFirstAudio(row.name,actual))))));"
+          ],
+          "after": [
+            " assert.equal(assertBoundCurrentProviderSource(row.current_path,actual),actual);checks++;",
+            " const historical=normalizeBoundProviderComparison(row.current_path,actual);assert.equal(sha(historical),row.comparison_sha256);checks++;",
+            " const normalized=withoutRequiredKinds(row.current_path,withoutProviderDecisionWire(row.current_path,withoutReleaseAdmission(row.current_path,withoutQualifiedProviderSchema(row.current_path,withoutRetainedNativeBridge(row.current_path,normalizeCurrentFirstAudio(row.current_path,actual))))));"
+          ]
+        },
+        {
+          "old_start": 35,
+          "old_count": 2,
+          "new_start": 79,
+          "new_count": 2,
+          "before": [
+            "  assert.notEqual(changed,actual);assert.throws(()=>assertBoundCurrentProviderSource(row.name,changed));",
+            "  assert.equal(normalizeBoundProviderComparison(row.name,changed),changed,'Unknown source cannot obtain a historical view');checks+=3;"
+          ],
+          "after": [
+            "  assert.notEqual(changed,actual);assert.throws(()=>assertBoundCurrentProviderSource(row.current_path,changed));",
+            "  assert.equal(normalizeBoundProviderComparison(row.current_path,changed),changed,'Unknown source cannot obtain a historical view');checks+=3;"
+          ]
+        },
+        {
+          "old_start": 38,
+          "old_count": 1,
+          "new_start": 82,
+          "new_count": 1,
+          "before": [
+            " assert.throws(()=>assertBoundCurrentProviderSource(row.name,historical),'Removed actual current caller cannot be accepted as the current owner');checks++;"
+          ],
+          "after": [
+            " assert.throws(()=>assertBoundCurrentProviderSource(row.current_path,historical),'Removed actual current caller cannot be accepted as the current owner');checks++;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 9043,
+      "prior_sha256": "75b2a6477b9a200d8f8a7312bffbb05c5b80fab5dd628c214b619ba77d91fc28",
+      "current_bytes": 9422,
+      "current_sha256": "04c964c03254843a232aaca7f30ed7f0c5e219ebde142f9abc00d728e218f2df",
+      "hunks": [
+        {
+          "old_start": 36,
+          "old_count": 1,
+          "new_start": 36,
+          "new_count": 6,
+          "before": [
+            "equal(audio.parseReviewedProviderAudioReleases(real).releases,[]);"
+          ],
+          "after": [
+            "const releaseAudio=audio.parseReviewedProviderAudioReleases(real).releases;",
+            "equal(releaseAudio.map(r=>[r.version_code,r.version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0']]);",
+            "equal(releaseAudio[0].policy.voice,'en-us-x-iol-local');",
+            "equal(releaseAudio[1].policy,releaseAudio[0].policy);",
+            "equal(releaseAudio[2].policy,releaseAudio[1].policy);",
+            "equal(releaseAudio[3].policy,releaseAudio[2].policy);"
+          ]
+        },
+        {
+          "old_start": 67,
+          "old_count": 1,
+          "new_start": 72,
+          "new_count": 1,
+          "before": [
+            "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:0,realAudioProfiles:0,synthetic:true,apk:false,device:false,independentReview:false}));"
+          ],
+          "after": [
+            "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:releaseAudio.length,realAudioProfiles:releaseAudio.length,synthetic:true,apk:false,device:false,independentReview:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-best-effort-release-tests.mjs",
+      "kind": "added",
+      "current_bytes": 5309,
+      "current_sha256": "236cc420cd5c5e2419a1df2d5213efe092fcd3e575607b271d58c3b0f5c77e52"
+    },
+    {
+      "path": "scripts/provider-notification-posting-source-boundary.mjs",
+      "kind": "added",
+      "current_bytes": 1555,
+      "current_sha256": "f6b11fad6048abada0805b6c66dd9ad0da3c29f40dd9dbb9aec195632c1f6bc8"
+    },
+    {
+      "path": "scripts/provider-notification-posting-source-tests.mjs",
+      "kind": "added",
+      "current_bytes": 2314,
+      "current_sha256": "43530abf888b70f2af08923442f311d5664159cb2a69600ba6df33036677af49"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v84-composition.json",
+      "kind": "added",
+      "current_bytes": 48824,
+      "current_sha256": "8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c"
+    }
+  ],
+  "presentationHistory": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderDisplayDriver.java",
+      "prior_bytes": 6619,
+      "prior_sha256": "58d65378ba4839dab51465eb079872e15844019ba9e9f4418891c1ad45cac212",
+      "current_bytes": 6724,
+      "current_sha256": "f3f34fab901dee875be77c4f5e5620d04cf1ba0222ba0555f0a421136911dc63",
+      "hunks": [
+        {
+          "old_start": 20,
+          "old_count": 0,
+          "new_start": 21,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    boolean enabled(NativeProviderPayload payload) throws Exception { return surface.enabled(payload); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "prior_bytes": 140926,
+      "prior_sha256": "db3ac96fc55080cff7c3a1af12893452f02860d7ed0a7fc361ed0fc5c05495c4",
+      "current_bytes": 141036,
+      "current_sha256": "1842d24df22fbdc3586825652d442b60bcbdcb5e15b866a6806147e65f46826d",
+      "hunks": [
+        {
+          "old_start": 641,
+          "old_count": 1,
+          "new_start": 641,
+          "new_count": 1,
+          "before": [
+            "            if (query == null) throw new VaultFailure(\"custodial_provider_operation_stale\");"
+          ],
+          "after": [
+            "            if (query == null || receipts == null) throw new VaultFailure(\"custodial_provider_operation_stale\");"
+          ]
+        },
+        {
+          "old_start": 645,
+          "old_count": 1,
+          "new_start": 645,
+          "new_count": 2,
+          "before": [
+            "            decisionRemaining(snapshot, current, query.batch); // Validate every original BEFORE any write."
+          ],
+          "after": [
+            "            Map<String, PendingEvent> remaining = decisionRemaining(snapshot, current, query.batch);",
+            "            receipts.requireBatch(query.batch);"
+          ]
+        },
+        {
+          "old_start": 648,
+          "old_count": 2,
+          "new_start": 649,
+          "new_count": 4,
+          "before": [
+            "            settleEvents(current, query.batch, receipts);",
+            "            Map<String, PendingEvent> remaining = decisionRemaining(store.load(), current, query.batch);"
+          ],
+          "after": [
+            "            if (!receipts.admittedIds().isEmpty()) {",
+            "                settleEvents(current, query.batch, receipts);",
+            "                remaining = decisionRemaining(store.load(), current, query.batch);",
+            "            }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "prior_bytes": 50821,
+      "prior_sha256": "3e73a0da03444c0a1fbd3280f85fa2ccdb84e16eaaf87a175f18556442452bf2",
+      "current_bytes": 51329,
+      "current_sha256": "f448038f632e704a88fb7c1cd026bc25d801b8a4db0f0a461d86fdbecf14d5bd",
+      "hunks": [
+        {
+          "old_start": 409,
+          "old_count": 1,
+          "new_start": 409,
+          "new_count": 1,
+          "before": [
+            "    /** Read-only scheduling hint for an existing exact notify attempt only."
+          ],
+          "after": [
+            "    /** Read-only scheduling hint for a live original awaiting OS display."
+          ]
+        },
+        {
+          "old_start": 417,
+          "old_count": 3,
+          "new_start": 417,
+          "new_count": 5,
+          "before": [
+            "                if(\"DISPLAY_UNCERTAIN\".equals(row.getString(\"display_state\"))&&!row.isNull(\"os_attempt_id\")",
+            "                    &&row.isNull(\"displayed_event_id\")&&!row.getBoolean(\"os_cancel_pending\")",
+            "                    &&!row.getBoolean(\"card_dismissed\")&&row.isNull(\"opened_event_id\")&&row.isNull(\"acknowledged_event_id\"))return true;"
+          ],
+          "after": [
+            "                String state=row.getString(\"display_state\");",
+            "                if(!row.isNull(\"displayed_event_id\")||row.getBoolean(\"os_cancel_pending\")",
+            "                    ||row.getBoolean(\"card_dismissed\")||!row.isNull(\"opened_event_id\")||!row.isNull(\"acknowledged_event_id\"))continue;",
+            "                if(\"DISPLAY_UNCERTAIN\".equals(state)&&!row.isNull(\"os_attempt_id\"))return true;",
+            "                if(\"PENDING_DISPLAY\".equals(state)&&display.enabled(presentation.payload))return true;"
+          ]
+        },
+        {
+          "old_start": 500,
+          "old_count": 2,
+          "new_start": 502,
+          "new_count": 4,
+          "before": [
+            "            if(!batch.events.isEmpty()){requireDelivery();batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);}",
+            "            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}"
+          ],
+          "after": [
+            "            if(!batch.events.isEmpty()){",
+            "                requireDelivery();",
+            "                batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 502,
+          "old_count": 0,
+          "new_start": 507,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "                invocation.attempt.check();"
+          ]
+        },
+        {
+          "old_start": 503,
+          "old_count": 0,
+          "new_start": 509,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "                // Original decisions must succeed before local effects. Uploading",
+            "                // the still-pending originals is independent of OS presentation."
+          ]
+        },
+        {
+          "old_start": 518,
+          "old_count": 0,
+          "new_start": 526,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "            }}",
+            "            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}",
+            "            synchronized(engine){synchronized(coordinator){"
+          ]
+        },
+        {
+          "old_start": 522,
+          "old_count": 1,
+          "new_start": 532,
+          "new_count": 1,
+          "before": [
+            "                invocation.attempt.check();current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();"
+          ],
+          "after": [
+            "                invocation.attempt.check();NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "prior_bytes": 48995,
+      "prior_sha256": "40b171684a75a4548c06cd9a2d0b07ae4469738cb003140fd8731f3ad6e2ea4d",
+      "current_bytes": 50974,
+      "current_sha256": "249d01aa008db24b2ee6dac07435183829d1e6c58677fbe34e220c0d4af2c1ad",
+      "hunks": [
+        {
+          "old_start": 13,
+          "old_count": 0,
+          "new_start": 14,
+          "new_count": 33,
+          "before": [],
+          "after": [
+            "    @Test public void slowReceiptUploadCannotStarveAnAdmittedOsDisplay()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);",
+            "        x.inventoryRows=new NativeProviderPayload[]{payload};",
+            "        var invocation=NativeProviderCompositionTest.invocation();",
+            "        x.duringHttp=()->{",
+            "            if(!x.paths.get(x.paths.size()-1).endsWith(\"/events\"))return;",
+            "            assertTrue(x.paths.contains(NativeProviderEventDecisions.PATH));",
+            "            assertEquals(1,x.surface.shows);",
+            "            invocation.attempt.cancel();",
+            "        };",
+            "        ProviderRecordStoreTest.failure(\"custodial_provider_network_canceled\",()->x.owner.synchronize(invocation));",
+            "        assertEquals(1,x.surface.shows);",
+            "        assertEquals(2,x.journal.pendingEvents(x.f.principal,16).events.size());",
+            "        assertEquals(\"DISPLAYED\",x.inbox(payload.recordId).getString(\"display_state\"));",
+            "        x.duringHttp=null;",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());",
+            "        assertEquals(1,x.surface.shows);",
+            "        assertTrue(x.journal.pendingEvents(x.f.principal,16).events.isEmpty());",
+            "    }",
+            "    @Test public void unpostedLiveAlertStillRequestsWorkAfterReceiptsDrain()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);",
+            "        x.surface.enabled=false;",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);",
+            "        x.inventoryRows=new NativeProviderPayload[]{payload};",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());",
+            "        assertEquals(\"PENDING_DISPLAY\",x.inbox(payload.recordId).getString(\"display_state\"));",
+            "        assertTrue(x.journal.pendingEvents(x.f.principal,16).events.isEmpty());",
+            "        x.surface.enabled=true;",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());",
+            "        x.sync();",
+            "        assertEquals(1,x.surface.shows);",
+            "    }"
+          ]
+        }
+      ]
+    }
+  ],
+  "basename_aliases": {
+    "provider-v84-composition.json": "mobile/release-evidence/provider-v84-composition.json"
+  }
+}

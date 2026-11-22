@@ -18,6 +18,7 @@ final class NativeProviderDisplayDriver {
     private final NativeProviderJournal journal;
     private final Surface surface;
     NativeProviderDisplayDriver(NativeProviderJournal journal, Surface surface) { this.journal = journal; this.surface = surface; }
+    boolean enabled(NativeProviderPayload payload) throws Exception { return surface.enabled(payload); }
     boolean display(NativeProviderPrincipal principal, NativeProviderJournal.Presentation presentation, Guard guard) throws VaultFailure {
         NativeProviderJournal.OsDisplayIntent intent = null;
         try {

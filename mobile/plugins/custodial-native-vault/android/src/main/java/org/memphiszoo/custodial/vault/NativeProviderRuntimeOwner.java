@@ -406,7 +406,7 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
             return journal.pendingOsCancellations().isEmpty()?NativeProviderJobLifecycle.Result.DRAINED:NativeProviderJobLifecycle.Result.RETRY;
         }}} catch(VaultFailure|RuntimeException unavailable){return NativeProviderJobLifecycle.Result.SUSPEND;}
     }
-    /** Read-only scheduling hint for an existing exact notify attempt only.
+    /** Read-only scheduling hint for a live original awaiting OS display.
      * No new clock interval, display receipt, audio acquisition or OS effect. */
     private boolean unconfirmedDisplayLocked(NativeProviderPrincipal principal)throws VaultFailure {
         NativeProviderJournal.Observation now=clock.observe();
@@ -414,9 +414,11 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
             NativeProviderJournal.Presentation presentation=journal.presentation(principal,id);
             if(!NativeProviderTime.live(now.bounds,presentation.payload.reservedAt,presentation.payload.validUntil))continue;
             try{org.json.JSONObject row=presentation.record();
-                if("DISPLAY_UNCERTAIN".equals(row.getString("display_state"))&&!row.isNull("os_attempt_id")
-                    &&row.isNull("displayed_event_id")&&!row.getBoolean("os_cancel_pending")
-                    &&!row.getBoolean("card_dismissed")&&row.isNull("opened_event_id")&&row.isNull("acknowledged_event_id"))return true;
+                String state=row.getString("display_state");
+                if(!row.isNull("displayed_event_id")||row.getBoolean("os_cancel_pending")
+                    ||row.getBoolean("card_dismissed")||!row.isNull("opened_event_id")||!row.isNull("acknowledged_event_id"))continue;
+                if("DISPLAY_UNCERTAIN".equals(state)&&!row.isNull("os_attempt_id"))return true;
+                if("PENDING_DISPLAY".equals(state)&&display.enabled(presentation.payload))return true;
             }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure("custodial_provider_audio_invalid",invalid);}
         }
         return false;
@@ -497,10 +499,15 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
             }}
             NativeProviderJournal.EventBatch batch;
             synchronized(engine){synchronized(coordinator){batch=journal.pendingEvents(currentLocked().principal,16);}}
-            if(!batch.events.isEmpty()){requireDelivery();batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);}
-            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}
+            if(!batch.events.isEmpty()){
+                requireDelivery();
+                batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);
+            }
             synchronized(engine){synchronized(coordinator){
+                invocation.attempt.check();
                 NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Observation now=clock.observe();
+                // Original decisions must succeed before local effects. Uploading
+                // the still-pending originals is independent of OS presentation.
                 display.cancelPending(32);int shown=0;
                 for(String id:journal.admittedRecordIds(current.principal)){
                     if(shown==8)break;invocation.attempt.check();NativeProviderJournal.Presentation presentation=journal.presentation(current.principal,id);
@@ -516,10 +523,13 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
                     }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure("custodial_provider_audio_invalid",invalid);}
                     if(audio.start(presentation.payload.get("body"),audioOwner(presentation)))break;
                 }}
+            }}
+            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}
+            synchronized(engine){synchronized(coordinator){
                 // Re-read after effects: an earlier display observation must not become
                 // cleanup authority after its own horizon expires. Predicates stay in
                 // the sole journal owner; no expiry guesses or uncertain-work eviction.
-                invocation.attempt.check();current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();
+                invocation.attempt.check();NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();
                 if(cleanup.bounds!=null)journal.compactSettledRecords(current.principal,cleanup,16);
                 NativeProviderJournal.Work remaining=journal.pendingWork(current.principal);
                 return remaining.networkPending()||quarantineWaiting||unconfirmedDisplayLocked(current.principal)||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())

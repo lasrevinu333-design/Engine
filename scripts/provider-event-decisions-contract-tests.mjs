@@ -16,7 +16,10 @@ for(const row of pins.files){
  equal(sha(prior),row.prior_sha256,'all original bytes restored: '+row.name);
  equal(withoutProviderEventDecisions(row.name,prior),prior,'exact predecessor normalization idempotent');
  reject(()=>requireCurrent(row,prior));
- for(const changed of [current+'\n// unknown delta',current.slice(1),prior+' ',current.replace(row.hunks[0].after[0],row.hunks[0].after[0]+' ')])reject(()=>withoutProviderEventDecisions(row.name,changed));
+ const projected=normalizeCurrentFirstAudio(row.name,current);
+ const changedHunk=projected.replace(row.hunks[0].after[0],row.hunks[0].after[0]+' ');
+ assert.notEqual(changedHunk,projected);
+ for(const changed of [current+'\n// unknown delta',current.slice(1),prior+' ',changedHunk])reject(()=>withoutProviderEventDecisions(row.name,changed));
 }
 equal(pins.pinned.length,6,'one new class, four focused tests and one owning runner');
 for(const row of pins.pinned)equal(sha(withoutProviderDecisionWire(row.path,withoutReleaseAdmission(row.path,normalizeCurrentFirstAudio(row.path,readFileSync(row.path,'utf8'))))),row.sha256,'exact new class/test/runner after separately pinned test-only wire delta: '+row.path);
@@ -45,7 +48,12 @@ assert.match(typed,/query.bodySha256.equals\(exchange.bodySha256\)/);assert.matc
 assert.match(typed,/ProviderWireJson.same\(query.requester\(\), data.getJSONObject\("requester"\)\)/);checks++;
 assert.match(journal,/decisionRemaining\(snapshot, current, query.batch\);[\s\S]*settleEvents\(current, query.batch, receipts\)/);checks++;
 assert.match(engine,/finally \{ VaultValidation.wipe\(credential\); if \(query != null\) query.close\(\); \}/);checks++;
-assert.match(owner,/lookupNativeProviderEventDecisions\(batch,principals,legacy,journal,delivery.http,invocation.attempt\);\}\s*if\(!batch.events.isEmpty\(\)\)\{requireDelivery\(\);engine.sendNativeProviderEvents/);checks++;
+const synchronization=owner.slice(owner.indexOf('Result synchronize('),owner.indexOf('void applyAction('));
+const originalDecision=synchronization.indexOf('batch=engine.lookupNativeProviderEventDecisions');
+const localDisplay=synchronization.indexOf('display.display(');
+const originalUpload=synchronization.indexOf('engine.sendNativeProviderEvents');
+assert.ok(originalDecision>=0&&originalDecision<localDisplay&&localDisplay<originalUpload);checks++;
+assert.match(synchronization,/if\(!batch.events.isEmpty\(\)\)\{requireDelivery\(\);engine.sendNativeProviderEvents\(batch,/);checks++;
 const runner=readFileSync('mobile/scripts/custodial-provider-storage-tests.mjs','utf8');
 equal(runner.match(/tests.push\('NativeProviderEventDecisionsTest'\)/g)?.length,1,'mandatory focused JVM inclusion exactly once');
 console.log(JSON.stringify({status:'PROVIDER_EVENT_DECISIONS_SOURCE_PASS',checks,scope:'exact native original-acceptance caller and hostile portable byte guards; no permanent disposition, qualification or activation'}));

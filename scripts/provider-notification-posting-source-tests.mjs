@@ -3,14 +3,19 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {notificationPostingPins,withoutNotificationPostingRepair} from './provider-notification-posting-source-boundary.mjs';
 import {withoutProviderMirror} from './provider-mirror-source-boundary.mjs';
+import {assertBoundCurrentGpsSource,normalizeNotificationPresentationForComparison} from './current-gps-qualification-source-boundary.mjs';
 const sha=value=>createHash('sha256').update(value).digest('hex');let checks=0;
 assert.equal(notificationPostingPins.schema,'custodial.notification-posting-byte-deltas.v1');
 assert.deepEqual(notificationPostingPins.files.map(row=>row.name),['NativeProviderDisplayDriver.java','NativeProviderRuntimeOwner.java']);checks+=2;
 for(const row of notificationPostingPins.files){
- const current=readFileSync(row.path,'utf8'),before=withoutNotificationPostingRepair(row.path,current);
+ const actual=readFileSync(row.path,'utf8');
+ assertBoundCurrentGpsSource(row.path,actual);
+ const current=normalizeNotificationPresentationForComparison(row.path,actual);
+ const before=withoutNotificationPostingRepair(row.path,actual);
  assert.equal(sha(current),row.after_sha256);assert.equal(sha(before),row.before_sha256);checks+=2;
  assert.equal(withoutNotificationPostingRepair(row.name,before),before);checks++;
  assert.throws(()=>withoutNotificationPostingRepair(row.name,current+'\n// unregistered change'));checks++;
+ assert.throws(()=>assertBoundCurrentGpsSource(row.path,actual+'\n// unregistered change'));checks++;
  for(const hunk of row.hunks){
   if(!hunk.after.length)continue;
   const start=current.indexOf(hunk.after.join('\n'));assert.ok(start>=0);

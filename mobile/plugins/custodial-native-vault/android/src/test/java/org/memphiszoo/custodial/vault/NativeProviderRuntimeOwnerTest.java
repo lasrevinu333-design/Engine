@@ -11,6 +11,39 @@ import static org.junit.Assert.*;
 /** Actual enrollment/principal/encrypted provider owners; synthetic storage, transport
  * and OS surface. These tests grant no clock profile or provider effect admission. */
 public final class NativeProviderRuntimeOwnerTest {
+    @Test public void slowReceiptUploadCannotStarveAnAdmittedOsDisplay()throws Exception {
+        var x=new NativeProviderCompositionTest.Composition(false);
+        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);
+        x.inventoryRows=new NativeProviderPayload[]{payload};
+        var invocation=NativeProviderCompositionTest.invocation();
+        x.duringHttp=()->{
+            if(!x.paths.get(x.paths.size()-1).endsWith("/events"))return;
+            assertTrue(x.paths.contains(NativeProviderEventDecisions.PATH));
+            assertEquals(1,x.surface.shows);
+            invocation.attempt.cancel();
+        };
+        ProviderRecordStoreTest.failure("custodial_provider_network_canceled",()->x.owner.synchronize(invocation));
+        assertEquals(1,x.surface.shows);
+        assertEquals(2,x.journal.pendingEvents(x.f.principal,16).events.size());
+        assertEquals("DISPLAYED",x.inbox(payload.recordId).getString("display_state"));
+        x.duringHttp=null;
+        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());
+        assertEquals(1,x.surface.shows);
+        assertTrue(x.journal.pendingEvents(x.f.principal,16).events.isEmpty());
+    }
+    @Test public void unpostedLiveAlertStillRequestsWorkAfterReceiptsDrain()throws Exception {
+        var x=new NativeProviderCompositionTest.Composition(false);
+        x.surface.enabled=false;
+        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);
+        x.inventoryRows=new NativeProviderPayload[]{payload};
+        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());
+        assertEquals("PENDING_DISPLAY",x.inbox(payload.recordId).getString("display_state"));
+        assertTrue(x.journal.pendingEvents(x.f.principal,16).events.isEmpty());
+        x.surface.enabled=true;
+        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());
+        x.sync();
+        assertEquals(1,x.surface.shows);
+    }
     @Test public void delayedOsDisplayRemainsScheduledAndDoesNotConsumeAudioBeforeConfirmation()throws Exception {
         var x=new NativeProviderCompositionTest.Composition(false);x.surface.visibleAfterShow=false;
         NativeProviderAudioSequenceTest.Fixture sdk=new NativeProviderAudioSequenceTest.Fixture();x.audioSurface=sdk;x.audioScheduler=sdk;x.owner=x.reconstruct();
