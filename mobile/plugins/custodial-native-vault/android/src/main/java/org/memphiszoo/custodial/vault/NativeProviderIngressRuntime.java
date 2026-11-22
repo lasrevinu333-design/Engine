@@ -4,6 +4,10 @@ package org.memphiszoo.custodial.vault;
 interface NativeProviderIngressRuntime {
     long captureToken(String token) throws VaultFailure;
     void receive(NativeProviderPayload payload) throws VaultFailure;
+    default void receiveFromSdk(NativeProviderPayload payload) throws VaultFailure {
+        receive(payload);
+        try { requestReconcile(); } catch (VaultFailure unavailable) { /* Ingress remains durable. */ }
+    }
     void deletedMessages() throws VaultFailure;
     void requestReconcile() throws VaultFailure;
 

@@ -3,12 +3,15 @@ package org.memphiszoo.custodial.vault;
 /** Does not replace an existing pending/running system job or erase its backoff. */
 final class NativeProviderJobSchedule {
     static final int ID = 0x4D5A5001;
+    static final int MESSAGE_ARRIVAL_ID = 0x4D5A5003;
     static final String COMPONENT = "org.memphiszoo.custodial.vault.CustodialProviderSyncJobService";
     enum Existing { ABSENT, EXACT, CONFLICT }
     enum Outcome { QUIET, ALREADY_SCHEDULED, SCHEDULED, REJECTED }
     interface SystemJobs {
         Existing existing();
         boolean schedule();
+        /** Optional, finite fast path. Its failure never cancels the persisted job. */
+        default boolean scheduleMessageArrival() { return false; }
     }
     static Outcome request(NativeProviderJobLifecycle.Result durableWork, SystemJobs jobs) throws VaultFailure {
         if (durableWork == null) throw new VaultFailure("custodial_provider_job_work_unknown");

@@ -514,8 +514,13 @@ final class NativeProviderJournal {
     }
     static final class Arrival {
         final String recordId, state;
-        final boolean newlyAdmitted;
-        Arrival(String recordId, String state, boolean newlyAdmitted) { this.recordId = recordId; this.state = state; this.newlyAdmitted = newlyAdmitted; }
+        final boolean newlyAdmitted, newWork;
+        Arrival(String recordId, String state, boolean newlyAdmitted) {
+            this(recordId, state, newlyAdmitted, newlyAdmitted);
+        }
+        Arrival(String recordId, String state, boolean newlyAdmitted, boolean newWork) {
+            this.recordId = recordId; this.state = state; this.newlyAdmitted = newlyAdmitted; this.newWork = newWork;
+        }
     }
 
     static final class PendingEvent {
@@ -1251,7 +1256,7 @@ final class NativeProviderJournal {
             if (reason != null) {
                 record.put("state", "QUARANTINED").put("quarantine_reason", reason);
                 put(writes, quarantineKey, record); commit(snapshot, writes);
-                return new Arrival(payload.recordId, "QUARANTINED", false);
+                return new Arrival(payload.recordId, "QUARANTINED", false, true);
             }
             String eventId = UUID.randomUUID().toString();
             record.put("state", "ADMITTED").put("quarantine_reason", JSONObject.NULL).put("admission_bounds", observation.json())

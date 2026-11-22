@@ -1,0 +1,2356 @@
+{
+  "main_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/AndroidProviderJobs.java",
+      "bytes": 3329,
+      "sha256": "fbb88102eb313194c01aa1391391f49a9154fdea0b55626ae08ea2026fd807ce"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialProviderSyncJobService.java",
+      "bytes": 7120,
+      "sha256": "5c6748ccb8f4fd58c32e747353c3c1414d161f8e71f7643fda9f805066232c15"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderAudioSequence.java",
+      "bytes": 12487,
+      "sha256": "2b248bffbcdaededc1d01a229f9ca77d460b770d545f77a81593ae60c5b87180"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderFirebaseDispatch.java",
+      "bytes": 1392,
+      "sha256": "261944295c75f75bac22654df08139856c9db332d5d018e301678021d2f30d59"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderIngressRuntime.java",
+      "bytes": 1189,
+      "sha256": "d49de77f0257627bd646873fa1472b0444a386f184985269d24e27461ca78650"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJobSchedule.java",
+      "bytes": 1423,
+      "sha256": "4a60ec292031efbf58668249b30c135310a0b3a72c3e9c8ce9b7111f1b9dc0ec"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "bytes": 141259,
+      "sha256": "c9a406416007feaee64f2873ac85f29df610922295e02366fc28c5e610a0523d"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
+      "bytes": 4364,
+      "sha256": "3d7b019b7c291cecad4aea6f03b58310027ef124dd3c3fcf5d3adebc0893d4f2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
+      "bytes": 4953,
+      "sha256": "0ea27e9298b85ca9e846ff7a89ba027d82f04cf33d0fb105588a1c5981e69973"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "bytes": 54840,
+      "sha256": "ca1dee0de943831ba6d08b74a2565c955b363f36270c711c83d497d7d30e976d"
+    }
+  ],
+  "test_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderJobLifecycleTest.java",
+      "bytes": 8943,
+      "sha256": "03e7120e686710941811cc0d4a51b18fc4d45841998f6cf89762f7018aaab5f0"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "bytes": 58298,
+      "sha256": "7949f593a12b50e31f80cf0a9ce1e703a351ee0465de40d1a6593c1e1048de2f"
+    }
+  ],
+  "auxiliary": [
+    {
+      "path": "codemagic.yaml",
+      "bytes": 48025,
+      "sha256": "601c0d78bc7d531537b21f2f4670eae6a278f8647134b46f4be95ce0293424d2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+      "bytes": 5037,
+      "sha256": "2f8b1dac527bc762177d7a5ec4c8e85a93da29b65372faae03b31751668d88b2"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
+      "bytes": 5381,
+      "sha256": "07c2ab87df3e531eb89fcdcf278518e429826ab1c09ade06aa9fa71dff7db3dd"
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "bytes": 10465,
+      "sha256": "2b0940cf1d699ef6f3b98c623337a21cc955791b2820c3ff1caedcaf9b6d87fa"
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "bytes": 6993,
+      "sha256": "9287a634c6bb5781b3009349ea5fa5073418b5740a050ccb7c1fed894b15b3d5"
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "bytes": 9623,
+      "sha256": "f77755e6473b3c57c8ff9c1f21c1f60e2cc0338cc3caab6a801b6ea296ae30fa"
+    },
+    {
+      "path": "scripts/provider-best-effort-release-tests.mjs",
+      "bytes": 5544,
+      "sha256": "f2f64fba26676ac3cc3588ac8ec5a072233dfd8abbdad4dbf6a30d283c096786"
+    },
+    {
+      "path": "scripts/provider-component-contract-tests.mjs",
+      "bytes": 5191,
+      "sha256": "837c40582b3c92da05bd8c76375d8ff29fee3cfa3424ff9082147574236c5a75"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v87-composition.json",
+      "bytes": 50878,
+      "sha256": "7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78"
+    }
+  ],
+  "core_sources": [],
+  "deltas": [
+    {
+      "path": "codemagic.yaml",
+      "kind": "modified",
+      "prior_bytes": 47967,
+      "prior_sha256": "6f0a4bc6a9f3968995082e8ba33d5132a4887d225669456af24b336450d24445",
+      "current_bytes": 48025,
+      "current_sha256": "601c0d78bc7d531537b21f2f4670eae6a278f8647134b46f4be95ce0293424d2",
+      "hunks": [
+        {
+          "old_start": 187,
+          "old_count": 0,
+          "new_start": 188,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        node scripts/css-distribution-reference-tests.mjs"
+          ]
+        },
+        {
+          "old_start": 976,
+          "old_count": 1,
+          "new_start": 977,
+          "new_count": 1,
+          "before": [
+            "        MZ_BUILD_NUMBER: '78'"
+          ],
+          "after": [
+            "        MZ_BUILD_NUMBER: '87'"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/AndroidProviderJobs.java",
+      "kind": "modified",
+      "prior_bytes": 2429,
+      "prior_sha256": "a2f790a7b4f48c91572d73b80b58774fab98db6d78774350cfde91b27534d749",
+      "current_bytes": 3329,
+      "current_sha256": "fbb88102eb313194c01aa1391391f49a9154fdea0b55626ae08ea2026fd807ce",
+      "hunks": [
+        {
+          "old_start": 6,
+          "old_count": 0,
+          "new_start": 7,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import android.os.Build;"
+          ]
+        },
+        {
+          "old_start": 27,
+          "old_count": 0,
+          "new_start": 29,
+          "new_count": 14,
+          "before": [],
+          "after": [
+            "    @Override public boolean scheduleMessageArrival() {",
+            "        if (scheduler == null || Build.VERSION.SDK_INT < 31) return false;",
+            "        synchronized (LOCK) {",
+            "            int id = NativeProviderJobSchedule.MESSAGE_ARRIVAL_ID;",
+            "            JobInfo existing = scheduler.getPendingJob(id);",
+            "            if (existing != null) return component.equals(existing.getService()) && existing.isExpedited()",
+            "                && !existing.isPersisted() && !existing.isPeriodic() && existing.getNetworkType() == JobInfo.NETWORK_TYPE_ANY",
+            "                && !existing.isRequireCharging() && !existing.isRequireDeviceIdle();",
+            "            JobInfo urgent = new JobInfo.Builder(id, component)",
+            "                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)",
+            "                .setExpedited(true).build();",
+            "            return scheduler.schedule(urgent) == JobScheduler.RESULT_SUCCESS;",
+            "        }",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialProviderSyncJobService.java",
+      "kind": "modified",
+      "prior_bytes": 4638,
+      "prior_sha256": "9bcf2b4b19584a2657214a23e05a3b10d2091547a59a0f89e2336155a482678e",
+      "current_bytes": 7120,
+      "current_sha256": "5c6748ccb8f4fd58c32e747353c3c1414d161f8e71f7643fda9f805066232c15",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 0,
+          "new_start": 5,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import android.os.Build;"
+          ]
+        },
+        {
+          "old_start": 7,
+          "old_count": 0,
+          "new_start": 9,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import android.util.Log;"
+          ]
+        },
+        {
+          "old_start": 16,
+          "old_count": 0,
+          "new_start": 19,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    private JobParameters deferredRecovery;"
+          ]
+        },
+        {
+          "old_start": 38,
+          "old_count": 2,
+          "new_start": 41,
+          "new_count": 6,
+          "before": [
+            "                if (run.future != null) run.future.cancel(true);",
+            "                run.executor.shutdownNow();"
+          ],
+          "after": [
+            "                // The lifecycle has already canceled the attempt and disconnected",
+            "                // its HTTP connection. An interrupt can make an in-flight Android",
+            "                // preferences commit report failure after staging protected data.",
+            "                // Let that write settle; the existing attempt checks still fence later work.",
+            "                if (run.future != null) run.future.cancel(false);",
+            "                run.executor.shutdown();"
+          ]
+        },
+        {
+          "old_start": 41,
+          "old_count": 1,
+          "new_start": 48,
+          "new_count": 5,
+          "before": [
+            "            @Override public void finished(Object owner, boolean retry) { jobFinished((JobParameters) owner, retry); }"
+          ],
+          "after": [
+            "            @Override public void finished(Object owner, boolean retry) {",
+            "                JobParameters parameters = (JobParameters) owner;",
+            "                jobFinished(parameters, retry && parameters.getJobId() == NativeProviderJobSchedule.ID);",
+            "                finishDeferredRecovery();",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 46,
+          "old_count": 1,
+          "new_start": 57,
+          "new_count": 14,
+          "before": [
+            "        if (parameters == null || parameters.getJobId() != NativeProviderJobSchedule.ID || active != null) return false;"
+          ],
+          "after": [
+            "        if (parameters == null) return false;",
+            "        int id = parameters.getJobId();",
+            "        if (id != NativeProviderJobSchedule.ID &&",
+            "            (id != NativeProviderJobSchedule.MESSAGE_ARRIVAL_ID || Build.VERSION.SDK_INT < 31 || !parameters.isExpeditedJob()))",
+            "            return false;",
+            "        if (active != null) {",
+            "            // Preserve the regular recovery job when Android starts it during an urgent pass.",
+            "            if (id == NativeProviderJobSchedule.ID && active.parameters.getJobId() == NativeProviderJobSchedule.MESSAGE_ARRIVAL_ID",
+            "                && deferredRecovery == null) {",
+            "                deferredRecovery = parameters;",
+            "                return true;",
+            "            }",
+            "            return false;",
+            "        }"
+          ]
+        },
+        {
+          "old_start": 52,
+          "old_count": 1,
+          "new_start": 76,
+          "new_count": 4,
+          "before": [
+            "            run.deadline = () -> lifecycle.deadline(invocation);"
+          ],
+          "after": [
+            "            run.deadline = () -> {",
+            "                if (active == run) diagnostic(\"native_sync_deadline\", null);",
+            "                lifecycle.deadline(invocation);",
+            "            };"
+          ]
+        },
+        {
+          "old_start": 62,
+          "old_count": 0,
+          "new_start": 90,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "                    diagnostic(\"native_sync_refused\", failure);"
+          ]
+        },
+        {
+          "old_start": 65,
+          "old_count": 0,
+          "new_start": 94,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "                if (result == NativeProviderJobLifecycle.Result.SUSPEND) diagnostic(\"native_sync_suspended\", null);"
+          ]
+        },
+        {
+          "old_start": 70,
+          "old_count": 0,
+          "new_start": 100,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            diagnostic(\"native_sync_start_refused\", unavailable);"
+          ]
+        },
+        {
+          "old_start": 75,
+          "old_count": 0,
+          "new_start": 106,
+          "new_count": 13,
+          "before": [],
+          "after": [
+            "    private static void diagnostic(String event, Throwable failure) {",
+            "        // Only private constant call sites supply event. Diagnostic loss cannot",
+            "        // change the original completion, cancellation, retry or storage state.",
+            "        try { Log.w(\"CustodialProvider\", event + (failure == null ? \"\" : \" \" + NativeProviderFailureDisposition.diagnostic(failure))); }",
+            "        catch (RuntimeException unavailable) { }",
+            "    }",
+            "",
+            "    private void finishDeferredRecovery() {",
+            "        JobParameters pending = deferredRecovery;",
+            "        deferredRecovery = null;",
+            "        if (pending != null) jobFinished(pending, true);",
+            "    }",
+            ""
+          ]
+        },
+        {
+          "old_start": 76,
+          "old_count": 0,
+          "new_start": 120,
+          "new_count": 6,
+          "before": [],
+          "after": [
+            "        if (parameters == null) return false;",
+            "        int id = parameters.getJobId();",
+            "        if (id == NativeProviderJobSchedule.ID && deferredRecovery != null) {",
+            "            deferredRecovery = null;",
+            "            return true;",
+            "        }"
+          ]
+        },
+        {
+          "old_start": 78,
+          "old_count": 4,
+          "new_start": 127,
+          "new_count": 4,
+          "before": [
+            "        // Android may reconstruct JobParameters across its Binder callback. Resolve its",
+            "        // one fixed job to OUR original invocation object; never compare parcel identity.",
+            "        if (run == null || parameters == null || parameters.getJobId() != NativeProviderJobSchedule.ID) return false;",
+            "        return lifecycle.stop(run.parameters, run.runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND"
+          ],
+          "after": [
+            "        // JobParameters may be reconstructed across Binder. Resolve the fixed",
+            "        // ID to the invocation that actually received onStartJob.",
+            "        if (run == null || run.parameters.getJobId() != id) return false;",
+            "        boolean retry = lifecycle.stop(run.parameters, run.runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND"
+          ]
+        },
+        {
+          "old_start": 82,
+          "old_count": 0,
+          "new_start": 132,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "        finishDeferredRecovery();",
+            "        return retry && id == NativeProviderJobSchedule.ID;"
+          ]
+        },
+        {
+          "old_start": 85,
+          "old_count": 0,
+          "new_start": 137,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        finishDeferredRecovery();"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderAudioSequence.java",
+      "kind": "modified",
+      "prior_bytes": 12390,
+      "prior_sha256": "242fbb1e09138a864c77bdbb6b35d1cbf920cecc80d719a3664674eff67a2833",
+      "current_bytes": 12487,
+      "current_sha256": "2b248bffbcdaededc1d01a229f9ca77d460b770d545f77a81593ae60c5b87180",
+      "hunks": [
+        {
+          "old_start": 143,
+          "old_count": 1,
+          "new_start": 143,
+          "new_count": 3,
+          "before": [
+            "            try{s.owner.current();next.run();}catch(Exception stale){stop(s,false,\"custodial_provider_audio_owner_stale\");}"
+          ],
+          "after": [
+            "            // Both possible successors revalidate here before scheduling their SDK effect.",
+            "            // A second observation in this same locked transition only repeats the durable clock write.",
+            "            next.run();"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderFirebaseDispatch.java",
+      "kind": "modified",
+      "prior_bytes": 1507,
+      "prior_sha256": "74c4c2589b0ee543bddd26b951b9d5ba98b8aeaca0b4714809b4ab45cd42c814",
+      "current_bytes": 1392,
+      "current_sha256": "261944295c75f75bac22654df08139856c9db332d5d018e301678021d2f30d59",
+      "hunks": [
+        {
+          "old_start": 16,
+          "old_count": 2,
+          "new_start": 16,
+          "new_count": 1,
+          "before": [
+            "        runtime.receive(NativeProviderPayload.fromFcm(sdkSender, projectNumber, notification, data));",
+            "        try { runtime.requestReconcile(); } catch (VaultFailure schedulingUnavailable) { /* Ingress remains durable. */ }"
+          ],
+          "after": [
+            "        runtime.receiveFromSdk(NativeProviderPayload.fromFcm(sdkSender, projectNumber, notification, data));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderIngressRuntime.java",
+      "kind": "modified",
+      "prior_bytes": 968,
+      "prior_sha256": "8a8aac934eed8c96030cff375eed74ab7f511afad0495223a24278110ae95ba1",
+      "current_bytes": 1189,
+      "current_sha256": "d49de77f0257627bd646873fa1472b0444a386f184985269d24e27461ca78650",
+      "hunks": [
+        {
+          "old_start": 6,
+          "old_count": 0,
+          "new_start": 7,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "    default void receiveFromSdk(NativeProviderPayload payload) throws VaultFailure {",
+            "        receive(payload);",
+            "        try { requestReconcile(); } catch (VaultFailure unavailable) { /* Ingress remains durable. */ }",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJobSchedule.java",
+      "kind": "modified",
+      "prior_bytes": 1214,
+      "prior_sha256": "be615de87a1fe73cae6dd98c0294db17d346a0a19b02d4a7ed5c2ef3a2de2ef4",
+      "current_bytes": 1423,
+      "current_sha256": "4a60ec292031efbf58668249b30c135310a0b3a72c3e9c8ce9b7111f1b9dc0ec",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 0,
+          "new_start": 6,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    static final int MESSAGE_ARRIVAL_ID = 0x4D5A5003;"
+          ]
+        },
+        {
+          "old_start": 11,
+          "old_count": 0,
+          "new_start": 13,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "        /** Optional, finite fast path. Its failure never cancels the persisted job. */",
+            "        default boolean scheduleMessageArrival() { return false; }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderJournal.java",
+      "kind": "modified",
+      "prior_bytes": 140053,
+      "prior_sha256": "b8097e4897db9c53594f278af430a435e626c8bfb558d1b5405abd3ebde37ae2",
+      "current_bytes": 141259,
+      "current_sha256": "c9a406416007feaee64f2873ac85f29df610922295e02366fc28c5e610a0523d",
+      "hunks": [
+        {
+          "old_start": 503,
+          "old_count": 0,
+          "new_start": 504,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "            if (bounds != null && bounds.bestEffort) return new JSONObject()",
+            "                .put(\"schema\", \"custodial.provider-best-effort-observation.v1\")",
+            "                .put(\"estimated_at\", bounds.earliest()).put(\"server_observed_at\", NativeProviderTime.canonical(bounds.serverObservedMicros))",
+            "                .put(\"clock_policy_id\", bounds.profileId).put(\"elapsed_realtime_ms\", elapsedRealtimeMillis).put(\"boot_count\", bootCount);"
+          ]
+        },
+        {
+          "old_start": 513,
+          "old_count": 2,
+          "new_start": 517,
+          "new_count": 7,
+          "before": [
+            "        final boolean newlyAdmitted;",
+            "        Arrival(String recordId, String state, boolean newlyAdmitted) { this.recordId = recordId; this.state = state; this.newlyAdmitted = newlyAdmitted; }"
+          ],
+          "after": [
+            "        final boolean newlyAdmitted, newWork;",
+            "        Arrival(String recordId, String state, boolean newlyAdmitted) {",
+            "            this(recordId, state, newlyAdmitted, newlyAdmitted);",
+            "        }",
+            "        Arrival(String recordId, String state, boolean newlyAdmitted, boolean newWork) {",
+            "            this.recordId = recordId; this.state = state; this.newlyAdmitted = newlyAdmitted; this.newWork = newWork;",
+            "        }"
+          ]
+        },
+        {
+          "old_start": 523,
+          "old_count": 1,
+          "new_start": 532,
+          "new_count": 2,
+          "before": [
+            "            JSONObject value = new JSONObject().put(\"schema\", \"custodial.native-provider-event.v2\");"
+          ],
+          "after": [
+            "            JSONObject value = new JSONObject().put(\"schema\", NativeProviderObservationWire.bestEffort(event.getJSONObject(\"admission_bounds\"))",
+            "                ? \"custodial.native-provider-event.v3\" : \"custodial.native-provider-event.v2\");"
+          ]
+        },
+        {
+          "old_start": 544,
+          "old_count": 2,
+          "new_start": 554,
+          "new_count": 5,
+          "before": [
+            "                org.json.JSONArray list = new org.json.JSONArray(); for (PendingEvent event : events.values()) list.put(event.wire());",
+            "                byte[] bytes = new JSONObject().put(\"schema\", \"custodial.native-provider-events.v2\").put(\"events\", list).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);"
+          ],
+          "after": [
+            "                org.json.JSONArray list = new org.json.JSONArray(); boolean bestEffort = false;",
+            "                for (PendingEvent event : events.values()) { JSONObject wire = event.wire(); list.put(wire);",
+            "                    bestEffort |= \"custodial.native-provider-event.v3\".equals(wire.get(\"schema\")); }",
+            "                byte[] bytes = new JSONObject().put(\"schema\", bestEffort ? \"custodial.native-provider-events.v3\" : \"custodial.native-provider-events.v2\")",
+            "                    .put(\"events\", list).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);"
+          ]
+        },
+        {
+          "old_start": 633,
+          "old_count": 1,
+          "new_start": 646,
+          "new_count": 1,
+          "before": [
+            "            if (query == null) throw new VaultFailure(\"custodial_provider_operation_stale\");"
+          ],
+          "after": [
+            "            if (query == null || receipts == null) throw new VaultFailure(\"custodial_provider_operation_stale\");"
+          ]
+        },
+        {
+          "old_start": 637,
+          "old_count": 1,
+          "new_start": 650,
+          "new_count": 2,
+          "before": [
+            "            decisionRemaining(snapshot, current, query.batch); // Validate every original BEFORE any write."
+          ],
+          "after": [
+            "            Map<String, PendingEvent> remaining = decisionRemaining(snapshot, current, query.batch);",
+            "            receipts.requireBatch(query.batch);"
+          ]
+        },
+        {
+          "old_start": 640,
+          "old_count": 2,
+          "new_start": 654,
+          "new_count": 4,
+          "before": [
+            "            settleEvents(current, query.batch, receipts);",
+            "            Map<String, PendingEvent> remaining = decisionRemaining(store.load(), current, query.batch);"
+          ],
+          "after": [
+            "            if (!receipts.admittedIds().isEmpty()) {",
+            "                settleEvents(current, query.batch, receipts);",
+            "                remaining = decisionRemaining(store.load(), current, query.batch);",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 1136,
+          "old_count": 1,
+          "new_start": 1152,
+          "new_count": 1,
+          "before": [
+            "                    if (NativeProviderTime.reached(observation.bounds, NativeProviderPayload.timestamp(tombstone.getString(\"dedupe_until\")))) { removals.add(key); compacted++; }"
+          ],
+          "after": [
+            "                    if (NativeProviderTime.authoritativelyReached(observation.bounds, NativeProviderPayload.timestamp(tombstone.getString(\"dedupe_until\")))) { removals.add(key); compacted++; }"
+          ]
+        },
+        {
+          "old_start": 1144,
+          "old_count": 1,
+          "new_start": 1160,
+          "new_count": 1,
+          "before": [
+            "                if (!NativeProviderTime.reached(observation.bounds, payload.validUntil) || !\"DISPLAYED\".equals(record.get(\"display_state\"))"
+          ],
+          "after": [
+            "                if (!NativeProviderTime.authoritativelyReached(observation.bounds, payload.validUntil) || !\"DISPLAYED\".equals(record.get(\"display_state\"))"
+          ]
+        },
+        {
+          "old_start": 1243,
+          "old_count": 1,
+          "new_start": 1259,
+          "new_count": 1,
+          "before": [
+            "                return new Arrival(payload.recordId, \"QUARANTINED\", false);"
+          ],
+          "after": [
+            "                return new Arrival(payload.recordId, \"QUARANTINED\", false, true);"
+          ]
+        },
+        {
+          "old_start": 1523,
+          "old_count": 1,
+          "new_start": 1539,
+          "new_count": 1,
+          "before": [
+            "                    if(profile.fingerprint().equals(old.getString(\"profile_fingerprint\"))){"
+          ],
+          "after": [
+            "                    if(!profile.bestEffort && profile.fingerprint().equals(old.getString(\"profile_fingerprint\"))){"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
+      "kind": "modified",
+      "prior_bytes": 510,
+      "prior_sha256": "c2e86842901efe30576f2c772a7c6afb267545bfaf2ffa5c866c41ff7871188d",
+      "current_bytes": 4364,
+      "current_sha256": "3d7b019b7c291cecad4aea6f03b58310027ef124dd3c3fcf5d3adebc0893d4f2",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 1,
+          "new_start": 8,
+          "new_count": 25,
+          "before": [
+            "        return new NativeProviderAudioAdmission.Entry[0];"
+          ],
+          "after": [
+            "        try {",
+            "            return new NativeProviderAudioAdmission.Entry[] {",
+            "                new NativeProviderAudioAdmission.Entry(81L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(82L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(83L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(84L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(85L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(86L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7a4cf3788e3fd297c38ef762c94b9effdacfe14cee385de0d16b33098c55a75d\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(87L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78\",",
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"))",
+            "            };",
+            "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
+      "kind": "modified",
+      "prior_bytes": 497,
+      "prior_sha256": "a44c8fba6dd520ddb1219684dd3518ac7c7e88b0fd5581d889ab3522a1a742e1",
+      "current_bytes": 4953,
+      "current_sha256": "0ea27e9298b85ca9e846ff7a89ba027d82f04cf33d0fb105588a1c5981e69973",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 1,
+          "new_start": 8,
+          "new_count": 25,
+          "before": [
+            "        return new NativeProviderReleaseAdmission.Release[0];"
+          ],
+          "after": [
+            "        try {",
+            "            return new NativeProviderReleaseAdmission.Release[] {",
+            "                new NativeProviderReleaseAdmission.Release(81L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\"),",
+            "                new NativeProviderReleaseAdmission.Release(82L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\"),",
+            "                new NativeProviderReleaseAdmission.Release(83L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\"),",
+            "                new NativeProviderReleaseAdmission.Release(84L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\"),",
+            "                new NativeProviderReleaseAdmission.Release(85L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e\"),",
+            "                new NativeProviderReleaseAdmission.Release(86L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7a4cf3788e3fd297c38ef762c94b9effdacfe14cee385de0d16b33098c55a75d\"),",
+            "                new NativeProviderReleaseAdmission.Release(87L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78\")",
+            "            };",
+            "        } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "kind": "modified",
+      "prior_bytes": 49032,
+      "prior_sha256": "3424517c43b2e0e35ec6cfa8c00c047cb9d1351d2945880639243d26296836e2",
+      "current_bytes": 54840,
+      "current_sha256": "ca1dee0de943831ba6d08b74a2565c955b363f36270c711c83d497d7d30e976d",
+      "hunks": [
+        {
+          "old_start": 53,
+          "old_count": 0,
+          "new_start": 54,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "    // Presentation only. Both values belong to the same authenticated native assignment.",
+            "    private NativeProviderPrincipal messengerRecipient;",
+            "    private String messengerRecipientName;"
+          ]
+        },
+        {
+          "old_start": 61,
+          "old_count": 0,
+          "new_start": 65,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        final String speechText;"
+          ]
+        },
+        {
+          "old_start": 66,
+          "old_count": 1,
+          "new_start": 70,
+          "new_count": 1,
+          "before": [
+            "        private OriginalJobFact(NativeProviderJournal.Presentation presentation,NativeProviderAudioSequence.Owner actualOwner,"
+          ],
+          "after": [
+            "        private OriginalJobFact(NativeProviderJournal.Presentation presentation,String speechText,NativeProviderAudioSequence.Owner actualOwner,"
+          ]
+        },
+        {
+          "old_start": 72,
+          "old_count": 1,
+          "new_start": 76,
+          "new_count": 1,
+          "before": [
+            "            this.presentation=presentation;this.actualOwner=actualOwner;this.actualRelease=actualRelease;"
+          ],
+          "after": [
+            "            this.presentation=presentation;this.speechText=speechText;this.actualOwner=actualOwner;this.actualRelease=actualRelease;"
+          ]
+        },
+        {
+          "old_start": 93,
+          "old_count": 1,
+          "new_start": 97,
+          "new_count": 1,
+          "before": [
+            "        String originalSpeechText(int index)throws VaultFailure {return originalPayload(index).get(\"body\");}"
+          ],
+          "after": [
+            "        String originalSpeechText(int index)throws VaultFailure {index(index);return facts.get(index).speechText;}"
+          ]
+        },
+        {
+          "old_start": 148,
+          "old_count": 1,
+          "new_start": 152,
+          "new_count": 1,
+          "before": [
+            "                    ||!NativeProviderPrincipal.hash(payload.get(\"body\")).equals(b.getString(\"speech_sha256\")))throw originalJobUnavailable();"
+          ],
+          "after": [
+            "                    ||!NativeProviderPrincipal.hash(selected.speechText).equals(b.getString(\"speech_sha256\")))throw originalJobUnavailable();"
+          ]
+        },
+        {
+          "old_start": 387,
+          "old_count": 0,
+          "new_start": 392,
+          "new_count": 29,
+          "before": [],
+          "after": [
+            "    void observeMessengerRecipient(AuthorizedRequest request, AuthorizedResponse response, java.util.Map<String,Object> statusState)",
+            "        throws VaultFailure {",
+            "        if (!NativePrincipalJournal.isStatus(request) || response.status != 200) return;",
+            "        synchronized (engine) { synchronized (coordinator) {",
+            "            java.util.Map<String,Object> state = engine.getState();",
+            "            if (!statusState.get(\"revision\").equals(state.get(\"revision\")) || !Boolean.TRUE.equals(state.get(\"active\"))) return;",
+            "            org.json.JSONObject principalRecord = NativeLegacyLineageJournal.applies(state)",
+            "                ? engine.readLegacyPrincipal(legacy) : principals.readFor(state);",
+            "            if (principalRecord == null) return;",
+            "            try {",
+            "                org.json.JSONObject envelope = ProviderWireJson.object(response.body, 32768);",
+            "                org.json.JSONObject data = envelope.getJSONObject(\"data\");",
+            "                if (!Boolean.TRUE.equals(envelope.opt(\"ok\")) || !Boolean.TRUE.equals(data.opt(\"authenticated\"))",
+            "                    || !Boolean.FALSE.equals(data.opt(\"enrollment_required\")) || !Boolean.FALSE.equals(data.opt(\"recovery_required\"))) return;",
+            "                Object epoch = data.opt(\"assignment_epoch\");",
+            "                if (!(epoch instanceof Integer || epoch instanceof Long)",
+            "                    || ((Number) epoch).longValue() != principalRecord.getLong(\"assignment_epoch\")",
+            "                    || !principalRecord.getString(\"device_id\").equals(data.opt(\"canonical_device_id\"))",
+            "                    || !principalRecord.getString(\"credential_id\").equals(data.opt(\"credential_id\"))",
+            "                    || !principalRecord.getString(\"employee_id\").equals(data.opt(\"employee_id\"))) return;",
+            "                Object label = data.opt(\"employee_name\");",
+            "                messengerRecipient = NativeProviderPrincipal.fromNativeJournal(principalRecord);",
+            "                messengerRecipientName = label instanceof String ? NativeProviderNotificationPolicy.firstName((String) label) : \"\";",
+            "            } catch (org.json.JSONException invalid) {",
+            "                // A missing presentation label cannot affect the native status response.",
+            "            }",
+            "        } }",
+            "    }",
+            ""
+          ]
+        },
+        {
+          "old_start": 405,
+          "old_count": 1,
+          "new_start": 438,
+          "new_count": 1,
+          "before": [
+            "            if(work.networkPending()||!work.quarantined.isEmpty()||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;"
+          ],
+          "after": [
+            "            if(work.networkPending()||!work.quarantined.isEmpty()||unconfirmedDisplayLocked(current.principal)||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;"
+          ]
+        },
+        {
+          "old_start": 408,
+          "old_count": 0,
+          "new_start": 442,
+          "new_count": 17,
+          "before": [],
+          "after": [
+            "    /** Read-only scheduling hint for a live original awaiting OS display.",
+            "     * No new clock interval, display receipt, audio acquisition or OS effect. */",
+            "    private boolean unconfirmedDisplayLocked(NativeProviderPrincipal principal)throws VaultFailure {",
+            "        NativeProviderJournal.Observation now=clock.observe();",
+            "        for(String id:journal.admittedRecordIds(principal)){",
+            "            NativeProviderJournal.Presentation presentation=journal.presentation(principal,id);",
+            "            if(!NativeProviderTime.live(now.bounds,presentation.payload.reservedAt,presentation.payload.validUntil))continue;",
+            "            try{org.json.JSONObject row=presentation.record();",
+            "                String state=row.getString(\"display_state\");",
+            "                if(!row.isNull(\"displayed_event_id\")||row.getBoolean(\"os_cancel_pending\")",
+            "                    ||row.getBoolean(\"card_dismissed\")||!row.isNull(\"opened_event_id\")||!row.isNull(\"acknowledged_event_id\"))continue;",
+            "                if(\"DISPLAY_UNCERTAIN\".equals(state)&&!row.isNull(\"os_attempt_id\"))return true;",
+            "                if(\"PENDING_DISPLAY\".equals(state)&&display.enabled(presentation.payload))return true;",
+            "            }catch(VaultFailure invalid){throw invalid;}catch(Exception invalid){throw new VaultFailure(\"custodial_provider_audio_invalid\",invalid);}",
+            "        }",
+            "        return false;",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 410,
+          "old_count": 0,
+          "new_start": 461,
+          "new_count": 6,
+          "before": [],
+          "after": [
+            "        receive(payload, false);",
+            "    }",
+            "    @Override public void receiveFromSdk(NativeProviderPayload payload) throws VaultFailure {",
+            "        receive(payload, true);",
+            "    }",
+            "    private void receive(NativeProviderPayload payload, boolean sdkArrival) throws VaultFailure {"
+          ]
+        },
+        {
+          "old_start": 411,
+          "old_count": 0,
+          "new_start": 468,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        boolean expedite = false;"
+          ]
+        },
+        {
+          "old_start": 414,
+          "old_count": 1,
+          "new_start": 471,
+          "new_count": 7,
+          "before": [
+            "            journal.recordArrival(current.principal,payload,clock.observe());"
+          ],
+          "after": [
+            "            NativeProviderJournal.Arrival arrival=journal.recordArrival(current.principal,payload,clock.observe());",
+            "            if (sdkArrival) {",
+            "                try {",
+            "                    journal.requestRecovery();",
+            "                    expedite = arrival.newWork && \"employee_message\".equals(payload.get(\"kind\"));",
+            "                } catch (VaultFailure unavailable) { /* Ingress remains durable. */ }",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 416,
+          "old_count": 0,
+          "new_start": 480,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        if (expedite) {",
+            "            try { delivery.jobs.scheduleMessageArrival(); }",
+            "            catch (RuntimeException unavailable) { /* The original persisted recovery job still owns fallback. */ }",
+            "        }"
+          ]
+        },
+        {
+          "old_start": 424,
+          "old_count": 0,
+          "new_start": 492,
+          "new_count": 6,
+          "before": [],
+          "after": [
+            "    }",
+            "    /** Foreground wake of existing admitted work only. Cached Firebase tokens",
+            "     * need not emit onNewToken after an in-place update. Do not increment a",
+            "     * recovery epoch, request a token or run HTTP from this lifecycle callback. */",
+            "    void requestPendingWork() throws VaultFailure {",
+            "        if(delivery!=null)NativeProviderJobSchedule.request(pendingWork(),delivery.jobs);"
+          ]
+        },
+        {
+          "old_start": 479,
+          "old_count": 2,
+          "new_start": 552,
+          "new_count": 4,
+          "before": [
+            "            if(!batch.events.isEmpty()){requireDelivery();batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);}",
+            "            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}"
+          ],
+          "after": [
+            "            if(!batch.events.isEmpty()){",
+            "                requireDelivery();",
+            "                batch=engine.lookupNativeProviderEventDecisions(batch,principals,legacy,journal,delivery.http,invocation.attempt);",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 481,
+          "old_count": 0,
+          "new_start": 557,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "                invocation.attempt.check();"
+          ]
+        },
+        {
+          "old_start": 482,
+          "old_count": 0,
+          "new_start": 559,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "                // Original decisions must succeed before local effects. Uploading",
+            "                // the still-pending originals is independent of OS presentation."
+          ]
+        },
+        {
+          "old_start": 492,
+          "old_count": 1,
+          "new_start": 570,
+          "new_count": 2,
+          "before": [
+            "                        if(!\"PENDING\".equals(row.getString(\"audio_state\"))||row.getBoolean(\"card_dismissed\")||!row.isNull(\"acknowledged_event_id\")"
+          ],
+          "after": [
+            "                        if(!\"DISPLAYED\".equals(row.getString(\"display_state\"))||row.isNull(\"displayed_event_id\")",
+            "                            ||!\"PENDING\".equals(row.getString(\"audio_state\"))||row.getBoolean(\"card_dismissed\")||!row.isNull(\"acknowledged_event_id\")"
+          ]
+        },
+        {
+          "old_start": 495,
+          "old_count": 1,
+          "new_start": 574,
+          "new_count": 3,
+          "before": [
+            "                    if(audio.start(presentation.payload.get(\"body\"),audioOwner(presentation)))break;"
+          ],
+          "after": [
+            "                    String recipient = current.principal.same(messengerRecipient) ? messengerRecipientName : null;",
+            "                    String speechText = NativeProviderNotificationPolicy.speechText(presentation.payload, recipient);",
+            "                    if(audio.start(speechText,audioOwner(presentation,speechText)))break;"
+          ]
+        },
+        {
+          "old_start": 496,
+          "old_count": 0,
+          "new_start": 578,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "            }}",
+            "            if(!batch.events.isEmpty()){requireDelivery();engine.sendNativeProviderEvents(batch,principals,legacy,journal,delivery.http,invocation.attempt);}",
+            "            synchronized(engine){synchronized(coordinator){"
+          ]
+        },
+        {
+          "old_start": 500,
+          "old_count": 1,
+          "new_start": 584,
+          "new_count": 1,
+          "before": [
+            "                invocation.attempt.check();current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();"
+          ],
+          "after": [
+            "                invocation.attempt.check();NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Observation cleanup=clock.observe();"
+          ]
+        },
+        {
+          "old_start": 503,
+          "old_count": 1,
+          "new_start": 587,
+          "new_count": 1,
+          "before": [
+            "                return remaining.networkPending()||quarantineWaiting||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())"
+          ],
+          "after": [
+            "                return remaining.networkPending()||quarantineWaiting||unconfirmedDisplayLocked(current.principal)||!journal.pendingOsCancellations().isEmpty()||(audio!=null&&audio.busy())"
+          ]
+        },
+        {
+          "old_start": 561,
+          "old_count": 1,
+          "new_start": 645,
+          "new_count": 1,
+          "before": [
+            "    private NativeProviderAudioSequence.Owner audioOwner(NativeProviderJournal.Presentation presentation){"
+          ],
+          "after": [
+            "    private NativeProviderAudioSequence.Owner audioOwner(NativeProviderJournal.Presentation presentation,String speechText){"
+          ]
+        },
+        {
+          "old_start": 591,
+          "old_count": 1,
+          "new_start": 675,
+          "new_count": 1,
+          "before": [
+            "                    actual.claimOriginal(audio,this,presentation.payload.get(\"body\"));"
+          ],
+          "after": [
+            "                    actual.claimOriginal(audio,this,speechText);"
+          ]
+        },
+        {
+          "old_start": 596,
+          "old_count": 1,
+          "new_start": 680,
+          "new_count": 1,
+          "before": [
+            "                    OriginalJobFact fact=new OriginalJobFact(presentation,this,actual,originalAttempt,completed,delivery.originalAudioPolicy,profile.fingerprint());"
+          ],
+          "after": [
+            "                    OriginalJobFact fact=new OriginalJobFact(presentation,speechText,this,actual,originalAttempt,completed,delivery.originalAudioPolicy,profile.fingerprint());"
+          ]
+        },
+        {
+          "old_start": 598,
+          "old_count": 1,
+          "new_start": 682,
+          "new_count": 1,
+          "before": [
+            "                        +presentation.payload.get(\"body\").getBytes(java.nio.charset.StandardCharsets.UTF_8).length+4096L;"
+          ],
+          "after": [
+            "                        +speechText.getBytes(java.nio.charset.StandardCharsets.UTF_8).length+4096L;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+      "kind": "modified",
+      "prior_bytes": 135,
+      "prior_sha256": "d48e25b21dedffbc4797680cf03d11482f07f5c148aa9fe12f74849fd5eb87bd",
+      "current_bytes": 5037,
+      "current_sha256": "2f8b1dac527bc762177d7a5ec4c8e85a93da29b65372faae03b31751668d88b2",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 1,
+          "new_start": 4,
+          "new_count": 100,
+          "before": [
+            "  \"releases\": []"
+          ],
+          "after": [
+            "  \"releases\": [",
+            "    {",
+            "      \"version_code\": 81,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 82,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 83,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 84,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 85,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 86,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"7a4cf3788e3fd297c38ef762c94b9effdacfe14cee385de0d16b33098c55a75d\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 87,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }",
+            "    }",
+            "  ]"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
+      "kind": "modified",
+      "prior_bytes": 129,
+      "prior_sha256": "4dac90e171c456601b2eaf0cda78498fc16c2b5b51a7f5f544de9439e5ea8fcb",
+      "current_bytes": 5381,
+      "current_sha256": "07c2ab87df3e531eb89fcdcf278518e429826ab1c09ade06aa9fa71dff7db3dd",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 1,
+          "new_start": 4,
+          "new_count": 100,
+          "before": [
+            "  \"releases\": []"
+          ],
+          "after": [
+            "  \"releases\": [",
+            "    {",
+            "      \"version_code\": 81,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"10e30f9e404cf01ed0df40afbbeb634686ee03e9ec47764bb525ccf1d5520878\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 82,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"70730a8cf2e0a197c69d5ae10c81b5c02b0104aa3684d6d7fdba8d21297b8602\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 83,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"fb93e940f1a94d00bfd139a4c0e016234575845b5e49516656be53082221eaca\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 84,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"8f7f6a0dda91457de7fc03c4db3e67c157616c63136f17e7919cfb620a767b2c\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 85,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 86,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"7a4cf3788e3fd297c38ef762c94b9effdacfe14cee385de0d16b33098c55a75d\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    },",
+            "    {",
+            "      \"version_code\": 87,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }",
+            "    }",
+            "  ]"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderJobLifecycleTest.java",
+      "kind": "modified",
+      "prior_bytes": 8765,
+      "prior_sha256": "8ac62a23af2dd3d2166aea5ae9c62757a40c5799234bbdf2084147d88ac45510",
+      "current_bytes": 8943,
+      "current_sha256": "03e7120e686710941811cc0d4a51b18fc4d45841998f6cf89762f7018aaab5f0",
+      "hunks": [
+        {
+          "old_start": 68,
+          "old_count": 1,
+          "new_start": 68,
+          "new_count": 6,
+          "before": [
+            "        boolean accepted = true; int inspected, scheduled;"
+          ],
+          "after": [
+            "        boolean accepted = true, expeditedAccepted = true;",
+            "        int inspected, scheduled, expedited;",
+            "        @Override public boolean scheduleMessageArrival() {",
+            "            expedited++;",
+            "            return expeditedAccepted;",
+            "        }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "kind": "modified",
+      "prior_bytes": 44162,
+      "prior_sha256": "4b76aaa1c76bda79f9eb551c95a8f48d510d20316b52b9fe81803b128f5a5c05",
+      "current_bytes": 58298,
+      "current_sha256": "7949f593a12b50e31f80cf0a9ce1e703a351ee0465de40d1a6593c1e1048de2f",
+      "hunks": [
+        {
+          "old_start": 13,
+          "old_count": 0,
+          "new_start": 14,
+          "new_count": 214,
+          "before": [],
+          "after": [
+            "    @Test public void messengerAnnouncesAssignedFirstNameAndSenderWithoutSpeakingBody()throws Exception {",
+            "        for (boolean legacy : new boolean[]{false, true}) assertMessengerSpeech(legacy, true);",
+            "    }",
+            "",
+            "    @Test public void messengerUsesPrivateGenericSpeechForAnotherAssignment()throws Exception {",
+            "        assertMessengerSpeech(false, false);",
+            "    }",
+            "",
+            "    @Test public void gapRevalidatesBeforeSdkWithoutAnExtraDurableClockWrite()throws Exception {",
+            "        var x = new NativeProviderCompositionTest.Composition(false);",
+            "        var sdk = new NativeProviderAudioSequenceTest.Fixture();",
+            "        x.audioSurface = sdk;",
+            "        x.audioScheduler = sdk;",
+            "        x.owner = x.reconstruct();",
+            "        NativeProviderPayload payload = NativeProviderIngressTest.payload(x.f.prepared);",
+            "        x.inventoryRows = new NativeProviderPayload[]{payload};",
+            "        x.sync();",
+            "        x.elapsed++;",
+            "        x.readingStep = 1;",
+            "        sdk.tone.done(true);",
+            "        int beforeSpeech = x.f.provider.storage.memory.commits;",
+            "        sdk.tick(900);",
+            "        assertEquals(java.util.List.of(payload.get(\"body\")), sdk.texts);",
+            "        // The next step and its actual SDK effect each prove a fresh interval.",
+            "        assertEquals(2, x.f.provider.storage.memory.commits - beforeSpeech);",
+            "        sdk.speech.done(true);",
+            "        int beforeRepeat = x.f.provider.storage.memory.commits;",
+            "        sdk.tick(1200);",
+            "        assertEquals(java.util.List.of(\"tone\", \"speech\", \"tone\"), sdk.effects);",
+            "        assertEquals(2, x.f.provider.storage.memory.commits - beforeRepeat);",
+            "        sdk.cycle();",
+            "        assertEquals(\"COMPLETED\", x.inbox(payload.recordId).getString(\"audio_state\"));",
+            "    }",
+            "",
+            "    @Test public void eventSpeechUsesOriginalReminderBody()throws Exception {",
+            "        NativeProviderPayload event = NativeProviderPayloadTest.accept(NativeProviderPayloadTest.requiredKind(true));",
+            "        assertEquals(event.get(\"body\"), NativeProviderNotificationPolicy.speechText(event, \"Karen Robinson\"));",
+            "    }",
+            "",
+            "    private void assertMessengerSpeech(boolean legacy, boolean matchingAssignment)throws Exception {",
+            "        var x = new NativeProviderCompositionTest.Composition(legacy);",
+            "        var sdk = new NativeProviderAudioSequenceTest.Fixture();",
+            "        x.audioSurface = sdk;",
+            "        x.audioScheduler = sdk;",
+            "        x.owner = x.reconstruct();",
+            "        JSONObject principal = x.f.principal.json();",
+            "        JSONObject status = new JSONObject()",
+            "            .put(\"authenticated\", true).put(\"enrollment_required\", false).put(\"recovery_required\", false)",
+            "            .put(\"canonical_device_id\", principal.get(\"device_id\")).put(\"credential_id\", principal.get(\"credential_id\"))",
+            "            .put(\"employee_id\", principal.get(\"employee_id\")).put(\"employee_name\", \"Karen Robinson\")",
+            "            .put(\"assignment_epoch\", principal.getLong(\"assignment_epoch\") + (matchingAssignment ? 0 : 1));",
+            "        JSONObject envelope = new JSONObject().put(\"ok\", true).put(\"data\", status);",
+            "        var request = new AuthorizedRequest(\"/device-auth/status?device_id=\" + principal.getString(\"device_id\"), \"GET\", Map.of(), new byte[0]);",
+            "        var response = new AuthorizedResponse(200, Map.of(), envelope.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));",
+            "        x.owner.observeMessengerRecipient(request, response, x.f.engine.getState());",
+            "",
+            "        NativeProviderPayload payload = messengerPayload(x);",
+            "        String privateBody = payload.get(\"body\");",
+            "        x.inventoryRows = new NativeProviderPayload[]{payload};",
+            "",
+            "        x.sync();",
+            "        sdk.full();",
+            "        String expected = matchingAssignment ? \"Karen, you have a new message from Eric.\" : \"You have a new message from Eric.\";",
+            "        assertEquals(java.util.List.of(expected, expected), sdk.texts);",
+            "        assertEquals(privateBody, x.journal.presentation(x.f.principal, payload.recordId).payload.get(\"body\"));",
+            "        assertEquals(\"COMPLETED\", x.inbox(payload.recordId).getString(\"audio_state\"));",
+            "    }",
+            "    private static NativeProviderPayload messengerPayload(NativeProviderCompositionTest.Composition x)throws Exception {",
+            "        JSONObject principal = x.f.principal.json();",
+            "        Map<String,String> message = NativeProviderPayloadTest.requiredKind(false);",
+            "        message.put(\"generation_id\", x.f.prepared.generationId);",
+            "        message.put(\"principal_digest\", x.f.prepared.principalDigest);",
+            "        message.put(\"token_digest\", x.f.prepared.tokenDigest);",
+            "        for (String field : new String[]{\"credential_id\", \"employee_id\", \"device_id\", \"assignment_epoch\"})",
+            "            message.put(\"receipt_\" + field, String.valueOf(principal.get(field)));",
+            "        message.put(\"title\", \"Eric Operle (shared PIN)\");",
+            "        String privateBody = \"Original private message for the fixture.\";",
+            "        message.put(\"body\", privateBody);",
+            "        return NativeProviderPayloadTest.accept(NativeProviderPayloadTest.signed(message));",
+            "    }",
+            "",
+            "    @Test public void freshSdkMessengerArrivalExpeditesOnceEvenWithRecoveryAlreadyPending()throws Exception {",
+            "        for (boolean warmClock : new boolean[]{false,true}) {",
+            "            var x = new NativeProviderCompositionTest.Composition(false);",
+            "            if (warmClock) x.sync();",
+            "            x.jobs.state = NativeProviderJobSchedule.Existing.EXACT;",
+            "            NativeProviderPayload payload = messengerPayload(x);",
+            "            sdkArrival(x, payload);",
+            "            assertEquals(1, x.jobs.expedited);",
+            "            assertEquals(0, x.jobs.scheduled);",
+            "            var domain = warmClock ? ProviderEnvelopeCrypto.Domain.INBOX : ProviderEnvelopeCrypto.Domain.QUARANTINE;",
+            "            assertNotNull(x.f.provider.read(domain, payload.recordId));",
+            "            assertEquals(0, x.surface.shows);",
+            "            sdkArrival(x, payload);",
+            "            assertEquals(\"A duplicate must not request another expedited job\", 1, x.jobs.expedited);",
+            "            assertEquals(NativeProviderJobSchedule.Existing.EXACT, x.jobs.state);",
+            "        }",
+            "    }",
+            "",
+            "    @Test public void rejectedExpeditedArrivalStillUsesOrdinaryRecoveryAndPreservesOriginal()throws Exception {",
+            "        var x = new NativeProviderCompositionTest.Composition(false);",
+            "        x.jobs.expeditedAccepted = false;",
+            "        NativeProviderPayload payload = messengerPayload(x);",
+            "        sdkArrival(x, payload);",
+            "        assertEquals(1, x.jobs.expedited);",
+            "        assertEquals(1, x.jobs.scheduled);",
+            "        x.inventoryRows = new NativeProviderPayload[]{payload};",
+            "        x.sync();",
+            "        assertEquals(1, x.surface.shows);",
+            "        assertEquals(\"DISPLAYED\", x.inbox(payload.recordId).getString(\"display_state\"));",
+            "    }",
+            "",
+            "    @Test public void sdkRemindersAndFailedMessengerCommitDoNotExpedite()throws Exception {",
+            "        var x = new NativeProviderCompositionTest.Composition(false);",
+            "        sdkArrival(x, NativeProviderIngressTest.payload(x.f.prepared));",
+            "        assertEquals(0, x.jobs.expedited);",
+            "        x.f.provider.storage.memory.reject = true;",
+            "        ProviderRecordStoreTest.failure(\"custodial_provider_commit_failed_preserved\", ()->sdkArrival(x,messengerPayload(x)));",
+            "        assertEquals(0, x.jobs.expedited);",
+            "    }",
+            "",
+            "    private static void sdkArrival(NativeProviderCompositionTest.Composition x, NativeProviderPayload payload)throws VaultFailure {",
+            "        NativeProviderFirebaseDispatch.message(x.owner, NativeProviderPayloadTest.PROJECT, NativeProviderPayloadTest.PROJECT, false,",
+            "            payload.data(), ()->fail(\"Protected arrival escaped to legacy Firebase forwarding\"));",
+            "    }",
+            "    @Test public void slowReceiptUploadCannotStarveAnAdmittedOsDisplay()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);",
+            "        x.inventoryRows=new NativeProviderPayload[]{payload};",
+            "        var invocation=NativeProviderCompositionTest.invocation();",
+            "        x.duringHttp=()->{",
+            "            if(!x.paths.get(x.paths.size()-1).endsWith(\"/events\"))return;",
+            "            assertTrue(x.paths.contains(NativeProviderEventDecisions.PATH));",
+            "            assertEquals(1,x.surface.shows);",
+            "            invocation.attempt.cancel();",
+            "        };",
+            "        ProviderRecordStoreTest.failure(\"custodial_provider_network_canceled\",()->x.owner.synchronize(invocation));",
+            "        assertEquals(1,x.surface.shows);",
+            "        assertEquals(2,x.journal.pendingEvents(x.f.principal,16).events.size());",
+            "        assertEquals(\"DISPLAYED\",x.inbox(payload.recordId).getString(\"display_state\"));",
+            "        x.duringHttp=null;",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());",
+            "        assertEquals(1,x.surface.shows);",
+            "        assertTrue(x.journal.pendingEvents(x.f.principal,16).events.isEmpty());",
+            "    }",
+            "    @Test public void unpostedLiveAlertStillRequestsWorkAfterReceiptsDrain()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);",
+            "        x.surface.enabled=false;",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);",
+            "        x.inventoryRows=new NativeProviderPayload[]{payload};",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());",
+            "        assertEquals(\"PENDING_DISPLAY\",x.inbox(payload.recordId).getString(\"display_state\"));",
+            "        assertTrue(x.journal.pendingEvents(x.f.principal,16).events.isEmpty());",
+            "        x.surface.enabled=true;",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());",
+            "        x.sync();",
+            "        assertEquals(1,x.surface.shows);",
+            "    }",
+            "    @Test public void delayedOsDisplayRemainsScheduledAndDoesNotConsumeAudioBeforeConfirmation()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);x.surface.visibleAfterShow=false;",
+            "        NativeProviderAudioSequenceTest.Fixture sdk=new NativeProviderAudioSequenceTest.Fixture();x.audioSurface=sdk;x.audioScheduler=sdk;x.owner=x.reconstruct();",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);x.inventoryRows=new NativeProviderPayload[]{payload};",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.sync());",
+            "        JSONObject pending=x.inbox(payload.recordId);String attempt=pending.getString(\"os_attempt_id\");",
+            "        assertEquals(\"DISPLAY_UNCERTAIN\",pending.getString(\"display_state\"));assertTrue(pending.isNull(\"displayed_event_id\"));",
+            "        assertEquals(\"PENDING\",pending.getString(\"audio_state\"));assertFalse(pending.getBoolean(\"os_cancel_pending\"));",
+            "        assertEquals(1,x.surface.shows);assertEquals(0,x.surface.cancels);",
+            "        assertTrue(sdk.effects.isEmpty());",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());",
+            "        x.surface.active.putAll(x.surface.pending);x.owner=x.reconstruct();x.sync();",
+            "        assertEquals(attempt,x.inbox(payload.recordId).getString(\"os_attempt_id\"));",
+            "        assertEquals(\"DISPLAYED\",x.inbox(payload.recordId).getString(\"display_state\"));",
+            "        assertFalse(x.inbox(payload.recordId).isNull(\"displayed_event_id\"));assertEquals(1,x.surface.shows);assertEquals(0,x.surface.cancels);",
+            "        assertEquals(java.util.List.of(\"tone\"),sdk.effects);sdk.full();",
+            "        assertEquals(\"COMPLETED\",x.inbox(payload.recordId).getString(\"audio_state\"));x.sync();assertEquals(2,sdk.texts.size());",
+            "    }",
+            "    @Test public void disabledDisplayCannotConsumePendingAudioOrCreateAReceipt()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);x.surface.enabled=false;",
+            "        NativeProviderAudioSequenceTest.Fixture sdk=new NativeProviderAudioSequenceTest.Fixture();x.audioSurface=sdk;x.audioScheduler=sdk;x.owner=x.reconstruct();",
+            "        NativeProviderPayload payload=NativeProviderIngressTest.payload(x.f.prepared);x.inventoryRows=new NativeProviderPayload[]{payload};x.sync();",
+            "        assertTrue(sdk.effects.isEmpty());assertTrue(x.inbox(payload.recordId).isNull(\"displayed_event_id\"));",
+            "        assertEquals(\"PENDING\",x.inbox(payload.recordId).getString(\"audio_state\"));assertEquals(0,x.surface.shows);",
+            "    }",
+            "    @Test public void foregroundWakeArmsPendingRegistrationWithoutTokenNetworkOrJournalMutation()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);x.owner.reconcile();",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY,x.owner.pendingWork());",
+            "        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);",
+            "        int commits=x.f.provider.storage.memory.commits;",
+            "        for(int n=0;n<20;n++)x.owner.requestPendingWork();",
+            "        assertEquals(1,x.jobs.scheduled);assertEquals(20,x.jobs.inspected);",
+            "        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(commits,x.f.provider.storage.memory.commits);",
+            "        assertEquals(0,x.tokens);assertTrue(x.paths.isEmpty());assertTrue(x.requests.isEmpty());",
+            "        assertEquals(0,x.surface.shows);assertEquals(0,x.surface.cancels);",
+            "    }",
+            "    @Test public void foregroundWakeCannotPromoteUnqualifiedOrMissingDelivery()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);x.profile=null;",
+            "        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);",
+            "        x.owner.requestPendingWork();",
+            "        var localOnly=new NativeProviderRuntimeOwner(x.f.engine,x.f.principalJournal,x.f.legacyJournal,",
+            "            x.journal,x.f.provider.storage.lock,x.surface);",
+            "        localOnly.requestPendingWork();",
+            "        assertEquals(0,x.jobs.inspected);assertEquals(0,x.jobs.scheduled);",
+            "        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(0,x.tokens);assertTrue(x.paths.isEmpty());",
+            "    }",
+            "    @Test public void foregroundWakeDoesNotInventRecoveryForAlreadyDrainedGeneration()throws Exception {",
+            "        var x=new NativeProviderCompositionTest.Composition(false);",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.sync());",
+            "        assertEquals(NativeProviderJobLifecycle.Result.DRAINED,x.owner.pendingWork());",
+            "        Map<String,Object> raw=new HashMap<>(x.f.provider.storage.memory.raw);",
+            "        int scheduled=x.jobs.scheduled,inspected=x.jobs.inspected,paths=x.paths.size(),tokens=x.tokens;",
+            "        for(int n=0;n<5;n++)x.owner.requestPendingWork();",
+            "        assertEquals(raw,x.f.provider.storage.memory.raw);assertEquals(scheduled,x.jobs.scheduled);",
+            "        assertEquals(inspected,x.jobs.inspected);assertEquals(paths,x.paths.size());assertEquals(tokens,x.tokens);",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 7247,
+      "prior_sha256": "12b64d33b7641bc9801e7b71c5f28e0638238daf55f55263c4e5ed7d1cfa1e7c",
+      "current_bytes": 10465,
+      "current_sha256": "2b0940cf1d699ef6f3b98c623337a21cc955791b2820c3ff1caedcaf9b6d87fa",
+      "hunks": [
+        {
+          "old_start": 11,
+          "old_count": 1,
+          "new_start": 11,
+          "new_count": 1,
+          "before": [
+            "const counts=assertCurrentGpsInventory();assert.equal(counts.main,194);assert.equal(counts.tests,208);pass('actual current 194 main and 208 native tests bound without unknown callers');"
+          ],
+          "after": [
+            "const counts=assertCurrentGpsInventory();assert.equal(counts.main,194);assert.equal(counts.tests,209);pass('actual current 194 main and 209 native tests bound without unknown callers');"
+          ]
+        },
+        {
+          "old_start": 16,
+          "old_count": 1,
+          "new_start": 16,
+          "new_count": 7,
+          "before": [
+            " const actual=readFileSync(join(root,row.path),'utf8');assert.equal(assertBoundCurrentGpsSource(row.path,actual),actual);assert.equal(assertBoundCurrentGpsSource(basename(row.path),actual),actual);"
+          ],
+          "after": [
+            " const actual=readFileSync(join(root,row.path),'utf8');assert.equal(assertBoundCurrentGpsSource(row.path,actual),actual);",
+            " // A root path such as index.html is already canonical. A nested file with",
+            " // the same basename must never borrow that root file's source identity.",
+            " const short=basename(row.path),bound=[...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.core_sources,...profile.presentation_sources];",
+            " const shortTarget=bound.some(x=>x.path===short)?short:profile.basename_aliases[short];",
+            " if(shortTarget===row.path)assert.equal(assertBoundCurrentGpsSource(short,actual),actual);",
+            " else assert.throws(()=>assertBoundCurrentGpsSource(short,actual));"
+          ]
+        },
+        {
+          "old_start": 36,
+          "old_count": 2,
+          "new_start": 42,
+          "new_count": 9,
+          "before": [
+            " const paths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.legacy_proofs,...profile.core_sources].map(row=>row.path));",
+            " paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');"
+          ],
+          "after": [
+            " const paths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.legacy_proofs,...profile.core_sources,...profile.presentation_sources].map(row=>row.path));",
+            " // Profiles are validator inputs copied explicitly; putting the selected",
+            " // profile in its own hashed inventory would introduce a self-hash cycle.",
+            " paths.add('scripts/fixtures/current-gps-notification-deadline-v83-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-notification-presentation-v84-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-provider-storage-v85-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-messenger-voice-v86-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-messenger-audio-gap-v87-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-week-perimeter-20261119-source-qualification.json');paths.add('scripts/fixtures/current-phone-repairs-r79-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r63-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r61-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44b-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r42-source-qualification.json');paths.add('scripts/fixtures/current-manager-home-bfcache-r34-source-qualification.json');paths.add('scripts/fixtures/current-hub-entry-contract-r33-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-assignment-r32-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-display-r31-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-cache-r30-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-hub-r29-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r22-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r21-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-source-qualification.json');paths.add('scripts/fixtures/current-web-readiness-source-qualification.json');paths.add('scripts/fixtures/current-reminder-timing-source-qualification.json');paths.add('scripts/fixtures/current-terracotta-departure-source-qualification.json');paths.add('scripts/fixtures/current-v80-presentation-source-qualification.json');paths.add('scripts/fixtures/current-schedule-diagnostic-source-qualification.json');paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');"
+          ]
+        },
+        {
+          "old_start": 39,
+          "old_count": 1,
+          "new_start": 52,
+          "new_count": 2,
+          "before": [
+            " writeFileSync(join(temporary,'package.json'),'{\"type\":\"module\"}\\n');"
+          ],
+          "after": [
+            " // The exact package is now a bound dependency input; retain its actual bytes.",
+            " // This validator and its profiles are .mjs and need no replacement package."
+          ]
+        },
+        {
+          "old_start": 42,
+          "old_count": 1,
+          "new_start": 56,
+          "new_count": 1,
+          "before": [
+            " const changeRows=[...profile.deltas,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0]];"
+          ],
+          "after": [
+            " const changeRows=[...profile.deltas,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];"
+          ]
+        },
+        {
+          "old_start": 52,
+          "old_count": 0,
+          "new_start": 67,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            " for(const folder of profile.presentation_namespace_roots){const p=join(temporary,folder,'unlisted.css');writeFileSync(p,'body{}');assert.throws(()=>isolated.assertCurrentGpsInventory());rmSync(p);}",
+            " pass('unlisted presentation files rejected');"
+          ]
+        },
+        {
+          "old_start": 63,
+          "old_count": 1,
+          "new_start": 79,
+          "new_count": 1,
+          "before": [
+            "console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:194,current_tests:208,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));"
+          ],
+          "after": [
+            "console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:194,current_tests:209,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 4365,
+      "prior_sha256": "8203cc7a2f08572c62dc3d7d32fe6dad72e503ae6c12e4fb4fdc7441b3b00d3c",
+      "current_bytes": 6993,
+      "current_sha256": "9287a634c6bb5781b3009349ea5fa5073418b5740a050ccb7c1fed894b15b3d5",
+      "hunks": [
+        {
+          "old_start": 24,
+          "old_count": 1,
+          "new_start": 24,
+          "new_count": 48,
+          "before": [
+            "assert.equal(currentGpsQualification.deltas.filter(row=>row.kind==='added').length,1);"
+          ],
+          "after": [
+            "// The historical projections above stay fixed. Keep the complete additions",
+            "// check in sync with the approved web, perimeter and notification sources.",
+            "const expectedAdditions=[",
+            " 'manager-test-record-archive-preview.mjs',",
+            " 'manager-ux.css',",
+            " 'memphis-zoo-perimeter.js',",
+            " 'mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialPhoneLocationService.java',",
+            " 'mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderBestEffortTest.java',",
+            " 'mobile/release-evidence/provider-v81-composition.json',",
+            " 'mobile/release-evidence/provider-v81-protocol.json',",
+            " 'mobile/release-evidence/provider-v82-composition.json',",
+            " 'mobile/release-evidence/provider-v83-composition.json',",
+            " 'mobile/release-evidence/provider-v84-composition.json',",
+            " 'mobile/release-evidence/provider-v85-composition.json',",
+            " 'mobile/release-evidence/provider-v86-composition.json',",
+            " 'mobile/release-evidence/provider-v87-composition.json',",
+            " 'mobile/scripts/custodial-native-observation-regression-tests.mjs',",
+            " 'mobile/scripts/custodial-provider-foreground-wake-tests.mjs',",
+            " 'operations-dashboard-data.js',",
+            " 'operations-dashboard.js',",
+            " 'ops-hub.css',",
+            " 'scripts/css-distribution-reference-tests.mjs',",
+            " 'scripts/dashboard-loading-state-tests.mjs',",
+            " 'scripts/dashboard-map-web-fit-tests.mjs',",
+            " 'scripts/fixtures/dashboard-map-current-context-pins-v3.json',",
+            " 'scripts/fixtures/dashboard-map-current-context-pins-v4.json',",
+            " 'scripts/fixtures/provider-notification-posting-byte-deltas.json',",
+            " 'scripts/fixtures/quiet-offline-v80-current-controls-v4.json',",
+            " 'scripts/fixtures/runtime-sanitation-predecessor/moxie-decommission-tests.mjs',",
+            " 'scripts/insights-session-withdrawal-tests.mjs',",
+            " 'scripts/manager-phone-perimeter-rendered-tests.mjs',",
+            " 'scripts/messenger-direct-create-lifecycle-tests.mjs',",
+            " 'scripts/messenger-direct-mounted-tests.mjs',",
+            " 'scripts/messenger-selection-race-tests.mjs',",
+            " 'scripts/messenger-session-renewal-browser-tests.mjs',",
+            " 'scripts/operations-dashboard-rendered-browser-tests.mjs',",
+            " 'scripts/operations-motion-controls-tests.mjs',",
+            " 'scripts/operations-next-rendered-tests.mjs',",
+            " 'scripts/operations-next-scheduled-tests.mjs',",
+            " 'scripts/provider-best-effort-release-tests.mjs',",
+            " 'scripts/provider-notification-posting-source-boundary.mjs',",
+            " 'scripts/provider-notification-posting-source-tests.mjs',",
+            " 'scripts/test-record-archive-preview-tests.mjs',",
+            " 'scripts/zoo-perimeter-phone-coverage-tests.mjs',",
+            " 'vendor/LICENSE.sheetjs',",
+            " 'vendor/xlsx-0.20.3.full.min.js',",
+            "];",
+            "assert.deepEqual(currentGpsQualification.deltas.filter(row=>row.kind==='added').map(row=>row.path).sort(),expectedAdditions);"
+          ]
+        },
+        {
+          "old_start": 30,
+          "old_count": 3,
+          "new_start": 77,
+          "new_count": 3,
+          "before": [
+            " assert.equal(assertBoundCurrentProviderSource(row.name,actual),actual);checks++;",
+            " const historical=normalizeBoundProviderComparison(row.name,actual);assert.equal(sha(historical),row.comparison_sha256);checks++;",
+            " const normalized=withoutRequiredKinds(row.name,withoutProviderDecisionWire(row.current_path,withoutReleaseAdmission(row.current_path,withoutQualifiedProviderSchema(row.current_path,withoutRetainedNativeBridge(row.current_path,normalizeCurrentFirstAudio(row.name,actual))))));"
+          ],
+          "after": [
+            " assert.equal(assertBoundCurrentProviderSource(row.current_path,actual),actual);checks++;",
+            " const historical=normalizeBoundProviderComparison(row.current_path,actual);assert.equal(sha(historical),row.comparison_sha256);checks++;",
+            " const normalized=withoutRequiredKinds(row.current_path,withoutProviderDecisionWire(row.current_path,withoutReleaseAdmission(row.current_path,withoutQualifiedProviderSchema(row.current_path,withoutRetainedNativeBridge(row.current_path,normalizeCurrentFirstAudio(row.current_path,actual))))));"
+          ]
+        },
+        {
+          "old_start": 35,
+          "old_count": 2,
+          "new_start": 82,
+          "new_count": 2,
+          "before": [
+            "  assert.notEqual(changed,actual);assert.throws(()=>assertBoundCurrentProviderSource(row.name,changed));",
+            "  assert.equal(normalizeBoundProviderComparison(row.name,changed),changed,'Unknown source cannot obtain a historical view');checks+=3;"
+          ],
+          "after": [
+            "  assert.notEqual(changed,actual);assert.throws(()=>assertBoundCurrentProviderSource(row.current_path,changed));",
+            "  assert.equal(normalizeBoundProviderComparison(row.current_path,changed),changed,'Unknown source cannot obtain a historical view');checks+=3;"
+          ]
+        },
+        {
+          "old_start": 38,
+          "old_count": 1,
+          "new_start": 85,
+          "new_count": 1,
+          "before": [
+            " assert.throws(()=>assertBoundCurrentProviderSource(row.name,historical),'Removed actual current caller cannot be accepted as the current owner');checks++;"
+          ],
+          "after": [
+            " assert.throws(()=>assertBoundCurrentProviderSource(row.current_path,historical),'Removed actual current caller cannot be accepted as the current owner');checks++;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 9043,
+      "prior_sha256": "75b2a6477b9a200d8f8a7312bffbb05c5b80fab5dd628c214b619ba77d91fc28",
+      "current_bytes": 9623,
+      "current_sha256": "f77755e6473b3c57c8ff9c1f21c1f60e2cc0338cc3caab6a801b6ea296ae30fa",
+      "hunks": [
+        {
+          "old_start": 36,
+          "old_count": 1,
+          "new_start": 36,
+          "new_count": 9,
+          "before": [
+            "equal(audio.parseReviewedProviderAudioReleases(real).releases,[]);"
+          ],
+          "after": [
+            "const releaseAudio=audio.parseReviewedProviderAudioReleases(real).releases;",
+            "equal(releaseAudio.map(r=>[r.version_code,r.version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0'],[85,'1.0.0'],[86,'1.0.0'],[87,'1.0.0']]);",
+            "equal(releaseAudio[0].policy.voice,'en-us-x-iol-local');",
+            "equal(releaseAudio[1].policy,releaseAudio[0].policy);",
+            "equal(releaseAudio[2].policy,releaseAudio[1].policy);",
+            "equal(releaseAudio[3].policy,releaseAudio[2].policy);",
+            "equal(releaseAudio[4].policy,releaseAudio[3].policy);",
+            "equal(releaseAudio[5].policy,releaseAudio[4].policy);",
+            "equal(releaseAudio[6].policy,releaseAudio[5].policy);"
+          ]
+        },
+        {
+          "old_start": 67,
+          "old_count": 1,
+          "new_start": 75,
+          "new_count": 1,
+          "before": [
+            "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:0,realAudioProfiles:0,synthetic:true,apk:false,device:false,independentReview:false}));"
+          ],
+          "after": [
+            "console.log(JSON.stringify({status:'PAIRED_AUDIO_SOURCE_PASS',checks,realClockProfiles:releaseAudio.length,realAudioProfiles:releaseAudio.length,synthetic:true,apk:false,device:false,independentReview:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-best-effort-release-tests.mjs",
+      "kind": "added",
+      "current_bytes": 5544,
+      "current_sha256": "f2f64fba26676ac3cc3588ac8ec5a072233dfd8abbdad4dbf6a30d283c096786"
+    },
+    {
+      "path": "scripts/provider-component-contract-tests.mjs",
+      "kind": "modified",
+      "prior_bytes": 4488,
+      "prior_sha256": "ee77255eecc8faf8d48212d4861b8c54e718c44c281e5a6be358cc96ef4e0465",
+      "current_bytes": 5191,
+      "current_sha256": "837c40582b3c92da05bd8c76375d8ff29fee3cfa3424ff9082147574236c5a75",
+      "hunks": [
+        {
+          "old_start": 23,
+          "old_count": 1,
+          "new_start": 23,
+          "new_count": 1,
+          "before": [
+            "const runtime = withoutReleaseAdmission('CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));"
+          ],
+          "after": [
+            "const runtime = withoutReleaseAdmission(directory+'CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));"
+          ]
+        },
+        {
+          "old_start": 29,
+          "old_count": 1,
+          "new_start": 29,
+          "new_count": 7,
+          "before": [
+            "assert.match(service, /parameters\\.getJobId\\(\\) != NativeProviderJobSchedule\\.ID/);"
+          ],
+          "after": [
+            "assert.match(service, /id != NativeProviderJobSchedule\\.ID[\\s\\S]*id != NativeProviderJobSchedule\\.MESSAGE_ARRIVAL_ID[\\s\\S]*!parameters\\.isExpeditedJob\\(\\)/);",
+            "assert.match(service, /active != null[\\s\\S]*deferredRecovery = parameters;[\\s\\S]*return true;/);",
+            "assert.match(service, /if \\(pending != null\\) jobFinished\\(pending, true\\)/);",
+            "assert.match(service, /jobFinished\\(parameters, retry && parameters\\.getJobId\\(\\) == NativeProviderJobSchedule\\.ID\\)/);",
+            "const platformJobs=read('AndroidProviderJobs.java');",
+            "assert.match(platformJobs, /MESSAGE_ARRIVAL_ID[\\s\\S]*setRequiredNetworkType\\(JobInfo\\.NETWORK_TYPE_ANY\\)[\\s\\S]*setExpedited\\(true\\)/);",
+            "assert.doesNotMatch(platformJobs, /scheduler\\.cancel\\(/);"
+          ]
+        },
+        {
+          "old_start": 32,
+          "old_count": 2,
+          "new_start": 38,
+          "new_count": 3,
+          "before": [
+            "assert.match(service, /run\\.future\\.cancel\\(true\\)/);",
+            "assert.match(service, /run\\.executor\\.shutdownNow\\(\\)/);"
+          ],
+          "after": [
+            "assert.match(service, /run\\.future\\.cancel\\(false\\)/);",
+            "assert.match(service, /run\\.executor\\.shutdown\\(\\)/);",
+            "assert.doesNotMatch(service, /\\.cancel\\(true\\)|\\.shutdownNow\\(|\\.interrupt\\(/);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/release-evidence/provider-v87-composition.json",
+      "kind": "added",
+      "current_bytes": 50878,
+      "current_sha256": "7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78"
+    }
+  ],
+  "voiceHistory": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "kind": "modified",
+      "prior_bytes": 51329,
+      "prior_sha256": "f448038f632e704a88fb7c1cd026bc25d801b8a4db0f0a461d86fdbecf14d5bd",
+      "current_bytes": 54840,
+      "current_sha256": "ca1dee0de943831ba6d08b74a2565c955b363f36270c711c83d497d7d30e976d",
+      "hunks": [
+        {
+          "old_start": 53,
+          "old_count": 0,
+          "new_start": 54,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "    // Presentation only. Both values belong to the same authenticated native assignment.",
+            "    private NativeProviderPrincipal messengerRecipient;",
+            "    private String messengerRecipientName;"
+          ]
+        },
+        {
+          "old_start": 61,
+          "old_count": 0,
+          "new_start": 65,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        final String speechText;"
+          ]
+        },
+        {
+          "old_start": 66,
+          "old_count": 1,
+          "new_start": 70,
+          "new_count": 1,
+          "before": [
+            "        private OriginalJobFact(NativeProviderJournal.Presentation presentation,NativeProviderAudioSequence.Owner actualOwner,"
+          ],
+          "after": [
+            "        private OriginalJobFact(NativeProviderJournal.Presentation presentation,String speechText,NativeProviderAudioSequence.Owner actualOwner,"
+          ]
+        },
+        {
+          "old_start": 72,
+          "old_count": 1,
+          "new_start": 76,
+          "new_count": 1,
+          "before": [
+            "            this.presentation=presentation;this.actualOwner=actualOwner;this.actualRelease=actualRelease;"
+          ],
+          "after": [
+            "            this.presentation=presentation;this.speechText=speechText;this.actualOwner=actualOwner;this.actualRelease=actualRelease;"
+          ]
+        },
+        {
+          "old_start": 93,
+          "old_count": 1,
+          "new_start": 97,
+          "new_count": 1,
+          "before": [
+            "        String originalSpeechText(int index)throws VaultFailure {return originalPayload(index).get(\"body\");}"
+          ],
+          "after": [
+            "        String originalSpeechText(int index)throws VaultFailure {index(index);return facts.get(index).speechText;}"
+          ]
+        },
+        {
+          "old_start": 148,
+          "old_count": 1,
+          "new_start": 152,
+          "new_count": 1,
+          "before": [
+            "                    ||!NativeProviderPrincipal.hash(payload.get(\"body\")).equals(b.getString(\"speech_sha256\")))throw originalJobUnavailable();"
+          ],
+          "after": [
+            "                    ||!NativeProviderPrincipal.hash(selected.speechText).equals(b.getString(\"speech_sha256\")))throw originalJobUnavailable();"
+          ]
+        },
+        {
+          "old_start": 387,
+          "old_count": 0,
+          "new_start": 392,
+          "new_count": 29,
+          "before": [],
+          "after": [
+            "    void observeMessengerRecipient(AuthorizedRequest request, AuthorizedResponse response, java.util.Map<String,Object> statusState)",
+            "        throws VaultFailure {",
+            "        if (!NativePrincipalJournal.isStatus(request) || response.status != 200) return;",
+            "        synchronized (engine) { synchronized (coordinator) {",
+            "            java.util.Map<String,Object> state = engine.getState();",
+            "            if (!statusState.get(\"revision\").equals(state.get(\"revision\")) || !Boolean.TRUE.equals(state.get(\"active\"))) return;",
+            "            org.json.JSONObject principalRecord = NativeLegacyLineageJournal.applies(state)",
+            "                ? engine.readLegacyPrincipal(legacy) : principals.readFor(state);",
+            "            if (principalRecord == null) return;",
+            "            try {",
+            "                org.json.JSONObject envelope = ProviderWireJson.object(response.body, 32768);",
+            "                org.json.JSONObject data = envelope.getJSONObject(\"data\");",
+            "                if (!Boolean.TRUE.equals(envelope.opt(\"ok\")) || !Boolean.TRUE.equals(data.opt(\"authenticated\"))",
+            "                    || !Boolean.FALSE.equals(data.opt(\"enrollment_required\")) || !Boolean.FALSE.equals(data.opt(\"recovery_required\"))) return;",
+            "                Object epoch = data.opt(\"assignment_epoch\");",
+            "                if (!(epoch instanceof Integer || epoch instanceof Long)",
+            "                    || ((Number) epoch).longValue() != principalRecord.getLong(\"assignment_epoch\")",
+            "                    || !principalRecord.getString(\"device_id\").equals(data.opt(\"canonical_device_id\"))",
+            "                    || !principalRecord.getString(\"credential_id\").equals(data.opt(\"credential_id\"))",
+            "                    || !principalRecord.getString(\"employee_id\").equals(data.opt(\"employee_id\"))) return;",
+            "                Object label = data.opt(\"employee_name\");",
+            "                messengerRecipient = NativeProviderPrincipal.fromNativeJournal(principalRecord);",
+            "                messengerRecipientName = label instanceof String ? NativeProviderNotificationPolicy.firstName((String) label) : \"\";",
+            "            } catch (org.json.JSONException invalid) {",
+            "                // A missing presentation label cannot affect the native status response.",
+            "            }",
+            "        } }",
+            "    }",
+            ""
+          ]
+        },
+        {
+          "old_start": 427,
+          "old_count": 0,
+          "new_start": 461,
+          "new_count": 6,
+          "before": [],
+          "after": [
+            "        receive(payload, false);",
+            "    }",
+            "    @Override public void receiveFromSdk(NativeProviderPayload payload) throws VaultFailure {",
+            "        receive(payload, true);",
+            "    }",
+            "    private void receive(NativeProviderPayload payload, boolean sdkArrival) throws VaultFailure {"
+          ]
+        },
+        {
+          "old_start": 428,
+          "old_count": 0,
+          "new_start": 468,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        boolean expedite = false;"
+          ]
+        },
+        {
+          "old_start": 431,
+          "old_count": 1,
+          "new_start": 471,
+          "new_count": 7,
+          "before": [
+            "            journal.recordArrival(current.principal,payload,clock.observe());"
+          ],
+          "after": [
+            "            NativeProviderJournal.Arrival arrival=journal.recordArrival(current.principal,payload,clock.observe());",
+            "            if (sdkArrival) {",
+            "                try {",
+            "                    journal.requestRecovery();",
+            "                    expedite = arrival.newWork && \"employee_message\".equals(payload.get(\"kind\"));",
+            "                } catch (VaultFailure unavailable) { /* Ingress remains durable. */ }",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 433,
+          "old_count": 0,
+          "new_start": 480,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        if (expedite) {",
+            "            try { delivery.jobs.scheduleMessageArrival(); }",
+            "            catch (RuntimeException unavailable) { /* The original persisted recovery job still owns fallback. */ }",
+            "        }"
+          ]
+        },
+        {
+          "old_start": 524,
+          "old_count": 1,
+          "new_start": 574,
+          "new_count": 3,
+          "before": [
+            "                    if(audio.start(presentation.payload.get(\"body\"),audioOwner(presentation)))break;"
+          ],
+          "after": [
+            "                    String recipient = current.principal.same(messengerRecipient) ? messengerRecipientName : null;",
+            "                    String speechText = NativeProviderNotificationPolicy.speechText(presentation.payload, recipient);",
+            "                    if(audio.start(speechText,audioOwner(presentation,speechText)))break;"
+          ]
+        },
+        {
+          "old_start": 593,
+          "old_count": 1,
+          "new_start": 645,
+          "new_count": 1,
+          "before": [
+            "    private NativeProviderAudioSequence.Owner audioOwner(NativeProviderJournal.Presentation presentation){"
+          ],
+          "after": [
+            "    private NativeProviderAudioSequence.Owner audioOwner(NativeProviderJournal.Presentation presentation,String speechText){"
+          ]
+        },
+        {
+          "old_start": 623,
+          "old_count": 1,
+          "new_start": 675,
+          "new_count": 1,
+          "before": [
+            "                    actual.claimOriginal(audio,this,presentation.payload.get(\"body\"));"
+          ],
+          "after": [
+            "                    actual.claimOriginal(audio,this,speechText);"
+          ]
+        },
+        {
+          "old_start": 628,
+          "old_count": 1,
+          "new_start": 680,
+          "new_count": 1,
+          "before": [
+            "                    OriginalJobFact fact=new OriginalJobFact(presentation,this,actual,originalAttempt,completed,delivery.originalAudioPolicy,profile.fingerprint());"
+          ],
+          "after": [
+            "                    OriginalJobFact fact=new OriginalJobFact(presentation,speechText,this,actual,originalAttempt,completed,delivery.originalAudioPolicy,profile.fingerprint());"
+          ]
+        },
+        {
+          "old_start": 630,
+          "old_count": 1,
+          "new_start": 682,
+          "new_count": 1,
+          "before": [
+            "                        +presentation.payload.get(\"body\").getBytes(java.nio.charset.StandardCharsets.UTF_8).length+4096L;"
+          ],
+          "after": [
+            "                        +speechText.getBytes(java.nio.charset.StandardCharsets.UTF_8).length+4096L;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwnerTest.java",
+      "kind": "modified",
+      "prior_bytes": 50974,
+      "prior_sha256": "249d01aa008db24b2ee6dac07435183829d1e6c58677fbe34e220c0d4af2c1ad",
+      "current_bytes": 58298,
+      "current_sha256": "7949f593a12b50e31f80cf0a9ce1e703a351ee0465de40d1a6593c1e1048de2f",
+      "hunks": [
+        {
+          "old_start": 13,
+          "old_count": 0,
+          "new_start": 14,
+          "new_count": 125,
+          "before": [],
+          "after": [
+            "    @Test public void messengerAnnouncesAssignedFirstNameAndSenderWithoutSpeakingBody()throws Exception {",
+            "        for (boolean legacy : new boolean[]{false, true}) assertMessengerSpeech(legacy, true);",
+            "    }",
+            "",
+            "    @Test public void messengerUsesPrivateGenericSpeechForAnotherAssignment()throws Exception {",
+            "        assertMessengerSpeech(false, false);",
+            "    }",
+            "",
+            "    @Test public void gapRevalidatesBeforeSdkWithoutAnExtraDurableClockWrite()throws Exception {",
+            "        var x = new NativeProviderCompositionTest.Composition(false);",
+            "        var sdk = new NativeProviderAudioSequenceTest.Fixture();",
+            "        x.audioSurface = sdk;",
+            "        x.audioScheduler = sdk;",
+            "        x.owner = x.reconstruct();",
+            "        NativeProviderPayload payload = NativeProviderIngressTest.payload(x.f.prepared);",
+            "        x.inventoryRows = new NativeProviderPayload[]{payload};",
+            "        x.sync();",
+            "        x.elapsed++;",
+            "        x.readingStep = 1;",
+            "        sdk.tone.done(true);",
+            "        int beforeSpeech = x.f.provider.storage.memory.commits;",
+            "        sdk.tick(900);",
+            "        assertEquals(java.util.List.of(payload.get(\"body\")), sdk.texts);",
+            "        // The next step and its actual SDK effect each prove a fresh interval.",
+            "        assertEquals(2, x.f.provider.storage.memory.commits - beforeSpeech);",
+            "        sdk.speech.done(true);",
+            "        int beforeRepeat = x.f.provider.storage.memory.commits;",
+            "        sdk.tick(1200);",
+            "        assertEquals(java.util.List.of(\"tone\", \"speech\", \"tone\"), sdk.effects);",
+            "        assertEquals(2, x.f.provider.storage.memory.commits - beforeRepeat);",
+            "        sdk.cycle();",
+            "        assertEquals(\"COMPLETED\", x.inbox(payload.recordId).getString(\"audio_state\"));",
+            "    }",
+            "",
+            "    @Test public void eventSpeechUsesOriginalReminderBody()throws Exception {",
+            "        NativeProviderPayload event = NativeProviderPayloadTest.accept(NativeProviderPayloadTest.requiredKind(true));",
+            "        assertEquals(event.get(\"body\"), NativeProviderNotificationPolicy.speechText(event, \"Karen Robinson\"));",
+            "    }",
+            "",
+            "    private void assertMessengerSpeech(boolean legacy, boolean matchingAssignment)throws Exception {",
+            "        var x = new NativeProviderCompositionTest.Composition(legacy);",
+            "        var sdk = new NativeProviderAudioSequenceTest.Fixture();",
+            "        x.audioSurface = sdk;",
+            "        x.audioScheduler = sdk;",
+            "        x.owner = x.reconstruct();",
+            "        JSONObject principal = x.f.principal.json();",
+            "        JSONObject status = new JSONObject()",
+            "            .put(\"authenticated\", true).put(\"enrollment_required\", false).put(\"recovery_required\", false)",
+            "            .put(\"canonical_device_id\", principal.get(\"device_id\")).put(\"credential_id\", principal.get(\"credential_id\"))",
+            "            .put(\"employee_id\", principal.get(\"employee_id\")).put(\"employee_name\", \"Karen Robinson\")",
+            "            .put(\"assignment_epoch\", principal.getLong(\"assignment_epoch\") + (matchingAssignment ? 0 : 1));",
+            "        JSONObject envelope = new JSONObject().put(\"ok\", true).put(\"data\", status);",
+            "        var request = new AuthorizedRequest(\"/device-auth/status?device_id=\" + principal.getString(\"device_id\"), \"GET\", Map.of(), new byte[0]);",
+            "        var response = new AuthorizedResponse(200, Map.of(), envelope.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));",
+            "        x.owner.observeMessengerRecipient(request, response, x.f.engine.getState());",
+            "",
+            "        NativeProviderPayload payload = messengerPayload(x);",
+            "        String privateBody = payload.get(\"body\");",
+            "        x.inventoryRows = new NativeProviderPayload[]{payload};",
+            "",
+            "        x.sync();",
+            "        sdk.full();",
+            "        String expected = matchingAssignment ? \"Karen, you have a new message from Eric.\" : \"You have a new message from Eric.\";",
+            "        assertEquals(java.util.List.of(expected, expected), sdk.texts);",
+            "        assertEquals(privateBody, x.journal.presentation(x.f.principal, payload.recordId).payload.get(\"body\"));",
+            "        assertEquals(\"COMPLETED\", x.inbox(payload.recordId).getString(\"audio_state\"));",
+            "    }",
+            "    private static NativeProviderPayload messengerPayload(NativeProviderCompositionTest.Composition x)throws Exception {",
+            "        JSONObject principal = x.f.principal.json();",
+            "        Map<String,String> message = NativeProviderPayloadTest.requiredKind(false);",
+            "        message.put(\"generation_id\", x.f.prepared.generationId);",
+            "        message.put(\"principal_digest\", x.f.prepared.principalDigest);",
+            "        message.put(\"token_digest\", x.f.prepared.tokenDigest);",
+            "        for (String field : new String[]{\"credential_id\", \"employee_id\", \"device_id\", \"assignment_epoch\"})",
+            "            message.put(\"receipt_\" + field, String.valueOf(principal.get(field)));",
+            "        message.put(\"title\", \"Eric Operle (shared PIN)\");",
+            "        String privateBody = \"Original private message for the fixture.\";",
+            "        message.put(\"body\", privateBody);",
+            "        return NativeProviderPayloadTest.accept(NativeProviderPayloadTest.signed(message));",
+            "    }",
+            "",
+            "    @Test public void freshSdkMessengerArrivalExpeditesOnceEvenWithRecoveryAlreadyPending()throws Exception {",
+            "        for (boolean warmClock : new boolean[]{false,true}) {",
+            "            var x = new NativeProviderCompositionTest.Composition(false);",
+            "            if (warmClock) x.sync();",
+            "            x.jobs.state = NativeProviderJobSchedule.Existing.EXACT;",
+            "            NativeProviderPayload payload = messengerPayload(x);",
+            "            sdkArrival(x, payload);",
+            "            assertEquals(1, x.jobs.expedited);",
+            "            assertEquals(0, x.jobs.scheduled);",
+            "            var domain = warmClock ? ProviderEnvelopeCrypto.Domain.INBOX : ProviderEnvelopeCrypto.Domain.QUARANTINE;",
+            "            assertNotNull(x.f.provider.read(domain, payload.recordId));",
+            "            assertEquals(0, x.surface.shows);",
+            "            sdkArrival(x, payload);",
+            "            assertEquals(\"A duplicate must not request another expedited job\", 1, x.jobs.expedited);",
+            "            assertEquals(NativeProviderJobSchedule.Existing.EXACT, x.jobs.state);",
+            "        }",
+            "    }",
+            "",
+            "    @Test public void rejectedExpeditedArrivalStillUsesOrdinaryRecoveryAndPreservesOriginal()throws Exception {",
+            "        var x = new NativeProviderCompositionTest.Composition(false);",
+            "        x.jobs.expeditedAccepted = false;",
+            "        NativeProviderPayload payload = messengerPayload(x);",
+            "        sdkArrival(x, payload);",
+            "        assertEquals(1, x.jobs.expedited);",
+            "        assertEquals(1, x.jobs.scheduled);",
+            "        x.inventoryRows = new NativeProviderPayload[]{payload};",
+            "        x.sync();",
+            "        assertEquals(1, x.surface.shows);",
+            "        assertEquals(\"DISPLAYED\", x.inbox(payload.recordId).getString(\"display_state\"));",
+            "    }",
+            "",
+            "    @Test public void sdkRemindersAndFailedMessengerCommitDoNotExpedite()throws Exception {",
+            "        var x = new NativeProviderCompositionTest.Composition(false);",
+            "        sdkArrival(x, NativeProviderIngressTest.payload(x.f.prepared));",
+            "        assertEquals(0, x.jobs.expedited);",
+            "        x.f.provider.storage.memory.reject = true;",
+            "        ProviderRecordStoreTest.failure(\"custodial_provider_commit_failed_preserved\", ()->sdkArrival(x,messengerPayload(x)));",
+            "        assertEquals(0, x.jobs.expedited);",
+            "    }",
+            "",
+            "    private static void sdkArrival(NativeProviderCompositionTest.Composition x, NativeProviderPayload payload)throws VaultFailure {",
+            "        NativeProviderFirebaseDispatch.message(x.owner, NativeProviderPayloadTest.PROJECT, NativeProviderPayloadTest.PROJECT, false,",
+            "            payload.data(), ()->fail(\"Protected arrival escaped to legacy Firebase forwarding\"));",
+            "    }"
+          ]
+        }
+      ]
+    }
+  ],
+  "basename_aliases": {
+    "provider-v87-composition.json": "mobile/release-evidence/provider-v87-composition.json"
+  }
+}

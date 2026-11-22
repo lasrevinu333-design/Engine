@@ -65,7 +65,12 @@ public final class NativeProviderJobLifecycleTest {
     }
     static final class Jobs implements NativeProviderJobSchedule.SystemJobs {
         NativeProviderJobSchedule.Existing state = NativeProviderJobSchedule.Existing.ABSENT;
-        boolean accepted = true; int inspected, scheduled;
+        boolean accepted = true, expeditedAccepted = true;
+        int inspected, scheduled, expedited;
+        @Override public boolean scheduleMessageArrival() {
+            expedited++;
+            return expeditedAccepted;
+        }
         public NativeProviderJobSchedule.Existing existing() { inspected++; return state; }
         public boolean schedule() { scheduled++; if (accepted) state = NativeProviderJobSchedule.Existing.EXACT; return accepted; }
     }

@@ -24,7 +24,10 @@ final class NativeProviderReviewedReleases {
                     "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952", "3c130b1d1925d44484c9548f27da424e8385589aa90d9452211edaa96699426e"),
                 new NativeProviderReleaseAdmission.Release(86L, "1.0.0",
                     NativeProviderTime.Profile.androidBestEffort("android-elapsed-best-effort.karen-api36.v1", new NativeProviderTime.Platform("android.os.SystemClock.elapsedRealtime/API-36", "motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys", "motorola/moto g - 2025/kansas/mt6835"), "ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798"),
-                    "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952", "7a4cf3788e3fd297c38ef762c94b9effdacfe14cee385de0d16b33098c55a75d")
+                    "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952", "7a4cf3788e3fd297c38ef762c94b9effdacfe14cee385de0d16b33098c55a75d"),
+                new NativeProviderReleaseAdmission.Release(87L, "1.0.0",
+                    NativeProviderTime.Profile.androidBestEffort("android-elapsed-best-effort.karen-api36.v1", new NativeProviderTime.Platform("android.os.SystemClock.elapsedRealtime/API-36", "motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys", "motorola/moto g - 2025/kansas/mt6835"), "ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798"),
+                    "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952", "7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78")
             };
         } catch (VaultFailure invalid) { throw new ExceptionInInitializerError(invalid); }
     }

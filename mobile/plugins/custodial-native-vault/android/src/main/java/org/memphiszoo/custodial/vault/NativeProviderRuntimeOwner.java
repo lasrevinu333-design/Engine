@@ -458,12 +458,29 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
     }
     @Override public long captureToken(String token) throws VaultFailure { requireDelivery();return registration.captureToken(token); }
     @Override public void receive(NativeProviderPayload payload) throws VaultFailure {
+        receive(payload, false);
+    }
+    @Override public void receiveFromSdk(NativeProviderPayload payload) throws VaultFailure {
+        receive(payload, true);
+    }
+    private void receive(NativeProviderPayload payload, boolean sdkArrival) throws VaultFailure {
         requireDelivery();
+        boolean expedite = false;
         synchronized(engine){synchronized(coordinator){
             NativeProviderAuthority.Current current=currentLocked();
-            journal.recordArrival(current.principal,payload,clock.observe());
+            NativeProviderJournal.Arrival arrival=journal.recordArrival(current.principal,payload,clock.observe());
+            if (sdkArrival) {
+                try {
+                    journal.requestRecovery();
+                    expedite = arrival.newWork && "employee_message".equals(payload.get("kind"));
+                } catch (VaultFailure unavailable) { /* Ingress remains durable. */ }
+            }
         }}
         NativeProviderJobSchedule.request(NativeProviderJobLifecycle.Result.RETRY,delivery.jobs);
+        if (expedite) {
+            try { delivery.jobs.scheduleMessageArrival(); }
+            catch (RuntimeException unavailable) { /* The original persisted recovery job still owns fallback. */ }
+        }
         publishMirrorHint();
     }
     @Override public void deletedMessages() throws VaultFailure {

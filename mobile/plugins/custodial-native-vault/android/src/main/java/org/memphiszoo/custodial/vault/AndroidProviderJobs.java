@@ -4,6 +4,7 @@ import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
+import android.os.Build;
 
 /** Exact persisted job adapter. Construction/scheduling is not wired until runtime admission. */
 final class AndroidProviderJobs implements NativeProviderJobSchedule.SystemJobs {
@@ -24,6 +25,20 @@ final class AndroidProviderJobs implements NativeProviderJobSchedule.SystemJobs 
         return component.equals(info.getService()) && info.isPersisted() && !info.isPeriodic()
             && info.getNetworkType() == JobInfo.NETWORK_TYPE_ANY && !info.isRequireCharging() && !info.isRequireDeviceIdle()
             && info.getBackoffPolicy() == JobInfo.BACKOFF_POLICY_EXPONENTIAL && info.getInitialBackoffMillis() == 30000;
+    }
+    @Override public boolean scheduleMessageArrival() {
+        if (scheduler == null || Build.VERSION.SDK_INT < 31) return false;
+        synchronized (LOCK) {
+            int id = NativeProviderJobSchedule.MESSAGE_ARRIVAL_ID;
+            JobInfo existing = scheduler.getPendingJob(id);
+            if (existing != null) return component.equals(existing.getService()) && existing.isExpedited()
+                && !existing.isPersisted() && !existing.isPeriodic() && existing.getNetworkType() == JobInfo.NETWORK_TYPE_ANY
+                && !existing.isRequireCharging() && !existing.isRequireDeviceIdle();
+            JobInfo urgent = new JobInfo.Builder(id, component)
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .setExpedited(true).build();
+            return scheduler.schedule(urgent) == JobScheduler.RESULT_SUCCESS;
+        }
     }
     @Override public boolean schedule() {
         // All adapter instances use this exact lock. Recheck after the caller's observation,

@@ -36,6 +36,7 @@ const expectedAdditions=[
  'mobile/release-evidence/provider-v84-composition.json',
  'mobile/release-evidence/provider-v85-composition.json',
  'mobile/release-evidence/provider-v86-composition.json',
+ 'mobile/release-evidence/provider-v87-composition.json',
  'mobile/scripts/custodial-native-observation-regression-tests.mjs',
  'mobile/scripts/custodial-provider-foreground-wake-tests.mjs',
  'operations-dashboard-data.js',

@@ -19,6 +19,32 @@ public final class NativeProviderRuntimeOwnerTest {
         assertMessengerSpeech(false, false);
     }
 
+    @Test public void gapRevalidatesBeforeSdkWithoutAnExtraDurableClockWrite()throws Exception {
+        var x = new NativeProviderCompositionTest.Composition(false);
+        var sdk = new NativeProviderAudioSequenceTest.Fixture();
+        x.audioSurface = sdk;
+        x.audioScheduler = sdk;
+        x.owner = x.reconstruct();
+        NativeProviderPayload payload = NativeProviderIngressTest.payload(x.f.prepared);
+        x.inventoryRows = new NativeProviderPayload[]{payload};
+        x.sync();
+        x.elapsed++;
+        x.readingStep = 1;
+        sdk.tone.done(true);
+        int beforeSpeech = x.f.provider.storage.memory.commits;
+        sdk.tick(900);
+        assertEquals(java.util.List.of(payload.get("body")), sdk.texts);
+        // The next step and its actual SDK effect each prove a fresh interval.
+        assertEquals(2, x.f.provider.storage.memory.commits - beforeSpeech);
+        sdk.speech.done(true);
+        int beforeRepeat = x.f.provider.storage.memory.commits;
+        sdk.tick(1200);
+        assertEquals(java.util.List.of("tone", "speech", "tone"), sdk.effects);
+        assertEquals(2, x.f.provider.storage.memory.commits - beforeRepeat);
+        sdk.cycle();
+        assertEquals("COMPLETED", x.inbox(payload.recordId).getString("audio_state"));
+    }
+
     @Test public void eventSpeechUsesOriginalReminderBody()throws Exception {
         NativeProviderPayload event = NativeProviderPayloadTest.accept(NativeProviderPayloadTest.requiredKind(true));
         assertEquals(event.get("body"), NativeProviderNotificationPolicy.speechText(event, "Karen Robinson"));
@@ -41,6 +67,19 @@ public final class NativeProviderRuntimeOwnerTest {
         var response = new AuthorizedResponse(200, Map.of(), envelope.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
         x.owner.observeMessengerRecipient(request, response, x.f.engine.getState());
 
+        NativeProviderPayload payload = messengerPayload(x);
+        String privateBody = payload.get("body");
+        x.inventoryRows = new NativeProviderPayload[]{payload};
+
+        x.sync();
+        sdk.full();
+        String expected = matchingAssignment ? "Karen, you have a new message from Eric." : "You have a new message from Eric.";
+        assertEquals(java.util.List.of(expected, expected), sdk.texts);
+        assertEquals(privateBody, x.journal.presentation(x.f.principal, payload.recordId).payload.get("body"));
+        assertEquals("COMPLETED", x.inbox(payload.recordId).getString("audio_state"));
+    }
+    private static NativeProviderPayload messengerPayload(NativeProviderCompositionTest.Composition x)throws Exception {
+        JSONObject principal = x.f.principal.json();
         Map<String,String> message = NativeProviderPayloadTest.requiredKind(false);
         message.put("generation_id", x.f.prepared.generationId);
         message.put("principal_digest", x.f.prepared.principalDigest);
@@ -50,15 +89,52 @@ public final class NativeProviderRuntimeOwnerTest {
         message.put("title", "Eric Operle (shared PIN)");
         String privateBody = "Original private message for the fixture.";
         message.put("body", privateBody);
-        NativeProviderPayload payload = NativeProviderPayloadTest.accept(NativeProviderPayloadTest.signed(message));
-        x.inventoryRows = new NativeProviderPayload[]{payload};
+        return NativeProviderPayloadTest.accept(NativeProviderPayloadTest.signed(message));
+    }
 
+    @Test public void freshSdkMessengerArrivalExpeditesOnceEvenWithRecoveryAlreadyPending()throws Exception {
+        for (boolean warmClock : new boolean[]{false,true}) {
+            var x = new NativeProviderCompositionTest.Composition(false);
+            if (warmClock) x.sync();
+            x.jobs.state = NativeProviderJobSchedule.Existing.EXACT;
+            NativeProviderPayload payload = messengerPayload(x);
+            sdkArrival(x, payload);
+            assertEquals(1, x.jobs.expedited);
+            assertEquals(0, x.jobs.scheduled);
+            var domain = warmClock ? ProviderEnvelopeCrypto.Domain.INBOX : ProviderEnvelopeCrypto.Domain.QUARANTINE;
+            assertNotNull(x.f.provider.read(domain, payload.recordId));
+            assertEquals(0, x.surface.shows);
+            sdkArrival(x, payload);
+            assertEquals("A duplicate must not request another expedited job", 1, x.jobs.expedited);
+            assertEquals(NativeProviderJobSchedule.Existing.EXACT, x.jobs.state);
+        }
+    }
+
+    @Test public void rejectedExpeditedArrivalStillUsesOrdinaryRecoveryAndPreservesOriginal()throws Exception {
+        var x = new NativeProviderCompositionTest.Composition(false);
+        x.jobs.expeditedAccepted = false;
+        NativeProviderPayload payload = messengerPayload(x);
+        sdkArrival(x, payload);
+        assertEquals(1, x.jobs.expedited);
+        assertEquals(1, x.jobs.scheduled);
+        x.inventoryRows = new NativeProviderPayload[]{payload};
         x.sync();
-        sdk.full();
-        String expected = matchingAssignment ? "Karen, you have a new message from Eric." : "You have a new message from Eric.";
-        assertEquals(java.util.List.of(expected, expected), sdk.texts);
-        assertEquals(privateBody, x.journal.presentation(x.f.principal, payload.recordId).payload.get("body"));
-        assertEquals("COMPLETED", x.inbox(payload.recordId).getString("audio_state"));
+        assertEquals(1, x.surface.shows);
+        assertEquals("DISPLAYED", x.inbox(payload.recordId).getString("display_state"));
+    }
+
+    @Test public void sdkRemindersAndFailedMessengerCommitDoNotExpedite()throws Exception {
+        var x = new NativeProviderCompositionTest.Composition(false);
+        sdkArrival(x, NativeProviderIngressTest.payload(x.f.prepared));
+        assertEquals(0, x.jobs.expedited);
+        x.f.provider.storage.memory.reject = true;
+        ProviderRecordStoreTest.failure("custodial_provider_commit_failed_preserved", ()->sdkArrival(x,messengerPayload(x)));
+        assertEquals(0, x.jobs.expedited);
+    }
+
+    private static void sdkArrival(NativeProviderCompositionTest.Composition x, NativeProviderPayload payload)throws VaultFailure {
+        NativeProviderFirebaseDispatch.message(x.owner, NativeProviderPayloadTest.PROJECT, NativeProviderPayloadTest.PROJECT, false,
+            payload.data(), ()->fail("Protected arrival escaped to legacy Firebase forwarding"));
     }
     @Test public void slowReceiptUploadCannotStarveAnAdmittedOsDisplay()throws Exception {
         var x=new NativeProviderCompositionTest.Composition(false);

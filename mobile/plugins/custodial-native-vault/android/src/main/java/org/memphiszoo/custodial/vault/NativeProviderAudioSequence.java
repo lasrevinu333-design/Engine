@@ -140,7 +140,9 @@ final class NativeProviderAudioSequence {
     }
     private void gap(Session s,long delay,Runnable next){long step=++s.step;s.timer=scheduler.after(()->{
         synchronized(engine){synchronized(coordinator){if(!owns(s,step))return;s.timer=null;
-            try{s.owner.current();next.run();}catch(Exception stale){stop(s,false,"custodial_provider_audio_owner_stale");}
+            // Both possible successors revalidate here before scheduling their SDK effect.
+            // A second observation in this same locked transition only repeats the durable clock write.
+            next.run();
         }}
     },delay);}
     private void stop(Session s,boolean complete,String reason){

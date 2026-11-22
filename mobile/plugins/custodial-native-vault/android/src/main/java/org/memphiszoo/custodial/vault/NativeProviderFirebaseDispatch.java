@@ -13,8 +13,7 @@ final class NativeProviderFirebaseDispatch {
         boolean notification, Map<String, ?> data, Runnable compatibility) throws VaultFailure {
         if (!NativeProviderPayload.protectedTraffic(data)) { compatibility.run(); return; }
         // Protected malformed/suspended/foreign traffic never falls through to the old plugin.
-        runtime.receive(NativeProviderPayload.fromFcm(sdkSender, projectNumber, notification, data));
-        try { runtime.requestReconcile(); } catch (VaultFailure schedulingUnavailable) { /* Ingress remains durable. */ }
+        runtime.receiveFromSdk(NativeProviderPayload.fromFcm(sdkSender, projectNumber, notification, data));
     }
     static void deleted(NativeProviderIngressRuntime runtime) throws VaultFailure {
         runtime.deletedMessages();

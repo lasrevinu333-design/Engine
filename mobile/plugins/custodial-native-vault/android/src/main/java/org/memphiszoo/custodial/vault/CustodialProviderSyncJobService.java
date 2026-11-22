@@ -2,6 +2,7 @@ package org.memphiszoo.custodial.vault;
 
 import android.app.job.JobParameters;
 import android.app.job.JobService;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -15,6 +16,7 @@ public final class CustodialProviderSyncJobService extends JobService {
     private Handler main;
     private NativeProviderJobLifecycle lifecycle;
     private Run active;
+    private JobParameters deferredRecovery;
     private static final class Run {
         final JobParameters parameters;
         final NativeProviderComponentRuntime runtime;
@@ -43,12 +45,29 @@ public final class CustodialProviderSyncJobService extends JobService {
                 if (run.future != null) run.future.cancel(false);
                 run.executor.shutdown();
             }
-            @Override public void finished(Object owner, boolean retry) { jobFinished((JobParameters) owner, retry); }
+            @Override public void finished(Object owner, boolean retry) {
+                JobParameters parameters = (JobParameters) owner;
+                jobFinished(parameters, retry && parameters.getJobId() == NativeProviderJobSchedule.ID);
+                finishDeferredRecovery();
+            }
         });
     }
 
     @Override public boolean onStartJob(JobParameters parameters) {
-        if (parameters == null || parameters.getJobId() != NativeProviderJobSchedule.ID || active != null) return false;
+        if (parameters == null) return false;
+        int id = parameters.getJobId();
+        if (id != NativeProviderJobSchedule.ID &&
+            (id != NativeProviderJobSchedule.MESSAGE_ARRIVAL_ID || Build.VERSION.SDK_INT < 31 || !parameters.isExpeditedJob()))
+            return false;
+        if (active != null) {
+            // Preserve the regular recovery job when Android starts it during an urgent pass.
+            if (id == NativeProviderJobSchedule.ID && active.parameters.getJobId() == NativeProviderJobSchedule.MESSAGE_ARRIVAL_ID
+                && deferredRecovery == null) {
+                deferredRecovery = parameters;
+                return true;
+            }
+            return false;
+        }
         final NativeProviderComponentRuntime runtime = CustodialNativeRuntime.providerComponents(getApplicationContext());
         if (runtime.pendingWork() != NativeProviderJobLifecycle.Result.RETRY) return false;
         try {
@@ -91,16 +110,31 @@ public final class CustodialProviderSyncJobService extends JobService {
         catch (RuntimeException unavailable) { }
     }
 
+    private void finishDeferredRecovery() {
+        JobParameters pending = deferredRecovery;
+        deferredRecovery = null;
+        if (pending != null) jobFinished(pending, true);
+    }
+
     @Override public boolean onStopJob(JobParameters parameters) {
+        if (parameters == null) return false;
+        int id = parameters.getJobId();
+        if (id == NativeProviderJobSchedule.ID && deferredRecovery != null) {
+            deferredRecovery = null;
+            return true;
+        }
         Run run = active;
-        // Android may reconstruct JobParameters across its Binder callback. Resolve its
-        // one fixed job to OUR original invocation object; never compare parcel identity.
-        if (run == null || parameters == null || parameters.getJobId() != NativeProviderJobSchedule.ID) return false;
-        return lifecycle.stop(run.parameters, run.runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND
+        // JobParameters may be reconstructed across Binder. Resolve the fixed
+        // ID to the invocation that actually received onStartJob.
+        if (run == null || run.parameters.getJobId() != id) return false;
+        boolean retry = lifecycle.stop(run.parameters, run.runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND
             ? NativeProviderJobLifecycle.Result.SUSPEND : NativeProviderJobLifecycle.Result.RETRY);
+        finishDeferredRecovery();
+        return retry && id == NativeProviderJobSchedule.ID;
     }
     @Override public void onDestroy() {
         if (lifecycle != null) lifecycle.destroy();
+        finishDeferredRecovery();
         super.onDestroy();
     }
 }
