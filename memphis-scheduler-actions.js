@@ -337,6 +337,13 @@ function validateCoverAllDays(options,days){
 
 function permissions(auth){const s=auth?.readSession?.(),p=s?.permissions,current=principal(auth),valid=!!current&&p?.schema==='custodial.manager-permissions.v1'&&p.read===true;const owner=valid&&p.owner===true&&s.read_only===false,managementAdmin=valid&&auth.isCustodialManagementAdmin?.(s)===true,management=owner||managementAdmin;return{read:valid,owner,managementAdmin,management,absences:valid&&(management||p.manage_absences===true),coverall:valid&&(management||p.manage_coverall===true),routes:valid&&(management||p.regenerate_routes===true),closeScanTickets:valid&&(management||p.close_scan_tickets===true)};}
 function receiptProjection(value){return value?.data?.current_projection||value?.data?.projection||null;}
+function acceptedRecoveryReceipt(path,value){
+ if(path!=='/static-weekly/rebuild-current-projection')return copy(value);
+ // The original request remains byte-for-byte in the recovery control. The
+ // accepted projection is read back from the server before that control clears.
+ const {projection_id,publication_id,week_start}=receiptProjection(value);
+ return{revision:value.revision,data:{current_projection:{projection_id,publication_id,week_start}}};
+}
 function accepted(value,record){if(isStaffingCommand(record)){try{return validateStaffingPreview(value,record).state==='ACCEPTED';}catch{return false;}}if(staffingOperation(record.path))return acceptedStaffing(value,record);const p=receiptProjection(value);return Number.isSafeInteger(value?.revision)&&value.revision>=record.body.expected_revision&&UUID.test(p?.projection_id||'')&&(!record.body.publication_id||p.publication_id===record.body.publication_id)&&(!p.week_start||p.week_start===record.body.week_start);}
 function authorized(auth,path,body){const p=permissions(auth);if(vacancyPreviewPath(path))return p.read&&p.management;if(!p.read||!knownPath(path))return false;
  if(staffingOperation(path))return p.management;
@@ -526,13 +533,13 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
    if(staffingOperation(r.path)){awaitingStaffingReadback=true;return await readStaffing(r);}
    if(!accepted(result,r))throw Error('The server response does not prove schedule acceptance. Retry only this saved request.');
    const current=read();if(current?.encoded!==r.encoded)throw Error('Saved scheduler request changed during submission.');
-   save({...r,state:'ACCEPTED',receipt:copy(result),error:null});return result;
+   save({...r,state:'ACCEPTED',receipt:acceptedRecoveryReceipt(r.path,result),error:null});return result;
   }catch(error){
    if(same(owner,principal(auth))&&error?.acceptedResult&&accepted(error.acceptedResult,r)){
     const current=read();if(current?.encoded!==r.encoded)throw error;
     // The database accepted this exact request even though later coordination
     // failed. Persist the bound result and require readback, not another POST.
-    save({...r,state:'ACCEPTED',receipt:copy(error.acceptedResult),error:null,coordination_pending:true});
+    save({...r,state:'ACCEPTED',receipt:acceptedRecoveryReceipt(r.path,error.acceptedResult),error:null,coordination_pending:true});
     return error.acceptedResult;
    }
    // Explicit 4xx rejection is not transport uncertainty. Unknown outcomes keep

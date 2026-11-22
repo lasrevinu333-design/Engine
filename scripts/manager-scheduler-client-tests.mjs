@@ -1087,6 +1087,30 @@ test('scheduler integration: route-only manager can regenerate, not record absen
  const a=f.create();await a.run('/static-weekly/rebuild-current-projection',{week_start:'2026-10-05',expected_revision:42,idempotency_key:'route-only'});
  assert.equal(a.acknowledge(snapshot),true);await assert.rejects(a.run(path,body),/not authorized/);assert.equal(f.calls.length,1);
 });
+test('large route rebuild acceptance keeps the exact request and a bounded readback receipt',async()=>{
+ const f=fixture(),route='/static-weekly/rebuild-current-projection';
+ f.patch({permissions:{schema:'custodial.manager-permissions.v1',read:true,regenerate_routes:true}});
+ const request={week_start:'2026-10-05',expected_revision:42,idempotency_key:'oversized-projection'};
+ const response=structuredClone(f.reply);
+ response.data.current_projection.plan='x'.repeat(230000);
+ for(const coordinationPending of [false,true]){
+  let calls=0;
+  const a=A.create({auth:f.auth,storage:f.storage,baseUrl:'https://scheduler.onrender.com',api:async()=>{
+   calls++;
+   if(coordinationPending)throw Object.assign(Error('lease settlement unavailable'),{acceptedResult:response});
+   return response;
+  }});
+  assert.deepEqual(await a.run(route,request),response);
+  const saved=a.pending();
+  assert.equal(saved.encoded,JSON.stringify(request));
+  assert.deepEqual(saved.receipt,f.reply);
+  assert.equal(Boolean(saved.coordination_pending),coordinationPending);
+  assert.deepEqual(await a.retry(),f.reply);
+  assert.equal(calls,1);
+  assert.equal(a.acknowledge({...snapshot,latest_projection:{projection_id:CID}}),false);
+  assert.equal(a.acknowledge(snapshot),true);
+ }
+});
 test('scheduler integration: absence-only manager can submit absences, not regenerate',async()=>{
  const f=fixture();f.patch({permissions:{schema:'custodial.manager-permissions.v1',read:true,manage_absences:true}});
  const a=f.create();await a.run(path,body);assert.equal(a.acknowledge(snapshot),true);
