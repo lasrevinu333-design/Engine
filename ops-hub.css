@@ -1,3 +1,6 @@
+/* Keep the Hub's document scrollable around its fixed navigation. */
+html:has(> body > .hubPage){overflow-x:hidden;overflow-y:auto}
+body:has(> .hubPage){overflow:visible}
 body{background:
   radial-gradient(circle at 84% -10%,rgba(82,211,223,.16),transparent 35rem),
   radial-gradient(circle at 9% 8%,rgba(145,214,58,.14),transparent 28rem),

@@ -111,9 +111,8 @@
     const horizontal=section?.dataset?.mapPresentation==='original-horizontal';
     const includeAssignedPhones=!publicRead&&section?.hasAttribute?.('data-map-assigned-phones')===true;
     const perimeter=includeAssignedPhones?root.MemphisZooPerimeter:null;
-    const baseWidth=horizontal?1282:FIT.WIDTH,baseHeight=horizontal?550:FIT.HEIGHT;
-    let frame={left:0,top:0,right:baseWidth,bottom:baseHeight},displayWidth=baseWidth,displayHeight=baseHeight;
-    const displayPoint=point=>{const p=horizontal?FIT.rasterToNative(point):point;return {x:p.x-frame.left,y:p.y-frame.top};};
+    const displayWidth=horizontal?1282:FIT.WIDTH,displayHeight=horizontal?550:FIT.HEIGHT;
+    const displayPoint=point=>horizontal?FIT.rasterToNative(point):point;
     if(!MAP||!FIT?.transformAnchors||!section||(!publicRead&&!auth?.readSession))throw new Error('Map staging requires the exact source bridge and accepted overall fit');
     const viewport=section.querySelector('[data-map-viewport]');
     const surface=section.querySelector('[data-map-surface]');
@@ -133,23 +132,9 @@
     const options=new Map();
     let lastGps=null,gpsAgeTimer=null,gpsCaptions=[],captionLayer=null,captionObserver=null,captionFrame=null;
     const gpsUnavailable='Assigned phone locations unavailable. Map position is an estimate; no cleaning session is required.';
-    function frameWholePerimeter(){
-      if(publicRead||!horizontal||!perimeter?.record||!perimeter.contains)return;
-      const registration=FIT.admit({anchors}),points=perimeter.record.geometry.coordinates[0].map(([longitude,latitude])=>{
-        const p=registration.projectPhone(latitude,longitude,1);if(!p.ok)throw Error('Zoo perimeter display projection unavailable');
-        return horizontal?FIT.rasterToNative(p.canvas):p.canvas;
-      });
-      // Five display units keep a boundary dot visible; no geographic buffer.
-      frame={left:Math.min(0,...points.map(p=>p.x))-5,top:Math.min(0,...points.map(p=>p.y))-5,
-        right:Math.max(baseWidth,...points.map(p=>p.x))+5,bottom:Math.max(baseHeight,...points.map(p=>p.y))+5};
-      displayWidth=frame.right-frame.left;displayHeight=frame.bottom-frame.top;
-      section.setAttribute?.('data-map-coverage','zoo-perimeter');
-      section.style?.setProperty('--map-frame-aspect',`${displayWidth} / ${displayHeight}`);
-    }
     function clearGps(message=gpsUnavailable){if(captionFrame!==null){window.cancelAnimationFrame?.(captionFrame);captionFrame=null;}lastGps=null;gpsCaptions=[];captionLayer=null;if(gpsAgeTimer!=null){window.clearInterval(gpsAgeTimer);gpsAgeTimer=null;}gpsLayer?.replaceChildren();if(gpsStatus)gpsStatus.textContent=message;}
-    // Captions are presentation, not geographic observations. Keep them outside
-    // the sealed inverse-fit group, in screen-sized units, with leaders back to
-    // the unchanged measured point. Never drag an offscreen phone into view.
+    // Keep captions outside the inverse-fit group with leaders to their markers.
+    // Only a horizontal map pan needs a caption layout during scrolling.
     function scheduleGpsCaptions(){
       if(closed||suspended||!captionLayer||captionFrame!==null)return;
       if(!window.requestAnimationFrame){layoutGpsCaptions();return;}
@@ -177,7 +162,6 @@
           clip(node.getBoundingClientRect?.(),node===section||clips(style?.overflowX),node===section||clips(style?.overflowY));
           if(node===section)break;
         }
-        if(window.innerWidth&&window.innerHeight)clip({left:0,top:0,right:window.innerWidth,bottom:window.innerHeight});
       }
       const pad=4,lineHeight=20,gap=3,maxWidth=Math.min(230,bounds.right-bounds.left-pad*2);
       if(maxWidth<40||bounds.bottom-bounds.top<lineHeight+pad*2)return;
@@ -249,13 +233,11 @@
       surface.style.width=`${fit.width}px`;
       surface.style.height=`${fit.height}px`;
       artwork.src=horizontal?ASSETS.horizontalArtwork:ASSETS.artwork;
-      artwork.setAttribute?.('width',String(baseWidth));artwork.setAttribute?.('height',String(baseHeight));
-      Object.assign(artwork.style,{position:'absolute',width:`${baseWidth*fit.fitScale}px`,height:`${baseHeight*fit.fitScale}px`,
-        left:`${-frame.left*fit.fitScale}px`,top:`${-frame.top*fit.fitScale}px`});
+      artwork.setAttribute?.('width',String(displayWidth));artwork.setAttribute?.('height',String(displayHeight));
       gpsLayer?.setAttribute('viewBox',`0 0 ${displayWidth} ${displayHeight}`);
       const urgent=[];
       const screenPoints=markers.map(marker=>({id:marker.locationId,...MAP.screenPoint(displayPoint(marker.canvasPoint),{fitScale:fit.fitScale,zoom:1})}));
-      const spaced=horizontal?separatePins(screenPoints,{width:fit.width,left:(55-frame.left)*fit.fitScale,right:(1141-frame.left)*fit.fitScale,top:(55-frame.top)*fit.fitScale,bottom:(431-frame.top)*fit.fitScale}):null;
+      const spaced=horizontal?separatePins(screenPoints,{width:fit.width,left:55*fit.fitScale,right:1141*fit.fitScale,top:55*fit.fitScale,bottom:431*fit.fitScale}):null;
       for(const marker of markers){
         const button=buttons.get(marker.locationId),view=MAP.presentation(marker,{interaction,
           reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true});
@@ -307,14 +289,6 @@
         if(!context||!Array.isArray(context.work))throw new Error('GPS context unavailable');
         const phones=includeAssignedPhones&&Array.isArray(context.phones)?context.phones:null;
         const now=Date.now(),svg='http://www.w3.org/2000/svg',nodes=[],captions=[];
-        if(perimeter?.record&&registration.projectPhone){
-          const outline=document.createElementNS(svg,'polygon');
-          outline.setAttribute('points',perimeter.record.geometry.coordinates[0].map(([longitude,latitude])=>{
-            const p=registration.projectPhone(latitude,longitude,1);if(!p.ok)throw Error('Zoo perimeter projection unavailable');return `${p.canvas.x},${p.canvas.y}`;
-          }).join(' '));
-          outline.setAttribute('fill','none');outline.setAttribute('stroke','#075e96');outline.setAttribute('stroke-width','1.5');
-          outline.setAttribute('data-zoo-perimeter',perimeter.id);nodes.push(outline);
-        }
         let tracks=0,current=0,stale=0,missing=0,discarded=0,unknownChronology=0;const phoneLabels=[];
         for(const work of Array.isArray(context.work)?context.work:[]){
           if(work?.truncated || work?.incomplete){discarded++;continue;}
@@ -350,21 +324,31 @@
           if(result.position&&transportFailed)result={...result,state:'stale'};
           if(!result.position){missing++;phoneLabels.push(`${entry?.employeeName||entry?.deviceIdentifier||'Assigned phone'}: location unavailable`);continue;}
           const point=result.position,color=result.state==='live'?'#075e96':'#685d4a';
+          const measured=displayPoint(point.canvas);
+          const beyondArtwork=horizontal&&(measured.x<55||measured.x>1141||measured.y<55||measured.y>431);
+          // Keep the illustration fixed. Positions beyond the crop get labeled
+          // edge markers while their original measurements remain unchanged.
+          const shown=beyondArtwork?{x:Math.max(63,Math.min(1133,measured.x)),
+            y:Math.max(63,Math.min(423,measured.y))}:measured;
+          const marker=beyondArtwork?FIT.nativeToRaster(shown):point.canvas;
           if(result.state==='live')current++;else stale++;
-            const label=`${result.label}: ${result.state==='live'?'live':'last known; no fresh update'} · ${new Date(point.observed).toLocaleTimeString([], {timeZone:'America/Chicago',hour:'numeric',minute:'2-digit'})}`;
+          const label=`${result.label}: ${result.state==='live'?'live':'last known; no fresh update'} · ${new Date(point.observed).toLocaleTimeString([], {timeZone:'America/Chicago',hour:'numeric',minute:'2-digit'})}${beyondArtwork?' · beyond illustrated map, inside zoo':''}`;
           phoneLabels.push(label);
-          const ring=document.createElementNS(svg,'circle');
-          ring.setAttribute('cx',String(point.canvas.x));ring.setAttribute('cy',String(point.canvas.y));
-          ring.setAttribute('r',String(point.uncertaintyCanvasPx));ring.setAttribute('fill','none');
-          ring.setAttribute('stroke',color);ring.setAttribute('stroke-dasharray','4 3');nodes.push(ring);
+          if(!beyondArtwork){
+            const ring=document.createElementNS(svg,'circle');
+            ring.setAttribute('cx',String(point.canvas.x));ring.setAttribute('cy',String(point.canvas.y));
+            ring.setAttribute('r',String(point.uncertaintyCanvasPx));ring.setAttribute('fill','none');
+            ring.setAttribute('stroke',color);ring.setAttribute('stroke-dasharray','4 3');nodes.push(ring);
+          }
           const dot=document.createElementNS(svg,'circle');
-          dot.setAttribute('cx',String(point.canvas.x));dot.setAttribute('cy',String(point.canvas.y));
+          dot.setAttribute('cx',String(marker.x));dot.setAttribute('cy',String(marker.y));
           dot.setAttribute('r','5');dot.setAttribute('fill',result.state==='live'?color:'#ffffff');
           dot.setAttribute('stroke',color);dot.setAttribute('stroke-width','2');
           dot.setAttribute('data-phone-state',result.state);dot.setAttribute('data-phone-device',result.deviceIdentifier);
+          if(beyondArtwork){dot.setAttribute('data-phone-edge','');dot.setAttribute('stroke-dasharray','2 2');}
           const title=document.createElementNS(svg,'title');title.textContent=label;dot.append(title);nodes.push(dot);
-          captions.push({point:displayPoint(point.canvas),color,device:String(result.deviceIdentifier),full:label,
-            text:`${result.label} · ${result.state==='live'?'Live':'Last known'}`});
+          captions.push({point:shown,color,device:String(result.deviceIdentifier),full:label,
+            text:`${result.label} · ${result.state==='live'?'Live':'Last known'}${beyondArtwork?' · Map edge':''}`});
         }
         if(!permitted())return false;
         if(horizontal&&nodes.length){
@@ -372,10 +356,8 @@
           // and accuracy ring. The sealed geographic registration is unchanged.
           const zero=FIT.rasterToNative({x:0,y:0}),x=FIT.rasterToNative({x:1,y:0}),y=FIT.rasterToNative({x:0,y:1});
           const group=document.createElementNS(svg,'g');
-          group.setAttribute('transform',`matrix(${x.x-zero.x} ${x.y-zero.y} ${y.x-zero.x} ${y.y-zero.y} ${zero.x-frame.left} ${zero.y-frame.top})`);
+          group.setAttribute('transform',`matrix(${x.x-zero.x} ${x.y-zero.y} ${y.x-zero.x} ${y.y-zero.y} ${zero.x} ${zero.y})`);
           group.append(...nodes);gpsLayer.replaceChildren(group);
-        }else if(nodes.length&&(frame.left||frame.top)){
-          const group=document.createElementNS(svg,'g');group.setAttribute('transform',`translate(${-frame.left} ${-frame.top})`);group.append(...nodes);gpsLayer.replaceChildren(group);
         }else gpsLayer.replaceChildren(...nodes);
         gpsCaptions=captions;captionLayer=null;
         if(captions.length){captionLayer=document.createElementNS(svg,'g');
@@ -426,7 +408,7 @@
       if(!response.ok)throw new Error('Approved map anchors unavailable');
       const parsed=await MAP.parseApprovedAnchors(new Uint8Array(await response.arrayBuffer()),{subtle:window.crypto?.subtle});
       if(closed||suspended||expected!==lifecycleGeneration)return false;
-      anchors=FIT.transformAnchors(parsed);frameWholePerimeter();
+      anchors=FIT.transformAnchors(parsed);
       for(const anchor of anchors.locations)addPin(anchor);
       if(locations){
         for(const anchor of anchors.locations){
@@ -443,7 +425,7 @@
         }
       }
       window.addEventListener('resize',render);
-      if(includeAssignedPhones)window.addEventListener('scroll',layoutGpsCaptions,true);
+      if(includeAssignedPhones)section.addEventListener('scroll',scheduleGpsCaptions,{passive:true});
       resizeBound=true;initialized=true;
       status.textContent='Map cleaning status unavailable until a current authenticated response';
       return true;
@@ -457,7 +439,7 @@
       // An obsolete anchor rejection must never suspend that newer attempt.
       if(closed||expected!==lifecycleGeneration)return;
       if(!initialized){
-        if(resizeBound){window.removeEventListener('resize',render);window.removeEventListener('scroll',layoutGpsCaptions,true);resizeBound=false;}
+        if(resizeBound){window.removeEventListener('resize',render);if(includeAssignedPhones)section.removeEventListener('scroll',scheduleGpsCaptions);resizeBound=false;}
         resizeObserver?.disconnect();resizeObserver=null;captionObserver?.disconnect();captionObserver=null;
         for(const [element,event,fn] of controls)element.removeEventListener?.(event,fn);
         controls.length=0;layer.replaceChildren();buttons.clear();markers=[];anchors=null;
@@ -478,7 +460,7 @@
     function stop(){
       if(closed)return;
       closed=true;lifecycleGeneration++;clearGps();gate.close();
-      if(resizeBound){window.removeEventListener('resize',render);window.removeEventListener('scroll',layoutGpsCaptions,true);resizeBound=false;}
+      if(resizeBound){window.removeEventListener('resize',render);if(includeAssignedPhones)section.removeEventListener('scroll',scheduleGpsCaptions);resizeBound=false;}
       resizeObserver?.disconnect();resizeObserver=null;captionObserver?.disconnect();captionObserver=null;
       for(const [element,event,fn] of controls)element.removeEventListener?.(event,fn);
       controls.length=0;layer.replaceChildren();buttons.clear();markers=[];anchors=null;
