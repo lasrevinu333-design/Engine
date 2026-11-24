@@ -1,0 +1,12 @@
+/* The body owns the native scroll area on manager pages with document content. */
+:root[data-manager-page-scroll] {
+  height: 100%;
+  overflow: hidden;
+}
+
+:root[data-manager-page-scroll] > body {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
