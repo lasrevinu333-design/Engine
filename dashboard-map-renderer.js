@@ -120,6 +120,9 @@
     const layer=section.querySelector('[data-map-layer]');
     const gpsLayer=section.querySelector('[data-map-gps-layer]');
     const gpsStatus=section.querySelector('[data-map-gps-status]');
+    const phoneList=includeAssignedPhones?section.parentElement?.querySelector('[data-map-phone-list]'):null;
+    const phoneRows=phoneList?.querySelector('[data-map-phone-rows]');
+    const phoneCount=phoneList?.querySelector('[data-map-phone-count]');
     const status=section.querySelector('[data-map-status]');
     const alerts=section.querySelector('[data-map-alerts]');
     const selection=section.querySelector('[data-map-selection]');
@@ -131,8 +134,37 @@
     const buttons=new Map();
     const options=new Map();
     let lastGps=null,gpsAgeTimer=null,gpsCaptions=[],captionLayer=null,captionObserver=null,captionFrame=null;
-    const gpsUnavailable='Assigned phone locations unavailable. Map position is an estimate; no cleaning session is required.';
-    function clearGps(message=gpsUnavailable){if(captionFrame!==null){window.cancelAnimationFrame?.(captionFrame);captionFrame=null;}lastGps=null;gpsCaptions=[];captionLayer=null;if(gpsAgeTimer!=null){window.clearInterval(gpsAgeTimer);gpsAgeTimer=null;}gpsLayer?.replaceChildren();if(gpsStatus)gpsStatus.textContent=message;}
+    const gpsUnavailable=includeAssignedPhones
+      ?'Assigned phone locations unavailable. Map position is an estimate; no cleaning session is required.'
+      :'Advisory GPS unavailable. Measured active-work history is required.';
+    let phoneListKey='';
+    function publishGpsStatus(message){
+      if(gpsStatus&&gpsStatus.textContent!==message)gpsStatus.textContent=message;
+    }
+    function updatePhoneList(labels){
+      if(!phoneRows||!phoneCount)return;
+      const nextKey=JSON.stringify(labels);
+      if(nextKey===phoneListKey)return;
+      phoneListKey=nextKey;
+      phoneList.hidden=labels.length===0;
+      if(phoneList.hidden)phoneList.open=false;
+      phoneCount.textContent=labels.length?`(${labels.length})`:'';
+      phoneRows.replaceChildren(...labels.map(label=>{
+        const row=document.createElement('li');
+        row.textContent=label;
+        return row;
+      }));
+    }
+    function clearGps(message=gpsUnavailable){
+      if(captionFrame!==null){window.cancelAnimationFrame?.(captionFrame);captionFrame=null;}
+      lastGps=null;
+      gpsCaptions=[];
+      captionLayer=null;
+      if(gpsAgeTimer!=null){window.clearInterval(gpsAgeTimer);gpsAgeTimer=null;}
+      gpsLayer?.replaceChildren();
+      updatePhoneList([]);
+      publishGpsStatus(message);
+    }
     // Keep captions outside the inverse-fit group with leaders to their markers.
     // Only a horizontal map pan needs a caption layout during scrolling.
     function scheduleGpsCaptions(){
@@ -322,7 +354,7 @@
           let result;
           try{result=PATH.phone({registration,phone:entry,now});}catch{result={position:null};}
           if(result.position&&transportFailed)result={...result,state:'stale'};
-          if(!result.position){missing++;phoneLabels.push(`${entry?.employeeName||entry?.deviceIdentifier||'Assigned phone'}: location unavailable`);continue;}
+          if(!result.position){missing++;continue;}
           const point=result.position,color=result.state==='live'?'#075e96':'#685d4a';
           const measured=displayPoint(point.canvas);
           const beyondArtwork=horizontal&&(measured.x<55||measured.x>1141||measured.y<55||measured.y>431);
@@ -332,7 +364,10 @@
             y:Math.max(63,Math.min(423,measured.y))}:measured;
           const marker=beyondArtwork?FIT.nativeToRaster(shown):point.canvas;
           if(result.state==='live')current++;else stale++;
-          const label=`${result.label}: ${result.state==='live'?'live':'last known; no fresh update'} · ${new Date(point.observed).toLocaleTimeString([], {timeZone:'America/Chicago',hour:'numeric',minute:'2-digit'})}${beyondArtwork?' · beyond illustrated map, inside zoo':''}`;
+          const observed=new Date(point.observed).toLocaleString('en-US',{
+            timeZone:'America/Chicago',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'
+          });
+          const label=`${result.label}: ${result.state==='live'?'live':'last known; no fresh update'} · ${observed}${beyondArtwork?' · beyond illustrated map, inside zoo':''}`;
           phoneLabels.push(label);
           if(!beyondArtwork){
             const ring=document.createElementNS(svg,'circle');
@@ -362,16 +397,27 @@
         gpsCaptions=captions;captionLayer=null;
         if(captions.length){captionLayer=document.createElementNS(svg,'g');
           captionLayer.setAttribute('data-phone-captions','');gpsLayer.append(captionLayer);layoutGpsCaptions();}
-        gpsStatus.textContent=phones
-          ? `Assigned phones: ${current} live, ${stale} last known, ${missing} unavailable. ${phoneLabels.join('; ')}. Dashed rings show reported phone accuracy. Map position is an estimate.`
+        const phoneDetails=phoneLabels.length?` ${phoneLabels.join('; ')}.`:'';
+        const statusMessage=phones
+          ? `Assigned phones: ${current} live, ${stale} last known, ${missing} unavailable.${phoneDetails} Dashed rings show reported phone accuracy. Map position is an estimate.`
           : `Advisory GPS on owner-accepted overall visual fit: ${current} recent measured position${current===1?'':'s'}, ${tracks} path segment${tracks===1?'':'s'}. Dashed rings show reported device accuracy ONLY; map/absolute error is unknown and the walking domain is unverified. Gaps are not inferred.`;
-        gpsStatus.textContent+=`${context.historyUnavailable||!Array.isArray(context.work)?' Optional work history unavailable; paths withheld.':''}${discarded?` ${discarded} readings or incomplete paths withheld.`:''}${unknownChronology?` ${unknownChronology} work paths withheld because capture chronology is unknown.`:''}${transportFailed?' Phone updates unavailable; displayed positions are last known.':''} Gaps are not inferred; map/absolute error is unknown and the walking domain is unverified.`;
+        publishGpsStatus(statusMessage+
+          (context.historyUnavailable?' Optional work history unavailable; paths withheld.':'')+
+          (discarded?` ${discarded} readings or incomplete paths withheld.`:'')+
+          (unknownChronology?` ${unknownChronology} work paths withheld because capture chronology is unknown.`:'')+
+          (phones&&transportFailed?' Phone updates unavailable; displayed positions are last known.':''));
+        updatePhoneList(phones?phoneLabels:[]);
         lastGps={ticket,context,transportFailed};
         if(phones&&gpsAgeTimer==null&&window.setInterval)gpsAgeTimer=window.setInterval(()=>{
           if(lastGps)acceptGps(lastGps.ticket,lastGps.context,{cached:true,transportFailed:lastGps.transportFailed});
         },10000);
         return true;
-      }catch{if(permitted())clearGps('Assigned phone locations unavailable: the received positions or map reference could not be verified.');return false;}
+      }catch{
+        if(permitted())clearGps(includeAssignedPhones
+          ?'Assigned phone locations unavailable: the received positions or map reference could not be verified.'
+          :'Advisory GPS unavailable. The map reference or active-work history could not be verified.');
+        return false;
+      }
     }
     function unavailableGps(ticket){if(!gate.isCurrent(ticket))return false;
       if(lastGps)acceptGps(ticket,lastGps.context,{transportFailed:true});else clearGps();return true;}

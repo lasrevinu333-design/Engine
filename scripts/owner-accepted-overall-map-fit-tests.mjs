@@ -138,9 +138,12 @@ check('new refresh and changed named-manager principal invalidate late advisory 
 });
 controller.stop();
 check('both manager map entrypoints load the exact reference before renderer and no new collector',()=>{
- for(const name of ['dashboard-map.html','operations-dashboard.html']){const html=read(name).toString();
+ for(const [name,width,height] of [['dashboard-map.html',2040,890],['operations-dashboard.html',1282,550]]){
+  const html=read(name).toString();
   assert(html.indexOf('custodial-gps-approved-overall-fit.js')<html.indexOf('dashboard-map-renderer.js'));
-  assert.match(html,/width="2040" height="890"/);}
+  const artwork=html.match(/<img[^>]*data-map-artwork[^>]*>/)?.[0] || '';
+  assert.ok(artwork.includes('width="'+width+'" height="'+height+'"'),name+' preserves its approved artwork dimensions');
+ }
  const source=read('custodial-gps-approved-overall-fit.js').toString();
  assert.doesNotMatch(source,/watchPosition|setInterval|sendBeacon|fetch\(|localStorage|sessionStorage/);
 });

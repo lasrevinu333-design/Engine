@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="./trail-terracotta.css">
   <link rel="stylesheet" href="./trail-pages/operations-dashboard.css">
   <link rel="stylesheet" href="./manager-page-scroll.css?v=2026.11.23.native-scroll-r3">
-</head><body tabindex="0" class="mapWebPage operationsPage" data-memphis-context="manager">
+</head><body tabindex="0" autofocus class="mapWebPage operationsPage" data-memphis-context="manager">
   <main class="mapPage commandPage">
     <header class="dashboardPageHeader"><a id="map-hub-link" class="mz-back-link" href="./start_page1.html" aria-label="Back to Operations Hub">Back</a><div class="mapTitle"><img class="trailIcon" src="./assets/trail-v1/map-64.webp" alt="Dashboard Map"><h1>Custodial Operations</h1></div><button id="operations-map-fullscreen" type="button" aria-pressed="false">⛶ Full screen</button></header>
     <p class="mapNotice" id="map-page-status" role="status" aria-live="polite">Checking manager access…</p>
@@ -39,6 +39,10 @@
       <div data-map-selection hidden></div>
       <ul data-map-alerts hidden></ul>
     </section>
+      <details class="dashboardTools" data-map-phone-list hidden>
+        <summary>Phone locations <span data-map-phone-count></span></summary>
+        <ul data-map-phone-rows></ul>
+      </details>
       <button type="button" class="tickerBand" data-board="tickets" aria-label="Open Custodial Tickets"><span class="tickerLabel">OPEN CUSTODIAL TICKETS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-tickets-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
       <button type="button" class="tickerBand" data-board="spiceworks" aria-label="Spiceworks 72 Hours"><span class="tickerLabel">SPICEWORKS 72 HOURS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-spiceworks-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
       <button type="button" class="tickerBand" data-board="city" aria-label="Open City work orders"><span class="tickerLabel">CITY WORK ORDERS</span><span class="tickerWindow"><span class="tickerTrack" id="ops-city-ticker">Loading…</span></span><span class="feedButton" aria-hidden="true">Open board ↗</span></button>
@@ -50,7 +54,7 @@
     <p id="operations-board-note" class="boardNote" role="status"></p><div id="operations-board-content" class="boardContent" tabindex="0" aria-label="Scrollable operations rows"></div>
   </dialog>
   <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
-  <script src="./dashboard-map-staging.js?v=2026.11.11.operations-layout"></script><script src="./custodial-gps-approved-overall-fit.js?v=2026.11.23.assigned-phones-r1"></script><script src="./memphis-zoo-perimeter.js?v=2026.11.23.assigned-phones-r1"></script><script src="./custodial-gps-path-model.js?v=2026.11.23.assigned-phones-r1"></script><script src="./custodial-gps-path-source.js?v=2026.11.23.assigned-phones-r1"></script><script src="./dashboard-map-renderer.js?v=2026.11.23.map-scroll-r2"></script>
+  <script src="./dashboard-map-staging.js?v=2026.11.11.operations-layout"></script><script src="./custodial-gps-approved-overall-fit.js?v=2026.11.23.assigned-phones-r1"></script><script src="./memphis-zoo-perimeter.js?v=2026.11.23.assigned-phones-r1"></script><script src="./custodial-gps-path-model.js?v=2026.11.23.assigned-phones-r1"></script><script src="./custodial-gps-path-source.js?v=2026.11.23.assigned-phones-r1"></script><script src="./dashboard-map-renderer.js?v=2026.11.23.manager-map-r4"></script>
   <script src="./operations-dashboard-data.js?v=2026.11.13.spiceworks-wording-r1"></script><script src="./operations-dashboard.js?v=2026.11.14.board-controls-r53"></script>
   <script src="./dashboard-map-page.js?v=2026.11.23.assigned-phones-r1"></script>
 </body></html>
