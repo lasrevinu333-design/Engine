@@ -113,16 +113,20 @@
           if(gpsOpen&&version>=gpsVersion&&currentRead()){gpsVersion=version;map?.acceptGps?.(ticket,context);}};
         const gpsFailure=error=>{gpsOpen=false;if(!currentRead())return;
           if(error?.authority)authorityLost();else map?.unavailableGps?.(ticket);};
-        phoneStarted=true;
-        if(gpsSource?.read){
-          void bounded(()=>gpsSource.read({headers,fetchImpl,signal,includeAssignedPhones,
-            onUpdate:receiveGps,
-            onAuthorityError:gpsFailure}),signal).then(receiveGps).catch(gpsFailure);
-        }else map.unavailableGps?.(ticket);
+        function startGps(){
+          phoneStarted=true;
+          if(gpsSource?.read){
+            void bounded(()=>gpsSource.read({headers,fetchImpl,signal,includeAssignedPhones,
+              onUpdate:receiveGps,
+              onAuthorityError:gpsFailure}),signal).then(receiveGps).catch(gpsFailure);
+          }else map.unavailableGps?.(ticket);
+        }
+        if(includeAssignedPhones)startGps();
         const {response,payload}=await bounded(async summarySignal=>{
-          const response=await fetchImpl(API,{method:'GET',cache:'no-store',headers,signal:summarySignal});
+          const response=await fetchImpl(API,{method:'GET',cache:'no-store',headers,
+            ...(includeAssignedPhones?{signal:summarySignal}:{})});
           if(summarySignal.aborted)throw new Error('Map read cancelled');
-          if(response.status===401||response.status===403){
+          if(includeAssignedPhones&&(response.status===401||response.status===403)){
             if(currentRead())authorityLost();throw new Error('Manager access unavailable');
           }
           return {response,payload:await response.json().catch(()=>null)};
@@ -132,6 +136,7 @@
           throw new Error('The authenticated Dashboard summary is unavailable or changed');
         if(!map.accept(ticket,payload.data))return false;
         status.textContent='';
+        if(!includeAssignedPhones)startGps();
         operations?.updateSummary?.({summary:payload.data,isCurrent:currentRead});
         return true;
       }catch{

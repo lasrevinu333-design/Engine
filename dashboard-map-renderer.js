@@ -304,7 +304,8 @@
       if(!permitted()||!anchors||!gpsLayer||!gpsStatus||!FIT?.admit||!PATH?.path)return false;
       try{
         const registration=FIT.admit({anchors});
-        if(!context||typeof context!=='object')throw new Error('GPS context unavailable');
+        if(!context||!Array.isArray(context.work))throw new Error('GPS context unavailable');
+        const phones=includeAssignedPhones&&Array.isArray(context.phones)?context.phones:null;
         const now=Date.now(),svg='http://www.w3.org/2000/svg',nodes=[],captions=[];
         if(perimeter?.record&&registration.projectPhone){
           const outline=document.createElementNS(svg,'polygon');
@@ -330,7 +331,7 @@
             line.setAttribute('stroke-width','3');line.setAttribute('stroke-linecap','round');
             line.setAttribute('stroke-linejoin','round');nodes.push(line);tracks++;
           }
-          if(result.current&&!Array.isArray(context.phones)){
+          if(result.current&&!phones){
             const ring=document.createElementNS(svg,'circle');
             ring.setAttribute('cx',String(result.current.canvas.x));
             ring.setAttribute('cy',String(result.current.canvas.y));
@@ -343,7 +344,7 @@
             dot.setAttribute('r','4');dot.setAttribute('fill','#075e96');nodes.push(dot);current++;
           }
         }
-        for(const entry of Array.isArray(context.phones)?context.phones:[]){
+        for(const entry of phones||[]){
           let result;
           try{result=PATH.phone({registration,phone:entry,now});}catch{result={position:null};}
           if(result.position&&transportFailed)result={...result,state:'stale'};
@@ -379,12 +380,12 @@
         gpsCaptions=captions;captionLayer=null;
         if(captions.length){captionLayer=document.createElementNS(svg,'g');
           captionLayer.setAttribute('data-phone-captions','');gpsLayer.append(captionLayer);layoutGpsCaptions();}
-        gpsStatus.textContent=Array.isArray(context.phones)
+        gpsStatus.textContent=phones
           ? `Assigned phones: ${current} live, ${stale} last known, ${missing} unavailable. ${phoneLabels.join('; ')}. Dashed rings show reported phone accuracy. Map position is an estimate.`
-          : `Advisory GPS: ${current} recent measured positions, ${tracks} active-work path segments. Map accuracy remains unverified.`;
+          : `Advisory GPS on owner-accepted overall visual fit: ${current} recent measured position${current===1?'':'s'}, ${tracks} path segment${tracks===1?'':'s'}. Dashed rings show reported device accuracy ONLY; map/absolute error is unknown and the walking domain is unverified. Gaps are not inferred.`;
         gpsStatus.textContent+=`${context.historyUnavailable||!Array.isArray(context.work)?' Optional work history unavailable; paths withheld.':''}${discarded?` ${discarded} readings or incomplete paths withheld.`:''}${unknownChronology?` ${unknownChronology} work paths withheld because capture chronology is unknown.`:''}${transportFailed?' Phone updates unavailable; displayed positions are last known.':''} Gaps are not inferred; map/absolute error is unknown and the walking domain is unverified.`;
         lastGps={ticket,context,transportFailed};
-        if(gpsAgeTimer==null&&window.setInterval)gpsAgeTimer=window.setInterval(()=>{
+        if(phones&&gpsAgeTimer==null&&window.setInterval)gpsAgeTimer=window.setInterval(()=>{
           if(lastGps)acceptGps(lastGps.ticket,lastGps.context,{cached:true,transportFailed:lastGps.transportFailed});
         },10000);
         return true;
@@ -436,10 +437,14 @@
       }
       markers=MAP.project({anchors,summary:null,transport:'LOADING'});render();
       if(window.ResizeObserver){resizeObserver=new window.ResizeObserver(render);resizeObserver.observe(viewport);
-        captionObserver=new window.ResizeObserver(scheduleGpsCaptions);
-        for(const target of [surface,gpsLayer,section])if(target)captionObserver.observe(target);
+        if(includeAssignedPhones){
+          captionObserver=new window.ResizeObserver(scheduleGpsCaptions);
+          for(const target of [surface,gpsLayer,section])if(target)captionObserver.observe(target);
+        }
       }
-      window.addEventListener('resize',render);window.addEventListener('scroll',layoutGpsCaptions,true);resizeBound=true;initialized=true;
+      window.addEventListener('resize',render);
+      if(includeAssignedPhones)window.addEventListener('scroll',layoutGpsCaptions,true);
+      resizeBound=true;initialized=true;
       status.textContent='Map cleaning status unavailable until a current authenticated response';
       return true;
     }
