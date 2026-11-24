@@ -10,3 +10,12 @@
   min-height: 0;
   overflow-y: auto;
 }
+
+:root[data-manager-page-scroll]:is(:fullscreen, .dashboard-expanded) {
+  overflow-y: auto;
+}
+
+:root[data-manager-page-scroll]:is(:fullscreen, .dashboard-expanded) > body {
+  height: auto;
+  overflow: visible;
+}
