@@ -138,6 +138,21 @@
   z-index:-1;border-radius:9px;background:#0d1f2f;box-shadow:0 0 0 1px var(--ux-line);pointer-events:none;
 }
 
+/* Assigned phones need the complete sourced perimeter, including land beyond
+   the artwork crop. The public cleaning map retains its approved crop. */
+.operationsPage .commandPage .commandMap.mzMapStage[data-map-coverage="zoo-perimeter"]{
+  width:100%;overflow:visible;
+}
+.operationsPage .commandMap[data-map-coverage="zoo-perimeter"] .mapArtworkFrame{
+  min-width:0;aspect-ratio:var(--map-frame-aspect);
+}
+.operationsPage .commandMap[data-map-coverage="zoo-perimeter"] .mapArtworkFrame .mzMapViewport{
+  left:0;top:0;width:100%;height:100%;aspect-ratio:auto;
+}
+.operationsPage .commandMap[data-map-coverage="zoo-perimeter"] .mzMapSurface::before{
+  inset:0;
+}
+
 /* Daily planned counts share the existing telemetry card, not the map. */
 .dailyExpected{display:grid;gap:4px;margin-top:8px}
 .dailyExpected strong{font-size:18px;line-height:1.2;overflow-wrap:anywhere}

@@ -89,7 +89,18 @@
         uncertaintyCanvasPx,absoluteUncertaintyUnknown:true,
         quality:'reported_device_accuracy_only_map_error_unknown',referenceSealSha256:SEAL_SHA});
     }
-    return Object.freeze({project,quality,referenceSealSha256:SEAL_SHA});
+    // Display-only projection for a separately verified geographic perimeter.
+    // Keep project() and its accepted-raster checks unchanged for work history.
+    function projectPhone(latitude,longitude,accuracyM){
+      if(!finite(latitude)||Math.abs(latitude)>85.05112878||!finite(longitude)||Math.abs(longitude)>180
+        ||!finite(accuracyM)||accuracyM<=0)return Object.freeze({ok:false,reason:'invalid_measured_position_or_reported_accuracy'});
+      const lat=latitude*Math.PI/180,canvas=mercatorToRaster(RADIUS*longitude*Math.PI/180,RADIUS*Math.log(Math.tan(Math.PI/4+lat/2)));
+      const uncertaintyCanvasPx=accuracyM/Math.cos(lat)*pixelsPerMercatorM;
+      if(!point(canvas)||!finite(uncertaintyCanvasPx))return Object.freeze({ok:false,reason:'invalid_measured_position_or_reported_accuracy'});
+      return Object.freeze({ok:true,canvas,reportedAccuracyM:accuracyM,uncertaintyM:null,uncertaintyCanvasPx,
+        outsideArtwork:!inside(canvas),absoluteUncertaintyUnknown:true,quality:'reported_device_accuracy_only_map_error_unknown',referenceSealSha256:SEAL_SHA});
+    }
+    return Object.freeze({project,projectPhone,quality,referenceSealSha256:SEAL_SHA});
   }
   const api=Object.freeze({ANCHOR_SHA,ARTWORK_SHA,SEAL_SHA,ORIGINAL_ARTWORK,WIDTH,HEIGHT,
     nativeToRaster,rasterToNative,rasterToWgs84,transformAnchors,admit,quality});
