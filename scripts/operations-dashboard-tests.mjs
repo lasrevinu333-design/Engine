@@ -31,7 +31,7 @@ function dashboardRefreshFixture(){
   roles:['CUSTODIAL_MANAGER'],permissions:{schema:'custodial.manager-permissions.v1',read:true,close_scan_tickets:true}};
  const node=id=>{if(!nodes.has(id)){const classes=new Set(),events=new Map();nodes.set(id,{id,textContent:'',innerHTML:'',disabled:false,open:false,value:'',returnValue:'',
   classList:{toggle(k,on){on?classes.add(k):classes.delete(k);},add:k=>classes.add(k),remove:k=>classes.delete(k)},
-  querySelectorAll(){return [];},addEventListener(type,callback,options){const list=events.get(type)||[];list.push({callback,once:options?.once});events.set(type,list);},
+  childNodes:[],replaceChildren(...rows){this.childNodes=rows;},querySelectorAll(){return [];},addEventListener(type,callback,options){const list=events.get(type)||[];list.push({callback,once:options?.once});events.set(type,list);},
   close(){this.open=false;const list=events.get('close')||[];events.set('close',list.filter(entry=>!entry.once));for(const entry of list)entry.callback();},showModal(){this.open=true;},focus(){}});}return nodes.get(id);};
  const response=data=>({ok:true,status:200,json:async()=>data});
  const summary=(label,{active=false}={})=>({ok:true,data:{meta:{version:label},restrooms:[{location_code:label,location_name:label,
@@ -55,8 +55,12 @@ function dashboardRefreshFixture(){
   if(url.endsWith('/close-ticket')){if(gates.close.length)return gates.close.shift()();const body=JSON.parse(options.body);return response({ok:true,data:{ticket_id:body.ticket_id,status:'closed',outcome:body.outcome,external_work_order_reference:body.external_work_order_reference,closed_at:'2026-10-13T12:00:00.000Z',closed_by:'SYNTHETIC fixture manager'}});}
   return response({ok:true,data:[]});
  };
- const window={location:{href:'https://fixture.invalid/dashboard.html',hash:'',replace(){throw Error('Unexpected stale reload');}},MemphisAuth:auth};
- const document={getElementById:node,querySelectorAll:()=>[]};
+ const ticketJournal=new Map(),locksHeld=new Set();
+ const localStorage={get length(){return ticketJournal.size;},key:i=>[...ticketJournal.keys()][i],getItem:k=>ticketJournal.get(k)??null,
+  setItem:(k,v)=>ticketJournal.set(k,v),removeItem:k=>ticketJournal.delete(k)};
+ const locks={async request(k,options,action){if(locksHeld.has(k))return action(null);locksHeld.add(k);try{return await action({name:k});}finally{locksHeld.delete(k);}}};
+ const window={localStorage,navigator:{locks},location:{href:'https://fixture.invalid/dashboard.html',hash:'',replace(){throw Error('Unexpected stale reload');}},MemphisAuth:auth};
+ const document={getElementById:node,querySelectorAll:()=>[],createElement:()=>({append(){}})};
  const context=vm.createContext({window,document,MemphisAuth:auth,fetch,URL,URLSearchParams,AbortSignal,Date,console:{error(){},warn(){}},
   localStorage:{getItem:()=>null},sessionStorage:{getItem:()=>null,setItem(){}},setInterval(){throw Error('Unexpected startup timer');},setTimeout});
  vm.runInContext(readFileSync(new URL('../memphis-ticket-actions.js',import.meta.url),'utf8'),context);
@@ -178,10 +182,12 @@ test('DASHBOARD_REFRESH_changed permission during enrichment withdraws all cache
  const f=dashboardRefreshFixture();await publishDashboard(f);const summary=f.enqueue('summary',f.response(f.summary('active',{active:true}))),scan=f.enqueue('enrich',f.response({ok:true,data:{latest_session_status:'active',latest_employee_name:'late private employee'}}));summary.release();
  const pending=f.page.refreshData();await scan.started;f.session().permissions.read=false;scan.release();await pending;assertDashboardWithdrawn(f);
 });
-test('DASHBOARD_REFRESH_superseded closure failure cannot overwrite new snapshot or controls',async()=>{
+test('DASHBOARD_REFRESH_superseded closure failure retains original and prohibits replacement',async()=>{
  const f=dashboardRefreshFixture();await publishDashboard(f);const gate=f.enqueue('close'),pending=f.page.closeTicket(dashboardTicketId,f.node('close'));chooseDashboardClosure(f);await gate.started;
  await publishDashboard(f,'newest');const status=f.node('refresh-status').textContent;gate.reject(Error('old close outcome unknown'));await pending;
- assert.equal(f.node('refresh-status').textContent,status);assert.equal(f.page.state.tickets[0].location_name,'newest');assert.equal(f.page.ticketActions.status(dashboardTicketId).can_close,true);
+ assert.equal(f.node('refresh-status').textContent,status);assert.equal(f.page.state.tickets[0].location_name,'newest');
+ assert.equal(f.page.ticketActions.recoveries()[0].ticket_id,dashboardTicketId);
+ await assert.rejects(f.page.ticketActions.close(dashboardTicketId,{outcome:'work_order_sent',reference:'replacement'}),/original closure/);
  assert.equal(f.calls.filter(c=>c.url.endsWith('/close-ticket')).length,1);
 });
 test('DASHBOARD_REFRESH_missing read permission never requests private rows',async()=>{

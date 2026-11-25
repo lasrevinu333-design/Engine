@@ -6,11 +6,13 @@ const all=node=>[node,...node.children.flatMap(all)];
 const text=node=>all(node).map(e=>e.textContent).join(' ');
 const record=()=>({session_id:uuid(1),session_uuid:'original opaque identity',status:'completed',correction_id:null,original_employee_id:uuid(2),current_employee_id:uuid(2),original_employee_name:'Original person',current_employee_name:'Original person',original_location_id:uuid(3),current_location_id:uuid(3),original_location_name:'Primate',current_location_name:'Primate',original_device_id:uuid(4),current_device_id:uuid(4),original_device_name:'Assigned phone',current_device_name:'Assigned phone',original_started_at:'2026-10-31T13:00:00.000Z',current_started_at:'2026-10-31T13:00:00.000Z',original_ended_at:'2026-10-31T13:15:00.000Z',current_ended_at:'2026-10-31T13:15:00.000Z'});
 const options={employees:[{id:uuid(2),label:'Original person'},{id:uuid(5),label:'Corrected person'}],locations:[{id:uuid(3),label:'Primate'}],devices:[{id:uuid(4),label:'Assigned phone'}]};
-function fixture(){let truth=record(),owner='ORIGINAL_SYNTHETIC_BINDING',saved=null,mode='ok',statusMode='ok';const calls=[],panel=new Element(),status=new Element(),content=new Element();
+function fixture({storage,scope=null}={}){let truth=record(),owner='ORIGINAL_SYNTHETIC_BINDING',saved=null,mode='ok',statusMode='ok';const calls=[],panel=new Element(),status=new Element(),content=new Element();
  const receipt={session_id:uuid(1),operation_id:uuid(10),correction_id:uuid(11),changed_fields:['employee'],created_at:'2026-10-31T19:00:00Z',replayed:false};
  const api={truth:async()=>structuredClone(truth),choices:async()=>structuredClone(options),save:async(id,operation,body)=>{calls.push({id,operation,body});if(mode==='conflict')throw Object.assign(new Error('conflict'),{status:409});if(mode==='lost-before')throw new Error('network');saved=structuredClone(receipt);truth={...truth,correction_id:uuid(11),current_employee_id:uuid(5),current_employee_name:'Corrected person',corrected_by_manager_name_snapshot:'Self-asserted manager',corrected_at:receipt.created_at,correction_reason:body.reason};if(mode==='lost-after')throw new Error('network');return saved;},status:async(id,op)=>{if(statusMode==='mismatch')return{found:true,...receipt,operation_id:uuid(99)};if(statusMode==='wrong-fields')return{found:true,...receipt,changed_fields:['location']};if(statusMode==='owner-change'){owner='OTHER';return{found:true,...receipt};}return saved?{found:true,...saved,replayed:true,actor_manager_id:uuid(8),actor_name:'Self-asserted manager (shared PIN; self-asserted)',reason:'Correct attribution from verified record'}:{found:false,session_id:id,operation_id:op};}};
- const controller=createCleaningCorrectionPanel({document:{createElement:tag=>new Element(tag)},panel,status,content,api,binding:()=>owner,canWrite:()=>true,uuid:()=>uuid(10)});
- return{controller,panel,status,content,calls,api,field:name=>all(content).find(e=>e.name===name),mode:value=>mode=value,statusMode:value=>statusMode=value,changeOwner:()=>owner='OTHER',setTruth:value=>truth=value,truth:()=>truth};}
+ const attach=(token)=>createCleaningCorrectionPanel({document:{createElement:tag=>new Element(tag)},panel,status,content,api,
+  binding:token||(()=>owner),...(scope?{recoveryBinding:()=>scope}:{}),storage,canWrite:()=>true,uuid:()=>uuid(10)});
+ const controller=attach();
+ return{controller,attach,panel,status,content,calls,api,renew:()=>owner='NEW-SAME-OWNER-TOKEN',field:name=>all(content).find(e=>e.name===name),mode:value=>mode=value,statusMode:value=>statusMode=value,changeOwner:()=>owner='OTHER',setTruth:value=>truth=value,truth:()=>truth};}
 const cases=[];const test=async(name,fn)=>{await fn();cases.push(name);console.log('ok - '+name);};
 async function preview(f){await f.controller.open(record());f.field('employee_id').value=uuid(5);f.field('reason').value='Correct attribution from verified record';await f.controller.preview();assert.equal(f.controller.getState(),'PREVIEW');}
 await test('completed original/current record and typed preview precede exact one-time confirmation/readback',async()=>{
@@ -39,5 +41,30 @@ await test('wrong operation or changed fields never confirms saved correction',a
 });
 await test('authority change during saved-outcome read withdraws details and blocks another manager replacing operation',async()=>{
  const f=fixture();await preview(f);f.mode('lost-after');await f.controller.confirm();f.statusMode('owner-change');await f.controller.checkSaved();assert.equal(f.controller.getState(),'DENIED');assert.equal(f.controller.hasUnresolved(),true);assert.equal(f.content.children.length,0);assert.equal(await f.controller.open(record()),false);assert.equal(f.calls.length,1);
+});
+function journal(){
+ const entries=new Map();
+ return {entries,getItem:key=>entries.get(key)??null,setItem:(key,value)=>entries.set(key,value),removeItem:key=>entries.delete(key)};
+}
+await test('same selected manager reauthentication recovers exact receipt without resending',async()=>{
+ const storage=journal(),f=fixture({storage,scope:'selected-A'});
+ await preview(f);f.mode('lost-after');await f.controller.confirm();f.renew();f.controller.revalidate();
+ assert.equal(f.controller.getState(),'UNKNOWN');assert.equal(storage.entries.size,1);
+ await f.controller.checkSaved();assert.equal(f.controller.getState(),'SAVED');assert.equal(storage.entries.size,0);assert.equal(f.calls.length,1);
+});
+await test('hard reload recovers only exact operation metadata and only for the same selected manager',async()=>{
+ const storage=journal(),f=fixture({storage,scope:'selected-A'});
+ await preview(f);f.mode('lost-after');await f.controller.confirm();f.controller.retire();
+ assert.deepEqual(Object.values(JSON.parse([...storage.entries.values()][0])),[uuid(1),uuid(10),['employee']]);
+ const different=fixture({storage,scope:'selected-B'});different.controller.resume();assert.equal(different.controller.getState(),'EMPTY');
+ const restarted=f.attach(()=> 'new-request-token');restarted.resume();assert.equal(restarted.getState(),'UNKNOWN');
+ await restarted.retry();await restarted.checkSaved();assert.equal(restarted.getState(),'SAVED');assert.equal(f.calls.length,1);assert.equal(storage.entries.size,0);
+});
+await test('hard reload with absent result retains a receipt-only record when payload has left memory',async()=>{
+ const storage=journal(),f=fixture({storage,scope:'selected-A'});
+ await preview(f);f.mode('lost-before');await f.controller.confirm();
+ const restarted=f.attach(()=> 'replacement-token');restarted.resume();await restarted.checkSaved();
+ assert.equal(restarted.getState(),'UNKNOWN');assert.doesNotMatch(text(f.content),/Retry this exact correction/);
+ await restarted.retry();assert.equal(f.calls.length,1);assert.equal(storage.entries.size,1);
 });
 console.log(JSON.stringify({suite:'actual completed-cleaning correction controller with synthetic API/DOM',passed:cases.length,failed:0,cases,network:false,SQL:false,independentAcceptance:false}));

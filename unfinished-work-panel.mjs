@@ -32,7 +32,7 @@ export function createUnfinishedWorkPanel({document,content,status,api,binding,s
  const current=()=>owner!==null&&owner===binding()&&scope===storageBinding();
  const node=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
  const button=(label,action)=>{const b=node('button',label);b.type='button';b.className='uxButton';b.addEventListener('click',()=>{void action();});return b;};
- const deny=()=>{generation++;busy=false;retryAllowed=false;content.replaceChildren();status.textContent='Manager access changed. Recheck access before continuing.';};
+ const deny=()=>{generation++;busy=false;retryAllowed=false;if(!attempted)pending=null;content.replaceChildren();status.textContent='Manager access changed. Recheck access before continuing.';};
  const owns=at=>at===generation&&current();
  function receipt(v,original){if(!v||v.notice_id!==original.notice_id||v.operation_id!==original.operation_id||v.history_preserved!==true||v.phone_released!==false||v.key_removal!==false||!['cancelled_without_completion','already_terminal_acknowledged'].includes(v.status))throw Error('Matching saved outcome unavailable.');}
  function unknown(){content.replaceChildren(node('p','The clear outcome is not confirmed. Check the original saved operation before another action.'),
@@ -94,7 +94,9 @@ export function createUnfinishedWorkPanel({document,content,status,api,binding,s
  async function load(){
   if(busy)return false;
   if(pending&&!attempted){if(current())return false;return deny();}
-  owner=binding();scope=storageBinding();if(!owner||!scope)return deny();
+  const nextScope=storageBinding();
+  if(scope!==nextScope){pending=null;attempted=false;}
+  owner=binding();scope=nextScope;if(!owner||!scope)return deny();
   const at=++generation;busy=true;retryAllowed=false;content.replaceChildren();status.textContent='Checking unfinished work…';
   try{
    await journal.run(scope,port=>{if(!owns(at))return;const saved=port.read();

@@ -4,17 +4,41 @@ const instant=value=>typeof value==='string'&&/(?:Z|[+-]\d{2}:\d{2})$/.test(valu
 const fields=[['employee_id','Employee','employees','employee_name'],['location_id','Location','locations','location_name'],['device_id','Phone','devices','device_name'],['started_at','Started',null],['ended_at','Finished',null]];
 const displayTime=value=>instant(value)?new Date(value).toLocaleString('en-US',{timeZone:'America/Chicago',dateStyle:'medium',timeStyle:'long'}):'Unavailable';
 const viewKey=truth=>JSON.stringify([truth.session_id,truth.session_uuid,truth.status,truth.correction_id,...fields.map(([key])=>truth['current_'+key])]);
-export function createCleaningCorrectionPanel({document,panel,status,content,api,binding,canWrite,uuid=()=>crypto.randomUUID()}) {
-  let state='EMPTY',generation=0,owner=null,selected=null,truth=null,choices=null,pinned=null,inputs={},pending=false,retryAllowed=false;
+export function createCleaningCorrectionPanel({document,panel,status,content,api,binding,recoveryBinding=binding,storage,canWrite,uuid=()=>crypto.randomUUID()}) {
+  let state='EMPTY',generation=0,owner=null,scope=null,selected=null,truth=null,choices=null,pinned=null,inputs={},pending=false,retryAllowed=false;
   const unresolved=()=>pending||['SENDING','UNKNOWN','CHECKING'].includes(state);
   const current=()=>owner!==null&&owner===binding()&&canWrite();
   const node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
   const setState=(next,text)=>{state=next;status.textContent=text;status.dataset.state=next.toLowerCase();};
   const deny=()=>{content.replaceChildren();setState('DENIED','Manager access changed. The original correction outcome is not confirmed. Return with the original manager access to reconcile it.');};
+  const key=()=>scope===null?null:'mz_cleaning_correction:v1:'+encodeURIComponent(scope);
+  const expectedFields=body=>Object.keys(body).filter(name=>name.startsWith('corrected_')).map(name=>name.slice(10).replace(/_id$/, '')).sort();
+  function saveOriginal(){
+    if(!storage)return;
+    const value=JSON.stringify({session_id:selected.session_id,operation_id:pinned.operationId,fields:pinned.fields});
+    const prior=storage.getItem(key());
+    if(prior!==null&&prior!==value)throw Error('Check the saved correction before sending another.');
+    storage.setItem(key(),value);
+    if(storage.getItem(key())!==value)throw Error('The original correction could not be saved for recovery.');
+  }
+  function forgetOriginal(){
+    if(storage)storage.removeItem(key());
+    pending=false;
+  }
+  function restoreOriginal(){
+    if(!storage)return false;
+    const raw=storage.getItem(key());
+    if(raw===null)return false;
+    const original=JSON.parse(raw);
+    const permitted=fields.map(([name])=>name.replace(/_id$/,''));
+    if(!UUID.test(original?.session_id)||!UUID.test(original.operation_id)||!Array.isArray(original.fields)||!original.fields.length
+      ||new Set(original.fields).size!==original.fields.length||original.fields.some(name=>!permitted.includes(name)))throw Error('Saved correction identity could not be verified.');
+    selected={session_id:original.session_id};pinned={operationId:original.operation_id,fields:original.fields};pending=true;return true;
+  }
   const check=()=>{if(!current()){deny();throw new Error('Manager access changed.');}};
-  function clear(){if(unresolved()){if(!current()){deny();return false;}status.textContent='Keep this original correction open and check its saved outcome before starting another.';return false;}generation++;state='EMPTY';owner=null;pinned=null;content.replaceChildren();panel.hidden=true;return true;}
+  function clear(){if(unresolved()){if(!current()){deny();return false;}status.textContent='Keep this original correction open and check its saved outcome before starting another.';return false;}generation++;state='EMPTY';owner=null;scope=null;pinned=null;content.replaceChildren();panel.hidden=true;return true;}
   function validateTruth(value,row){
-    if(!value||value.session_id!==row.session_id||value.session_uuid!==row.session_uuid||value.status!=='completed'||!instant(value.current_started_at)||!instant(value.current_ended_at)||Date.parse(value.current_ended_at)<Date.parse(value.current_started_at))throw new Error('Only a verified completed record can be corrected here. Interrupted or pending work requires its existing recovery process.');
+    if(!value||value.session_id!==row.session_id||(row.session_uuid!==undefined&&value.session_uuid!==row.session_uuid)||value.status!=='completed'||!instant(value.current_started_at)||!instant(value.current_ended_at)||Date.parse(value.current_ended_at)<Date.parse(value.current_started_at))throw new Error('Only a verified completed record can be corrected here. Interrupted or pending work requires its existing recovery process.');
     if(value.correction_id!==null&&value.correction_id!==undefined&&!UUID.test(value.correction_id))throw new Error('Current correction reference is unavailable.');
     return value;
   }
@@ -47,9 +71,10 @@ export function createCleaningCorrectionPanel({document,panel,status,content,api
     form.append(button('Preview correction',preview),button('Cancel',()=>clear()));content.append(form);setState('EDITING','Review the preserved original and current values. Select only the facts to correct and enter the reason.');
   }
   async function open(row){
+    if(!unresolved())resume();
     if(unresolved()){if(!current()){deny();return false;}status.textContent='Check the original correction outcome before opening another record.';return false;}
     if(!canWrite()||!UUID.test(row?.session_id)||typeof row?.session_uuid!=='string')throw new Error('Current full manager access and an exact record are required.');
-    const epoch=++generation;owner=binding();selected={session_id:row.session_id,session_uuid:row.session_uuid};pinned=null;panel.hidden=false;content.replaceChildren();setState('LOADING','Reading the original record and correction choices…');
+    const epoch=++generation;owner=binding();scope=recoveryBinding();selected={session_id:row.session_id,session_uuid:row.session_uuid};pinned=null;panel.hidden=false;content.replaceChildren();setState('LOADING','Reading the original record and correction choices…');
     try{const [record,options]=await Promise.all([api.truth(selected.session_id),api.choices(selected.session_id)]);if(epoch!==generation)return false;check();truth=validateTruth(record,selected);choices=validateChoices(options);edit();return true;}
     catch(error){if(epoch!==generation)return false;if(!current()){deny();return false;}content.replaceChildren();setState('UNAVAILABLE',error.message||'Correction information unavailable.');return false;}
   }
@@ -63,37 +88,64 @@ export function createCleaningCorrectionPanel({document,panel,status,content,api
       retryAllowed=false;
       if(!diff.length)throw new Error('Choose at least one changed fact before previewing.');
       if(Date.parse(body.corrected_ended_at||truth.current_ended_at)<Date.parse(body.corrected_started_at||truth.current_started_at))throw new Error('Finished time must be on or after started time.');
-      pinned=Object.freeze({operationId:uuid(),body:Object.freeze(body),baseline:viewKey(truth),diff});if(!UUID.test(pinned.operationId))throw new Error('A correction operation could not be created.');
+      pinned=Object.freeze({operationId:uuid(),body:Object.freeze(body),fields:expectedFields(body),baseline:viewKey(truth),diff});if(!UUID.test(pinned.operationId))throw new Error('A correction operation could not be created.');
       content.replaceChildren();originalAndCurrent();const list=node('ul');for(const change of diff)list.append(node('li',`${change.field}: ${change.before} → ${change.after}`));content.append(node('h4','Preview — only these facts will change'),list,node('p','Reason: '+body.reason),node('p','The original record is retained. The server records the current manager’s attribution.'));
       content.append(button('Confirm this correction once',confirm),button('Back to edit',edit),button('Cancel',()=>clear()));setState('PREVIEW','No correction has been saved. Confirm exactly this preview or cancel.');
     }catch(error){status.textContent=error.message||'Correction choices unavailable.';}
   }
-  function showUnknown(){content.replaceChildren();content.append(node('p','The correction may have been saved. Keep this original operation; do not create a replacement.'),node('p','Original operation: '+pinned.operationId),node('p','Reason: '+pinned.body.reason));
-    const list=node('ul');for(const change of pinned.diff)list.append(node('li',`${change.field}: ${change.before} → ${change.after}`));content.append(list,button('Check saved outcome',checkSaved));
+  function showUnknown(){content.replaceChildren();content.append(node('p','The correction may have been saved. Keep this original operation; do not create a replacement.'),node('p','Original operation: '+pinned.operationId));
+    if(pinned.body){const list=node('ul');for(const change of pinned.diff)list.append(node('li',`${change.field}: ${change.before} → ${change.after}`));content.append(list,node('p','Reason: '+pinned.body.reason));}
+    content.append(button('Check saved outcome',checkSaved));
     if(retryAllowed)content.append(button('Retry this exact correction',retry));
     setState('UNKNOWN',retryAllowed?'No matching saved operation was found on the last check. Check again or explicitly retry this exact operation.':'Outcome unknown. Check this original operation’s saved outcome.');}
   function receipt(value){
     if(!value||value.session_id!==selected.session_id||value.operation_id!==pinned.operationId||!UUID.test(value.correction_id)||!instant(value.created_at)||!Array.isArray(value.changed_fields))throw new Error('Matching correction receipt unavailable.');
-    const expected=Object.keys(pinned.body).filter(key=>key.startsWith('corrected_')).map(key=>key.slice(10).replace(/_id$/, '')).sort();
+    const expected=[...pinned.fields].sort();
     if(JSON.stringify([...value.changed_fields].sort())!==JSON.stringify(expected))throw new Error('Correction fields do not match the original operation.');
     return value;
   }
   async function confirm(){
     if(state!=='PREVIEW')return;check();setState('SENDING','Confirming this correction once…');for(const b of content.querySelectorAll('button'))b.disabled=true;
-    let sent=false;
-    try{const fresh=validateTruth(await api.truth(selected.session_id),selected);check();if(viewKey(fresh)!==pinned.baseline){truth=fresh;edit();status.textContent='This record changed since preview. Review the current values and make a new preview.';return;}
-      sent=true;pending=true;const value=await api.save(selected.session_id,pinned.operationId,pinned.body);check();receipt(value);await readSaved();
-    }catch(error){if(!current()){deny();return;}if(sent && error.status===409){pending=false;setState('CONFLICT','This record changed. Reopen it to review current values.');content.replaceChildren();}else if(sent)showUnknown();else{state='PREVIEW';for(const b of content.querySelectorAll('button'))b.disabled=false;status.textContent=error.message||'Current record could not be rechecked. Nothing was sent.';}}
+    const epoch=generation;let sent=false;
+    try{const fresh=await api.truth(selected.session_id);if(epoch!==generation)return;check();validateTruth(fresh,selected);if(viewKey(fresh)!==pinned.baseline){truth=fresh;edit();status.textContent='This record changed since preview. Review the current values and make a new preview.';return;}
+      saveOriginal();sent=true;pending=true;const value=await api.save(selected.session_id,pinned.operationId,pinned.body);if(epoch!==generation)return;check();receipt(value);await readSaved(epoch);
+    }catch(error){if(epoch!==generation)return;if(!current()){deny();return;}if(sent && error.status===409){forgetOriginal();setState('CONFLICT','This record changed. Reopen it to review current values.');content.replaceChildren();}else if(sent)showUnknown();else{state='PREVIEW';for(const b of content.querySelectorAll('button'))b.disabled=false;status.textContent=error.message||'Current record could not be rechecked. Nothing was sent.';}}
   }
-  async function readSaved(){
-    const value=await api.status(selected.session_id,pinned.operationId);check();
-    if(value?.found===false&&value.session_id===selected.session_id&&value.operation_id===pinned.operationId){retryAllowed=true;throw new Error('Original operation not found.');}
+  async function readSaved(epoch){
+    const value=await api.status(selected.session_id,pinned.operationId);if(epoch!==generation)return;check();
+    if(value?.found===false&&value.session_id===selected.session_id&&value.operation_id===pinned.operationId){retryAllowed=!!pinned.body;throw new Error('Original operation not found.');}
     if(value?.found!==true)throw new Error('Original operation readback unavailable.');
     retryAllowed=false;const saved=receipt(value);
-    if(!UUID.test(saved.actor_manager_id)||typeof saved.actor_name!=='string'||!saved.actor_name.trim()||saved.reason!==pinned.body.reason)throw new Error('Original correction attribution unavailable.');const currentTruth=validateTruth(await api.truth(selected.session_id),selected);check();
-    truth=currentTruth;pending=false;content.replaceChildren();originalAndCurrent();content.append(node('p',`Saved correction: ${displayTime(saved.created_at)}. ${saved.actor_name}`),node('p','Reason: '+pinned.body.reason),button('Close correction',()=>clear()));setState('SAVED','This exact correction was confirmed by its saved operation receipt. The current recorded values are shown above.');
+    if(!UUID.test(saved.actor_manager_id)||typeof saved.actor_name!=='string'||!saved.actor_name.trim()||typeof saved.reason!=='string'||!saved.reason.trim()||(pinned.body&&saved.reason!==pinned.body.reason))throw new Error('Original correction attribution unavailable.');const record=await api.truth(selected.session_id);if(epoch!==generation)return;check();const currentTruth=validateTruth(record,selected);
+    truth=currentTruth;forgetOriginal();content.replaceChildren();originalAndCurrent();content.append(node('p',`Saved correction: ${displayTime(saved.created_at)}. ${saved.actor_name}`),node('p','Reason: '+saved.reason),button('Close correction',()=>clear()));setState('SAVED','This exact correction was confirmed by its saved operation receipt. The current recorded values are shown above.');
   }
-  async function retry(){if(state!=='UNKNOWN'||!retryAllowed)return;try{check();setState('SENDING','Retrying the same pinned operation once…');receipt(await api.save(selected.session_id,pinned.operationId,pinned.body));check();await readSaved();}catch{if(current())showUnknown();else deny();}}
-  async function checkSaved(){if(state!=='UNKNOWN')return;try{check();setState('CHECKING','Checking the original saved operation…');await readSaved();}catch{if(current())showUnknown();else deny();}}
-  return {open,clear,preview,confirm,checkSaved,retry,getState:()=>state,hasUnresolved:unresolved,resume:()=>{if(pending&&current())showUnknown();else if(owner&&!current())deny();},revalidate:()=>{if(owner&&!current())deny();},retire:()=>{if(unresolved()){deny();}else clear();}};
+  async function retry(){
+    if(state!=='UNKNOWN'||!retryAllowed||!pinned?.body)return;
+    const epoch=generation;retryAllowed=false;
+    try{check();setState('SENDING','Retrying the same pinned operation once…');const value=await api.save(selected.session_id,pinned.operationId,pinned.body);if(epoch!==generation)return;check();receipt(value);await readSaved(epoch);}
+    catch{if(epoch===generation){if(current())showUnknown();else deny();}}
+  }
+  async function checkSaved(){
+    if(state!=='UNKNOWN')return;const epoch=generation;retryAllowed=false;
+    try{check();setState('CHECKING','Checking the original saved operation…');await readSaved(epoch);}
+    catch{if(epoch===generation){if(current())showUnknown();else deny();}}
+  }
+  function retire(){
+    if(!pending){generation++;owner=null;scope=null;pinned=null;state='EMPTY';content.replaceChildren();panel.hidden=true;return;}
+    generation++;owner=null;retryAllowed=false;deny();panel.hidden=true;
+  }
+  function resume(){
+    if(!canWrite()){if(owner)retire();return;}
+    const nextScope=recoveryBinding(),nextOwner=binding();
+    if(!nextScope||!nextOwner)return;
+    if(owner===nextOwner&&scope===nextScope)return;
+    const retained=pending&&scope===nextScope;
+    generation++;content.replaceChildren();panel.hidden=true;state='EMPTY';retryAllowed=false;
+    if(!retained){pending=false;pinned=null;selected=null;}
+    owner=nextOwner;scope=nextScope;
+    try{
+      if((retained&&pinned)||restoreOriginal()){panel.hidden=false;showUnknown();}
+    }catch{panel.hidden=false;setState('UNAVAILABLE','The saved correction could not be verified. No correction was sent.');}
+  }
+  return {open,clear,preview,confirm,checkSaved,retry,getState:()=>state,hasUnresolved:unresolved,resume,revalidate:resume,retire};
 }

@@ -19,7 +19,18 @@ function fixture(shared){
 const results=[];async function test(name,fn){await fn();results.push({name,passed:true});}
 await test('explicit preview and cancel make no writes',async()=>{const f=fixture();await f.preview();assert.equal(f.writes.length,0);await f.click('Cancel preview');assert.equal(f.panel.hasUnresolved(),false);assert.equal(f.state.rows.size,0);});
 await test('lost response readback enables only identical retry',async()=>{const f=fixture();await f.preview();await f.click('Confirm clear');assert.equal(f.writes.length,1);assert.equal(f.panel.getPending().operation_id,op);await f.panel.retry();assert.equal(f.writes.length,1);await f.click('Check original clear');f.fail=false;await f.click('Retry this exact clear');assert.deepEqual(f.writes[0],f.writes[1]);assert.equal(f.panel.hasUnresolved(),false);assert.equal(f.state.rows.size,0);assert.match(f.status.textContent,/confirmed/);});
-await test('identity change retains original without writes',async()=>{const f=fixture();await f.preview();f.owner='changed';f.panel.revalidate();await f.panel.retry();assert.equal(f.writes.length,0);assert.ok(f.panel.hasUnresolved());assert.equal(f.content.children.length,0);});
+await test('renewal retires unsent preview and can reload without writing',async()=>{
+ const f=fixture();await f.preview();f.owner='refreshed-same-manager';f.panel.revalidate();await f.panel.retry();
+ assert.equal(f.writes.length,0);assert.equal(f.panel.hasUnresolved(),false);assert.equal(f.state.rows.size,0);
+ assert.equal(await f.panel.load(),true);assert.equal(f.reads,2);
+});
+await test('same-page manager switch isolates an attempted clear and renewal can reconcile it',async()=>{
+ const f=fixture();await f.preview();await f.click('Confirm clear');f.owner='other-token';f.scope='other';f.panel.revalidate();
+ assert.equal(await f.panel.load(),true);assert.equal(f.panel.hasUnresolved(),false);assert.equal(f.state.rows.size,1);
+ f.owner='renewed-token';f.scope='original-selected-name';await f.panel.load();
+ assert.equal(f.panel.getPending().operation_id,op);
+ f.outcome={found:true,...result};await f.panel.check();assert.equal(f.panel.hasUnresolved(),false);assert.equal(f.writes.length,1);
+});
 await test('cancel and duplicate confirm during POST cannot lose original',async()=>{const f=fixture();let release;f.clear=()=>new Promise(r=>release=r);await f.preview();const cancel=find(f.content,'Cancel preview'),confirm=find(f.content,'Confirm clear');await f.click('Confirm clear');cancel.handlers.click();confirm.handlers.click();await f.panel.load();assert.ok(f.panel.hasUnresolved());assert.equal(f.reads,1);assert.equal(f.writes.length,1);assert.equal(f.state.rows.size,1);release(result);await settle();assert.equal(f.panel.hasUnresolved(),false);});
 await test('recreated controller queries saved original before any retry',async()=>{const f=fixture();await f.preview();await f.click('Confirm clear');const restored=fixture(f.state);await restored.panel.load();assert.deepEqual(restored.panel.getPending(),f.panel.getPending());assert.equal(restored.reads,0);await restored.panel.retry();assert.equal(restored.writes.length,0);restored.outcome={found:true,...result};await restored.panel.check();assert.equal(restored.queries.length,1);assert.equal(restored.writes.length,0);assert.equal(restored.state.rows.size,0);});
 await test('second tab cannot overwrite or dispatch during original request',async()=>{const a=fixture();await a.preview();const b=fixture(a.state);await b.preview();let release;a.clear=()=>new Promise(r=>release=r);await a.click('Confirm clear');await b.click('Confirm clear');assert.equal(b.writes.length,0);assert.equal(a.state.rows.size,1);release(result);await settle();});

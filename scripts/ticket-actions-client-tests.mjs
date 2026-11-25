@@ -1,12 +1,12 @@
 import test from'node:test';import assert from'node:assert/strict';import{createRequire}from'node:module';
 const T=createRequire(import.meta.url)('../memphis-ticket-actions.js');
 const MID='11000000-0000-4000-8000-000000000001',CID='12000000-0000-4000-8000-000000000001',TID='13000000-0000-4000-8000-000000000001',OTHER='13000000-0000-4000-8000-000000000002';
-function fixture(){let account={role:'ops_manager',manager_id:MID,credential_id:CID,device_id:'fixture-browser',token:'fixture-only',expires_at:new Date(Date.now()+600000).toISOString(),read_only:true,permissions:{schema:'custodial.manager-permissions.v1',read:true,close_scan_tickets:true,owner:false}},mode='normal',hold=null;const calls=[];
+function fixture(journal){let account={role:'ops_manager',manager_id:MID,credential_id:CID,device_id:'fixture-browser',token:'fixture-only',expires_at:new Date(Date.now()+600000).toISOString(),read_only:true,permissions:{schema:'custodial.manager-permissions.v1',read:true,close_scan_tickets:true,owner:false}},mode='normal',hold=null;const calls=[];
  const auth={readSession:()=>account,opsManagerAuthHeaders:async()=>({Authorization:'Bearer fixture-only','X-Device-Id':'fixture-browser'})};
  const eligible={schema:'custodial.ticket-capabilities.v1',manager_id:MID,credential_id:CID,tickets:[{ticket_id:TID,found:true,status:'open',scan_session_verified:true,can_close:true},{ticket_id:OTHER,found:true,status:'open',scan_session_verified:false,can_close:false}]};
  const receipt={ticket_id:TID,status:'closed',outcome:'mark_fixed',external_work_order_reference:null,closed_at:new Date().toISOString(),closed_by:'manager:'+MID+':Fixture'};
- const fetchImpl=async(url,options)=>{calls.push({url,options});if(hold)await hold;if(mode==='offline')throw Error('network failure');if(mode==='denied')return{ok:false,json:async()=>({ok:false,error:'Current closure access denied'})};return{ok:true,json:async()=>({ok:true,data:structuredClone(url.includes('ticket-capabilities')?eligible:receipt)})};};
- const actions=T.create({auth,fetchImpl});return{actions,auth,calls,eligible,receipt,patch:p=>account={...account,...p},setMode:m=>mode=m,setHold:p=>hold=p};}
+ const fetchImpl=async(url,options)=>{calls.push({url,options});if(hold)await hold;if(mode==='offline')throw Error('network failure');if(mode==='denied')return{ok:false,json:async()=>({ok:false,error:'Current closure access denied'})};return{ok:true,json:async()=>({ok:true,data:structuredClone(url.includes('ticket-capabilities')?{...eligible,tickets:eligible.tickets.filter(row=>new URL(url).searchParams.get('ids').split(',').includes(row.ticket_id))}:receipt)})};};
+ const actions=T.create({auth,fetchImpl,journal});return{actions,auth,calls,eligible,receipt,patch:p=>account={...account,...p},setMode:m=>mode=m,setHold:p=>hold=p};}
 const rows=[{ticket_id:TID},{ticket_id:OTHER}];
 test('only verified scan ticket is offered to delegate',async()=>{const f=fixture();await f.actions.refresh(rows);assert.equal(f.actions.status(TID).can_close,true);assert.equal(f.actions.status(OTHER).can_close,false);await assert.rejects(f.actions.close(OTHER,{outcome:'mark_fixed'}));assert.equal(f.calls.length,1);});
 test('valid closed receipt matches exact ticket and actual closer',async()=>{const f=fixture();await f.actions.refresh(rows);const r=await f.actions.close(TID,{outcome:'mark_fixed'});assert.equal(r.ticket_id,TID);assert.equal(f.actions.status(TID).can_close,false);assert.deepEqual(JSON.parse(f.calls[1].options.body),{ticket_id:TID,outcome:'mark_fixed',external_work_order_reference:null,close_notes:null});assert.equal(f.calls[1].options.headers.Authorization,'Bearer fixture-only');});
@@ -42,4 +42,26 @@ test('revoked cohort binding invalidates previously read ticket eligibility',asy
  const f=fixture();let current=true;f.patch({auth_mode:'custodial_leadership_pin',permissions:cohortPermissions});
  f.auth.isCustodialManagementAdmin=()=>current;await f.actions.refresh(rows);current=false;
  assert.equal(f.actions.status(TID),null);await assert.rejects(f.actions.close(TID,{outcome:'mark_fixed'}));assert.equal(f.calls.length,1);
+});
+
+test('lost reply retains original across controller refresh and retries only its exact typed body',async()=>{
+ const journal=T.createJournal(),a=fixture(journal),b=fixture(journal);
+ await a.actions.refresh(rows);a.setMode('offline');
+ await assert.rejects(a.actions.close(TID,{outcome:'mark_fixed',notes:'Original reason'}),/network failure/);
+ await b.actions.refresh(rows);
+ await assert.rejects(b.actions.close(TID,{outcome:'work_order_sent',reference:'different'}),/original closure/);
+ await assert.rejects(b.actions.retry(TID),/Check the original/);
+ await b.actions.readOriginal(TID);
+ await b.actions.retry(TID);
+ assert.equal(b.calls.filter(x=>x.url.endsWith('/close-ticket')).length,1);
+ assert.deepEqual(b.calls.at(-1).options.body,a.calls.at(-1).options.body);
+ assert.equal(b.actions.recoveries().length,0);
+});
+test('same principal is isolated by claimed identity while retry requires fresh auth readback',async()=>{
+ const journal=T.createJournal(),a=fixture(journal),b=fixture(journal);
+ a.patch({claimed_manager_id:MID});b.patch({claimed_manager_id:OTHER});
+ await a.actions.refresh(rows);a.setMode('offline');await assert.rejects(a.actions.close(TID,{outcome:'mark_fixed'}));
+ assert.deepEqual(b.actions.recoveries(),[]);
+ a.setMode('normal');await a.actions.readOriginal(TID);a.patch({token:'renewed'});
+ await assert.rejects(a.actions.retry(TID),/Check the original/);
 });
