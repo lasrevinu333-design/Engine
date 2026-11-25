@@ -756,17 +756,7 @@
         const button = event.target.closest("[data-action]");
         if (!button) return;
         const action = button.getAttribute("data-action");
-        if (action === "close-ticket") {
-          openActionModal({
-            type: "close-ticket",
-            id: button.getAttribute("data-ticket-id"),
-            title: "Close Maintenance Ticket",
-            subtitle: "Add optional close notes, then confirm.",
-            placeholder: "Close notes. Leave blank if you just need it gone.",
-            confirmText: "Close Ticket",
-            buttonClass: "warning"
-          });
-        }
+
         if (action === "force-close-session") {
           openActionModal({
             type: "force-close-session",
@@ -965,19 +955,7 @@
           setMessage(response.canary_paused === true ? "Physical release canary paused." : "Physical release canary resumed after authority checks passed.", "good");
           return;
         }
-        if (action.type === 'close-ticket') {
-          setMessage("Closing ticket...", "info");
-          await apiFetch("/close-ticket", {
-            method: "POST",
-            body: {
-              ticket_id: action.id,
-              close_notes: notes || null
-            }
-          });
-          closeActionModal();
-          await refreshAdmin("Ticket closed", false);
-          return;
-        }
+
         if (action.type === 'force-close-session') {
           setMessage("Force-closing session...", "info");
           await apiFetch("/force-close-session", {
@@ -1165,7 +1143,7 @@
         els.ticketsPanel.innerHTML = emptyState("No open maintenance tickets.");
         return;
       }
-      els.ticketsPanel.innerHTML = `<div class="cardList">${tickets.map((ticket) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(ticket.maintenance_issue || "Ticket")}</div><div class="itemSub">${escapeHtml(ticket.location_name || ticket.location_code || "Unknown location")} • ${escapeHtml(ticket.date_submitted_display || "No submission time")}</div></div>${renderPill(ticket.out_of_order ? "Out of order" : "Open", ticket.out_of_order ? "bad" : "warn")}</div><div class="itemMetaGrid"><div><strong>Reported by:</strong> ${escapeHtml(ticket.reported_by || "Unknown")}</div><div><strong>Location code:</strong> ${escapeHtml(ticket.location_code || "—")}</div><div><strong>Fixture:</strong> ${escapeHtml(ticket.fixture_type || "—")}</div><div><strong>Identifier:</strong> ${escapeHtml(ticket.fixture_identifier || "—")}</div><div><strong>Created:</strong> ${escapeHtml(ticket.created_at_display || "—")}</div><div><strong>Ticket ID:</strong> <span class="inlineCode">${escapeHtml(ticket.ticket_id || "")}</span></div></div><div class="itemActions"><button class="button warning" type="button" data-action="close-ticket" data-ticket-id="${escapeHtml(ticket.ticket_id || "")}">Close Ticket</button></div></article>`).join("")}</div>`;
+      els.ticketsPanel.innerHTML = `<div class="cardList">${tickets.map((ticket) => `<article class="itemCard"><div class="itemTop"><div><div class="itemTitle">${escapeHtml(ticket.maintenance_issue || "Ticket")}</div><div class="itemSub">${escapeHtml(ticket.location_name || ticket.location_code || "Unknown location")} • ${escapeHtml(ticket.date_submitted_display || "No submission time")}</div></div>${renderPill(ticket.out_of_order ? "Out of order" : "Open", ticket.out_of_order ? "bad" : "warn")}</div><div class="itemMetaGrid"><div><strong>Reported by:</strong> ${escapeHtml(ticket.reported_by || "Unknown")}</div><div><strong>Location code:</strong> ${escapeHtml(ticket.location_code || "—")}</div><div><strong>Fixture:</strong> ${escapeHtml(ticket.fixture_type || "—")}</div><div><strong>Identifier:</strong> ${escapeHtml(ticket.fixture_identifier || "—")}</div><div><strong>Created:</strong> ${escapeHtml(ticket.created_at_display || "—")}</div><div><strong>Ticket ID:</strong> <span class="inlineCode">${escapeHtml(ticket.ticket_id || "")}</span></div></div><div class="itemActions"><a class="button warning" href="./dashboard.html#tickets-section">Review ticket closures in Dashboard</a></div></article>`).join("")}</div>`;
     }
 
     function renderDashboard() {

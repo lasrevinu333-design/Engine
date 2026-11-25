@@ -1,0 +1,346 @@
+{
+  "managerRecoveryHistory": [
+    {
+      "path": "operational-insights.js",
+      "kind": "changed",
+      "prior_bytes": 40249,
+      "prior_sha256": "e72d8efca2150f81ea1293b828312412c3317dd563bbc31ac7bc084b16e3dfdb",
+      "current_sha256": "86fe03a1247864e7f4e0be24ab9f4318ecd94c484593e14bee05f64f141fa9d1",
+      "hunks": [
+        {
+          "old_start": 67,
+          "old_count": 0,
+          "new_start": 68,
+          "new_count": 5,
+          "before": [],
+          "after": [
+            "  const correctionRecoveryBinding=()=>{",
+            "    if(!canCorrect())return null;",
+            "    const session=window.MemphisAuth.readSession();",
+            "    return JSON.stringify([session.role,session.manager_id,session.claimed_manager_id,session.credential_id,session.device_id,session.auth_mode]);",
+            "  };"
+          ]
+        },
+        {
+          "old_start": 85,
+          "old_count": 1,
+          "new_start": 90,
+          "new_count": 1,
+          "before": [
+            "  async function openCorrection(row) {"
+          ],
+          "after": [
+            "  async function getCorrectionPanel() {"
+          ]
+        },
+        {
+          "old_start": 87,
+          "old_count": 1,
+          "new_start": 92,
+          "new_count": 1,
+          "before": [
+            "    correctionModule ||= import('./manager-cleaning-correction.mjs');"
+          ],
+          "after": [
+            "    correctionModule ||= import('./manager-cleaning-correction.mjs?v=20261125-r1');"
+          ]
+        },
+        {
+          "old_start": 90,
+          "old_count": 1,
+          "new_start": 95,
+          "new_count": 1,
+          "before": [
+            "    correctionPanel ||= createCleaningCorrectionPanel({document,panel:document.getElementById('cleaning-correction-panel'),status:document.getElementById('cleaning-correction-status'),content:document.getElementById('cleaning-correction-content'),binding:correctionBinding,canWrite:canCorrect,api:{"
+          ],
+          "after": [
+            "    correctionPanel ||= createCleaningCorrectionPanel({document,panel:document.getElementById('cleaning-correction-panel'),status:document.getElementById('cleaning-correction-status'),content:document.getElementById('cleaning-correction-content'),binding:correctionBinding,recoveryBinding:correctionRecoveryBinding,storage:window.sessionStorage,canWrite:canCorrect,api:{"
+          ]
+        },
+        {
+          "old_start": 96,
+          "old_count": 1,
+          "new_start": 101,
+          "new_count": 7,
+          "before": [
+            "    await correctionPanel.open(row);"
+          ],
+          "after": [
+            "    return correctionPanel;",
+            "  }",
+            "  async function openCorrection(row) {await (await getCorrectionPanel()).open(row);}",
+            "  function recoverCorrection(){",
+            "    if(!canCorrect())return;",
+            "    try{if(!window.sessionStorage.getItem('mz_cleaning_correction:v1:'+encodeURIComponent(correctionRecoveryBinding())))return;}catch{return;}",
+            "    void getCorrectionPanel().then(panel=>panel.resume()).catch(()=>{});"
+          ]
+        },
+        {
+          "old_start": 459,
+          "old_count": 1,
+          "new_start": 470,
+          "new_count": 1,
+          "before": [
+            "    correctionPanel?.revalidate();"
+          ],
+          "after": [
+            "    correctionPanel?.revalidate();if(!correctionPanel)recoverCorrection();"
+          ]
+        },
+        {
+          "old_start": 593,
+          "old_count": 1,
+          "new_start": 604,
+          "new_count": 1,
+          "before": [
+            "  void loadAll();"
+          ],
+          "after": [
+            "  void loadAll().then(recoverCorrection);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "admin.html",
+      "kind": "changed",
+      "prior_bytes": 53174,
+      "prior_sha256": "a30d873a645b7688f3c7945c75137c00419baec0fa879c616c518cfd96e5c8e3",
+      "current_sha256": "34917ea65ead6a1f4ea3cca3f1905823f6225ae429f6fbba286023ff5681fc89",
+      "hunks": [
+        {
+          "old_start": 759,
+          "old_count": 11,
+          "new_start": 759,
+          "new_count": 1,
+          "before": [
+            "        if (action === \"close-ticket\") {",
+            "          openActionModal({",
+            "            type: \"close-ticket\",",
+            "            id: button.getAttribute(\"data-ticket-id\"),",
+            "            title: \"Close Maintenance Ticket\",",
+            "            subtitle: \"Add optional close notes, then confirm.\",",
+            "            placeholder: \"Close notes. Leave blank if you just need it gone.\",",
+            "            confirmText: \"Close Ticket\",",
+            "            buttonClass: \"warning\"",
+            "          });",
+            "        }"
+          ],
+          "after": [
+            ""
+          ]
+        },
+        {
+          "old_start": 968,
+          "old_count": 13,
+          "new_start": 958,
+          "new_count": 1,
+          "before": [
+            "        if (action.type === 'close-ticket') {",
+            "          setMessage(\"Closing ticket...\", \"info\");",
+            "          await apiFetch(\"/close-ticket\", {",
+            "            method: \"POST\",",
+            "            body: {",
+            "              ticket_id: action.id,",
+            "              close_notes: notes || null",
+            "            }",
+            "          });",
+            "          closeActionModal();",
+            "          await refreshAdmin(\"Ticket closed\", false);",
+            "          return;",
+            "        }"
+          ],
+          "after": [
+            ""
+          ]
+        },
+        {
+          "old_start": 1168,
+          "old_count": 1,
+          "new_start": 1146,
+          "new_count": 1,
+          "before": [
+            "      els.ticketsPanel.innerHTML = `<div class=\"cardList\">${tickets.map((ticket) => `<article class=\"itemCard\"><div class=\"itemTop\"><div><div class=\"itemTitle\">${escapeHtml(ticket.maintenance_issue || \"Ticket\")}</div><div class=\"itemSub\">${escapeHtml(ticket.location_name || ticket.location_code || \"Unknown location\")} • ${escapeHtml(ticket.date_submitted_display || \"No submission time\")}</div></div>${renderPill(ticket.out_of_order ? \"Out of order\" : \"Open\", ticket.out_of_order ? \"bad\" : \"warn\")}</div><div class=\"itemMetaGrid\"><div><strong>Reported by:</strong> ${escapeHtml(ticket.reported_by || \"Unknown\")}</div><div><strong>Location code:</strong> ${escapeHtml(ticket.location_code || \"—\")}</div><div><strong>Fixture:</strong> ${escapeHtml(ticket.fixture_type || \"—\")}</div><div><strong>Identifier:</strong> ${escapeHtml(ticket.fixture_identifier || \"—\")}</div><div><strong>Created:</strong> ${escapeHtml(ticket.created_at_display || \"—\")}</div><div><strong>Ticket ID:</strong> <span class=\"inlineCode\">${escapeHtml(ticket.ticket_id || \"\")}</span></div></div><div class=\"itemActions\"><button class=\"button warning\" type=\"button\" data-action=\"close-ticket\" data-ticket-id=\"${escapeHtml(ticket.ticket_id || \"\")}\">Close Ticket</button></div></article>`).join(\"\")}</div>`;"
+          ],
+          "after": [
+            "      els.ticketsPanel.innerHTML = `<div class=\"cardList\">${tickets.map((ticket) => `<article class=\"itemCard\"><div class=\"itemTop\"><div><div class=\"itemTitle\">${escapeHtml(ticket.maintenance_issue || \"Ticket\")}</div><div class=\"itemSub\">${escapeHtml(ticket.location_name || ticket.location_code || \"Unknown location\")} • ${escapeHtml(ticket.date_submitted_display || \"No submission time\")}</div></div>${renderPill(ticket.out_of_order ? \"Out of order\" : \"Open\", ticket.out_of_order ? \"bad\" : \"warn\")}</div><div class=\"itemMetaGrid\"><div><strong>Reported by:</strong> ${escapeHtml(ticket.reported_by || \"Unknown\")}</div><div><strong>Location code:</strong> ${escapeHtml(ticket.location_code || \"—\")}</div><div><strong>Fixture:</strong> ${escapeHtml(ticket.fixture_type || \"—\")}</div><div><strong>Identifier:</strong> ${escapeHtml(ticket.fixture_identifier || \"—\")}</div><div><strong>Created:</strong> ${escapeHtml(ticket.created_at_display || \"—\")}</div><div><strong>Ticket ID:</strong> <span class=\"inlineCode\">${escapeHtml(ticket.ticket_id || \"\")}</span></div></div><div class=\"itemActions\"><a class=\"button warning\" href=\"./dashboard.html#tickets-section\">Review ticket closures in Dashboard</a></div></article>`).join(\"\")}</div>`;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "dashboard.html",
+      "kind": "changed",
+      "prior_bytes": 57183,
+      "prior_sha256": "bf70a4fa777b294e753d57f64d3c62a6f1828dc0deec778ccb52b14a20a534a1",
+      "current_sha256": "d1258a31c2d93ecb94643b30e702bea523783da46cdf29d9b28fd520f94f58b4",
+      "hunks": [
+        {
+          "old_start": 74,
+          "old_count": 0,
+          "new_start": 75,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  <section id=\"ticket-recovery\" aria-label=\"Original ticket closures\" aria-live=\"polite\"></section>"
+          ]
+        },
+        {
+          "old_start": 84,
+          "old_count": 1,
+          "new_start": 85,
+          "new_count": 1,
+          "before": [
+            "<script src=\"./memphis-ticket-actions.js\"></script>"
+          ],
+          "after": [
+            "<script src=\"./memphis-ticket-actions.js?v=20261125-r1\"></script>"
+          ]
+        },
+        {
+          "old_start": 90,
+          "old_count": 1,
+          "new_start": 91,
+          "new_count": 2,
+          "before": [
+            "    let ticketActions=window.MemphisTicketActions.create();"
+          ],
+          "after": [
+            "    const ticketJournal=window.MemphisTicketActions.createJournal({storage:window.localStorage,locks:window.navigator?.locks});",
+            "    let ticketActions=window.MemphisTicketActions.create({journal:ticketJournal});"
+          ]
+        },
+        {
+          "old_start": 103,
+          "old_count": 0,
+          "new_start": 106,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      document.getElementById('ticket-recovery')?.replaceChildren();"
+          ]
+        },
+        {
+          "old_start": 110,
+          "old_count": 1,
+          "new_start": 113,
+          "new_count": 1,
+          "before": [
+            "    function dashboardTicketActions(binding){ return window.MemphisTicketActions.create({auth:{readSession:()=>matchesDashboardBinding(binding)?window.MemphisAuth.readSession():null,isCustodialManagementAdmin:session=>matchesDashboardBinding(binding)&&session===binding.session&&window.MemphisAuth.isCustodialManagementAdmin?.(session)===true,opsManagerAuthHeaders:()=>dashboardAuthHeaders(binding)}}); }"
+          ],
+          "after": [
+            "    function dashboardTicketActions(binding){ return window.MemphisTicketActions.create({journal:ticketJournal,auth:{readSession:()=>matchesDashboardBinding(binding)?window.MemphisAuth.readSession():null,isCustodialManagementAdmin:session=>matchesDashboardBinding(binding)&&session===binding.session&&window.MemphisAuth.isCustodialManagementAdmin?.(session)===true,opsManagerAuthHeaders:()=>dashboardAuthHeaders(binding)}}); }"
+          ]
+        },
+        {
+          "old_start": 148,
+          "old_count": 1,
+          "new_start": 151,
+          "new_count": 4,
+          "before": [
+            "      catch(error){if(!currentDashboardRefresh(context))return;button.disabled=false;button.textContent='Close';els.refreshStatus.textContent=`Close not verified: ${safe(error)}`;}"
+          ],
+          "after": [
+            "      catch(error){if(!currentDashboardRefresh(context))return;let held=true;try{held=actions.recoveries().some(item=>item.ticket_id===String(ticketId).toLowerCase());}catch{}",
+            "        button.disabled=held;button.textContent=held?'Check original closure':'Close';",
+            "        if(held){renderDashboardViews();wireCloseButtons();}",
+            "        els.refreshStatus.textContent=`Close not verified: ${safe(error)}`;}"
+          ]
+        },
+        {
+          "old_start": 151,
+          "old_count": 1,
+          "new_start": 157,
+          "new_count": 37,
+          "before": [
+            "    function wireCloseButtons(){ els.ticketsWrap.querySelectorAll(\".closeBtn\").forEach((btn)=>{ btn.addEventListener(\"click\",()=>{ if(btn.disabled) return; closeTicket(btn.dataset.ticketId,btn); }); }); }"
+          ],
+          "after": [
+            "    function wireCloseButtons(){",
+            "      const recovery=document.getElementById('ticket-recovery'),binding=dashboardPublicationBinding,actions=ticketActions;",
+            "      let originals=[];",
+            "      try{originals=actions.recoveries();}catch{if(recovery)recovery.textContent='Saved ticket closure storage is unavailable.';return;}",
+            "      const held=new Set(originals.map(item=>item.ticket_id));",
+            "      els.ticketsWrap.querySelectorAll(\".closeBtn\").forEach(btn=>{",
+            "        if(held.has(String(btn.dataset.ticketId).toLowerCase())){btn.disabled=true;btn.textContent='Check original closure';}",
+            "        btn.addEventListener(\"click\",()=>{if(!btn.disabled)void closeTicket(btn.dataset.ticketId,btn);});",
+            "      });",
+            "      if(!recovery)return;",
+            "      const nodes=originals.map(item=>{",
+            "        const row=document.createElement('p'),feedback=document.createElement('span'),check=document.createElement('button'),retry=document.createElement('button');",
+            "        const current=()=>binding&&matchesDashboardBinding(binding)&&row.isConnected;",
+            "        row.textContent='Closure pending for ticket '+item.ticket_id+'. ';",
+            "        check.type=retry.type='button';check.textContent='Check original closure';retry.textContent='Submit same closure again';retry.hidden=true;",
+            "        check.onclick=async()=>{",
+            "          if(!current())return;",
+            "          check.disabled=true;retry.hidden=true;",
+            "          try{",
+            "            const ticket=await actions.readOriginal(item.ticket_id);",
+            "            if(!current())return;",
+            "            feedback.textContent=ticket.status==='closed'?'Ticket is closed. Submit the same closure to verify the exact saved outcome.':'The original outcome is unconfirmed. You may submit the same outcome, reference and notes.';",
+            "            retry.hidden=ticket.status!=='closed'&&!ticket.can_close;",
+            "          }catch(error){if(current())feedback.textContent=safe(error);}",
+            "          finally{if(current())check.disabled=false;}",
+            "        };",
+            "        retry.onclick=async()=>{",
+            "          if(!current())return;retry.hidden=true;check.disabled=true;",
+            "          try{",
+            "            await actions.retry(item.ticket_id);",
+            "            if(current()){await refreshData();if(matchesDashboardBinding(binding))els.refreshStatus.textContent='Ticket closure verified.';}",
+            "          }catch(error){if(current()){feedback.textContent=safe(error);check.disabled=false;}}",
+            "        };",
+            "        row.append(check,' ',retry,' ',feedback);return row;",
+            "      });",
+            "      if(nodes.length||recovery.childNodes?.length)recovery.replaceChildren(...nodes);",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "operational-insights.html",
+      "kind": "changed",
+      "prior_bytes": 9939,
+      "prior_sha256": "20b289efab15603343496e6ced6cb519e7c88d0cc2b09699b09bf4317b025687",
+      "current_sha256": "e4bd8d94950ee6ff62d26a424345d12dc78f7908f6bb0145e1038f12fe915546",
+      "hunks": [
+        {
+          "old_start": 124,
+          "old_count": 1,
+          "new_start": 124,
+          "new_count": 1,
+          "before": [
+            "  <script src=\"./operational-insights.js?v=20261114-r44\"></script>"
+          ],
+          "after": [
+            "  <script src=\"./operational-insights.js?v=20261125-r1\"></script>"
+          ]
+        }
+      ]
+    }
+  ],
+  "core_sources": [
+    {
+      "path": "operational-insights.js",
+      "bytes": 41035,
+      "sha256": "86fe03a1247864e7f4e0be24ab9f4318ecd94c484593e14bee05f64f141fa9d1"
+    }
+  ],
+  "presentation_sources": [
+    {
+      "path": "admin.html",
+      "bytes": 52278,
+      "sha256": "34917ea65ead6a1f4ea3cca3f1905823f6225ae429f6fbba286023ff5681fc89"
+    },
+    {
+      "path": "dashboard.html",
+      "bytes": 60031,
+      "sha256": "d1258a31c2d93ecb94643b30e702bea523783da46cdf29d9b28fd520f94f58b4"
+    },
+    {
+      "path": "operational-insights.html",
+      "bytes": 9938,
+      "sha256": "e4bd8d94950ee6ff62d26a424345d12dc78f7908f6bb0145e1038f12fe915546"
+    }
+  ]
+}

@@ -65,6 +65,11 @@
     const session=window.MemphisAuth?.readSession?.();
     return session?.role==='ops_manager'&&session.read_only===false&&Date.parse(session.expires_at)>Date.now()&&window.MemphisAuth?.canMutateOpsManagerSurface?.(session)===true;
   };
+  const correctionRecoveryBinding=()=>{
+    if(!canCorrect())return null;
+    const session=window.MemphisAuth.readSession();
+    return JSON.stringify([session.role,session.manager_id,session.claimed_manager_id,session.credential_id,session.device_id,session.auth_mode]);
+  };
   async function correctionEnvelope(path,{method='GET',body,operationId,contract='cleaning-truth.v1'}={}) {
     if(!canCorrect())throw new Error('Current full manager access is required.');
     const owner=correctionBinding(),headers=await window.MemphisAuth.opsManagerAuthHeaders();
@@ -82,18 +87,24 @@
       return result.data;
     } finally {clearTimeout(timer);}
   }
-  async function openCorrection(row) {
+  async function getCorrectionPanel() {
     const owner=correctionBinding();
-    correctionModule ||= import('./manager-cleaning-correction.mjs');
+    correctionModule ||= import('./manager-cleaning-correction.mjs?v=20261125-r1');
     const {createCleaningCorrectionPanel}=await correctionModule;
     if(owner!==correctionBinding()||!canCorrect())throw new Error('Manager access changed.');
-    correctionPanel ||= createCleaningCorrectionPanel({document,panel:document.getElementById('cleaning-correction-panel'),status:document.getElementById('cleaning-correction-status'),content:document.getElementById('cleaning-correction-content'),binding:correctionBinding,canWrite:canCorrect,api:{
+    correctionPanel ||= createCleaningCorrectionPanel({document,panel:document.getElementById('cleaning-correction-panel'),status:document.getElementById('cleaning-correction-status'),content:document.getElementById('cleaning-correction-content'),binding:correctionBinding,recoveryBinding:correctionRecoveryBinding,storage:window.sessionStorage,canWrite:canCorrect,api:{
       truth:id=>correctionEnvelope(`/admin-api/custodial/cleaning-sessions/${encodeURIComponent(id)}/truth`),
       choices:()=>correctionEnvelope('/admin-api/custodial/cleaning-correction-choices',{contract:'cleaning-correction-choices.v1'}),
       save:(id,operationId,body)=>correctionEnvelope(`/admin-api/custodial/cleaning-sessions/${encodeURIComponent(id)}/corrections`,{method:'POST',operationId,body}),
       status:(id,operationId)=>correctionEnvelope(`/admin-api/custodial/cleaning-sessions/${encodeURIComponent(id)}/corrections/${encodeURIComponent(operationId)}`),
     }});
-    await correctionPanel.open(row);
+    return correctionPanel;
+  }
+  async function openCorrection(row) {await (await getCorrectionPanel()).open(row);}
+  function recoverCorrection(){
+    if(!canCorrect())return;
+    try{if(!window.sessionStorage.getItem('mz_cleaning_correction:v1:'+encodeURIComponent(correctionRecoveryBinding())))return;}catch{return;}
+    void getCorrectionPanel().then(panel=>panel.resume()).catch(()=>{});
   }
 
   function safe(error) {
@@ -456,7 +467,7 @@
   function revalidateAuthority(){
     const current=principal();
     if(settledOwners.size && [...settledOwners.values()].some(owner=>owner.key!==current || owner.auth!==window.MemphisAuth || owner.mobile!==window.MemphisMobile || owner.security!==window.MemphisCustodialSecurity))withdrawAuthority();
-    correctionPanel?.revalidate();
+    correctionPanel?.revalidate();if(!correctionPanel)recoverCorrection();
   }
   function armExpiry(){
     cancelExpiry();if(custodialAuthority() || !window.setTimeout)return;
@@ -590,5 +601,5 @@
 
   const hashTab = () => {const name=String(window.location?.hash || '').replace(/^#panel-/, '');if(els.tabs.some(tab=>tab.dataset.tab===name))setTab(name);};
   window.addEventListener('hashchange', hashTab);hashTab();
-  void loadAll();
+  void loadAll().then(recoverCorrection);
 })();

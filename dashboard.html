@@ -72,6 +72,7 @@
       <div class="footer"><div class="refreshBadge">Dashboard refreshes automatically every 30 seconds.</div><div class="refreshBadge" id="refresh-status">Waiting for first refresh…</div></div>
     </div>
   </div>
+  <section id="ticket-recovery" aria-label="Original ticket closures" aria-live="polite"></section>
   <dialog id="ticket-close-dialog" style="max-width:520px;width:calc(100% - 32px);border:1px solid var(--trail-control-border,#778b72);border-radius:16px;background:var(--trail-surface,#10202b);color:var(--trail-ink,#fff);padding:22px">
     <form method="dialog"><h2>Close ticket</h2><p>Select what actually happened. This does not submit a work order.</p>
       <label for="ticket-close-outcome">Outcome</label><select id="ticket-close-outcome" required style="display:block;width:100%;min-height:44px;margin:8px 0 16px"><option value="">Choose outcome</option><option value="mark_fixed">Issue fixed</option><option value="work_order_sent">Work order already submitted</option></select>
@@ -81,13 +82,14 @@
     </form>
   </dialog>
   <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
-<script src="./memphis-ticket-actions.js"></script>
+<script src="./memphis-ticket-actions.js?v=20261125-r1"></script>
 <script>
     const CONFIG={APP_VERSION:"release-2026.07.19.custodial-v3.12",REQUIRED_DASHBOARD_CONTRACT_VERSION:"dashboard.v1",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version",API_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/summary",WORK_ALERTS_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/"+("work-session-"+"alerts"),ATTENDANCE_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/current-attendance",SCAN_RPC_URL:"https://memphis-zoo-mcp.onrender.com/scan-api/rpc",CLOSE_TICKET_URL:"https://memphis-zoo-mcp.onrender.com/dashboard-api/close-ticket",REFRESH_MS:30000,DEVICE_STORAGE_KEY:'mz_scan_device_id',ICONS:{people:"🚻",paw:"🐾",clock:"🕒",wrench:"🔧"}};
     const BUILD_REFRESH_KEY="mz_dashboard_build_refresh";const BACKEND_REFRESH_KEY="mz_dashboard_backend_refresh";
     const els={backBtn:document.getElementById("back-btn"),tiles:document.getElementById("tiles"),filterBar:document.getElementById("filter-bar"),mobileStatus:document.getElementById("mobile-status"),restroomSection:document.getElementById("restroom-section"),exhibitSection:document.getElementById("exhibit-section"),ticketsSection:document.getElementById("tickets-section"),restroomWrap:document.getElementById("restroom-wrap"),exhibitWrap:document.getElementById("exhibit-wrap"),ticketsWrap:document.getElementById("tickets-wrap"),refreshStatus:document.getElementById("refresh-status"),attendanceTime:document.getElementById("attendance-time"),currentClock:document.getElementById("current-clock"),currentDate:document.getElementById("current-date"),buildStamp:document.getElementById("build-stamp")};
     const dashboardState={restrooms:[],exhibits:[],tickets:[],workAlerts:[],filter:'all'};
-    let ticketActions=window.MemphisTicketActions.create();
+    const ticketJournal=window.MemphisTicketActions.createJournal({storage:window.localStorage,locks:window.navigator?.locks});
+    let ticketActions=window.MemphisTicketActions.create({journal:ticketJournal});
     let dashboardRefreshGeneration=0,dashboardPublicationBinding=null,dashboardAccessWithdrawn=false;
     // Local publication fences only. The normal auth/controller still supplies
     // credentials and verifies each request; this page never grants permissions.
@@ -101,13 +103,14 @@
       dashboardState.restrooms=[];dashboardState.exhibits=[];dashboardState.tickets=[];dashboardState.workAlerts=[];
       for(const wrap of [els.restroomWrap,els.exhibitWrap,els.ticketsWrap]) wrap.innerHTML='<div class="empty">Dashboard access changed. Refresh with your current manager session.</div>';
       els.tiles.innerHTML='';els.mobileStatus.textContent='Dashboard access unavailable';renderAttendanceBox(null);
+      document.getElementById('ticket-recovery')?.replaceChildren();
       const dialog=document.getElementById('ticket-close-dialog');if(dialog.open){dialog.returnValue='';dialog.close();}
       els.refreshStatus.textContent='Dashboard access changed. Refresh with your current manager session.';
     }
     function currentDashboardRefresh(context){ if(context.attempt!==dashboardRefreshGeneration) return false; if(!matchesDashboardBinding(context.binding)){withdrawDashboardAccess();return false;}return true; }
     function currentDashboardPublication(){ if(dashboardPublicationBinding&&!matchesDashboardBinding(dashboardPublicationBinding)) withdrawDashboardAccess(); return !dashboardAccessWithdrawn; }
     async function dashboardAuthHeaders(binding){ if(!matchesDashboardBinding(binding)) throw Error('Manager access changed.');const headers=await window.MemphisAuth.opsManagerAuthHeaders();if(!matchesDashboardBinding(binding)) throw Error('Manager access changed.');return headers; }
-    function dashboardTicketActions(binding){ return window.MemphisTicketActions.create({auth:{readSession:()=>matchesDashboardBinding(binding)?window.MemphisAuth.readSession():null,isCustodialManagementAdmin:session=>matchesDashboardBinding(binding)&&session===binding.session&&window.MemphisAuth.isCustodialManagementAdmin?.(session)===true,opsManagerAuthHeaders:()=>dashboardAuthHeaders(binding)}}); }
+    function dashboardTicketActions(binding){ return window.MemphisTicketActions.create({journal:ticketJournal,auth:{readSession:()=>matchesDashboardBinding(binding)?window.MemphisAuth.readSession():null,isCustodialManagementAdmin:session=>matchesDashboardBinding(binding)&&session===binding.session&&window.MemphisAuth.isCustodialManagementAdmin?.(session)===true,opsManagerAuthHeaders:()=>dashboardAuthHeaders(binding)}}); }
     init();
     function isDemoMode(){ return new URL(window.location.href).searchParams.get("demo")==="1"; }
     async function init(){ await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true}); els.backBtn.addEventListener('click', navigateBack); els.filterBar.addEventListener('click', handleFilterClick); els.tiles.addEventListener('click', handleTileClick); document.addEventListener('click', handleExpandableServices); window.addEventListener('hashchange', applyHashFilter); applyHashFilter(); setBuildStamp(CONFIG.APP_VERSION); startClock(); if(isDemoMode()){ renderDemoDashboard(); return; } if(await ensureFreshClientBuild()) return; if(await verifyBackendCompatibility()) return; refreshData(); setInterval(refreshData, CONFIG.REFRESH_MS); }
@@ -145,10 +148,49 @@
       // Invalidate pre-closure snapshots so they cannot resurrect the ticket.
       const context={attempt:++dashboardRefreshGeneration,binding};
       try{await actions.close(ticketId,choice);if(!currentDashboardRefresh(context))return;dashboardState.tickets=dashboardState.tickets.filter(r=>r.ticket_id!==ticketId);renderTiles({restrooms:dashboardState.restrooms,exhibits:dashboardState.exhibits,open_tickets:dashboardState.tickets});renderDashboardViews();wireCloseButtons();els.refreshStatus.textContent='Ticket closure verified.';}
-      catch(error){if(!currentDashboardRefresh(context))return;button.disabled=false;button.textContent='Close';els.refreshStatus.textContent=`Close not verified: ${safe(error)}`;}
+      catch(error){if(!currentDashboardRefresh(context))return;let held=true;try{held=actions.recoveries().some(item=>item.ticket_id===String(ticketId).toLowerCase());}catch{}
+        button.disabled=held;button.textContent=held?'Check original closure':'Close';
+        if(held){renderDashboardViews();wireCloseButtons();}
+        els.refreshStatus.textContent=`Close not verified: ${safe(error)}`;}
     }
     function chooseTicketOutcome(){const dialog=document.getElementById('ticket-close-dialog'),outcome=document.getElementById('ticket-close-outcome'),reference=document.getElementById('ticket-close-reference'),notes=document.getElementById('ticket-close-notes');if(dialog.open)return Promise.resolve(null);outcome.value='';reference.value='';reference.disabled=true;reference.required=false;notes.value='';dialog.returnValue='';outcome.onchange=()=>{reference.disabled=outcome.value!=='work_order_sent';reference.required=!reference.disabled;if(reference.disabled)reference.value='';};return new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'?{outcome:outcome.value,reference:reference.value||null,notes:notes.value||null}:null),{once:true});dialog.showModal();outcome.focus();});}
-    function wireCloseButtons(){ els.ticketsWrap.querySelectorAll(".closeBtn").forEach((btn)=>{ btn.addEventListener("click",()=>{ if(btn.disabled) return; closeTicket(btn.dataset.ticketId,btn); }); }); }
+    function wireCloseButtons(){
+      const recovery=document.getElementById('ticket-recovery'),binding=dashboardPublicationBinding,actions=ticketActions;
+      let originals=[];
+      try{originals=actions.recoveries();}catch{if(recovery)recovery.textContent='Saved ticket closure storage is unavailable.';return;}
+      const held=new Set(originals.map(item=>item.ticket_id));
+      els.ticketsWrap.querySelectorAll(".closeBtn").forEach(btn=>{
+        if(held.has(String(btn.dataset.ticketId).toLowerCase())){btn.disabled=true;btn.textContent='Check original closure';}
+        btn.addEventListener("click",()=>{if(!btn.disabled)void closeTicket(btn.dataset.ticketId,btn);});
+      });
+      if(!recovery)return;
+      const nodes=originals.map(item=>{
+        const row=document.createElement('p'),feedback=document.createElement('span'),check=document.createElement('button'),retry=document.createElement('button');
+        const current=()=>binding&&matchesDashboardBinding(binding)&&row.isConnected;
+        row.textContent='Closure pending for ticket '+item.ticket_id+'. ';
+        check.type=retry.type='button';check.textContent='Check original closure';retry.textContent='Submit same closure again';retry.hidden=true;
+        check.onclick=async()=>{
+          if(!current())return;
+          check.disabled=true;retry.hidden=true;
+          try{
+            const ticket=await actions.readOriginal(item.ticket_id);
+            if(!current())return;
+            feedback.textContent=ticket.status==='closed'?'Ticket is closed. Submit the same closure to verify the exact saved outcome.':'The original outcome is unconfirmed. You may submit the same outcome, reference and notes.';
+            retry.hidden=ticket.status!=='closed'&&!ticket.can_close;
+          }catch(error){if(current())feedback.textContent=safe(error);}
+          finally{if(current())check.disabled=false;}
+        };
+        retry.onclick=async()=>{
+          if(!current())return;retry.hidden=true;check.disabled=true;
+          try{
+            await actions.retry(item.ticket_id);
+            if(current()){await refreshData();if(matchesDashboardBinding(binding))els.refreshStatus.textContent='Ticket closure verified.';}
+          }catch(error){if(current()){feedback.textContent=safe(error);check.disabled=false;}}
+        };
+        row.append(check,' ',retry,' ',feedback);return row;
+      });
+      if(nodes.length||recovery.childNodes?.length)recovery.replaceChildren(...nodes);
+    }
     function runningDurationDisplay(startedAt){ if(!startedAt) return "—"; const ms=Date.now()-new Date(startedAt).getTime(); if(!Number.isFinite(ms)||ms<0) return "—"; return `${Math.max(0, Math.round(ms/60000))} min`; }
 
     function renderDemoDashboard(){ const data=demoDashboardData(); dashboardState.restrooms=sortRows(data.restrooms); dashboardState.exhibits=sortRows(data.exhibits); dashboardState.tickets=data.open_tickets; renderTiles(data); renderAttendanceBox({attendance:8124}); renderDashboardViews(); els.refreshStatus.textContent="Demo view: sample operational instances for documentation"; }
