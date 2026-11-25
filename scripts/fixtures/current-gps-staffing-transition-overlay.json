@@ -341,6 +341,36 @@
           ]
         }
       ]
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 10572,
+      "prior_sha256": "8f4729bd181bab44452b987d0188dc928e167b6469c221488f4ea1092464f840",
+      "current_sha256": "ae17e717047f1205095232ad808b29350807752d72555c3f93de1f49780cf456",
+      "hunks": [
+        {
+          "old_start": 45,
+          "old_count": 7,
+          "new_start": 45,
+          "new_count": 4,
+          "before": [
+            " paths.add('scripts/fixtures/current-gps-notification-deadline-v83-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-notification-presentation-v84-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-provider-storage-v85-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-messenger-voice-v86-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-messenger-audio-gap-v87-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-integration-repairs-overlay.json');",
+            " paths.add('scripts/fixtures/current-gps-week-perimeter-20261119-source-qualification.json');paths.add('scripts/fixtures/current-phone-repairs-r79-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r63-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r61-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44b-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r42-source-qualification.json');paths.add('scripts/fixtures/current-manager-home-bfcache-r34-source-qualification.json');paths.add('scripts/fixtures/current-hub-entry-contract-r33-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-assignment-r32-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-display-r31-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-cache-r30-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-hub-r29-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r22-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r21-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-source-qualification.json');paths.add('scripts/fixtures/current-web-readiness-source-qualification.json');paths.add('scripts/fixtures/current-reminder-timing-source-qualification.json');paths.add('scripts/fixtures/current-terracotta-departure-source-qualification.json');paths.add('scripts/fixtures/current-v80-presentation-source-qualification.json');paths.add('scripts/fixtures/current-schedule-diagnostic-source-qualification.json');paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');"
+          ],
+          "after": [
+            " const boundary='scripts/current-gps-qualification-source-boundary.mjs';",
+            " paths.add(boundary);",
+            " const source=readFileSync(join(root,boundary),'utf8');",
+            " for(const [,fixture] of source.matchAll(/['\"]\\.\\/(fixtures\\/[a-z0-9.-]+\\.json)['\"]/g))paths.add('scripts/'+fixture);"
+          ]
+        }
+      ]
     }
   ],
   "core_sources": [
@@ -370,6 +400,13 @@
       "path": "staffing-management.html",
       "bytes": 5747,
       "sha256": "9df62c023fba7326a1e2d07e00296f4380caed4e3e90ec9f30ae77029ab5305a"
+    }
+  ],
+  "auxiliary": [
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "bytes": 8437,
+      "sha256": "ae17e717047f1205095232ad808b29350807752d72555c3f93de1f49780cf456"
     }
   ]
 }
