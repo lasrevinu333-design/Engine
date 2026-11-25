@@ -23,7 +23,7 @@ function fixture({subscribeGate=null,stopGate=null,state='ATTACHED'}={}){
     show(event,action){record('show');const row={event,action};f.shown.push(row);action.onRetire(options=>{record('removeCard',options);return true;});action.onOpen(()=>record('open'));return true;},
     async stopAndReadback(action){record('stopReadback',action?.providerMirror===true);if(stopGate)await stopGate.promise;return f.stop;},
   };
-  f.mirror=createProviderMirror({bridge:f.bridge,visible:()=>f.visible,current:()=>f.current,locationMatches:()=>f.matches===true,
+  f.mirror=createProviderMirror({bridge:f.bridge,visible:()=>f.visible,current:()=>f.current,canOpen:()=>f.locked!==true,locationMatches:()=>f.matches===true,
     defer:fn=>{const key=++f.serial;f.deferred.set(key,fn);return key;},cancel:key=>f.deferred.delete(key),
     repeat:(fn,delay)=>{const key=++f.serial;f.timers.set(key,{fn,delay});return key;},clearRepeat:key=>f.timers.delete(key)});
   f.add=(n,extra={})=>{const value={claim_id:id(n+100),payload:{schema:'custodial.native-provider-payload.v1',kind:'employee_lunch_coverage',
@@ -147,6 +147,21 @@ function fixture({subscribeGate=null,stopGate=null,state='ATTACHED'}={}){
  const gate=pending();f.plugin.providerClaimState=async()=>gate.promise;const reading=f.mirror.reconcile();await turn();
  f.current=false;f.mirror.changed();gate.resolve({current:true,freshness:'CURRENT',retire_visual:false,stop_audio:false,navigation_pending:false});await reading;
  check(updates.length,1,'late snapshot after principal loss cannot relabel old card');check(await action('opened'),false,'late current snapshot grants no old action');await f.mirror.destroy();
+}
+{
+ const f=fixture();f.locked=true;
+ const row=f.add(1,{play_audio:true});
+ f.states.set(row.claim_id,{current:true,freshness:'CURRENT',retire_visual:false,stop_audio:false,navigation_pending:true});
+ await f.start();
+ check(f.count('show'),1,'one non-blocking visual while the clock is locked');
+ check(f.count('open'),0,'committed Open remains pending during lock');
+ check(await f.shown[0].action('opened'),false,'locked WebView Open cannot alter native state');
+ check(await f.shown[0].action.beginAudio(),true,'clock does not cancel admitted speech');
+ f.locked=false;await f.mirror.reconcile();
+ check(f.count('open'),1,'Unlock resumes the exact pending native Open');
+ f.matches=true;await f.mirror.reconcile();
+ check(f.calls.filter(x=>x[0]==='apply'&&x[1].action==='navigation_completed').length,1,'one delivery to the original route');
+ await f.mirror.destroy();
 }
 console.log(JSON.stringify({status:'PROVIDER_MIRROR_LIFECYCLE_PASS',checks,scope:'actual typed JS facade/coordinator; synthetic native and renderer edges; not physical audio or activation'}));
 export {fixture as mirrorFixture};

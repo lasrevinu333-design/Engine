@@ -65,8 +65,17 @@ export function bindPhoneUnlock(surface, button, unlock, viewportHeight = () => 
 
 const workPages = new Set(['/messages.html', '/employee-schedule.html', '/events.html', '/employee-feedback.html', '/system-feedback.html']);
 
+export function setPhoneClockPresentation(document, window, presentation) {
+  const state = document.documentElement?.dataset;
+  if (!state || state.custodialClock === presentation) return;
+  state.custodialClock = presentation;
+  window.dispatchEvent(new window.Event('memphis:custodial-clock-presentation'));
+}
+
 export function installWorkPageClock({ app, mobile, document, window }) {
   if (!workPages.has(window.location.pathname) || typeof mobile.phonePresentation !== 'function') return;
+  const publish = state => setPhoneClockPresentation(document, window, state);
+  publish('pending');
   const clock = createPhonePresentation({ principal: mobile.principalIdentity, read: mobile.phonePresentation });
   const dialog = document.createElement('dialog');
   dialog.className = 'phoneLock phoneLockDialog';
@@ -82,8 +91,9 @@ export function installWorkPageClock({ app, mobile, document, window }) {
     time.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     date.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
   };
-  function close() {
+  function close(presentation = 'pending') {
     if (dialog.open) dialog.close();
+    publish(presentation);
     window.clearInterval(timer);
     timer = null;
   }
@@ -95,18 +105,19 @@ export function installWorkPageClock({ app, mobile, document, window }) {
       : 'Employee phone';
     drawTime();
     if (!dialog.open) dialog.showModal();
+    publish('locked');
     if (timer === null) timer = window.setInterval(drawTime, 1000);
   }
   const refresh = async () => {
     const invocation = ++lifecycle;
     const unlocked = await clock.refresh();
     if (invocation !== lifecycle) return;
-    if (unlocked) close();
+    if (unlocked) close('unlocked');
     else show();
   };
   bindPhoneUnlock(dialog, button, async () => {
     const invocation = lifecycle;
-    if (await clock.unlock() && invocation === lifecycle) close();
+    if (await clock.unlock() && invocation === lifecycle) close('unlocked');
     else if (invocation === lifecycle) await refresh();
   });
   dialog.addEventListener('cancel', event => event.preventDefault());
@@ -121,10 +132,10 @@ export function installWorkPageClock({ app, mobile, document, window }) {
     document.body.append(dialog);
     void app.addListener('pause', () => { ++lifecycle; clock.reset(); show(); });
     void app.addListener('resume', refresh);
-    window.addEventListener('memphis:custodial-security-state', () => { clock.reset(); void refresh(); });
+    window.addEventListener('memphis:custodial-security-state', () => { publish('pending'); clock.reset(); void refresh(); });
     window.addEventListener('pageshow', refresh);
     window.addEventListener('pagehide', () => { ++lifecycle; clock.reset(); close(); });
-    void mobile.ready.then(refresh, close);
+    void mobile.ready.then(refresh, () => close());
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
   else mount();

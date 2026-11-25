@@ -309,6 +309,9 @@ export function installDeviceReminders(options) {
       .mz-reminder-btn{border:0;border-radius:18px;padding:14px 20px;font-size:1.05rem;font-weight:900;cursor:pointer;min-width:160px;box-shadow:0 10px 24px rgba(0,0,0,.22)}
       .mz-reminder-open{background:linear-gradient(180deg,#fcd34d,#f59e0b);color:#111827}
       .mz-reminder-dismiss{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:#f8fafc}
+      html:is([data-custodial-clock="locked"],[data-custodial-clock="pending"]) .mz-reminder-backdrop{align-items:flex-start;background:transparent;pointer-events:none}
+      html:is([data-custodial-clock="locked"],[data-custodial-clock="pending"]) .mz-reminder-card{width:min(90vw,26rem);padding:12px}
+      html:is([data-custodial-clock="locked"],[data-custodial-clock="pending"]) .mz-reminder-card :is(.mz-reminder-body,.mz-reminder-actions){display:none}
     `;
     document.head.appendChild(style);
   }
@@ -1185,6 +1188,7 @@ export function installDeviceReminders(options) {
     backdrop.querySelector('.mz-reminder-dismiss').textContent = safeText(alert.dismissLabel, 'Dismiss');
 
     let providerOpening=false,providerDismissing=false,providerAcknowledging=false,providerAcknowledge=null;
+    const clockOwnsPresentation=()=>['locked','pending'].includes(document.documentElement?.dataset?.custodialClock);
     function recipientCurrent() {
       try { return alertCurrent(alert) && (alert.boundReceiptAction || writerAuthority?.current() === true
         && alert.id === writerAlertId && JSON.stringify(alert.linkedIds || []) === writerLinkedIds); }
@@ -1212,7 +1216,7 @@ export function installDeviceReminders(options) {
     }
 
     backdrop.querySelector('.mz-reminder-open').addEventListener('click', sourceWriter('REMINDER_1198',async () => {
-      if(state.activeAlert!==alert)return;
+      if(state.activeAlert!==alert||clockOwnsPresentation())return;
       if(!recipientCurrent()){closeActiveAlert({stopSpeech:true});return;}
       const openButton = backdrop.querySelector('.mz-reminder-open');
       const dismissButton = backdrop.querySelector('.mz-reminder-dismiss');
@@ -1253,6 +1257,13 @@ export function installDeviceReminders(options) {
       if(state.activeAlert!==alert)return;
       if(!recipientCurrent()){
         if(state.activeAlert===alert)closeActiveAlert({stopSpeech:true});
+        return;
+      }
+      if(clockOwnsPresentation()){
+        providerOpening=false;
+        if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');}
+        if(dismissButton)dismissButton.disabled=false;
+        refreshProviderView();
         return;
       }
       closeActiveAlert({ stopSpeech: false, nextPresentation:false });

@@ -108,6 +108,7 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
     providerMirror=createProviderMirror({bridge:getNativeProviderMirrorBridge(),
       visible:()=>providerPageVisible&&providerAppActive&&document.hidden!==true,
       current:()=>security.getStatus().ready===true,
+      canOpen:()=>!['locked','pending'].includes(document.documentElement?.dataset?.custodialClock),
       locationMatches:route=>{
         const actual=new URL(window.location.href),expected=new URL(route,actual);
         return actual.origin==='https://localhost'&&expected.origin===actual.origin&&actual.pathname===expected.pathname&&actual.search===expected.search;
@@ -117,6 +118,7 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
     window.addEventListener('pageshow',()=>{providerPageVisible=true;providerMirror.changed();});
     window.addEventListener('memphis:custodial-security-state',()=>{void providerMirror.suspend().then(()=>providerMirror.changed());});
     window.addEventListener('online',()=>providerMirror.changed());
+    window.addEventListener('memphis:custodial-clock-presentation',()=>providerMirror.changed());
     App.addListener('appStateChange',({isActive})=>{providerAppActive=isActive===true;providerMirror.changed();});
     void providerMirror.start();
   }

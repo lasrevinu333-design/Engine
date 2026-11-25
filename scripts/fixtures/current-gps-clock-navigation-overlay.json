@@ -1,0 +1,378 @@
+{
+  "clockHistory": [
+    {
+      "path": "mobile/src/custodial/app.js",
+      "kind": "changed",
+      "prior_bytes": 26703,
+      "prior_sha256": "548efcfed7482e9f6b79a9e7eee989683969353e0d145ea3ea4d90502a14e258",
+      "current_sha256": "3eb09828869c39dca12b0cfe5de876d3c7270dd7764eefb9f53a04c6e5ea9bce",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 1,
+          "new_start": 4,
+          "new_count": 1,
+          "before": [
+            "import { bindPhoneUnlock, createPhonePresentation } from './phone-presentation.js';"
+          ],
+          "after": [
+            "import { bindPhoneUnlock, createPhonePresentation, setPhoneClockPresentation } from './phone-presentation.js';"
+          ]
+        },
+        {
+          "old_start": 146,
+          "old_count": 0,
+          "new_start": 147,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  setPhoneClockPresentation(document, window, 'locked');"
+          ]
+        },
+        {
+          "old_start": 149,
+          "old_count": 1,
+          "new_start": 150,
+          "new_count": 4,
+          "before": [
+            "function hidePhoneLock() { els.phoneLock.hidden = true; }"
+          ],
+          "after": [
+            "function hidePhoneLock() {",
+            "  els.phoneLock.hidden = true;",
+            "  setPhoneClockPresentation(document, window, phoneClock.unlocked() ? 'unlocked' : 'pending');",
+            "}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/bridge.js",
+      "kind": "changed",
+      "prior_bytes": 165330,
+      "prior_sha256": "fff50ac718bd286f85083dbdf41781b26085c6786484de9ab1ec8c42827b4bcd",
+      "current_sha256": "bbe3a7550c8deafdddc2f09c3e465f43952fcf3112c320917f247c657da41b1c",
+      "hunks": [
+        {
+          "old_start": 110,
+          "old_count": 0,
+          "new_start": 111,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      canOpen:()=>!['locked','pending'].includes(document.documentElement?.dataset?.custodialClock),"
+          ]
+        },
+        {
+          "old_start": 119,
+          "old_count": 0,
+          "new_start": 121,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    window.addEventListener('memphis:custodial-clock-presentation',()=>providerMirror.changed());"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/device-reminders-runtime.js",
+      "kind": "changed",
+      "prior_bytes": 83674,
+      "prior_sha256": "bb843087104b4014dd99ccfc163a3c003656c07adf1836bd881528b499cd11e2",
+      "current_sha256": "2b229a3fdbefa577edf758826873dc4c6bb3af455751571fbdfc092b0c61cf2a",
+      "hunks": [
+        {
+          "old_start": 311,
+          "old_count": 0,
+          "new_start": 312,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "      html:is([data-custodial-clock=\"locked\"],[data-custodial-clock=\"pending\"]) .mz-reminder-backdrop{align-items:flex-start;background:transparent;pointer-events:none}",
+            "      html:is([data-custodial-clock=\"locked\"],[data-custodial-clock=\"pending\"]) .mz-reminder-card{width:min(90vw,26rem);padding:12px}",
+            "      html:is([data-custodial-clock=\"locked\"],[data-custodial-clock=\"pending\"]) .mz-reminder-card :is(.mz-reminder-body,.mz-reminder-actions){display:none}"
+          ]
+        },
+        {
+          "old_start": 1187,
+          "old_count": 0,
+          "new_start": 1191,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    const clockOwnsPresentation=()=>['locked','pending'].includes(document.documentElement?.dataset?.custodialClock);"
+          ]
+        },
+        {
+          "old_start": 1215,
+          "old_count": 1,
+          "new_start": 1219,
+          "new_count": 1,
+          "before": [
+            "      if(state.activeAlert!==alert)return;"
+          ],
+          "after": [
+            "      if(state.activeAlert!==alert||clockOwnsPresentation())return;"
+          ]
+        },
+        {
+          "old_start": 1257,
+          "old_count": 0,
+          "new_start": 1262,
+          "new_count": 7,
+          "before": [],
+          "after": [
+            "      if(clockOwnsPresentation()){",
+            "        providerOpening=false;",
+            "        if(openButton){openButton.disabled=false;openButton.textContent=safeText(alert.openLabel,'Open');}",
+            "        if(dismissButton)dismissButton.disabled=false;",
+            "        refreshProviderView();",
+            "        return;",
+            "      }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/index.html",
+      "kind": "changed",
+      "prior_bytes": 15063,
+      "prior_sha256": "4ab111ce503ff854d84193c094c5182835b849394a7fd106c4b82ee43302f051",
+      "current_sha256": "161358385a0ef734cd619735c7d65d9db7622878a414adcd7d358f2722b2fb74",
+      "hunks": [
+        {
+          "old_start": 2,
+          "old_count": 1,
+          "new_start": 2,
+          "new_count": 1,
+          "before": [
+            "<html lang=\"en\" data-trail-theme=\"terracotta\" data-trail-section=\"dashboard\">"
+          ],
+          "after": [
+            "<html lang=\"en\" data-trail-theme=\"terracotta\" data-trail-section=\"dashboard\" data-custodial-clock=\"pending\">"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/phone-presentation.js",
+      "kind": "changed",
+      "prior_bytes": 6184,
+      "prior_sha256": "efdf2dd595605bb4fc2230242726f13640cca2a268b14d40a03a0ebde946b6dd",
+      "current_sha256": "9939fc03abac7088822a78508e247505eb395ad80901c73be8d5fee188cbba8a",
+      "hunks": [
+        {
+          "old_start": 67,
+          "old_count": 0,
+          "new_start": 68,
+          "new_count": 7,
+          "before": [],
+          "after": [
+            "export function setPhoneClockPresentation(document, window, presentation) {",
+            "  const state = document.documentElement?.dataset;",
+            "  if (!state || state.custodialClock === presentation) return;",
+            "  state.custodialClock = presentation;",
+            "  window.dispatchEvent(new window.Event('memphis:custodial-clock-presentation'));",
+            "}",
+            ""
+          ]
+        },
+        {
+          "old_start": 69,
+          "old_count": 0,
+          "new_start": 77,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "  const publish = state => setPhoneClockPresentation(document, window, state);",
+            "  publish('pending');"
+          ]
+        },
+        {
+          "old_start": 85,
+          "old_count": 1,
+          "new_start": 94,
+          "new_count": 1,
+          "before": [
+            "  function close() {"
+          ],
+          "after": [
+            "  function close(presentation = 'pending') {"
+          ]
+        },
+        {
+          "old_start": 86,
+          "old_count": 0,
+          "new_start": 96,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    publish(presentation);"
+          ]
+        },
+        {
+          "old_start": 97,
+          "old_count": 0,
+          "new_start": 108,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    publish('locked');"
+          ]
+        },
+        {
+          "old_start": 104,
+          "old_count": 1,
+          "new_start": 115,
+          "new_count": 1,
+          "before": [
+            "    if (unlocked) close();"
+          ],
+          "after": [
+            "    if (unlocked) close('unlocked');"
+          ]
+        },
+        {
+          "old_start": 109,
+          "old_count": 1,
+          "new_start": 120,
+          "new_count": 1,
+          "before": [
+            "    if (await clock.unlock() && invocation === lifecycle) close();"
+          ],
+          "after": [
+            "    if (await clock.unlock() && invocation === lifecycle) close('unlocked');"
+          ]
+        },
+        {
+          "old_start": 124,
+          "old_count": 1,
+          "new_start": 135,
+          "new_count": 1,
+          "before": [
+            "    window.addEventListener('memphis:custodial-security-state', () => { clock.reset(); void refresh(); });"
+          ],
+          "after": [
+            "    window.addEventListener('memphis:custodial-security-state', () => { publish('pending'); clock.reset(); void refresh(); });"
+          ]
+        },
+        {
+          "old_start": 127,
+          "old_count": 1,
+          "new_start": 138,
+          "new_count": 1,
+          "before": [
+            "    void mobile.ready.then(refresh, close);"
+          ],
+          "after": [
+            "    void mobile.ready.then(refresh, () => close());"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/provider-mirror.js",
+      "kind": "changed",
+      "prior_bytes": 11196,
+      "prior_sha256": "7585860b04cdcba3d21f09bc3b10083743f5aaa042cea076fe7f608e54d93439",
+      "current_sha256": "1d49d7c1ca02e8a9c680607c09a37d65cf725b874a1cc4cd017541234e1c56e2",
+      "hunks": [
+        {
+          "old_start": 3,
+          "old_count": 1,
+          "new_start": 3,
+          "new_count": 1,
+          "before": [
+            "export function createProviderMirror({bridge,visible,current,locationMatches=()=>false,"
+          ],
+          "after": [
+            "export function createProviderMirror({bridge,visible,current,canOpen=()=>true,locationMatches=()=>false,"
+          ]
+        },
+        {
+          "old_start": 32,
+          "old_count": 1,
+          "new_start": 32,
+          "new_count": 1,
+          "before": [
+            "      if(kind==='opened'&&entry.status.freshness!=='CURRENT'&&!entry.status.navigation_pending)return false;"
+          ],
+          "after": [
+            "      if(kind==='opened'&&(canOpen()!==true||entry.status.freshness!=='CURRENT'&&!entry.status.navigation_pending))return false;"
+          ]
+        },
+        {
+          "old_start": 94,
+          "old_count": 1,
+          "new_start": 94,
+          "new_count": 1,
+          "before": [
+            "    if(status.navigation_pending&&locationMatches(value.payload.route)){"
+          ],
+          "after": [
+            "    if(status.navigation_pending&&canOpen()===true&&locationMatches(value.payload.route)){"
+          ]
+        },
+        {
+          "old_start": 108,
+          "old_count": 1,
+          "new_start": 108,
+          "new_count": 1,
+          "before": [
+            "    if(status.navigation_pending&&valid(generation,id))entry.open?.();"
+          ],
+          "after": [
+            "    if(status.navigation_pending&&valid(generation,id)&&canOpen()===true)entry.open?.();"
+          ]
+        }
+      ]
+    }
+  ],
+  "core_sources": [
+    {
+      "path": "mobile/src/custodial/app.js",
+      "bytes": 26884,
+      "sha256": "3eb09828869c39dca12b0cfe5de876d3c7270dd7764eefb9f53a04c6e5ea9bce"
+    },
+    {
+      "path": "mobile/src/custodial/phone-presentation.js",
+      "bytes": 6721,
+      "sha256": "9939fc03abac7088822a78508e247505eb395ad80901c73be8d5fee188cbba8a"
+    },
+    {
+      "path": "scripts/custodial-home-authenticated-restore-tests.mjs",
+      "bytes": 17972,
+      "sha256": "fa46d4df3acba87b4b258713814208f9096eeec140a34e00886974b0133b73bc"
+    }
+  ],
+  "auxiliary": [
+    {
+      "path": "mobile/src/custodial/bridge.js",
+      "bytes": 165529,
+      "sha256": "bbe3a7550c8deafdddc2f09c3e465f43952fcf3112c320917f247c657da41b1c"
+    },
+    {
+      "path": "mobile/src/custodial/index.html",
+      "bytes": 15094,
+      "sha256": "161358385a0ef734cd619735c7d65d9db7622878a414adcd7d358f2722b2fb74"
+    },
+    {
+      "path": "mobile/src/custodial/provider-mirror.js",
+      "bytes": 11269,
+      "sha256": "1d49d7c1ca02e8a9c680607c09a37d65cf725b874a1cc4cd017541234e1c56e2"
+    },
+    {
+      "path": "scripts/native-audio-sequence-source-boundary.mjs",
+      "bytes": 2115,
+      "sha256": "39475ebf3acc43a1318a1c0a93f06acf59226a5090f65220f2a584b334a6025e"
+    }
+  ],
+  "presentation_sources": [
+    {
+      "path": "mobile/src/custodial/device-reminders-runtime.js",
+      "bytes": 84559,
+      "sha256": "2b229a3fdbefa577edf758826873dc4c6bb3af455751571fbdfc092b0c61cf2a"
+    }
+  ]
+}

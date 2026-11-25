@@ -1,6 +1,6 @@
 // One foreground mirror, never an ingress/receipt store or a second audio engine.
 // Only the native capability facade can supply content and accept finite actions.
-export function createProviderMirror({bridge,visible,current,locationMatches=()=>false,
+export function createProviderMirror({bridge,visible,current,canOpen=()=>true,locationMatches=()=>false,
   defer=fn=>setTimeout(fn,0),cancel=clearTimeout,repeat=(fn,delay)=>setInterval(fn,delay),clearRepeat=clearInterval}){
   let renderer=null,listener=null,subscribing=null,session=null,epoch=0,started=false,drain=null,nextTurn=null,repair=null,again=false,stopping=Promise.resolve();
   const entries=new Map();
@@ -29,7 +29,7 @@ export function createProviderMirror({bridge,visible,current,locationMatches=()=
       if(!live()||!['opened','dismissed','acknowledged'].includes(kind))return false;
       // UI eligibility never grants an action: native Journal rechecks fresh
       // authority, or returns the exact already-durable original event.
-      if(kind==='opened'&&entry.status.freshness!=='CURRENT'&&!entry.status.navigation_pending)return false;
+      if(kind==='opened'&&(canOpen()!==true||entry.status.freshness!=='CURRENT'&&!entry.status.navigation_pending))return false;
       if(kind==='acknowledged'&&entry.status.freshness!=='CURRENT'&&!entry.status.stop_audio)return false;
       try{await bridge.apply(id,value.claim_id,kind);if(!live())return false;
         if(kind==='opened')entry.status={...entry.status,navigation_pending:true};
@@ -91,7 +91,7 @@ export function createProviderMirror({bridge,visible,current,locationMatches=()=
       await bridge.retire(id,value.claim_id);
       if(entry.audioDone){entry.alive=false;entries.delete(value.claim_id);}return true;
     }
-    if(status.navigation_pending&&locationMatches(value.payload.route)){
+    if(status.navigation_pending&&canOpen()===true&&locationMatches(value.payload.route)){
       await bridge.apply(id,value.claim_id,'navigation_completed');await bridge.retire(id,value.claim_id);
       entry.alive=false;entries.delete(value.claim_id);return true;
     }
@@ -105,7 +105,7 @@ export function createProviderMirror({bridge,visible,current,locationMatches=()=
       try{if(!value.historical&&status.freshness==='CURRENT')await bridge.apply(id,value.claim_id,'displayed');entry.resolveDisplay(true);}
       catch(error){entry.resolveDisplay(false);entry.alive=false;entry.remove?.({stopAudio:true});throw error;}
     }
-    if(status.navigation_pending&&valid(generation,id))entry.open?.();
+    if(status.navigation_pending&&valid(generation,id)&&canOpen()===true)entry.open?.();
     return true;
   }
   async function run(){

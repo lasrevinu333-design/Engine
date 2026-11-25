@@ -1,7 +1,7 @@
 import { installHomeFacts } from './home-facts-dom.js';
 import { installHourlyForecastKeyboard } from './hourly-forecast-keyboard.js';
 import { classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode } from './readiness.js';
-import { bindPhoneUnlock, createPhonePresentation } from './phone-presentation.js';
+import { bindPhoneUnlock, createPhonePresentation, setPhoneClockPresentation } from './phone-presentation.js';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
@@ -144,9 +144,13 @@ function showPhoneLock(value = profile) {
   updatePhoneLockClock();
   if (!phoneLockClockTimer) phoneLockClockTimer = window.setInterval(updatePhoneLockClock, 1000);
   els.phoneLock.hidden = false;
+  setPhoneClockPresentation(document, window, 'locked');
   return true;
 }
-function hidePhoneLock() { els.phoneLock.hidden = true; }
+function hidePhoneLock() {
+  els.phoneLock.hidden = true;
+  setPhoneClockPresentation(document, window, phoneClock.unlocked() ? 'unlocked' : 'pending');
+}
 async function unlockPhone() {
   if (els.phoneLock.hidden || !currentProfile(profile)) return;
   if (!await phoneClock.unlock()) await phoneClock.refresh();

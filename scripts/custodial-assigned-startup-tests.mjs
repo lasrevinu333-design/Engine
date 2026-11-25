@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import {assertOwnerContextClosed} from './scan-owner-vm-context.mjs';
 import { installHourlyForecastKeyboard } from '../mobile/src/custodial/hourly-forecast-keyboard.js';
-import { bindPhoneUnlock, createPhonePresentation } from '../mobile/src/custodial/phone-presentation.js';
+import { bindPhoneUnlock, createPhonePresentation, setPhoneClockPresentation } from '../mobile/src/custodial/phone-presentation.js';
 const source=readFileSync(new URL('../mobile/src/custodial/app.js',import.meta.url),'utf8');
 const scanSource=readFileSync(new URL('../memphis-scan-sync.js',import.meta.url),'utf8');
 const { classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode } = await import(`data:text/javascript;base64,${Buffer.from(readFileSync(new URL('../mobile/src/custodial/readiness.js',import.meta.url),'utf8')).toString('base64')}`);
@@ -38,7 +38,7 @@ function fixture({enrolled=false,reject=false,delay=false,cached=null,missingPri
     assertOwnerContextClosed(implementation,scan,'actual startup gate and event owner');vm.runInNewContext(implementation,scan);
     window.MemphisScanSync.reconcileStartupRecovery=()=>{calls.push('protected-recovery');return scan.reconcileStartupRecovery();};
   }
-  const context={window,document:{getElementById:element},navigator:{onLine:false},console,queueMicrotask,classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode,installHourlyForecastKeyboard,bindPhoneUnlock,createPhonePresentation,
+  const context={window,document:{getElementById:element},navigator:{onLine:false},console,queueMicrotask,classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode,installHourlyForecastKeyboard,bindPhoneUnlock,createPhonePresentation,setPhoneClockPresentation,
     __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__:false,
     sessionStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)},
     installHomeFacts:()=>({stop(){},update(){},authenticatedProfileRestored(){return true;},async restoreProfileFacts(){return true;}}),App:{addListener:async()=>{}},Network:{addListener:async()=>{}},StatusBar:{hide:async()=>{}},Promise,Date,Error};

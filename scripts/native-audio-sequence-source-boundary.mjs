@@ -1,3 +1,4 @@
+import {normalizeClockNavigationForComparison} from './current-gps-qualification-source-boundary.mjs';
 import {normalizeCurrentNativeScheduleWire} from './native-schedule-wire-source-boundary.mjs';
 import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {createHash} from 'node:crypto';
 const sha=x=>createHash('sha256').update(x).digest('hex');
@@ -14,7 +15,7 @@ export function withoutNativeAudioSequence(name,source){
 }
 // Comparison only, never a product/review/clock or installation permission.
 export function normalizeCurrentNativeAudioSequence(name,source){
- source=normalizeCurrentNativeScheduleWire(name,source);
+ source=normalizeCurrentNativeScheduleWire(name,normalizeClockNavigationForComparison(name,source));
  const row=nativeAudioSequencePins.files.find(x=>x.name===name||x.path===name||name.endsWith('/'+x.name));
  return row&&sha(source)===row.current_sha256?withoutNativeAudioSequence(name,source):source;
 }
