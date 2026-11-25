@@ -12,7 +12,12 @@ function principal(auth){
 function create({auth=root.MemphisAuth,fetchImpl=(...args)=>root.fetch(...args),origin='https://memphis-zoo-mcp.onrender.com',journal=createJournal(),getToken=()=>auth?.readSession?.()?.token}={}){
  let current=null,records=new Map(),generation=0;const checked=new Map();
  function clear(){current=null;records=new Map();generation++;}
- function status(id){return current&&current===principal(auth)?records.get(String(id).toLowerCase())||null:null;}
+ function status(id){
+  id=String(id).toLowerCase();
+  if(!current||current!==principal(auth))return null;
+  const record=records.get(id);
+  return journal.isSettled(recoveryOwner(),id)?{...record,ticket_id:id,status:'closed',can_close:false}:record||null;
+ }
  async function readCapabilities(owner,ids,valid){
   const token=getToken();
   const headers=await auth.opsManagerAuthHeaders();if(principal(auth)!==owner||getToken()!==token||!valid())return null;
@@ -70,7 +75,7 @@ function create({auth=root.MemphisAuth,fetchImpl=(...args)=>root.fetch(...args),
     throw Error(payload?.error||'Closure outcome unavailable. Check the original ticket.');
    }
    if(receipt?.ticket_id?.toLowerCase()!==id||receipt.status!=='closed'||receipt.outcome!==body.outcome||(receipt.external_work_order_reference||null)!==body.external_work_order_reference||!Number.isFinite(Date.parse(receipt.closed_at))||!String(receipt.closed_by||'').trim())throw Error('Closure receipt could not be verified. Check the original ticket.');
-   journal.remove(recovery,id);records.set(id,Object.freeze({...records.get(id),status:'closed',can_close:false}));return receipt;
+   journal.settle(recovery,id);journal.remove(recovery,id);return receipt;
   });
  }
  async function close(id,{outcome,reference=null,notes=null}={}){
@@ -83,7 +88,7 @@ function create({auth=root.MemphisAuth,fetchImpl=(...args)=>root.fetch(...args),
 function createJournal({storage,locks}={}){
  const scope=owner=>'mz_ticket_closure:v1:'+encodeURIComponent(owner)+':';
  const key=(owner,id)=>scope(owner)+id;
- const fallback=new Map(),active=new Set();
+ const fallback=new Map(),active=new Set(),settled=new Set();
  const read=key=>storage?storage.getItem(key):fallback.get(key)??null;
  function valid(value,id){
   return value?.ticket_id===id&&UUID.test(id)&&['mark_fixed','work_order_sent'].includes(value.outcome)
@@ -112,6 +117,8 @@ function createJournal({storage,locks}={}){
    if(storage)storage.setItem(name,raw);else fallback.set(name,raw);
    if(read(name)!==raw)throw Error('The original closure could not be saved.');
   },
+  settle(owner,id){settled.add(key(owner,id));},
+  isSettled(owner,id){return settled.has(key(owner,id));},
   remove(owner,id){const name=key(owner,id);if(storage)storage.removeItem(name);else fallback.delete(name);},
  });
 }
