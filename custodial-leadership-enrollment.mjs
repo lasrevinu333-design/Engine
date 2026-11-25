@@ -19,7 +19,8 @@ export async function mountLeadershipEnrollment({document:d=document,fetchImpl=f
   if(closed)return;
   closed=true;controller?.abort();csrf=null;pin.value='';clearChallenge();
   pinForm.hidden=true;enrolled.hidden=true;check.hidden=true;
-  id('claimed-name').textContent='';id('open-manager').hidden=true;
+  id('claimed-name').textContent='';
+  const link=id('open-manager');link.hidden=true;link.href='./start_page1.html';
   status.textContent='Checking this browser’s access…';
   for(const [target,type,fn] of listeners)target.removeEventListener(type,fn);
  }
@@ -78,7 +79,7 @@ export async function mountLeadershipEnrollment({document:d=document,fetchImpl=f
 if(typeof document!=='undefined'&&document.getElementById('leadership-pin')){
  let startup=0;
  window.addEventListener('pagehide',()=>{startup++;});
- const start=()=>{
+ const start=({allowReturn=true}={})=>{
   const launched=++startup;
   void mountLeadershipEnrollment({
  lifecycleTarget:window,
@@ -96,13 +97,13 @@ if(typeof document!=='undefined'&&document.getElementById('leadership-pin')){
   return ()=>{
    if(!current())return;
    if(link){link.href=target.href;link.hidden=false;}
-   if(signedIn||requested)location.replace(target.href);
+   if(signedIn||(allowReturn&&requested))location.replace(target.href);
   };
  }
   }).catch(()=>{
    if(startup===launched)document.getElementById('status').textContent='Leadership enrollment configuration or manager adapter is unavailable.';
   });
  };
- window.addEventListener('pageshow',event=>{if(event.persisted)start();});
+ window.addEventListener('pageshow',event=>{if(event.persisted)start({allowReturn:false});});
  start();
 }
