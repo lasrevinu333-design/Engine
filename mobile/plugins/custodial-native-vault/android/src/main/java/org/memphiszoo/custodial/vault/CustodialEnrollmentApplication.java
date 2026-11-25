@@ -34,16 +34,20 @@ public final class CustodialEnrollmentApplication extends Application {
                 var store=existingStore();
                 // Only completion of an already encrypted durable pointer
                 // intent; never a new inventory/finalizer/manager decision.
-                var state=store.finishPrepared();realm=state.realm;pointerSha=state.sha256;
+                var state=Build.VERSION.SDK_INT>=28?store.finishPrepared():store.read();
+                realm=state.realm;pointerSha=state.sha256;
                 currentRoot=store.realmRoot(state).toFile();
             }
             if(!NativeRetainedEnrollmentRealmStore.LEGACY.equals(realm)){
-                if(Build.VERSION.SDK_INT<28)throw new VaultFailure("custodial_retained_enrollment_webview_partition_unsupported");
+                requireRetainedPartitionSupport();
                 // Before ContentProviders/Capacitor can create a WebView. The
                 // previous origin's local/session/IDB data is left untouched.
                 WebView.setDataDirectorySuffix(browserSuffix(realm));
             }
         }catch(Exception e){throw new IllegalStateException(NativeRetainedEnrollmentRealmStore.FAILURE,e);}
+    }
+    static void requireRetainedPartitionSupport()throws VaultFailure {
+        if(Build.VERSION.SDK_INT<28)throw new VaultFailure("custodial_retained_enrollment_webview_partition_unsupported");
     }
     @Override public SharedPreferences getSharedPreferences(String name,int mode){
         return super.getSharedPreferences(preferenceName(name,realm),mode);

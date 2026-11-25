@@ -1,0 +1,422 @@
+{
+  "retainedFeedbackHistory": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialEnrollmentApplication.java",
+      "kind": "changed",
+      "prior_bytes": 9611,
+      "prior_sha256": "e14ff3da0ab1e3874c78dc00b144eaf6145aac8dba54ad706a0b2164f64f17ad",
+      "current_sha256": "5c621ca00b3b7387eef6cd6c1e097550b867820f7046bf4d5275de5445062365",
+      "hunks": [
+        {
+          "old_start": 37,
+          "old_count": 1,
+          "new_start": 37,
+          "new_count": 2,
+          "before": [
+            "                var state=store.finishPrepared();realm=state.realm;pointerSha=state.sha256;"
+          ],
+          "after": [
+            "                var state=Build.VERSION.SDK_INT>=28?store.finishPrepared():store.read();",
+            "                realm=state.realm;pointerSha=state.sha256;"
+          ]
+        },
+        {
+          "old_start": 41,
+          "old_count": 1,
+          "new_start": 42,
+          "new_count": 1,
+          "before": [
+            "                if(Build.VERSION.SDK_INT<28)throw new VaultFailure(\"custodial_retained_enrollment_webview_partition_unsupported\");"
+          ],
+          "after": [
+            "                requireRetainedPartitionSupport();"
+          ]
+        },
+        {
+          "old_start": 47,
+          "old_count": 0,
+          "new_start": 49,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "    static void requireRetainedPartitionSupport()throws VaultFailure {",
+            "        if(Build.VERSION.SDK_INT<28)throw new VaultFailure(\"custodial_retained_enrollment_webview_partition_unsupported\");",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/VaultEngine.java",
+      "kind": "changed",
+      "prior_bytes": 1387631,
+      "prior_sha256": "3934ed5927d433de834768299e9b57ecb84005f745443e95d7686eef9fd4c7f0",
+      "current_sha256": "568ea82cd13805f088980e3b35eee3139a4b0a4e9ee45e30dba7ffab6412bcaf",
+      "hunks": [
+        {
+          "old_start": 12517,
+          "old_count": 0,
+          "new_start": 12518,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        CustodialEnrollmentApplication.requireRetainedPartitionSupport();"
+          ]
+        },
+        {
+          "old_start": 12926,
+          "old_count": 0,
+          "new_start": 12928,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        CustodialEnrollmentApplication.requireRetainedPartitionSupport();"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/feedback-outbox.js",
+      "kind": "changed",
+      "prior_bytes": 18209,
+      "prior_sha256": "e3e46f098ab216991aca61056a5b03288cb48660263397c100c083377c9551d1",
+      "current_sha256": "438a01613657437a0aeb72bd8c30b87979b222c47d6ba1b3606bfe54e1e46b91",
+      "hunks": [
+        {
+          "old_start": 2,
+          "old_count": 0,
+          "new_start": 3,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "const DISPATCH_PREFIX='mz_employee_feedback_dispatch:';"
+          ]
+        },
+        {
+          "old_start": 8,
+          "old_count": 0,
+          "new_start": 10,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "const digest=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');",
+            "const textDigest=text=>digest(new TextEncoder().encode(text));"
+          ]
+        },
+        {
+          "old_start": 10,
+          "old_count": 1,
+          "new_start": 12,
+          "new_count": 0,
+          "before": [
+            "  const digest=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 13,
+          "old_count": 1,
+          "new_start": 15,
+          "new_count": 1,
+          "before": [
+            "  return digest(new TextEncoder().encode(JSON.stringify([String(body.category??'other').trim().toLowerCase(),String(body.priority??'normal').trim().toLowerCase(),String(body.message??body.body??'').trim(),String(body.page_url??body.url??'').trim()||null,imageSha])));"
+          ],
+          "after": [
+            "  return textDigest(JSON.stringify([String(body.category??'other').trim().toLowerCase(),String(body.priority??'normal').trim().toLowerCase(),String(body.message??body.body??'').trim(),String(body.page_url??body.url??'').trim()||null,imageSha]));"
+          ]
+        },
+        {
+          "old_start": 137,
+          "old_count": 0,
+          "new_start": 140,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    const dispatchKey=DISPATCH_PREFIX+current.deviceId+':'+original.operation_id;"
+          ]
+        },
+        {
+          "old_start": 158,
+          "old_count": 0,
+          "new_start": 162,
+          "new_count": 9,
+          "before": [],
+          "after": [
+            "      // Only a newly retained original can earn one first dispatch. If",
+            "      // reserving its marker fails, the original itself remains available.",
+            "      try {",
+            "        const mark='0:'+await textDigest(originalEncoded);",
+            "        await requireBinding(current,context);",
+            "        if(storage.getItem(key)===originalEncoded&&storage.getItem(dispatchKey)===null)storage.setItem(dispatchKey,mark);",
+            "      } catch {",
+            "        onStatus({state:'saved_pending_delivery',operationId:original.operation_id,reason:'dispatch_reservation_unavailable'});",
+            "      }"
+          ]
+        },
+        {
+          "old_start": 216,
+          "old_count": 1,
+          "new_start": 228,
+          "new_count": 3,
+          "before": [
+            "        let generation=null;"
+          ],
+          "after": [
+            "        const dispatchKey=DISPATCH_PREFIX+current.deviceId+':'+row.body.operation_id;",
+            "        const originalDigest=await textDigest(encoded);",
+            "        let generation=null,dispatch=false;"
+          ]
+        },
+        {
+          "old_start": 221,
+          "old_count": 0,
+          "new_start": 236,
+          "new_count": 9,
+          "before": [],
+          "after": [
+            "          if(storage.getItem(dispatchKey)==='0:'+originalDigest){",
+            "            // Same-size replacement before network entry. A lost reply or",
+            "            // restart can only observe the exact original and never resend.",
+            "            const started='1:'+originalDigest;",
+            "            context?.assertCurrent?.();",
+            "            storage.setItem(dispatchKey,started);",
+            "            if(storage.getItem(dispatchKey)!==started)throw Error('Feedback dispatch reservation was not confirmed.');",
+            "            dispatch=true;",
+            "          }"
+          ]
+        },
+        {
+          "old_start": 225,
+          "old_count": 1,
+          "new_start": 248,
+          "new_count": 2,
+          "before": [
+            "        const response=await request('/feedback-api/submit',{method:'POST',headers:{'Idempotency-Key':row.body.operation_id},body:payload,expectedGeneration:generation});"
+          ],
+          "after": [
+            "        const response=await request(dispatch?'/feedback-api/submit':'/feedback-api/original-receipt',",
+            "          {method:'POST',...(dispatch?{headers:{'Idempotency-Key':row.body.operation_id}}:{}),body:payload,expectedGeneration:generation});"
+          ]
+        },
+        {
+          "old_start": 249,
+          "old_count": 0,
+          "new_start": 274,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "          if(storage.getItem(dispatchKey)==='1:'+originalDigest)storage.removeItem(dispatchKey);"
+          ]
+        },
+        {
+          "old_start": 258,
+          "old_count": 1,
+          "new_start": 283,
+          "new_count": 1,
+          "before": [
+            "        if(![409,422].includes(Number(error?.status||error?.httpStatus)))break;"
+          ],
+          "after": [
+            "        if(!error?.feedbackRetentionReason&&![409,422].includes(Number(error?.status||error?.httpStatus)))break;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/feedback-outbox-binding-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 40124,
+      "prior_sha256": "39cd1115e715de27d4ca23973073b62818c934ecf74da94bf654463fc5cd75b1",
+      "current_sha256": "3cc355c67fc5e2a15753bf4922c3593ce2a3975ded1e7dbdc74c454ffb5a0177",
+      "hunks": [
+        {
+          "old_start": 11,
+          "old_count": 0,
+          "new_start": 12,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "const DISPATCH_PREFIX='mz_employee_feedback_dispatch:';",
+            "const retainedCount=memory=>[...memory.keys()].filter(key=>!key.startsWith(DISPATCH_PREFIX)).length;"
+          ]
+        },
+        {
+          "old_start": 77,
+          "old_count": 1,
+          "new_start": 79,
+          "new_count": 1,
+          "before": [
+            "   same(accepted,kind==='normal'?[b.operation_id]:[]);same(f.memory.get(key),undefined);same(f.memory.size,1);"
+          ],
+          "after": [
+            "   same(accepted,kind==='normal'?[b.operation_id]:[]);same(f.memory.get(key),undefined);same(retainedCount(f.memory),1);"
+          ]
+        },
+        {
+          "old_start": 91,
+          "old_count": 0,
+          "new_start": 94,
+          "new_count": 21,
+          "before": [],
+          "after": [
+            " {",
+            "  const f=scenario('quota'),first=body(),second=body();",
+            "  await f.box.save(first);await f.box.save(second);",
+            "  const originalBytes=Array.from(f.memory).filter(([key])=>key.startsWith(ACTIVE_PREFIX));",
+            "  same(await f.box.flush(),[]);same(await f.restart().flush(),[]);",
+            "  same(f.requests.map(item=>[item.path,item.body.operation_id]),[",
+            "   ['/feedback-api/submit',first.operation_id],['/feedback-api/submit',second.operation_id],",
+            "   ['/feedback-api/original-receipt',first.operation_id],['/feedback-api/original-receipt',second.operation_id],",
+            "  ]);",
+            "  for(const [key,bytes] of originalBytes)same(f.memory.get(key),bytes);",
+            "  cases++;",
+            " }",
+            " {",
+            "  const f=scenario('quota'),original=body();",
+            "  await f.box.save(original);",
+            "  for(const key of f.memory.keys())if(key.startsWith(DISPATCH_PREFIX))f.memory.delete(key);",
+            "  same(await f.restart().flush(),[]);",
+            "  same(f.requests.map(item=>item.path),['/feedback-api/original-receipt']);",
+            "  same(activeCount(f),1);",
+            "  cases++;",
+            " }"
+          ]
+        },
+        {
+          "old_start": 97,
+          "old_count": 1,
+          "new_start": 120,
+          "new_count": 1,
+          "before": [
+            " const extra=JSON.parse(backupBytes);extra.accepted=true;f.memory.set(backupKey,JSON.stringify(extra));same(await f.box.readPending(),{state:'held'});await assert.rejects(()=>f.box.save(original),/protected recovery/);checks++;same(f.memory.size,1);f.memory.set(backupKey,backupBytes);cases++;"
+          ],
+          "after": [
+            " const extra=JSON.parse(backupBytes);extra.accepted=true;f.memory.set(backupKey,JSON.stringify(extra));same(await f.box.readPending(),{state:'held'});await assert.rejects(()=>f.box.save(original),/protected recovery/);checks++;same(retainedCount(f.memory),1);f.memory.set(backupKey,backupBytes);cases++;"
+          ]
+        },
+        {
+          "old_start": 108,
+          "old_count": 1,
+          "new_start": 131,
+          "new_count": 1,
+          "before": [
+            " await p.listeners['form:submit']({preventDefault(){}});await drain();assert.notEqual(p.saves[0].operation_id,b.operation_id);checks++;same(p.elements.status.textContent,'Saved in the program.');same([...f.memory.keys()].filter(k=>k.startsWith(BACKUP_PREFIX)).length,2);same(f.memory.get(backupKey),backupBytes);"
+          ],
+          "after": [
+            " await p.listeners['form:submit']({preventDefault(){}});await f.box.flush();await drain();assert.notEqual(p.saves[0].operation_id,b.operation_id);checks++;same(p.elements.status.textContent,'Saved in the program.');same([...f.memory.keys()].filter(k=>k.startsWith(BACKUP_PREFIX)).length,2);same(f.memory.get(backupKey),backupBytes);"
+          ]
+        },
+        {
+          "old_start": 198,
+          "old_count": 1,
+          "new_start": 221,
+          "new_count": 1,
+          "before": [
+            " const foreign=fixture();await foreign.box.save(body());foreign.identity.credentialId=randomUUID();same(await foreign.box.readPending(),{state:'held'});same(foreign.memory.size,1);"
+          ],
+          "after": [
+            " const foreign=fixture();await foreign.box.save(body());foreign.identity.credentialId=randomUUID();same(await foreign.box.readPending(),{state:'held'});same(retainedCount(foreign.memory),1);"
+          ]
+        },
+        {
+          "old_start": 209,
+          "old_count": 1,
+          "new_start": 232,
+          "new_count": 1,
+          "before": [
+            " await box.save(b);const encoded=[...memory.values()][0];same(memory.size,1);same(await box.flush(),[]);same(memory.size,1);unstable=false;const pending=await box.readPending();same(pending.state,'pending');same(pending.body,JSON.parse(encoded).body);"
+          ],
+          "after": [
+            " await box.save(b);const encoded=[...memory.values()][0];same(retainedCount(memory),1);same(await box.flush(),[]);same(retainedCount(memory),1);unstable=false;const pending=await box.readPending();same(pending.state,'pending');same(pending.body,JSON.parse(encoded).body);"
+          ]
+        },
+        {
+          "old_start": 258,
+          "old_count": 1,
+          "new_start": 281,
+          "new_count": 1,
+          "before": [
+            "  same(await f.box.flush(),[]);same(f.memory.get(key),bytes);same(f.memory.size,1);same(f.requests.length,1);cases++;"
+          ],
+          "after": [
+            "  same(await f.box.flush(),[]);same(f.memory.get(key),bytes);same(retainedCount(f.memory),1);same(f.requests.length,1);cases++;"
+          ]
+        },
+        {
+          "old_start": 286,
+          "old_count": 1,
+          "new_start": 309,
+          "new_count": 1,
+          "before": [
+            "  same(await f.restart().flush(),[b.operation_id]);same(f.requests.length,2);same(f.requests[0].request.headers['Idempotency-Key'],f.requests[1].request.headers['Idempotency-Key']);same(f.requests[0].request.body,f.requests[1].request.body);cases++;"
+          ],
+          "after": [
+            "  same(await f.restart().flush(),[b.operation_id]);same(f.requests.length,2);same(f.requests[0].request.headers['Idempotency-Key'],b.operation_id);same(f.requests[1].path,'/feedback-api/original-receipt');same(f.requests[1].request.headers,undefined);same(f.requests[0].request.body,f.requests[1].request.body);cases++;"
+          ]
+        },
+        {
+          "old_start": 299,
+          "old_count": 1,
+          "new_start": 322,
+          "new_count": 1,
+          "before": [
+            " same(await f.box.flush(),[]);same(f.memory.size,1);same([...f.memory.values()][0],bytes);"
+          ],
+          "after": [
+            " same(await f.box.flush(),[]);same(retainedCount(f.memory),1);same([...f.memory.values()][0],bytes);"
+          ]
+        },
+        {
+          "old_start": 304,
+          "old_count": 1,
+          "new_start": 327,
+          "new_count": 1,
+          "before": [
+            " same(f.memory.size,1);same([...f.memory.values()][0],bytes);"
+          ],
+          "after": [
+            " same(retainedCount(f.memory),1);same([...f.memory.values()][0],bytes);"
+          ]
+        },
+        {
+          "old_start": 313,
+          "old_count": 1,
+          "new_start": 336,
+          "new_count": 1,
+          "before": [
+            " same(f.requests.length,0);same(f.memory.size,1);"
+          ],
+          "after": [
+            " same(f.requests.length,0);same(retainedCount(f.memory),1);"
+          ]
+        }
+      ]
+    }
+  ],
+  "main_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialEnrollmentApplication.java",
+      "bytes": 9787,
+      "sha256": "5c621ca00b3b7387eef6cd6c1e097550b867820f7046bf4d5275de5445062365"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/VaultEngine.java",
+      "bytes": 1387779,
+      "sha256": "568ea82cd13805f088980e3b35eee3139a4b0a4e9ee45e30dba7ffab6412bcaf"
+    }
+  ],
+  "auxiliary": [
+    {
+      "path": "mobile/src/custodial/feedback-outbox.js",
+      "bytes": 19798,
+      "sha256": "438a01613657437a0aeb72bd8c30b87979b222c47d6ba1b3606bfe54e1e46b91"
+    }
+  ],
+  "core_sources": [
+    {
+      "path": "scripts/feedback-outbox-binding-tests.mjs",
+      "bytes": 41418,
+      "sha256": "3cc355c67fc5e2a15753bf4922c3593ce2a3975ded1e7dbdc74c454ffb5a0177"
+    }
+  ]
+}

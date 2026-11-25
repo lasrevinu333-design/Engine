@@ -1,16 +1,18 @@
 const PREFIX='mz_employee_feedback_outbox:';
 const BACKUP_PREFIX='mz_employee_feedback_retirement_backup:';
+const DISPATCH_PREFIX='mz_employee_feedback_dispatch:';
 const ORIGINAL_LIMIT=3500000;
 const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
 const canonical=value=>JSON.stringify(value,(_key,item)=>item&&typeof item==='object'&&!Array.isArray(item)
   ? Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
 const receiptFields=new Set(['id','operation_id','status','notification_status','email_delivery','created_at','newly_inserted','binding']);
 const bindingFields=new Set(['schema','device_id','employee_id','content_sha256']);
+const digest=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');
+const textDigest=text=>digest(new TextEncoder().encode(text));
 async function contentDigest(body){
-  const digest=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');
   const image=body.image_attachment||body.image;let imageSha=null;
   if(image){const match=String(image.data_url||image.dataUrl||'').trim().match(/^data:image\/(?:png|jpeg|jpg|webp|gif);base64,([a-z0-9+/=\s]+)$/i);if(!match)throw Error('Original feedback attachment cannot be matched.');imageSha=await digest(Uint8Array.from(atob(match[1].replace(/\s/g,'')),v=>v.charCodeAt(0)));}
-  return digest(new TextEncoder().encode(JSON.stringify([String(body.category??'other').trim().toLowerCase(),String(body.priority??'normal').trim().toLowerCase(),String(body.message??body.body??'').trim(),String(body.page_url??body.url??'').trim()||null,imageSha])));
+  return textDigest(JSON.stringify([String(body.category??'other').trim().toLowerCase(),String(body.priority??'normal').trim().toLowerCase(),String(body.message??body.body??'').trim(),String(body.page_url??body.url??'').trim()||null,imageSha]));
 }
 const privateEpoch=value=>{
   if(typeof value==='number')return Number.isSafeInteger(value)&&value>=1?value:null;
@@ -135,6 +137,7 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
       expected_credential_id:current.credentialId,expected_assignment_epoch:String(current.assignmentEpoch)};
     const row={schema_version:'employee-feedback-outbox.v2',created_at:new Date().toISOString(),body:payload};
     const encoded=JSON.stringify(row),key=PREFIX+current.deviceId+':'+original.operation_id;
+    const dispatchKey=DISPATCH_PREFIX+current.deviceId+':'+original.operation_id;
     if(encoded.length>ORIGINAL_LIMIT) throw Error('Feedback photo is too large.');
     await mutate(async context=>{
       await requireBinding(current,context);
@@ -156,6 +159,15 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
       context?.assertCurrent?.();
       storage.setItem(key,originalEncoded);
       if(storage.getItem(key)!==originalEncoded) throw Error('Feedback could not be saved.');
+      // Only a newly retained original can earn one first dispatch. If
+      // reserving its marker fails, the original itself remains available.
+      try {
+        const mark='0:'+await textDigest(originalEncoded);
+        await requireBinding(current,context);
+        if(storage.getItem(key)===originalEncoded&&storage.getItem(dispatchKey)===null)storage.setItem(dispatchKey,mark);
+      } catch {
+        onStatus({state:'saved_pending_delivery',operationId:original.operation_id,reason:'dispatch_reservation_unavailable'});
+      }
     });
     savedRevision+=1;
     return {saved:true,operationId:original.operation_id};
@@ -213,16 +225,28 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
       try{
         const payload=freeze(JSON.parse(JSON.stringify(row.body)));
         const expectedContent=await contentDigest(payload);
-        let generation=null;
+        const dispatchKey=DISPATCH_PREFIX+current.deviceId+':'+row.body.operation_id;
+        const originalDigest=await textDigest(encoded);
+        let generation=null,dispatch=false;
         await mutate(async context=>{
           await requireBinding(current,context);
           if(storage.getItem(key)!==encoded)throw Error('Feedback changed before delivery.');
           if(!Number.isSafeInteger(context?.generation)||context.generation<1)throw Error('Feedback delivery generation is unavailable.');
           generation=context.generation;
+          if(storage.getItem(dispatchKey)==='0:'+originalDigest){
+            // Same-size replacement before network entry. A lost reply or
+            // restart can only observe the exact original and never resend.
+            const started='1:'+originalDigest;
+            context?.assertCurrent?.();
+            storage.setItem(dispatchKey,started);
+            if(storage.getItem(dispatchKey)!==started)throw Error('Feedback dispatch reservation was not confirmed.');
+            dispatch=true;
+          }
         });
         await requireBinding(current);
         // The server compares expected_employee_id against current authenticated identity.
-        const response=await request('/feedback-api/submit',{method:'POST',headers:{'Idempotency-Key':row.body.operation_id},body:payload,expectedGeneration:generation});
+        const response=await request(dispatch?'/feedback-api/submit':'/feedback-api/original-receipt',
+          {method:'POST',...(dispatch?{headers:{'Idempotency-Key':row.body.operation_id}}:{}),body:payload,expectedGeneration:generation});
         requireReceipt(response,payload,current,expectedContent);
         await requireBinding(current);
         await mutate(async context=>{
@@ -247,6 +271,7 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
           }
           context?.assertCurrent?.();
           storage.removeItem(key);if(storage.getItem(key)!==null)throw Error('Feedback cleanup failed.');
+          if(storage.getItem(dispatchKey)==='1:'+originalDigest)storage.removeItem(dispatchKey);
         });
         const backupKey=BACKUP_PREFIX+current.deviceId+':'+row.body.operation_id;
         const backupEncoded=storage.getItem(backupKey);
@@ -255,7 +280,7 @@ export function createFeedbackOutbox({storage,mutate,identity,request,online=()=
         accepted.push(row.body.operation_id);onStatus({state:'uploaded',operationId:row.body.operation_id});
       }catch(error){
         onStatus({state:'saved_pending_delivery',operationId:row.body.operation_id,...(error?.feedbackRetentionReason?{reason:error.feedbackRetentionReason}:{})});
-        if(![409,422].includes(Number(error?.status||error?.httpStatus)))break;
+        if(!error?.feedbackRetentionReason&&![409,422].includes(Number(error?.status||error?.httpStatus)))break;
       }
     }
     return accepted;

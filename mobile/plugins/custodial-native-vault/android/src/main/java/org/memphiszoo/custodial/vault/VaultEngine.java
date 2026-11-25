@@ -12515,6 +12515,7 @@ final class VaultEngine {
         NativePrivateCapsuleFileStore capsules,AndroidProtectedWorkPreferences.HeldOriginalRead held,
         NativePrivateCustodyFrameReadControl control,CustodialNativeRuntime runtime,String requestedOperation)throws VaultFailure {
         if(Thread.holdsLock(this)||runtime==null||runtime.engine!=this||readers==null||journal==null||capsules==null||held==null||control==null)throw retainedFailure();
+        CustodialEnrollmentApplication.requireRetainedPartitionSupport();
         NativeOriginalInventoryFinalizationRestoredRead original=null;NativeProtectedNamespaceObservation namespaces=null;
         NativeOriginalInventoryFinalizationControl fixed=null;
         try{
@@ -12924,6 +12925,7 @@ final class VaultEngine {
         NativePrivateCustodyHttp http,NativePrivateCustodyFrameReadControl control,
         CustodialNativeRuntime runtime)throws VaultFailure {
         if(runtime==null||runtime.engine!=this)throw retainedFailure();
+        CustodialEnrollmentApplication.requireRetainedPartitionSupport();
         var application=runtime.retainedEnrollmentApplication(this);
         application.requireStartupPartitionCurrent();
         return finalizeOriginalInventoryPreservingWork(original,retained,http,control,application,runtime);

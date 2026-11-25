@@ -9,6 +9,8 @@ import {createFeedbackOutbox} from '../mobile/src/custodial/feedback-outbox.js';
 let checks=0;const same=(a,b)=>{assert.deepEqual(a,b);checks++;};
 const META={contract_version:'feedback.v3.enrolled-authority'};
 const ACTIVE_PREFIX='mz_employee_feedback_outbox:',BACKUP_PREFIX='mz_employee_feedback_retirement_backup:';
+const DISPATCH_PREFIX='mz_employee_feedback_dispatch:';
+const retainedCount=memory=>[...memory.keys()].filter(key=>!key.startsWith(DISPATCH_PREFIX)).length;
 const activeCount=f=>[...f.memory.keys()].filter(key=>key.startsWith(ACTIVE_PREFIX)).length;
 function fixture(){
  const memory=new Map(),notices=[],requests=[];let online=false,response={ok:true},wait=null,mutationHook=null,requestHook=null,identityHook=null,generation=1,contextDevice=null,removeHook=null;
@@ -74,7 +76,7 @@ async function retirementBackupCases(){
   if(kind==='conflict'){const altered=JSON.parse(encoded);altered.body.message='Contradictory retained original';conflict=JSON.stringify({schema_version:'employee-feedback-retirement-backup.v1',original_key:key,original_encoded:JSON.stringify(altered)});f.memory.set(backupKey,conflict);}
   const accepted=await f.box.flush();
   if(['normal','post-reject'].includes(kind)){
-   same(accepted,kind==='normal'?[b.operation_id]:[]);same(f.memory.get(key),undefined);same(f.memory.size,1);
+   same(accepted,kind==='normal'?[b.operation_id]:[]);same(f.memory.get(key),undefined);same(retainedCount(f.memory),1);
    const backupBytes=f.memory.get(backupKey),backup=JSON.parse(backupBytes);same(Object.keys(backup).sort(),['original_encoded','original_key','schema_version']);same(backup.schema_version,'employee-feedback-retirement-backup.v1');same(backup.original_key,key);same(backup.original_encoded,encoded);
    const restarted=f.restart(),pending=await restarted.readPending();same(pending.state,'pending');same(pending.body,JSON.parse(encoded).body);same(pending.originals.length,1);same(f.requests.length,1);
    const before=f.writes.length;f.identity.credentialId='';same(await restarted.readPending(),{state:'unavailable'});same(f.writes.length,before);
@@ -89,12 +91,33 @@ async function retirementBackupCases(){
   }
   cases++;
  }
+ {
+  const f=scenario('quota'),first=body(),second=body();
+  await f.box.save(first);await f.box.save(second);
+  const originalBytes=Array.from(f.memory).filter(([key])=>key.startsWith(ACTIVE_PREFIX));
+  same(await f.box.flush(),[]);same(await f.restart().flush(),[]);
+  same(f.requests.map(item=>[item.path,item.body.operation_id]),[
+   ['/feedback-api/submit',first.operation_id],['/feedback-api/submit',second.operation_id],
+   ['/feedback-api/original-receipt',first.operation_id],['/feedback-api/original-receipt',second.operation_id],
+  ]);
+  for(const [key,bytes] of originalBytes)same(f.memory.get(key),bytes);
+  cases++;
+ }
+ {
+  const f=scenario('quota'),original=body();
+  await f.box.save(original);
+  for(const key of f.memory.keys())if(key.startsWith(DISPATCH_PREFIX))f.memory.delete(key);
+  same(await f.restart().flush(),[]);
+  same(f.requests.map(item=>item.path),['/feedback-api/original-receipt']);
+  same(activeCount(f),1);
+  cases++;
+ }
  const f=scenario(),b=body();await f.box.save(b);await f.box.flush();const backupKey=[...f.memory.keys()][0],backupBytes=f.memory.get(backupKey),original=JSON.parse(JSON.parse(backupBytes).original_encoded).body;
  for(const field of ['employeeId','credentialId','assignmentEpoch']){
   const before=f.identity[field];f.identity[field]=field==='assignmentEpoch'?8:randomUUID();const writes=f.writes.length;
   same(await f.box.readPending(),{state:'held'});await assert.rejects(()=>f.box.save(original),/authority changed/);checks++;same(f.writes.length,writes);same(f.memory.get(backupKey),backupBytes);f.identity[field]=before;
  }cases++;
- const extra=JSON.parse(backupBytes);extra.accepted=true;f.memory.set(backupKey,JSON.stringify(extra));same(await f.box.readPending(),{state:'held'});await assert.rejects(()=>f.box.save(original),/protected recovery/);checks++;same(f.memory.size,1);f.memory.set(backupKey,backupBytes);cases++;
+ const extra=JSON.parse(backupBytes);extra.accepted=true;f.memory.set(backupKey,JSON.stringify(extra));same(await f.box.readPending(),{state:'held'});await assert.rejects(()=>f.box.save(original),/protected recovery/);checks++;same(retainedCount(f.memory),1);f.memory.set(backupKey,backupBytes);cases++;
  function page(){
   const script=readFileSync(new URL('../employee-feedback.html',import.meta.url),'utf8').split('  <script>')[1].split('</script>')[0],listeners={},elements={},saves=[];
   for(const id of ['form','message','photo','add-photo','preview','preview-image','remove-photo','send','status'])elements[id]={value:'A different new draft',addEventListener:(n,fn)=>listeners[id+':'+n]=fn,removeAttribute(){},reset(){},querySelector:()=>({value:'need_help'})};
@@ -105,7 +128,7 @@ async function retirementBackupCases(){
  const drain=async()=>{for(let n=0;n<25;n++)await new Promise(setImmediate);};
  f.box=f.restart();const requests=f.requests.length;
  const p=page();await drain();same(p.elements.send.textContent,'Send');same(p.elements.status.textContent,'Saved in the program.');same(p.saves.length,0);same(f.requests.length,requests+1);same(f.requests.at(-1).path,'/feedback-api/original-receipt');same(f.memory.get(backupKey),backupBytes);
- await p.listeners['form:submit']({preventDefault(){}});await drain();assert.notEqual(p.saves[0].operation_id,b.operation_id);checks++;same(p.elements.status.textContent,'Saved in the program.');same([...f.memory.keys()].filter(k=>k.startsWith(BACKUP_PREFIX)).length,2);same(f.memory.get(backupKey),backupBytes);
+ await p.listeners['form:submit']({preventDefault(){}});await f.box.flush();await drain();assert.notEqual(p.saves[0].operation_id,b.operation_id);checks++;same(p.elements.status.textContent,'Saved in the program.');same([...f.memory.keys()].filter(k=>k.startsWith(BACKUP_PREFIX)).length,2);same(f.memory.get(backupKey),backupBytes);
  f.box=f.restart();const reload=page();await drain();same(reload.elements.status.textContent,'Saved in the program.');same(reload.elements.send.textContent,'Send');same(reload.saves.length,0);same(f.memory.get(backupKey),backupBytes);cases++;
  console.log(JSON.stringify({status:'FEEDBACK_RETIREMENT_BACKUP_SOURCE_PASS',cases,checks,utc:new Date().toISOString(),callbacks:'synthetic',actualPageScript:true,SQL:false,HTTP:false,provider:false,native:false,backupAcceptance:false,retentionCleanupQualified:false}));
 }
@@ -195,7 +218,7 @@ async function pendingRecoveryCases(){
  await first.listeners['form:submit']({preventDefault(){}});await drain();same(first.saves[0].operation_id,b.operation_id);same(first.saves[0],pending.body);same(f.memory.get(key),encoded);same(first.elements.status.textContent,'Saved on this phone. It will retry automatically.');
  const reloaded=page();await drain();await reloaded.listeners['form:submit']({preventDefault(){}});await drain();same(reloaded.saves[0],pending.body);same(f.memory.get(key),encoded);
  f.setRemoveHook(null);await reloaded.listeners['form:submit']({preventDefault(){}});await drain();same(reloaded.elements.status.textContent,'Saved in the program.');same(reloaded.elements.send.textContent,'Send');same(activeCount(f),0);
- const foreign=fixture();await foreign.box.save(body());foreign.identity.credentialId=randomUUID();same(await foreign.box.readPending(),{state:'held'});same(foreign.memory.size,1);
+ const foreign=fixture();await foreign.box.save(body());foreign.identity.credentialId=randomUUID();same(await foreign.box.readPending(),{state:'held'});same(retainedCount(foreign.memory),1);
  const legacy=fixture();await legacy.box.save(body());const legacyKey=[...legacy.memory.keys()][0],legacyRow=JSON.parse(legacy.memory.get(legacyKey));delete legacyRow.body.expected_credential_id;legacy.memory.set(legacyKey,JSON.stringify(legacyRow));same(await legacy.box.readPending(),{state:'held'});
  f.identity.credentialId='';const withdrawn=page();await drain();same(withdrawn.elements.send.disabled,true);await withdrawn.listeners['form:submit']({preventDefault(){}});same(withdrawn.saves.length,0);same(withdrawn.elements.status.textContent,'Saved feedback recovery is unavailable. Keep the original pending.');
  console.log(JSON.stringify({status:'FEEDBACK_PENDING_UI_RECOVERY_SOURCE_PASS',checks,newCases:6,utc:new Date().toISOString(),actualPageScript:true,callbacks:'synthetic',SQL:false,HTTP:false,provider:false,physical:false}));
@@ -206,7 +229,7 @@ if(process.argv.includes('--post-cleanup-boundary-only')){
  const box=createFeedbackOutbox({storage:{get length(){return memory.size;},key:i=>[...memory.keys()][i],getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},identity:async()=>current,online:()=>true,
   mutate:async fn=>{const value=await fn({deviceId:current.deviceId,generation:1});if(sent&&unstable)throw Error('Recording existing store post-callback admission rejection');return value;},
   request:async()=>{sent=true;return {ok:true,meta:META,data:{item:{id:randomUUID(),operation_id:b.operation_id,binding:{schema:'employee-feedback-receipt.v1',device_id:current.deviceId,employee_id:current.employeeId,content_sha256:contentDigest(b)}}}};}});
- await box.save(b);const encoded=[...memory.values()][0];same(memory.size,1);same(await box.flush(),[]);same(memory.size,1);unstable=false;const pending=await box.readPending();same(pending.state,'pending');same(pending.body,JSON.parse(encoded).body);
+ await box.save(b);const encoded=[...memory.values()][0];same(retainedCount(memory),1);same(await box.flush(),[]);same(retainedCount(memory),1);unstable=false;const pending=await box.readPending();same(pending.state,'pending');same(pending.body,JSON.parse(encoded).body);
  console.log(JSON.stringify({status:'POST_DELETE_UNKNOWN_ORIGINAL_BACKUP_PRESERVED',checks,utc:new Date().toISOString(),newCases:1,sourceOnly:true,SQL:false,HTTP:false,retentionCleanupQualified:false}));process.exit(0);
 }
 if(process.argv.includes('--pending-recovery-before')){
@@ -255,7 +278,7 @@ async function affectedCleanupCases(){
   const f=fixture(),b=body();await f.box.save(b);const [key,bytes]=[...f.memory][0];f.setOnline(true);f.setResponse({ok:true,meta:META,data:{item:ack(f,b)}});
   const change=()=>{if(boundary.startsWith('employee'))f.identity.employeeId=randomUUID();if(boundary==='device-http')f.identity.deviceId='KIOSK_OTHER';if(boundary==='generation-mutation')f.setGeneration(2);if(boundary==='missing-employee')f.identity.employeeId='';if(boundary==='mutation-device')f.setContextDevice('KIOSK_OTHER');};
   if(boundary.endsWith('mutation')||boundary==='mutation-device')f.setMutationHook(()=>{if(f.requests.length)change();});else f.setRequestHook(change);
-  same(await f.box.flush(),[]);same(f.memory.get(key),bytes);same(f.memory.size,1);same(f.requests.length,1);cases++;
+  same(await f.box.flush(),[]);same(f.memory.get(key),bytes);same(retainedCount(f.memory),1);same(f.requests.length,1);cases++;
  }
  for(const field of ['missing-contract','device_id','employee_id','message']){
   const f=fixture(),b=body();await f.box.save(b);const [key,bytes]=[...f.memory][0];f.setOnline(true);
@@ -283,7 +306,7 @@ async function affectedCleanupCases(){
  {
   const f=fixture(),b=body();await f.box.save(b);const [key,bytes]=[...f.memory][0];f.setOnline(true);f.setRequestHook(()=>{throw Error('synthetic lost acknowledgment');});
   same(await f.box.flush(),[]);same(f.memory.get(key),bytes);f.setRequestHook(null);f.setResponse({ok:true,meta:META,data:{item:ack(f,b)}});
-  same(await f.restart().flush(),[b.operation_id]);same(f.requests.length,2);same(f.requests[0].request.headers['Idempotency-Key'],f.requests[1].request.headers['Idempotency-Key']);same(f.requests[0].request.body,f.requests[1].request.body);cases++;
+  same(await f.restart().flush(),[b.operation_id]);same(f.requests.length,2);same(f.requests[0].request.headers['Idempotency-Key'],b.operation_id);same(f.requests[1].path,'/feedback-api/original-receipt');same(f.requests[1].request.headers,undefined);same(f.requests[0].request.body,f.requests[1].request.body);cases++;
  }
  {
   const f=fixture(),b=body();f.setMutationHook(()=>{f.identity.employeeId=randomUUID();});await assert.rejects(()=>f.box.save(b),/authority changed/);same(f.memory.size,0);same(f.requests.length,0);cases++;
@@ -296,12 +319,12 @@ async function affectedCleanupCases(){
 if(process.argv.includes('--affected-cleanup-only')){await affectedCleanupCases();process.exit(0);}
 for(const makeResponse of [()=>({ok:true}),(_fixture,b)=>({ok:true,data:{item:{id:randomUUID(),operation_id:randomUUID()}}}),(_fixture,b)=>({ok:true,data:{item:{id:'invalid',operation_id:b.operation_id}}}),(f,b)=>({ok:false,data:{item:ack(f,b)}})]){
  const f=fixture(),b=body();await f.box.save(b);const bytes=[...f.memory.values()][0];f.setOnline(true);f.setResponse(makeResponse(f,b));
- same(await f.box.flush(),[]);same(f.memory.size,1);same([...f.memory.values()][0],bytes);
+ same(await f.box.flush(),[]);same(retainedCount(f.memory),1);same([...f.memory.values()][0],bytes);
 }
 {
  const f=fixture(),b=body();await f.box.save(b);const bytes=[...f.memory.values()][0];
  await f.box.save({priority:b.priority,category:b.category,message:b.message,operation_id:b.operation_id});
- same(f.memory.size,1);same([...f.memory.values()][0],bytes);
+ same(retainedCount(f.memory),1);same([...f.memory.values()][0],bytes);
  await assert.rejects(()=>f.box.save({...b,message:'changed'}),/identity/);checks++;
  await acceptedDefaultUploadCase(f,b);
 }
@@ -310,7 +333,7 @@ for(const makeResponse of [()=>({ok:true}),(_fixture,b)=>({ok:true,data:{item:{i
 }
 {
  const f=fixture(),b=body();await f.box.save(b);f.identity.employeeId=randomUUID();f.setOnline(true);f.setResponse({ok:false});await f.box.flush();
- same(f.requests.length,0);same(f.memory.size,1);
+ same(f.requests.length,0);same(retainedCount(f.memory),1);
 }
 console.log(JSON.stringify({status:'FEEDBACK_OUTBOX_BINDING_PASS',checks,actualModule:true,transport:'synthetic',physical:false}));
 }
