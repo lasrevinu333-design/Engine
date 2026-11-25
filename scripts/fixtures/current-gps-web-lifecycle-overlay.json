@@ -1,0 +1,450 @@
+{
+  "webHistory": [
+    {
+      "path": "mobile/src/web-install/manager/manifest.webmanifest",
+      "kind": "changed",
+      "prior_bytes": 717,
+      "prior_sha256": "68d4725a79a9f353eb66251f5ca9983473484959d1cb9a46da522c5fa114d460",
+      "current_sha256": "b71e3da08cee43a3836e85eed467bda7c6b04e1ea084d9cb7cc8a02bc37fa2d7",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 3,
+          "new_start": 5,
+          "new_count": 2,
+          "before": [
+            "  \"id\": \"/manager/\",",
+            "  \"start_url\": \"/manager/\",",
+            "  \"scope\": \"/manager/\","
+          ],
+          "after": [
+            "  \"start_url\": \"./\",",
+            "  \"scope\": \"./\","
+          ]
+        },
+        {
+          "old_start": 13,
+          "old_count": 3,
+          "new_start": 12,
+          "new_count": 3,
+          "before": [
+            "    { \"src\": \"/manager/icons/icon-192.png\", \"sizes\": \"192x192\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+            "    { \"src\": \"/manager/icons/icon-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+            "    { \"src\": \"/manager/icons/icon-maskable-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"maskable\" }"
+          ],
+          "after": [
+            "    { \"src\": \"./icons/icon-192.png\", \"sizes\": \"192x192\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+            "    { \"src\": \"./icons/icon-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+            "    { \"src\": \"./icons/icon-maskable-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"maskable\" }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/web-install/manager/service-worker.js",
+      "kind": "changed",
+      "prior_bytes": 3535,
+      "prior_sha256": "148c0c4a63d65f51a8eed856320fe68ae76b3f63ae739a885c712a6bd0f14924",
+      "current_sha256": "fe4cc668acefb8237098abded511ed085b222a9176ac9c9e5a4ec39977771a57",
+      "hunks": [
+        {
+          "old_start": 2,
+          "old_count": 1,
+          "new_start": 1,
+          "new_count": 0,
+          "before": [
+            "const CACHE = `${CACHE_PREFIX}__MZ_EXACT_CACHE_ID__`;"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 3,
+          "old_count": 0,
+          "new_start": 3,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "const FAMILY = `${CACHE_PREFIX}${encodeURIComponent(BASE.pathname)}:`;",
+            "const CACHE = `${FAMILY}__MZ_EXACT_CACHE_ID__`;"
+          ]
+        },
+        {
+          "old_start": 42,
+          "old_count": 1,
+          "new_start": 43,
+          "new_count": 3,
+          "before": [
+            "self.addEventListener('install', (event) => event.waitUntil((async () => {"
+          ],
+          "after": [
+            "const offlineUrl = absolute('./offline.html').href;",
+            "const readOffline = request => caches.match(request, {cacheName:CACHE});",
+            "self.addEventListener('install', event => event.waitUntil((async () => {"
+          ]
+        },
+        {
+          "old_start": 44,
+          "old_count": 4,
+          "new_start": 47,
+          "new_count": 10,
+          "before": [
+            "  for (const path of PRECACHE) {",
+            "    const response = await fetch(absolute(path), { cache: 'reload', credentials: 'omit' });",
+            "    if (!response.ok) throw new Error(`Manager shell asset unavailable: ${path}`);",
+            "    await cache.put(absolute(path), response);"
+          ],
+          "after": [
+            "  try {",
+            "    for (const path of PRECACHE) {",
+            "      const response = await fetch(absolute(path), { cache: 'reload', credentials: 'omit' });",
+            "      const control = response.headers.get('cache-control') || '';",
+            "      if (!response.ok || /\\b(?:no-store|private)\\b/i.test(control)) throw new Error(`Offline shell asset unavailable: ${path}`);",
+            "      await cache.put(absolute(path), response);",
+            "    }",
+            "  } catch (error) {",
+            "    await caches.delete(CACHE);",
+            "    throw error;"
+          ]
+        },
+        {
+          "old_start": 49,
+          "old_count": 1,
+          "new_start": 58,
+          "new_count": 2,
+          "before": [
+            "  await self.skipWaiting();"
+          ],
+          "after": [
+            "  // Existing tabs stay with their original worker until the browser can",
+            "  // safely activate this release. A partial install is never read."
+          ]
+        },
+        {
+          "old_start": 51,
+          "old_count": 1,
+          "new_start": 61,
+          "new_count": 1,
+          "before": [
+            "self.addEventListener('activate', (event) => event.waitUntil((async () => {"
+          ],
+          "after": [
+            "self.addEventListener('activate', event => event.waitUntil((async () => {"
+          ]
+        },
+        {
+          "old_start": 53,
+          "old_count": 1,
+          "new_start": 63,
+          "new_count": 1,
+          "before": [
+            "  await Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE).map((key) => caches.delete(key)));"
+          ],
+          "after": [
+            "  await Promise.all(keys.filter(key => key.startsWith(FAMILY) && key !== CACHE).map(key => caches.delete(key)));"
+          ]
+        },
+        {
+          "old_start": 56,
+          "old_count": 6,
+          "new_start": 66,
+          "new_count": 11,
+          "before": [
+            "self.addEventListener('fetch', (event) => {",
+            "  if (event.request.method !== 'GET') return;",
+            "  const url = new URL(event.request.url);",
+            "  if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE.pathname) || isSensitive(event.request, url)) return;",
+            "  if (event.request.mode === 'navigate') {",
+            "    event.respondWith(fetch(event.request).catch(() => caches.match(absolute('./offline.html'))));"
+          ],
+          "after": [
+            "self.addEventListener('fetch', event => {",
+            "  const {request} = event;",
+            "  if (request.method !== 'GET') return;",
+            "  const url = new URL(request.url);",
+            "  if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE.pathname) || isSensitive(request, url)) return;",
+            "  if (request.mode === 'navigate') {",
+            "    if (url.href === offlineUrl) {",
+            "      event.respondWith(readOffline(offlineUrl).then(response => response || new Response('Offline', {status:503})));",
+            "    } else {",
+            "      event.respondWith(fetch(request, {cache:'no-cache'}).catch(() => Response.redirect(offlineUrl)));",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 64,
+          "old_count": 9,
+          "new_start": 79,
+          "new_count": 8,
+          "before": [
+            "  if (!['script', 'style', 'image', 'font'].includes(event.request.destination) || url.search) return;",
+            "  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then(async (response) => {",
+            "    const control = String(response.headers.get('cache-control') || '');",
+            "    if (response.ok && !/\\b(?:no-store|private)\\b/i.test(control)) {",
+            "      const cache = await caches.open(CACHE);",
+            "      await cache.put(event.request, response.clone());",
+            "    }",
+            "    return response;",
+            "  })));"
+          ],
+          "after": [
+            "  if (!['script', 'style', 'image', 'font'].includes(request.destination)) return;",
+            "  if (request.referrer === offlineUrl) {",
+            "    event.respondWith(readOffline(request).then(response => response || fetch(request, {cache:'no-cache'})));",
+            "  } else {",
+            "    // Online HTML and its mutable asset URLs must come from the same current",
+            "    // site, even while the next worker is still installing.",
+            "    event.respondWith(fetch(request, {cache:'no-cache'}));",
+            "  }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/web-install/viewer/manifest.webmanifest",
+      "kind": "changed",
+      "prior_bytes": 672,
+      "prior_sha256": "dca684abc187de241513db1565a6a098f8214d29a18150a9e8f7baf75d0b6d79",
+      "current_sha256": "a46764f35ef71e875fa01ed5ef5d90e570f643d9bbada0cc4f7309ac62de16c4",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 3,
+          "new_start": 5,
+          "new_count": 2,
+          "before": [
+            "  \"id\": \"/viewer/\",",
+            "  \"start_url\": \"/viewer/\",",
+            "  \"scope\": \"/viewer/\","
+          ],
+          "after": [
+            "  \"start_url\": \"./\",",
+            "  \"scope\": \"./\","
+          ]
+        },
+        {
+          "old_start": 13,
+          "old_count": 3,
+          "new_start": 12,
+          "new_count": 3,
+          "before": [
+            "    { \"src\": \"/viewer/icons/icon-192.png\", \"sizes\": \"192x192\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+            "    { \"src\": \"/viewer/icons/icon-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+            "    { \"src\": \"/viewer/icons/icon-maskable-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"maskable\" }"
+          ],
+          "after": [
+            "    { \"src\": \"./icons/icon-192.png\", \"sizes\": \"192x192\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+            "    { \"src\": \"./icons/icon-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+            "    { \"src\": \"./icons/icon-maskable-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"maskable\" }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/web-install/viewer/service-worker.js",
+      "kind": "changed",
+      "prior_bytes": 2948,
+      "prior_sha256": "c54763b05839be153c94f3e064ae9c946977befecef3651617912590514736f2",
+      "current_sha256": "5b4b0b2583a811b7d1dfe1a0c364b9a9418d410236c90d4aa19e2250ef866406",
+      "hunks": [
+        {
+          "old_start": 2,
+          "old_count": 1,
+          "new_start": 1,
+          "new_count": 0,
+          "before": [
+            "const CACHE = `${CACHE_PREFIX}__MZ_EXACT_CACHE_ID__`;"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 3,
+          "old_count": 0,
+          "new_start": 3,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "const FAMILY = `${CACHE_PREFIX}${encodeURIComponent(BASE.pathname)}:`;",
+            "const CACHE = `${FAMILY}__MZ_EXACT_CACHE_ID__`;"
+          ]
+        },
+        {
+          "old_start": 28,
+          "old_count": 1,
+          "new_start": 29,
+          "new_count": 3,
+          "before": [
+            "self.addEventListener('install', (event) => event.waitUntil((async () => {"
+          ],
+          "after": [
+            "const offlineUrl = absolute('./offline.html').href;",
+            "const readOffline = request => caches.match(request, {cacheName:CACHE});",
+            "self.addEventListener('install', event => event.waitUntil((async () => {"
+          ]
+        },
+        {
+          "old_start": 30,
+          "old_count": 4,
+          "new_start": 33,
+          "new_count": 10,
+          "before": [
+            "  for (const path of PRECACHE) {",
+            "    const response = await fetch(absolute(path), { cache: 'reload', credentials: 'omit' });",
+            "    if (!response.ok) throw new Error(`Viewer shell asset unavailable: ${path}`);",
+            "    await cache.put(absolute(path), response);"
+          ],
+          "after": [
+            "  try {",
+            "    for (const path of PRECACHE) {",
+            "      const response = await fetch(absolute(path), { cache: 'reload', credentials: 'omit' });",
+            "      const control = response.headers.get('cache-control') || '';",
+            "      if (!response.ok || /\\b(?:no-store|private)\\b/i.test(control)) throw new Error(`Offline shell asset unavailable: ${path}`);",
+            "      await cache.put(absolute(path), response);",
+            "    }",
+            "  } catch (error) {",
+            "    await caches.delete(CACHE);",
+            "    throw error;"
+          ]
+        },
+        {
+          "old_start": 35,
+          "old_count": 1,
+          "new_start": 44,
+          "new_count": 2,
+          "before": [
+            "  await self.skipWaiting();"
+          ],
+          "after": [
+            "  // Existing tabs stay with their original worker until the browser can",
+            "  // safely activate this release. A partial install is never read."
+          ]
+        },
+        {
+          "old_start": 37,
+          "old_count": 1,
+          "new_start": 47,
+          "new_count": 1,
+          "before": [
+            "self.addEventListener('activate', (event) => event.waitUntil((async () => {"
+          ],
+          "after": [
+            "self.addEventListener('activate', event => event.waitUntil((async () => {"
+          ]
+        },
+        {
+          "old_start": 39,
+          "old_count": 1,
+          "new_start": 49,
+          "new_count": 1,
+          "before": [
+            "  await Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE).map((key) => caches.delete(key)));"
+          ],
+          "after": [
+            "  await Promise.all(keys.filter(key => key.startsWith(FAMILY) && key !== CACHE).map(key => caches.delete(key)));"
+          ]
+        },
+        {
+          "old_start": 42,
+          "old_count": 6,
+          "new_start": 52,
+          "new_count": 11,
+          "before": [
+            "self.addEventListener('fetch', (event) => {",
+            "  if (event.request.method !== 'GET') return;",
+            "  const url = new URL(event.request.url);",
+            "  if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE.pathname) || isSensitive(event.request, url)) return;",
+            "  if (event.request.mode === 'navigate') {",
+            "    event.respondWith(fetch(event.request).catch(() => caches.match(absolute('./offline.html'))));"
+          ],
+          "after": [
+            "self.addEventListener('fetch', event => {",
+            "  const {request} = event;",
+            "  if (request.method !== 'GET') return;",
+            "  const url = new URL(request.url);",
+            "  if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE.pathname) || isSensitive(request, url)) return;",
+            "  if (request.mode === 'navigate') {",
+            "    if (url.href === offlineUrl) {",
+            "      event.respondWith(readOffline(offlineUrl).then(response => response || new Response('Offline', {status:503})));",
+            "    } else {",
+            "      event.respondWith(fetch(request, {cache:'no-cache'}).catch(() => Response.redirect(offlineUrl)));",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 50,
+          "old_count": 9,
+          "new_start": 65,
+          "new_count": 8,
+          "before": [
+            "  if (!['script', 'style', 'image', 'font'].includes(event.request.destination) || url.search) return;",
+            "  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then(async (response) => {",
+            "    const control = String(response.headers.get('cache-control') || '');",
+            "    if (response.ok && !/\\b(?:no-store|private)\\b/i.test(control)) {",
+            "      const cache = await caches.open(CACHE);",
+            "      await cache.put(event.request, response.clone());",
+            "    }",
+            "    return response;",
+            "  })));"
+          ],
+          "after": [
+            "  if (!['script', 'style', 'image', 'font'].includes(request.destination)) return;",
+            "  if (request.referrer === offlineUrl) {",
+            "    event.respondWith(readOffline(request).then(response => response || fetch(request, {cache:'no-cache'})));",
+            "  } else {",
+            "    // Online HTML and its mutable asset URLs must come from the same current",
+            "    // site, even while the next worker is still installing.",
+            "    event.respondWith(fetch(request, {cache:'no-cache'}));",
+            "  }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "ops-manager-hub.html",
+      "kind": "changed",
+      "prior_bytes": 2673,
+      "prior_sha256": "a79337b6a928a59d824b963c815d82de32470209025fd913ec240b77b471169f",
+      "current_sha256": "cfe3fb62242b4bb9f4ffdb54d927ac1a3931af8c3e190c579047408955f58129",
+      "hunks": [
+        {
+          "old_start": 14,
+          "old_count": 1,
+          "new_start": 14,
+          "new_count": 1,
+          "before": [
+            "<p><a href=\"./ops-viewer.html\">Open the read-only viewer</a></p></main><script src=\"./memphis-auth.js\"></script><script type=\"module\" src=\"./custodial-leadership-enrollment.mjs?v=2026.11.10.full-manager-names\"></script></body></html>"
+          ],
+          "after": [
+            "<p><a href=\"./ops-viewer.html\">Open the read-only viewer</a></p></main><script src=\"./memphis-auth.js\"></script><script type=\"module\" src=\"./custodial-leadership-enrollment.mjs?v=2026.11.25.session-restore\"></script></body></html>"
+          ]
+        }
+      ]
+    }
+  ],
+  "presentation_sources": [
+    {
+      "path": "mobile/src/web-install/manager/manifest.webmanifest",
+      "bytes": 661,
+      "sha256": "b71e3da08cee43a3836e85eed467bda7c6b04e1ea084d9cb7cc8a02bc37fa2d7"
+    },
+    {
+      "path": "mobile/src/web-install/manager/service-worker.js",
+      "bytes": 4147,
+      "sha256": "fe4cc668acefb8237098abded511ed085b222a9176ac9c9e5a4ec39977771a57"
+    },
+    {
+      "path": "mobile/src/web-install/viewer/manifest.webmanifest",
+      "bytes": 622,
+      "sha256": "a46764f35ef71e875fa01ed5ef5d90e570f643d9bbada0cc4f7309ac62de16c4"
+    },
+    {
+      "path": "mobile/src/web-install/viewer/service-worker.js",
+      "bytes": 3561,
+      "sha256": "5b4b0b2583a811b7d1dfe1a0c364b9a9418d410236c90d4aa19e2250ef866406"
+    },
+    {
+      "path": "ops-manager-hub.html",
+      "bytes": 2670,
+      "sha256": "cfe3fb62242b4bb9f4ffdb54d927ac1a3931af8c3e190c579047408955f58129"
+    }
+  ]
+}

@@ -35,11 +35,12 @@ const MESSENGER_EXPEDITED_PROFILE_SHA='c11825f767737556de3109058085a04a9829f1520
 const INTEGRATION_REPAIR_PROFILE_SHA='4a1829b74c4c68077d8b7b681dda8ec4224cf0906db818217103dacb6242ea46';
 const CLOCK_NAVIGATION_PROFILE_SHA='0a79cfcb4b8457a67a0924035b1bfbb2111b4d65bbe60c8a88daaa0bd8fd78f8';
 const RETAINED_FEEDBACK_PROFILE_SHA='bfa5fa1084c8953a9243e8469742383717d2b5ec4b8400f0661fe6ff5d5e34cb';
+const WEB_LIFECYCLE_PROFILE_SHA='a414732e10fde9ddf4978fd67985984573588198e2c48bbad7181b2b3556dbb3';
 const BASECAMP_R34_PROFILE_SHA='113e0647421cfbb6b3dc8cfc2a21757e15446f27bd65c64bc150ba41af4a2f36';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
- const integrationRepair=[INTEGRATION_REPAIR_PROFILE_SHA,CLOCK_NAVIGATION_PROFILE_SHA,RETAINED_FEEDBACK_PROFILE_SHA].includes(sha(JSON.stringify(value)));
+ const integrationRepair=[INTEGRATION_REPAIR_PROFILE_SHA,CLOCK_NAVIGATION_PROFILE_SHA,RETAINED_FEEDBACK_PROFILE_SHA,WEB_LIFECYCLE_PROFILE_SHA].includes(sha(JSON.stringify(value)));
  assert.ok(integrationRepair||[PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA,NOTIFICATION_DEADLINE_PROFILE_SHA,NOTIFICATION_PRESENTATION_PROFILE_SHA,PROVIDER_STORAGE_PROFILE_SHA,MESSENGER_VOICE_PROFILE_SHA,MESSENGER_EXPEDITED_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact registered source profile; independent review and runtime admission remain separate');
  assert.equal(value.schema,'custodial.current-gps-source-qualification.v1');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
@@ -112,6 +113,7 @@ function applyNotificationOverlay(profile,relativePath,expected){
  if(overlay.voiceHistory)result.voiceHistory=overlay.voiceHistory;
  if(overlay.clockHistory)result.clockHistory=overlay.clockHistory;
  if(overlay.retainedFeedbackHistory)result.retainedFeedbackHistory=overlay.retainedFeedbackHistory;
+ if(overlay.webHistory)result.webHistory=overlay.webHistory;
  if(overlay.auditRepairHistory){
   for(const group of ['main_java','test_java'])if(overlay[group])
    result[group].sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);
@@ -136,7 +138,9 @@ const clockNavigationProfile=applyNotificationOverlay(integrationRepairProfile,
  './fixtures/current-gps-clock-navigation-overlay.json',CLOCK_NAVIGATION_PROFILE_SHA);
 const retainedFeedbackProfile=applyNotificationOverlay(clockNavigationProfile,
  './fixtures/current-gps-retained-feedback-overlay.json',RETAINED_FEEDBACK_PROFILE_SHA);
-export const currentGpsQualification=freeze(validateCurrentGpsQualification(retainedFeedbackProfile));
+const webLifecycleProfile=applyNotificationOverlay(retainedFeedbackProfile,
+ './fixtures/current-gps-web-lifecycle-overlay.json',WEB_LIFECYCLE_PROFILE_SHA);
+export const currentGpsQualification=freeze(validateCurrentGpsQualification(webLifecycleProfile));
 const all=[...currentGpsQualification.main_java,...currentGpsQualification.test_java,...currentGpsQualification.auxiliary,...currentGpsQualification.core_sources,...(currentGpsQualification.presentation_sources||[])];
 const byPath=new Map(all.map(row=>[row.path,row]));
 const aliases=new Map(Object.entries(currentGpsQualification.basename_aliases));
@@ -194,6 +198,11 @@ export function assertBoundCurrentGpsSource(name,source){
 // any of the archived GPS or provider contracts.
 export function normalizeClockNavigationForComparison(name,source){
  const path=canonical(name);
+ const web=currentGpsQualification.webHistory.find(row=>row.path===path);
+ if(web&&sha(source)===web.current_sha256){
+  assertCurrentGpsInventory();
+  source=reverseGps(web,source);
+ }
  const retained=currentGpsQualification.retainedFeedbackHistory.find(row=>row.path===path);
  if(retained&&sha(source)===retained.current_sha256){
   assertCurrentGpsInventory();
