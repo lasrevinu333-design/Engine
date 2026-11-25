@@ -14,7 +14,7 @@
 <main id="staffing-workspace">
   <a class="mz-back-link" href="./start_page1.html" data-mz-back>Back to Manager Hub</a>
   <h1 class="trailPageTitle">Stable roster positions</h1>
-  <p>Vacate an occupied position or fill an eligible vacancy. These actions are separate from legacy departure/replacement. No staffing change clears protected work or transfers a phone.</p>
+  <p>Review a stable vacancy in Weekly Schedule. Use this page to fill an eligible never-filled position. Phone assignment is a separate action.</p>
   <p>To publish or restore a recurring <strong>position pattern</strong>, <a id="staffing-pattern-link" href="./schedule-weekly.html?hub=manager">review the current approved pattern in Schedule</a>. Current people and availability must validate before confirmation; historical source identities never reactivate employees.</p>
   <p id="staffing-status" role="status" aria-live="polite">Normal manager staffing integration must be mounted before this page can read or change anything.</p>
   <div class="toolbar"><label>Service date (Central)<input id="staffing-date" type="date" required></label><button id="staffing-refresh" type="button">Refresh current roster</button></div>
@@ -31,6 +31,7 @@
       <label>Reason<textarea id="staffing-reason" maxlength="500" required></textarea></label>
       <button id="staffing-preview-button" type="submit">Preview intended action</button>
     </form>
+    <a id="staffing-vacancy-link" class="uxButton" href="./schedule-weekly.html?hub=manager" hidden>Review this vacancy in Weekly Schedule</a>
     <button id="staffing-read-separation" type="button">Read protected separation status</button>
   </section>
   <section id="staffing-preview" aria-labelledby="staffing-preview-title" hidden>
@@ -45,8 +46,8 @@
 <!-- Main mounts the normal manager session/service and the existing owning
      saved-request/source/outcome adapters by importing mountStaffingPage.
      No standalone auth script, arbitrary URL, or storage fallback is installed. -->
-<script src="./memphis-auth.js"></script><script src="./memphis-scheduler-actions.js?v=2026.11.11.current-roster"></script>
+<script src="./memphis-auth.js"></script><script src="./memphis-scheduler-actions.js?v=20261125-r1"></script>
 <script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
-<script type="module" src="./manager-staffing-runtime.mjs?v=2026.11.11.current-roster"></script>
+<script type="module" src="./manager-staffing-runtime.mjs?v=20261125-r1"></script>
 </body>
 </html>

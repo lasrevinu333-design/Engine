@@ -1,0 +1,375 @@
+{
+  "staffingTransitionHistory": [
+    {
+      "path": "memphis-scheduler-actions.js",
+      "kind": "changed",
+      "prior_bytes": 78784,
+      "prior_sha256": "94e31d24e37119f94e5adc7c15050307cbc8fd5958212c8647abe6a8f1274c69",
+      "current_sha256": "39c352f04ab7150c3ac92c804af3a6ab686bdaf10190510b78eaa231ddda00ab",
+      "hunks": [
+        {
+          "old_start": 688,
+          "old_count": 0,
+          "new_start": 689,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "   if(ownerPaths.has(path))throw Error('Use the protected Stable vacancy review in Weekly Schedule.');"
+          ]
+        },
+        {
+          "old_start": 693,
+          "old_count": 1,
+          "new_start": 694,
+          "new_count": 1,
+          "before": [
+            "  async retry(){const r=read();if(!r)throw Error('No saved scheduler request.');if(r.state==='REJECTED')throw Error('This request was conclusively rejected. Refresh and dismiss it before entering a corrected change.');if(r.state==='ACCEPTED')return r.receipt;if(isStaffingCommand(r)){if(sending)throw Error('Staffing request is already in progress.');sending=true;try{return await reviewCommand(r);}finally{sending=false;}}if(staffingOperation(r.path)){if(sending)throw Error('Staffing request is already in progress.');sending=true;try{return await readStaffing(r);}finally{sending=false;}}return send({...r,state:'PENDING',error:null});},"
+          ],
+          "after": [
+            "  async retry(){const r=read();if(!r)throw Error('No saved scheduler request.');if(ownerPaths.has(r.path))throw Error('The legacy turnover original is retained. No request was resent.');if(r.state==='REJECTED')throw Error('This request was conclusively rejected. Refresh and dismiss it before entering a corrected change.');if(r.state==='ACCEPTED')return r.receipt;if(isStaffingCommand(r)){if(sending)throw Error('Staffing request is already in progress.');sending=true;try{return await reviewCommand(r);}finally{sending=false;}}if(staffingOperation(r.path)){if(sending)throw Error('Staffing request is already in progress.');sending=true;try{return await readStaffing(r);}finally{sending=false;}}return send({...r,state:'PENDING',error:null});},"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "schedule-weekly.js",
+      "kind": "changed",
+      "prior_bytes": 152781,
+      "prior_sha256": "20e91468e3aa249e656567c4a8bc0818b71ae774aef8365d3fd2293866517c6e",
+      "current_sha256": "ac349399bd5ae7d2ae1b465cee7f0871bfd6fc410b3250ae6f05b3b62549346e",
+      "hunks": [
+        {
+          "old_start": 3,
+          "old_count": 1,
+          "new_start": 3,
+          "new_count": 1,
+          "before": [
+            "const els=Object.fromEntries(['refresh-btn','rebuild-projection-btn','generate-btn','publish-btn','apply-day-btn','week-start','service-date','absence-type','status','subtitle','working-count','absent-count','open-count','revision-count','roster-list','baseline-absences','temporary-absences','contractor-slots','week-title','week-meta','week-head','week-body','changes-list','readiness-list','turnover-dialog','turnover-form','turnover-title','turnover-current','turnover-slot','turnover-mode','replacement-name-field','replacement-name','turnover-effective-date','turnover-reason','turnover-close','turnover-cancel','turnover-submit','turnover-submit-label','action-confirm-dialog','action-confirm-title','action-confirm-message','action-confirm-cancel','action-confirm-accept'].map((id)=>[id.replaceAll('-','_'),document.getElementById(id)]));"
+          ],
+          "after": [
+            "const els=Object.fromEntries(['refresh-btn','rebuild-projection-btn','generate-btn','publish-btn','apply-day-btn','week-start','service-date','absence-type','status','subtitle','working-count','absent-count','open-count','revision-count','roster-list','baseline-absences','temporary-absences','contractor-slots','week-title','week-meta','week-head','week-body','changes-list','readiness-list','action-confirm-dialog','action-confirm-title','action-confirm-message','action-confirm-cancel','action-confirm-accept'].map((id)=>[id.replaceAll('-','_'),document.getElementById(id)]));"
+          ]
+        },
+        {
+          "old_start": 19,
+          "old_count": 1,
+          "new_start": 19,
+          "new_count": 1,
+          "before": [
+            "  ||!!state.turnoverSelection||!!state.vacancySelection||els.action_confirm_dialog.open||els.turnover_dialog.open||vacancyEls.vacancy_dialog.open"
+          ],
+          "after": [
+            "  ||!!state.vacancySelection||els.action_confirm_dialog.open||vacancyEls.vacancy_dialog.open"
+          ]
+        },
+        {
+          "old_start": 100,
+          "old_count": 1,
+          "new_start": 100,
+          "new_count": 1,
+          "before": [
+            "  if(!target.closest(scheduleInputSelector+',#turnover-form,#vacancy-form,#third-coverall-panel,#week-start,#service-date'))return;"
+          ],
+          "after": [
+            "  if(!target.closest(scheduleInputSelector+',#vacancy-form,#third-coverall-panel,#week-start,#service-date'))return;"
+          ]
+        },
+        {
+          "old_start": 105,
+          "old_count": 1,
+          "new_start": 105,
+          "new_count": 1,
+          "before": [
+            " for(const dialog of [els.action_confirm_dialog,els.turnover_dialog,vacancyEls.vacancy_dialog])dialog.addEventListener('close',()=>deferScheduleRefresh());"
+          ],
+          "after": [
+            " for(const dialog of [els.action_confirm_dialog,vacancyEls.vacancy_dialog])dialog.addEventListener('close',()=>deferScheduleRefresh());"
+          ]
+        },
+        {
+          "old_start": 126,
+          "old_count": 1,
+          "new_start": 126,
+          "new_count": 1,
+          "before": [
+            "async function init(){window.lucide?.createIcons?.();await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true,throwOnFailure:true});const params=new URLSearchParams(location.search);const requested=validCivilDate(params.has('date')?params.get('date'):params.has('week_start')?params.get('week_start'):window.MemphisAuth.getCSTDateString());const week=validCivilDate(params.has('week_start')?params.get('week_start'):requested);if(!weekDates(week).includes(requested))throw new Error('The service date must be inside the selected week.');els.week_start.value=week;els.service_date.value=requested;els.refresh_btn.addEventListener('click',loadSnapshot);els.rebuild_projection_btn.addEventListener('click',()=>rebuildCurrentProjection().catch(e=>setStatus(safe(e),'error')));els.generate_btn.addEventListener('click',()=>generateDraft().catch(e=>setStatus(safe(e),'error')));els.publish_btn.addEventListener('click',()=>publishDraft().catch(e=>setStatus(safe(e),'error')));els.apply_day_btn.addEventListener('click',()=>applyDayChanges().catch(e=>setStatus(safe(e),'error')));els.changes_list.addEventListener('click',e=>reverseChange(e).catch(error=>setStatus(safe(error),'error')));els.roster_list.addEventListener('click',e=>{try{openTurnoverDialog(e);}catch(error){setStatus(safe(error),'error');}});els.turnover_form.addEventListener('submit',e=>submitTurnover(e).catch(error=>setStatus(safe(error),'error')));els.turnover_close.addEventListener('click',closeTurnoverDialog);els.turnover_cancel.addEventListener('click',closeTurnoverDialog);els.week_start.addEventListener('change',()=>{invalidateApprovedPreview();try{els.week_start.value=validCivilDate(els.week_start.value);if(!weekDates(els.week_start.value).includes(els.service_date.value))els.service_date.value=els.week_start.value;loadSnapshot();}catch(error){setStatus(safe(error),'error');setControls();}});els.service_date.addEventListener('change',()=>{invalidateApprovedPreview();try{selectedServiceDate();if(state.snapshot)render();}catch(error){setStatus(safe(error),'error');setControls();}});document.querySelectorAll('[data-view]').forEach((button)=>button.addEventListener('click',()=>selectView(button.dataset.view)));window.addEventListener('hashchange',applyHashRoute);state.baseUrl=await loadControlPlaneUrl();state.principal=window.MemphisSchedulerActions.principal(window.MemphisAuth);state.actions=window.MemphisSchedulerActions.create({auth:window.MemphisAuth,api,baseUrl:state.baseUrl,onState:r=>{state.pending=r;renderPending();}});state.actions.pending();state.approved=window.MemphisApprovedSchedule.create({api,auth:window.MemphisAuth,managerId:state.principal.managerId,baseUrl:state.baseUrl,onState:r=>{state.approvedPending=r;renderPending();}});state.approved.pending();state.manualActivationPanel=window.MemphisApprovedSchedule.mountManualActivation({container:document.getElementById('approved-source-panel').parentNode,before:document.getElementById('approved-source-panel'),api,auth:window.MemphisAuth,managerId:state.principal.managerId,baseUrl:state.baseUrl,otherPending:()=>state.busy||state.accessDenied||!!state.pending||!!state.approvedPending,available:()=>!state.accessDenied,onState:r=>{state.manualPending=r;setControls();},onBusy:value=>{state.manualBusy=value;setControls();},onAccepted:async()=>{await refreshSnapshot();return state.snapshot;}});if([state.pending,state.approvedPending,state.manualPending].filter(Boolean).length>1)throw new Error('Two saved scheduler operations require manager recovery. Neither request was changed.');const saved=state.pending||state.approvedPending;if(saved){const staffing=window.MemphisSchedulerActions.isStaffingCommand(saved);const rosterOriginal=state.pending&&window.MemphisSchedulerActions.staffingOperation(saved.path);const week=staffing?saved.weekStart:rosterOriginal?mondayOf(saved.body.effective_start):state.pending?saved.body.week_start:saved.body.effective_start;const date=staffing?saved.body.start_date:rosterOriginal?saved.body.effective_start:state.pending?(saved.body.service_date||week):week;if(typeof week!=='string'||(!staffing&&saved.path!=='/static-weekly/rebuild-current-projection'&&mondayOf(week)!==week)||!weekDates(week).includes(validCivilDate(date)))throw new Error('Saved scheduler dates cannot be verified. The request remains preserved.');els.week_start.value=week;els.service_date.value=date;}document.getElementById('approved-source').addEventListener('change',invalidateApprovedPreview);document.getElementById('scheduler-retry').addEventListener('click',()=>busy(async()=>{if(window.MemphisSchedulerActions.isStaffingCommand(state.pending)){await resumeStaffingPreview();return;}if(state.approvedPending)await state.approved.retry();else await state.actions.retry();await refreshSnapshot();}));document.getElementById('scheduler-dismiss').addEventListener('click',()=>busy(dismissRejectedScheduleRequest));try{await state.manualActivationPanel.load();}catch(error){document.querySelector('#manual-activation-panel [role=status]')?.replaceChildren(document.createTextNode(safe(error)));}await loadSnapshot();applyHashRoute();installScheduleAutoRefresh();const guard=setInterval(()=>{if(!window.MemphisSchedulerActions.same(state.principal,window.MemphisSchedulerActions.principal(window.MemphisAuth))){clearInterval(guard);withdrawSchedulerAccess();setStatus('Manager access changed. Reload the scheduler; saved requests are preserved.','error');setControls();}},1000);window.addEventListener('pagehide',()=>clearInterval(guard),{once:true});}"
+          ],
+          "after": [
+            "async function init(){window.lucide?.createIcons?.();await window.MemphisAuth.requireOpsManagerSession({interactive:false,redirect:true,throwOnFailure:true});const params=new URLSearchParams(location.search);const requested=validCivilDate(params.has('date')?params.get('date'):params.has('week_start')?params.get('week_start'):window.MemphisAuth.getCSTDateString());const week=validCivilDate(params.has('week_start')?params.get('week_start'):requested);if(!weekDates(week).includes(requested))throw new Error('The service date must be inside the selected week.');els.week_start.value=week;els.service_date.value=requested;els.refresh_btn.addEventListener('click',loadSnapshot);els.rebuild_projection_btn.addEventListener('click',()=>rebuildCurrentProjection().catch(e=>setStatus(safe(e),'error')));els.generate_btn.addEventListener('click',()=>generateDraft().catch(e=>setStatus(safe(e),'error')));els.publish_btn.addEventListener('click',()=>publishDraft().catch(e=>setStatus(safe(e),'error')));els.apply_day_btn.addEventListener('click',()=>applyDayChanges().catch(e=>setStatus(safe(e),'error')));els.changes_list.addEventListener('click',e=>reverseChange(e).catch(error=>setStatus(safe(error),'error')));els.roster_list.addEventListener('click',e=>{try{openTurnoverDialog(e);}catch(error){setStatus(safe(error),'error');}});els.week_start.addEventListener('change',()=>{invalidateApprovedPreview();try{els.week_start.value=validCivilDate(els.week_start.value);if(!weekDates(els.week_start.value).includes(els.service_date.value))els.service_date.value=els.week_start.value;loadSnapshot();}catch(error){setStatus(safe(error),'error');setControls();}});els.service_date.addEventListener('change',()=>{invalidateApprovedPreview();try{selectedServiceDate();if(state.snapshot)render();}catch(error){setStatus(safe(error),'error');setControls();}});document.querySelectorAll('[data-view]').forEach((button)=>button.addEventListener('click',()=>selectView(button.dataset.view)));window.addEventListener('hashchange',applyHashRoute);state.baseUrl=await loadControlPlaneUrl();state.principal=window.MemphisSchedulerActions.principal(window.MemphisAuth);state.actions=window.MemphisSchedulerActions.create({auth:window.MemphisAuth,api,baseUrl:state.baseUrl,onState:r=>{state.pending=r;renderPending();}});state.actions.pending();state.approved=window.MemphisApprovedSchedule.create({api,auth:window.MemphisAuth,managerId:state.principal.managerId,baseUrl:state.baseUrl,onState:r=>{state.approvedPending=r;renderPending();}});state.approved.pending();state.manualActivationPanel=window.MemphisApprovedSchedule.mountManualActivation({container:document.getElementById('approved-source-panel').parentNode,before:document.getElementById('approved-source-panel'),api,auth:window.MemphisAuth,managerId:state.principal.managerId,baseUrl:state.baseUrl,otherPending:()=>state.busy||state.accessDenied||!!state.pending||!!state.approvedPending,available:()=>!state.accessDenied,onState:r=>{state.manualPending=r;setControls();},onBusy:value=>{state.manualBusy=value;setControls();},onAccepted:async()=>{await refreshSnapshot();return state.snapshot;}});if([state.pending,state.approvedPending,state.manualPending].filter(Boolean).length>1)throw new Error('Two saved scheduler operations require manager recovery. Neither request was changed.');const saved=state.pending||state.approvedPending;if(saved){const staffing=window.MemphisSchedulerActions.isStaffingCommand(saved);const rosterOriginal=state.pending&&window.MemphisSchedulerActions.staffingOperation(saved.path);const week=staffing?saved.weekStart:rosterOriginal?mondayOf(saved.body.effective_start):state.pending?saved.body.week_start:saved.body.effective_start;const date=staffing?saved.body.start_date:rosterOriginal?saved.body.effective_start:state.pending?(saved.body.service_date||week):week;if(typeof week!=='string'||(!staffing&&saved.path!=='/static-weekly/rebuild-current-projection'&&mondayOf(week)!==week)||!weekDates(week).includes(validCivilDate(date)))throw new Error('Saved scheduler dates cannot be verified. The request remains preserved.');els.week_start.value=week;els.service_date.value=date;}document.getElementById('approved-source').addEventListener('change',invalidateApprovedPreview);document.getElementById('scheduler-retry').addEventListener('click',()=>busy(async()=>{if(window.MemphisSchedulerActions.isStaffingCommand(state.pending)){await resumeStaffingPreview();return;}if(state.approvedPending)await state.approved.retry();else await state.actions.retry();await refreshSnapshot();}));document.getElementById('scheduler-dismiss').addEventListener('click',()=>busy(dismissRejectedScheduleRequest));try{await state.manualActivationPanel.load();}catch(error){document.querySelector('#manual-activation-panel [role=status]')?.replaceChildren(document.createTextNode(safe(error)));}await loadSnapshot();applyHashRoute();installScheduleAutoRefresh();const guard=setInterval(()=>{if(!window.MemphisSchedulerActions.same(state.principal,window.MemphisSchedulerActions.principal(window.MemphisAuth))){clearInterval(guard);withdrawSchedulerAccess();setStatus('Manager access changed. Reload the scheduler; saved requests are preserved.','error');setControls();}},1000);window.addEventListener('pagehide',()=>clearInterval(guard),{once:true});}"
+          ]
+        },
+        {
+          "old_start": 634,
+          "old_count": 2,
+          "new_start": 634,
+          "new_count": 6,
+          "before": [
+            "function openTurnoverDialog(event){const button=event.target.closest('[data-turnover-slot]');if(!button||state.busy)return;if(state.pending||state.approvedPending)throw new Error('Resolve the saved scheduler request first.');requireSchedulerPermission('management');if(button.dataset.turnoverMode==='vacate'){openVacancyDialog(button);return;}const snapshot=needSnapshot(),today=snapshot.current_service_date;if(!validServerDate(today)||!validServerDate(snapshot.week_start)||!validServerDate(snapshot.week_end)||today<snapshot.week_start||today>snapshot.week_end)throw new Error('Employee changes are available only from the current operational week.');const row=rosterForDate(snapshot,today).find((item)=>item.slot_id===button.dataset.turnoverSlot);if(!row?.person_id||!row.staffing_identity_valid)throw new Error('No current employee is bound to this staffing record.');const mode=button.dataset.turnoverMode;if(!['replace','departed'].includes(mode))throw new Error('Choose an existing staffing operation.');state.turnoverSelection=Object.freeze({principal:Object.freeze(window.MemphisSchedulerActions.principal(window.MemphisAuth)),slotId:row.slot_id,personId:row.person_id,date:today,mode,revision:snapshot.authority_revision,weekStart:snapshot.week_start,publicationId:snapshot.current_publication?.publication_id});els.turnover_slot.value=row.slot_id;els.turnover_mode.value=mode;els.turnover_effective_date.value=today;els.turnover_effective_date.min=today;els.turnover_effective_date.max=today;els.turnover_current.textContent=row.person_name||row.slot_label;els.replacement_name.value='';els.replacement_name.required=mode==='replace';els.replacement_name_field.hidden=mode!=='replace';els.turnover_title.textContent=mode==='replace'?'Add replacement':'Mark employee gone';els.turnover_reason.value=mode==='replace'?'New employee hired':'Employee no longer working';els.turnover_submit_label.textContent=mode==='replace'?'Add Employee':'Mark Gone';els.turnover_dialog.showModal();if(mode==='replace')els.replacement_name.focus();else els.turnover_reason.focus();window.lucide?.createIcons?.();}",
+            "function closeTurnoverDialog(){state.turnoverSelection=null;els.turnover_dialog.close();}"
+          ],
+          "after": [
+            "function openTurnoverDialog(event){",
+            " const button=event.target.closest('[data-turnover-mode=\"vacate\"][data-turnover-slot]');",
+            " if(!button||button.disabled||state.busy)return;",
+            " if(state.pending||state.approvedPending)throw new Error('Resolve the saved scheduler request first.');",
+            " requireSchedulerPermission('management');openVacancyDialog(button);",
+            "}"
+          ]
+        },
+        {
+          "old_start": 754,
+          "old_count": 38,
+          "new_start": 758,
+          "new_count": 14,
+          "before": [
+            "async function submitTurnover(event){",
+            " requireSchedulerPermission('management');event.preventDefault();if(state.busy)return;",
+            " if(state.pending||state.approvedPending)throw new Error('Resolve the saved scheduler request first.');",
+            " const snapshot=needSnapshot(),publication=snapshot.current_publication;",
+            " if(!publication)throw new Error('Publish the weekly baseline before changing the roster.');",
+            " const mode=els.turnover_mode.value,binding=state.turnoverSelection;",
+            " const requireOriginalTurnover=()=>{",
+            "  requireSchedulerPermission('management');",
+            "  if(state.pending||state.approvedPending)throw new Error('Resolve the saved scheduler request first.');",
+            "  if(!window.MemphisSchedulerActions.same(binding?.principal,window.MemphisSchedulerActions.principal(window.MemphisAuth)))",
+            "   throw new Error('Manager access changed. Review the current schedule again.');",
+            "  const currentSnapshot=needSnapshot(),today=currentSnapshot.current_service_date;",
+            "  const currentWeek=validServerDate(today)&&validServerDate(currentSnapshot.week_start)&&validServerDate(currentSnapshot.week_end)",
+            "   &&today>=currentSnapshot.week_start&&today<=currentSnapshot.week_end;",
+            "  const current=currentWeek?rosterForDate(currentSnapshot,today).find(row=>row.slot_id===els.turnover_slot.value):null;",
+            "  if(!binding||state.turnoverSelection!==binding||!currentWeek||binding.date!==today||binding.mode!==mode",
+            "   ||binding.mode!==els.turnover_mode.value||binding.slotId!==els.turnover_slot.value||binding.personId!==current?.person_id",
+            "   ||!current?.staffing_identity_valid||binding.revision!==currentSnapshot.authority_revision",
+            "   ||binding.weekStart!==currentSnapshot.week_start||binding.publicationId!==currentSnapshot.current_publication?.publication_id",
+            "   ||els.turnover_effective_date.value!==binding.date)",
+            "   throw new Error('The staffing record changed. Close this dialog and review the current employee again.');",
+            " };",
+            " requireOriginalTurnover();",
+            " const replacementName=els.replacement_name.value.trim();",
+            " if(mode==='replace'&&replacementName.length<2){els.replacement_name.focus();return;}",
+            " const path=mode==='replace'?'/static-weekly/employees/replacements':'/static-weekly/employees/departed';",
+            " const body={slot_id:els.turnover_slot.value,reason:els.turnover_reason.value.trim(),expected_revision:snapshot.authority_revision,",
+            "  idempotency_key:commandId(mode==='replace'?'replacement':'departure'),week_start:snapshot.week_start};",
+            " if(mode==='replace')body.new_employee_name=replacementName;",
+            " await busy(()=>{",
+            "  requireOriginalTurnover();",
+            "  if(els.turnover_reason.value.trim()!==body.reason||(mode==='replace'&&els.replacement_name.value.trim()!==replacementName))",
+            "   throw new Error('The staffing review inputs changed. Review the original employee again.');",
+            "  els.turnover_dialog.close();",
+            "  requireOriginalTurnover();",
+            "  state.turnoverSelection=null;els.service_date.value=binding.date;",
+            "  return runDated(path,body,'Updating staffing and regenerating current routes...');",
+            " });"
+          ],
+          "after": [
+            "function render(){const s=needSnapshot();const rows=activeRoster(s);const staffing=effectiveStaffing(s,selectedServiceDate());const assignments=displayAssignments(s);const open=assignments.filter(row=>String(row.status).toLowerCase()!=='assigned');els.working_count.textContent=String(staffing.working);els.absent_count.textContent=String(staffing.absent);document.getElementById('vacancy-count').textContent=String(staffing.vacant);document.getElementById('contractor-count').textContent=String(staffing.contractors);document.getElementById('partial-count').textContent=String(staffing.partial);els.open_count.textContent=s.projection_status==='current'?String(open.length):'—';els.revision_count.textContent=String(s.authority_revision||0);els.week_title.textContent=`${formatDate(s.week_start)} - ${formatDate(s.week_end)}`;const stage=projectionNeedsRebuild(s)?'Schedule rebuild required':s.drafts?.length?'Draft ready':s.current_publication?'Published baseline':'No baseline';els.week_meta.textContent=`${stage} • ${assignments.length} work items • revision ${s.authority_revision}`;els.subtitle.textContent=s.current_publication?'Repeats until a later schedule is published':'Approved source required before first publication';renderRoster(s,rows);renderAbsences(s,rows);renderContractors(s,rows);renderWeek(s,rows,assignments);renderChanges(s);renderReadiness(s,assignments);els.rebuild_projection_btn.hidden=!s.current_publication||!projectionNeedsRebuild(s);els.generate_btn.disabled=state.busy||Boolean(s.drafts?.length);els.publish_btn.disabled=state.busy||!s.drafts?.length;els.apply_day_btn.disabled=state.busy||!s.current_publication;setControls();window.lucide?.createIcons?.();}",
+            "function renderRoster(s,rows){",
+            " const staff=rows.filter(row=>!row.contractor_capacity),today=s.current_service_date;",
+            " const currentWeek=validServerDate(today)&&today>=s.week_start&&today<=s.week_end;",
+            " const todayRoster=currentWeek?rosterForDate(s,today):[];",
+            " els.roster_list.innerHTML=staff.length?staff.map(row=>{",
+            "  const absent=row.availability_state==='departed_named_absent',current=todayRoster.find(item=>item.slot_id===row.slot_id);",
+            "  const canManage=schedulerPermissions().management;",
+            "  const vacancyEnabled=canManage&&!state.busy&&!state.pending&&!state.approvedPending&&s.projection_status==='current'",
+            "   &&Boolean(s.current_publication)&&Boolean(current?.person_id)&&current.staffing_identity_valid&&current.employee_active!==false;",
+            "  const phones=(row.device_ids||[]).filter(Boolean).join(', ')||'No current phone';",
+            "  const detail=absent?'Absent until replacement':'Current phone assignment: '+phones;",
+            "  return `<div class=\"rosterRow ${absent?'absentFixed':''}\"><div><strong>${escapeHtml(row.person_name||row.slot_label)}</strong><small>${escapeHtml(detail)}</small></div><button class=\"btn secondary small\" ${canManage?'':'hidden'} type=\"button\" data-turnover-slot=\"${escapeHtml(row.slot_id)}\" data-turnover-mode=\"vacate\" ${vacancyEnabled?'':'disabled'}>Stable vacancy</button></div>`;",
+            " }).join(''):'<div class=\"empty\">No employee slots.</div>';"
+          ]
+        },
+        {
+          "old_start": 793,
+          "old_count": 2,
+          "new_start": 772,
+          "new_count": 0,
+          "before": [
+            "function render(){const s=needSnapshot();const rows=activeRoster(s);const staffing=effectiveStaffing(s,selectedServiceDate());const assignments=displayAssignments(s);const open=assignments.filter(row=>String(row.status).toLowerCase()!=='assigned');els.working_count.textContent=String(staffing.working);els.absent_count.textContent=String(staffing.absent);document.getElementById('vacancy-count').textContent=String(staffing.vacant);document.getElementById('contractor-count').textContent=String(staffing.contractors);document.getElementById('partial-count').textContent=String(staffing.partial);els.open_count.textContent=s.projection_status==='current'?String(open.length):'—';els.revision_count.textContent=String(s.authority_revision||0);els.week_title.textContent=`${formatDate(s.week_start)} - ${formatDate(s.week_end)}`;const stage=projectionNeedsRebuild(s)?'Schedule rebuild required':s.drafts?.length?'Draft ready':s.current_publication?'Published baseline':'No baseline';els.week_meta.textContent=`${stage} • ${assignments.length} work items • revision ${s.authority_revision}`;els.subtitle.textContent=s.current_publication?'Repeats until a later schedule is published':'Approved source required before first publication';renderRoster(s,rows);renderAbsences(s,rows);renderContractors(s,rows);renderWeek(s,rows,assignments);renderChanges(s);renderReadiness(s,assignments);els.rebuild_projection_btn.hidden=!s.current_publication||!projectionNeedsRebuild(s);els.generate_btn.disabled=state.busy||Boolean(s.drafts?.length);els.publish_btn.disabled=state.busy||!s.drafts?.length;els.apply_day_btn.disabled=state.busy||!s.current_publication;setControls();window.lucide?.createIcons?.();}",
+            "function renderRoster(s,rows){const staff=rows.filter((row)=>!row.contractor_capacity);const today=s.current_service_date;const currentWeek=validServerDate(today)&&validServerDate(s.week_start)&&validServerDate(s.week_end)&&today>=s.week_start&&today<=s.week_end;els.roster_list.innerHTML=staff.length?staff.map((row)=>{const absent=row.availability_state==='departed_named_absent';const phones=(row.device_ids||[]).join(', ')||'No phone';const action=absent?'replace':'departed';const enabled=schedulerPermissions().management&&Boolean(s.current_publication)&&currentWeek;const title=!s.current_publication?'Publish the weekly baseline first':!currentWeek?'Open the current week to change employees':absent?'Add replacement':'Mark employee gone';const serverDate=s.current_service_date,current=validServerDate(serverDate)&&serverDate>=s.week_start&&serverDate<=s.week_end?rosterForDate(s,serverDate).find(r=>r.slot_id===row.slot_id):null;const vacancyEnabled=schedulerPermissions().management&&!state.busy&&!state.pending&&!state.approvedPending&&s.projection_status==='current'&&Boolean(s.current_publication)&&Boolean(current?.person_id)&&current.staffing_identity_valid;return `<div class=\"rosterRow ${absent?'absentFixed':''}\"><div><strong>${escapeHtml(row.person_name||row.slot_label)}</strong><small>${absent?'Absent until replacement':escapeHtml(phones)}</small></div><button class=\"iconBtn small\" ${schedulerPermissions().management?'':'hidden'} type=\"button\" data-turnover-slot=\"${escapeHtml(row.slot_id)}\" data-turnover-mode=\"${action}\" title=\"${title}\" aria-label=\"${absent?'Add replacement for':'Mark gone'} ${escapeHtml(row.person_name||row.slot_label)}\" ${enabled?'':'disabled'}><span data-lucide=\"${absent?'user-plus':'user-minus'}\"></span></button><button class=\"btn secondary small\" ${schedulerPermissions().management?'':'hidden'} type=\"button\" data-turnover-slot=\"${escapeHtml(row.slot_id)}\" data-turnover-mode=\"vacate\" ${vacancyEnabled?'':'disabled'} title=\"Review stable vacancy using the current server-day employee and registered source\">Stable vacancy</button></div>`;}).join(''):'<div class=\"empty\">No employee slots.</div>';}"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 870,
+          "old_count": 1,
+          "new_start": 848,
+          "new_count": 7,
+          "before": [
+            "function applyHashRoute(){const hash=String(location.hash||'').slice(1).toLowerCase();const targetByHash={coverage:'coverage-section',absence:'absence-section','day-changes':'day-changes-section'};if(hash==='changes'){selectView('changes');document.querySelector('.main')?.scrollIntoView({block:'start'});return;}const target=document.getElementById(targetByHash[hash]);if(target)target.scrollIntoView({block:'start'});}"
+          ],
+          "after": [
+            "function applyHashRoute(){const hash=String(location.hash||'').slice(1).toLowerCase();const slot=hash.startsWith('vacancy-')?hash.slice(8):null;",
+            " if(slot&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(slot)){",
+            "  const button=[...els.roster_list.querySelectorAll('[data-turnover-mode=\"vacate\"]')].find(item=>item.dataset.turnoverSlot===slot);",
+            "  if(button){selectView('week');button.scrollIntoView?.({block:'center'});if(!button.disabled)button.focus();}",
+            "  return;",
+            " }",
+            " const targetByHash={coverage:'coverage-section',absence:'absence-section','day-changes':'day-changes-section'};if(hash==='changes'){selectView('changes');document.querySelector('.main')?.scrollIntoView({block:'start'});return;}const target=document.getElementById(targetByHash[hash]);if(target)target.scrollIntoView({block:'start'});}"
+          ]
+        },
+        {
+          "old_start": 1059,
+          "old_count": 1,
+          "new_start": 1043,
+          "new_count": 1,
+          "before": [
+            " for(const dialog of[els.turnover_dialog,els.action_confirm_dialog])if(dialog?.open)dialog.close();"
+          ],
+          "after": [
+            " for(const dialog of[els.action_confirm_dialog])if(dialog?.open)dialog.close();"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "phone-assignments.html",
+      "kind": "changed",
+      "prior_bytes": 2562,
+      "prior_sha256": "820862575c235f9375a6d97c3b2384e0c1c45a8d5a23f2c2c9bf825f8c27467a",
+      "current_sha256": "2738e7e851da80ac207d0dc247ea9a06708ccf469426e0b694c631dd68df9eaa",
+      "hunks": [
+        {
+          "old_start": 43,
+          "old_count": 1,
+          "new_start": 43,
+          "new_count": 1,
+          "before": [
+            "  <script src=\"./phone-assignments.js\"></script>"
+          ],
+          "after": [
+            "  <script src=\"./phone-assignments.js?v=20261125-r1\"></script>"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "schedule-weekly.html",
+      "kind": "changed",
+      "prior_bytes": 12180,
+      "prior_sha256": "99b6d1821efd6c62d492a64e2f0bf949b25f312e69909616e1b7701ccbebbb85",
+      "current_sha256": "8b21751329d2187f7397f34f3d86c0396fc158400b3087712eb3ae36bdea5a84",
+      "hunks": [
+        {
+          "old_start": 85,
+          "old_count": 11,
+          "new_start": 85,
+          "new_count": 1,
+          "before": [
+            "<dialog id=\"turnover-dialog\" aria-labelledby=\"turnover-title\">",
+            "  <form id=\"turnover-form\" class=\"turnoverForm\">",
+            "    <div class=\"dialogHeader\"><div><h2 id=\"turnover-title\">Employee change</h2><p id=\"turnover-current\"></p></div><button class=\"iconBtn\" id=\"turnover-close\" type=\"button\" title=\"Close\" aria-label=\"Close\"><span data-lucide=\"x\"></span></button></div>",
+            "    <input id=\"turnover-slot\" type=\"hidden\">",
+            "    <input id=\"turnover-mode\" type=\"hidden\">",
+            "    <div class=\"field\" id=\"replacement-name-field\"><label for=\"replacement-name\">New employee name</label><input id=\"replacement-name\" type=\"text\" minlength=\"2\" maxlength=\"160\" autocomplete=\"off\"></div>",
+            "    <div class=\"field\"><label for=\"turnover-effective-date\">Effective today</label><input id=\"turnover-effective-date\" type=\"date\" required readonly></div>",
+            "    <div class=\"field\"><label for=\"turnover-reason\">Reason</label><input id=\"turnover-reason\" type=\"text\" maxlength=\"500\" required></div>",
+            "    <div class=\"dialogActions\"><button class=\"btn\" id=\"turnover-cancel\" type=\"button\">Cancel</button><button class=\"btn primary\" id=\"turnover-submit\" type=\"submit\"><span data-lucide=\"check\"></span><span id=\"turnover-submit-label\">Apply</span></button></div>",
+            "  </form>",
+            "</dialog>"
+          ],
+          "after": [
+            ""
+          ]
+        },
+        {
+          "old_start": 107,
+          "old_count": 2,
+          "new_start": 97,
+          "new_count": 2,
+          "before": [
+            "<script src=\"./memphis-scheduler-actions.js?v=2026.11.11.current-roster\"></script>",
+            "<script src=\"./schedule-weekly.js?v=2026.11.11.current-roster\"></script>"
+          ],
+          "after": [
+            "<script src=\"./memphis-scheduler-actions.js?v=20261125-r1\"></script>",
+            "<script src=\"./schedule-weekly.js?v=20261125-r1\"></script>"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "staffing-management.html",
+      "kind": "changed",
+      "prior_bytes": 5674,
+      "prior_sha256": "b01bbff22ea0ed71cda023105630977527a1719c4f0dca3f73cb4b81965ae66f",
+      "current_sha256": "9df62c023fba7326a1e2d07e00296f4380caed4e3e90ec9f30ae77029ab5305a",
+      "hunks": [
+        {
+          "old_start": 17,
+          "old_count": 1,
+          "new_start": 17,
+          "new_count": 1,
+          "before": [
+            "  <p>Vacate an occupied position or fill an eligible vacancy. These actions are separate from legacy departure/replacement. No staffing change clears protected work or transfers a phone.</p>"
+          ],
+          "after": [
+            "  <p>Review a stable vacancy in Weekly Schedule. Use this page to fill an eligible never-filled position. Phone assignment is a separate action.</p>"
+          ]
+        },
+        {
+          "old_start": 33,
+          "old_count": 0,
+          "new_start": 34,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    <a id=\"staffing-vacancy-link\" class=\"uxButton\" href=\"./schedule-weekly.html?hub=manager\" hidden>Review this vacancy in Weekly Schedule</a>"
+          ]
+        },
+        {
+          "old_start": 48,
+          "old_count": 1,
+          "new_start": 49,
+          "new_count": 1,
+          "before": [
+            "<script src=\"./memphis-auth.js\"></script><script src=\"./memphis-scheduler-actions.js?v=2026.11.11.current-roster\"></script>"
+          ],
+          "after": [
+            "<script src=\"./memphis-auth.js\"></script><script src=\"./memphis-scheduler-actions.js?v=20261125-r1\"></script>"
+          ]
+        },
+        {
+          "old_start": 50,
+          "old_count": 1,
+          "new_start": 51,
+          "new_count": 1,
+          "before": [
+            "<script type=\"module\" src=\"./manager-staffing-runtime.mjs?v=2026.11.11.current-roster\"></script>"
+          ],
+          "after": [
+            "<script type=\"module\" src=\"./manager-staffing-runtime.mjs?v=20261125-r1\"></script>"
+          ]
+        }
+      ]
+    }
+  ],
+  "core_sources": [
+    {
+      "path": "memphis-scheduler-actions.js",
+      "bytes": 78993,
+      "sha256": "39c352f04ab7150c3ac92c804af3a6ab686bdaf10190510b78eaa231ddda00ab"
+    },
+    {
+      "path": "schedule-weekly.js",
+      "bytes": 146962,
+      "sha256": "ac349399bd5ae7d2ae1b465cee7f0871bfd6fc410b3250ae6f05b3b62549346e"
+    }
+  ],
+  "presentation_sources": [
+    {
+      "path": "phone-assignments.html",
+      "bytes": 2576,
+      "sha256": "2738e7e851da80ac207d0dc247ea9a06708ccf469426e0b694c631dd68df9eaa"
+    },
+    {
+      "path": "schedule-weekly.html",
+      "bytes": 10926,
+      "sha256": "8b21751329d2187f7397f34f3d86c0396fc158400b3087712eb3ae36bdea5a84"
+    },
+    {
+      "path": "staffing-management.html",
+      "bytes": 5747,
+      "sha256": "9df62c023fba7326a1e2d07e00296f4380caed4e3e90ec9f30ae77029ab5305a"
+    }
+  ]
+}

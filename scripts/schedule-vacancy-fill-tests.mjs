@@ -116,6 +116,7 @@ function staffingFillFixture({selected='2026-10-12',eligibility=null,lost=false,
   if(path.includes('/manager-snapshot'))return structuredClone(path.includes('week_start=2026-10-12')?(committed?current():{...before,authority_revision:revision}):staffingSnapshot());
   if(path.includes('/source-details?')){const date=new URLSearchParams(path.split('?')[1]).get('effective_start');if(date!==selected)return staffingSourceDetails();
    const s=committed?current():{...before,authority_revision:revision},details={...staffingSourceDetails(s),effective_start:selected,week_start:before.week_start};
+   details.initial_fill_slot_ids=eligibility==='history'?[]:[slotId];
    if(eligibility==='unregistered')details.registered_compiler_input.version.vacancyCapableSlotIds=[];
    if(sourceDrift)details.current_source_digest='c'.repeat(64);return structuredClone(details);}
   if(o.method==='POST'){
@@ -144,7 +145,7 @@ function staffingFillFixture({selected='2026-10-12',eligibility=null,lost=false,
 {
  const hub=readFileSync(new URL('../start_page1.html',import.meta.url),'utf8'),page=readFileSync(new URL('../staffing-management.html',import.meta.url),'utf8');
  assert.match(hub,/<a id="staffing-link"[^>]*href="\.\/staffing-management\.html\?hub=manager"/);checks++;
- assert.match(page,/<script type="module" src="\.\/manager-staffing-runtime\.mjs\?v=2026\.11\.11\.current-roster"><\/script>/);checks++;
+ assert.match(page,/<script type="module" src="\.\/manager-staffing-runtime\.mjs\?v=20261125-r1"><\/script>/);checks++;
 }
 {
  const f=staffingFillFixture();try{
@@ -177,7 +178,7 @@ function staffingFillFixture({selected='2026-10-12',eligibility=null,lost=false,
   await f.refresh();check(f.saved(),null,'recovered fill clears after current readback');check(f.page.view().rows[0].person_name,'Synthetic New Custodian','recovery keeps original employee name');
  }finally{f.page.stop();}
 }
-for(const eligibility of ['occupied','future','contractor','unregistered','missing-source','ambiguous-source']){
+for(const eligibility of ['occupied','future','history','contractor','unregistered','missing-source','ambiguous-source']){
  const f=staffingFillFixture({eligibility});try{const choices=await f.open();check(choices.includes('fill'),false,eligibility+' never exposes eligible fill action');
   await f.preview();check(f.page.view().preview,null,eligibility+' forged form cannot prepare fill');check(f.calls.some(row=>row.o.method==='POST'),false,eligibility+' cannot dispatch');check(f.saved(),null,eligibility+' cannot save original');
  }finally{f.page.stop();}

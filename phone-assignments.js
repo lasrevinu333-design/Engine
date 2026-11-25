@@ -98,9 +98,12 @@
   }
   function employeeOptions(device) {
     const current = String(device.assigned_employee_id || '');
+    const employees=state.data?.employees||[];
+    const retained=current&&!employees.some(employee=>employee.id===current);
     return [
-      '<option value="">Unassigned</option>',
-      ...(state.data?.employees || []).map((employee) => {
+      '<option value=""'+(!current?' selected':'')+'>Unassigned</option>',
+      ...(retained?[`<option value="${escapeHtml(current)}" selected disabled>${escapeHtml(device.employee_name||'Current employee')} · retained assignment</option>`]:[]),
+      ...employees.map((employee) => {
         const assignedElsewhere = employee.assigned_device_id && employee.assigned_device_id !== device.device_id;
         const suffix = assignedElsewhere ? ` · ${employee.assigned_device_id}` : '';
         return `<option value="${escapeHtml(employee.id)}" ${employee.id === current ? 'selected' : ''} ${assignedElsewhere ? 'disabled' : ''}>${escapeHtml(employee.display_name)} · ${escapeHtml(employee.employee_code || '')}${escapeHtml(suffix)}</option>`;
@@ -145,6 +148,7 @@
   }
   function rowView(device) {
     const current = device.employee_name || 'Unassigned';
+    const editable=ownerAccess()&&device.active===true;
     const search = `${device.device_id} ${device.device_name || ''} ${current}`.toLowerCase();
     const needle = String(els.search.value || '').trim().toLowerCase();
     const hidden = needle && !search.includes(needle);
@@ -156,11 +160,11 @@
         ${operationalWarnings(device).length ? `<div class="phoneOperationalWarning">${operationalWarnings(device).map(escapeHtml).join('<br>')}</div>` : ''}
       </div>
       <div class="phoneControls">
-        <select class="uxSelect" ${ownerAccess()?'':'disabled'} data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
+        <select class="uxSelect" ${editable?'':'disabled'} data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
       </div>
-      ${ownerAccess()?'<div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button></div>':'<div class="phoneLastSeen">Read-only phone assignment information</div>'}
+      ${editable?'<div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button></div>':`<div class="phoneLastSeen">${device.active===true?'Read-only phone assignment information':'Inactive kiosk'}</div>`}
       <div class="rowStatus" data-row-status></div>
-      ${ownerAccess()?`<div class="phoneActivation">
+      ${editable?`<div class="phoneActivation">
         <p>Saving an assignment does not activate the phone. Activation uses the trusted maintenance computer with this phone connected by USB; saved work is retained.</p>
         <div class="phoneActionRow"><button class="uxButton compact" data-activate type="button" ${!device.assigned_employee_id?'disabled':''}>Activate / recover phone</button>
         <button class="uxButton compact" data-activation-status type="button">Check activation status</button></div>
@@ -266,8 +270,10 @@
     const deviceId = row.dataset.device;
     const employeeId = row.querySelector('[data-employee]').value || null;
     const device = state.data.devices.find((item) => item.device_id === deviceId) || {};
+    if(device.active!==true)return showToast('Select a current active kiosk.','error');
     const expected = expectedAssignment(device);
-    if (!expected.present) return showToast('Phone assignment state is unavailable. Refresh before saving.', 'error');
+    if (!expected.present || !Number.isSafeInteger(device.assignment_epoch) || device.assignment_epoch < 1)
+      return showToast('Phone assignment generation is unavailable. Refresh before saving.', 'error');
     const currentId = expected.value;
     if (String(employeeId || '') === String(currentId || '')) return showToast('That phone is already assigned to that employee.');
     const nextLabel = employeeId
@@ -285,8 +291,9 @@
       const data = await request(`/leadership-api/phone-assignments/${encodeURIComponent(deviceId)}`, {
         method: 'POST', authority:owner,
         body: {
-          operation_id: operationId(), employee_id: employeeId,
+          employee_id: employeeId,
           expected_current_employee_id: expected.value,
+          expected_assignment_epoch: device.assignment_epoch,
         },
       });
       status.textContent = `Assigned to ${data.employee?.display_name || 'Unassigned'}.`;

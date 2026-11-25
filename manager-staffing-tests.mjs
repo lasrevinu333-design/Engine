@@ -15,7 +15,7 @@ test('MAIN_MOUNT normal authenticated website runtime binds fixed service and pr
  const id='11000000-0000-4000-8000-000000000001',calls=[],timers=new Set(),events=new Map();let helpers=0,owner=false,apiSeen;
  const session={role:'ops_manager',manager_id:id,credential_id:'current-fixture',device_id:'fixture-web',token:'synthetic-only',expires_at:new Date(Date.now()+3600000).toISOString(),read_only:true,permissions:{}};
  const w={MemphisAuth:{readSession:()=>session,opsManagerAuthHeaders:async()=>({Authorization:'Bearer synthetic-only'})},
-  MemphisSchedulerActions:{principal:()=>({managerId:id,credentialId:session.credential_id,deviceId:session.device_id}),permissions:()=>({read:true,owner}),create:()=>{helpers++;return{pending:()=>null};}},
+  MemphisSchedulerActions:{principal:()=>({managerId:id,credentialId:session.credential_id,deviceId:session.device_id}),permissions:()=>({read:true,owner,management:owner}),create:()=>{helpers++;return{pending:()=>null};}},
   setTimeout:fn=>{timers.add(fn);return fn;},clearTimeout:fn=>timers.delete(fn),addEventListener:(n,fn)=>events.set(n,fn),removeEventListener:n=>events.delete(n)};
  const fetchImpl=async(url,options)=>{calls.push({url,options});return{ok:true,status:200,json:async()=>({ok:true,data:url.endsWith('/scheduler-runtime-config')?{public_url:'https://scheduler-fixture.onrender.com'}:{current:true}})};};
  const mount=deps=>({init:async()=>{apiSeen=deps.api;await deps.api('/static-weekly/manager-snapshot?week_start=2026-10-05',{method:'GET',expectedManagerId:id});return true;},stop:()=>{}});
@@ -58,14 +58,34 @@ function pageFixture({owner=true,native=false,api=null,savedRequests=null,savedR
 }
 function sourceDetails(s=snapshot()){return {schema:'custodial.roster-source-details.v1',manager_id:managerId,source_id:sourceId,effective_start:'2026-10-11',week_start:'2026-10-05',authority_revision:s.authority_revision,
  current_source_digest:'b'.repeat(64),registered_source_digest:digest,compiler_input:{slots:[{id:slotId,incumbencies:[]}],version:{vacancyCapableSlotIds:[slotId]}},
- registered_compiler_input:{slots:[{id:slotId,incumbencies:[{personId:employeeId,displayName:'Historic person',effectiveStart:'2026-10-11'}]}],version:{vacancyCapableSlotIds:[slotId]}},current_roster:s.roster,publication_id:publication,phone_released:false};}
+ registered_compiler_input:{slots:[{id:slotId,incumbencies:[{personId:employeeId,displayName:'Historic person',effectiveStart:'2026-10-11'}]}],version:{vacancyCapableSlotIds:[slotId]}},current_roster:s.roster,publication_id:publication,phone_released:false,initial_fill_slot_ids:s.roster[0].incumbencies.length?[]:[slotId]};}
 function owningHelper(auth,api){const values=new Map();return authority.create({auth,api,baseUrl:'https://synthetic.invalid',storage:{getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)}});}
 function outcome(body){const mutation={slot_id:slotId,source_id:sourceId,source_digest:digest,effective_start:body.effective_start,former_employee_id:employeeId,replacement_employee_id:null,history_preserved:true,completion_mode:'projection_required',original_publication_id:publication,employee_status:{separation_id:id(72)}};
  return {schema:'custodial.original-staffing-outcome.v1',state:'ACCEPTED_ORIGINAL',manager_id:managerId,operation:'vacate_roster_slot',idempotency_key:body.idempotency_key,command_id:id(71),
  original_request:{actor_manager_id:managerId,reason:body.reason,slot_id:slotId,operation:'vacate_roster_slot',expected_revision:body.expected_revision,effective_start:body.effective_start,employee_id:body.employee_id,source_id:body.source_id},original_request_digest:digest,retry_safe:false,phone_released:false,
  receipt:{operation:'materialize_projection',revision:14,request_digest:digest,content_digest:digest,output_digest:digest,data:{...mutation,mutation,current_projection:{projection_id:id(73),publication_id:publication,week_start:'2026-10-05'}}}};}
 async function settle(){for(let i=0;i<4;i++)await new Promise(resolve=>setImmediate(resolve));}
-async function previewVacancy(f){await f.page.init();f.nodes.get('staffing-slot').value=slotId;await f.nodes.get('staffing-slot').fire('change');f.nodes.get('staffing-kind').value='vacate';f.nodes.get('staffing-reason').value='Manager confirmed vacancy';await f.nodes.get('staffing-form').fire('submit');}
+async function selectSlot(f){
+ await f.page.init();f.nodes.get('staffing-slot').value=slotId;await f.nodes.get('staffing-slot').fire('change');
+}
+const fillSnapshot=()=>({...snapshot(),roster:[{...snapshot().roster[0],incumbencies:[],week_staffing:[{
+ service_date:'2026-10-05',person_id:null,employee_active:null,availability_state:'vacant_unfilled'
+}]}]});
+const fillSource=(s=fillSnapshot())=>({...sourceDetails(s),effective_start:'2026-10-05'});
+async function previewFill(f){
+ await f.page.init();f.nodes.get('staffing-date').value='2026-10-05';await f.nodes.get('staffing-date').fire('change');
+ f.nodes.get('staffing-slot').value=slotId;await f.nodes.get('staffing-slot').fire('change');
+ f.nodes.get('staffing-kind').value='fill';f.nodes.get('staffing-new-name').value='Synthetic new employee';f.nodes.get('staffing-reason').value='Manager confirmed initial fill';
+ await f.nodes.get('staffing-form').fire('submit');
+}
+function fillOutcome(body){
+ const result=outcome(body),request=result.original_request,mutation=result.receipt.data.mutation;
+ result.operation=request.operation='fill_vacant_slot';
+ delete request.employee_id;request.new_employee_name=body.new_employee_name;
+ delete mutation.former_employee_id;delete mutation.replacement_employee_id;
+ mutation.new_employee_id=id(7);mutation.new_employee_name=body.new_employee_name;mutation.phone_assignment=null;
+ return result;
+}
 test('READONLY actual page renders roster but creates no staffing listeners or owner-only reads',async()=>{
   // Existing readonly behavior remains separate from main's new pattern entry.
  let sources=0,saved=0,outcomes=0;const f=pageFixture({owner:false,savedRequests:{pending(){saved++;return null;},run(){throw Error('Must not mutate');}},readSourceDetails:()=>{sources++;},readOriginalOutcome:()=>{outcomes++;}});
@@ -126,50 +146,51 @@ test('ORIGINAL_PENDING actual page preserves local encoded identity and refuses 
   await f.nodes.get('staffing-refresh').fire('click');assert.equal(record.encoded,original);assert.equal(sends,0);assert.equal(f.page.view().state,'OUTCOME_UNKNOWN');
  }finally{f.page.stop();}
 });
-test('OWNER_CONFIRM actual page/helper preview, one POST and original GET acceptance keeps separation Pending',async()=>{
- assert.equal(typeof authority.acceptedStaffing,'function','Requires sealed main staffing helper extension');let body,posts=0,gets=0,release;
- const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
-  if(path.includes('/manager-snapshot'))return snapshot();if(path.includes('/source-details?'))return sourceDetails();
-  if(opts.method==='POST'){posts++;body=JSON.parse(opts.body);return await new Promise(resolve=>{release=resolve;});}
-  if(path.includes('/staffing/operations/')){gets++;return outcome(body);}throw Error('Unexpected path');}});
- try{await previewVacancy(f);assert.equal(f.page.view().state,'PREVIEW');assert.equal(f.nodes.get('staffing-confirm').disabled,false);
-  assert.match(f.nodes.get('staffing-preview-text').textContent,/Existing employee identity:.*98000000/);assert.match(f.nodes.get('staffing-preview-text').textContent,/Current hydrated source digest: b{64}/);
-  await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(posts,1);await f.nodes.get('staffing-confirm').fire('click');assert.equal(posts,1);
-  release({});await settle();assert.equal(gets,1);assert.equal(f.page.view().state,'ACCEPTED');assert.match(f.nodes.get('staffing-status').textContent,/Protected separation is still Pending/);assert.equal(f.nodes.get('staffing-confirm').disabled,true);
+test('OWNER_VACANCY exact eligible position opens the reviewed Weekly Schedule action',async()=>{
+ let posts=0;const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
+  if(opts.method==='POST'){posts++;throw Error('Unexpected write');}
+  return path.includes('/source-details?')?sourceDetails():snapshot();
+ }});
+ try{await selectSlot(f);
+  assert.equal(f.nodes.get('staffing-vacancy-link').hidden,false);
+  assert.equal(f.nodes.get('staffing-vacancy-link').href,'./schedule-weekly.html?hub=manager&date=2026-10-11#vacancy-'+slotId);
+  assert.ok(f.nodes.get('staffing-kind').children.every(o=>o.value!=='vacate'));
+  f.nodes.get('staffing-kind').value='vacate';f.nodes.get('staffing-reason').value='Direct old path';await f.nodes.get('staffing-form').fire('submit');
+  assert.ok(['READY','HELD'].includes(f.page.view().state));assert.equal(f.page.view().pending,false);assert.equal(posts,0);
  }finally{f.page.stop();}
 });
 test('OWNER_RECOVERY lost reply checks canonical reordered values once via owning GET, never resends',async()=>{
  let body,posts=0,gets=0,revision=12;const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
-  if(path.includes('/manager-snapshot'))return {...snapshot(),authority_revision:revision};if(path.includes('/source-details?'))return sourceDetails({...snapshot(),authority_revision:revision});
+  if(path.includes('/manager-snapshot'))return {...fillSnapshot(),authority_revision:revision};if(path.includes('/source-details?'))return fillSource({...fillSnapshot(),authority_revision:revision});
   if(opts.method==='POST'){posts++;body=JSON.parse(opts.body);throw Error('Synthetic lost commit response');}
-  if(path.includes('/staffing/operations/')){gets++;return outcome(body);}throw Error('Unexpected path');}});
- try{await previewVacancy(f);await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(f.page.view().state,'OUTCOME_UNKNOWN');assert.equal(posts,1);
+  if(path.includes('/staffing/operations/')){gets++;return fillOutcome(body);}throw Error('Unexpected path');}});
+ try{await previewFill(f);await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(f.page.view().state,'OUTCOME_UNKNOWN');assert.equal(posts,1);
   const before=JSON.stringify(f.page.view().preview.body);await f.nodes.get('staffing-reason').fire('input');assert.equal(JSON.stringify(f.page.view().preview.body),before);
   await f.nodes.get('staffing-check-outcome').fire('click');await settle();assert.equal(gets,1);assert.equal(posts,1);assert.equal(f.page.view().state,'ACCEPTED');
-  revision=14;await f.nodes.get('staffing-refresh').fire('click');await settle();assert.equal(f.page.view().state,'READY');assert.equal(f.page.view().pending,false);assert.equal(posts,1);
+  assert.equal(f.page.view().pending,true);assert.equal(posts,1);
  }finally{f.page.stop();}
 });
 test('OWNER_FOREIGN_PENDING empty and wrong original request stay unknown without resend or replacement',async()=>{
  let body,posts=0,mode='empty';const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
-  if(path.includes('/manager-snapshot'))return snapshot();if(path.includes('/source-details?'))return sourceDetails();
+  if(path.includes('/manager-snapshot'))return fillSnapshot();if(path.includes('/source-details?'))return fillSource();
   if(opts.method==='POST'){posts++;body=JSON.parse(opts.body);throw Error('Synthetic lost reply');}
-  if(path.includes('/staffing/operations/')){if(mode==='empty')return {schema:'custodial.original-staffing-outcome.v1',state:'OUTCOME_UNCONFIRMED'};const r=outcome(body);r.original_request.employee_id=id(88);return r;}throw Error('Unexpected path');}});
- try{await previewVacancy(f);await f.nodes.get('staffing-confirm').fire('click');await settle();const encoded=JSON.stringify(f.page.view().preview.body);
+  if(path.includes('/staffing/operations/')){if(mode==='empty')return {schema:'custodial.original-staffing-outcome.v1',state:'OUTCOME_UNCONFIRMED'};const r=fillOutcome(body);r.original_request.new_employee_name="Different employee";return r;}throw Error('Unexpected path');}});
+ try{await previewFill(f);await f.nodes.get('staffing-confirm').fire('click');await settle();const encoded=JSON.stringify(f.page.view().preview.body);
   await f.nodes.get('staffing-check-outcome').fire('click');await settle();assert.equal(f.page.view().state,'OUTCOME_UNKNOWN');mode='foreign';
   await f.nodes.get('staffing-check-outcome').fire('click');await settle();assert.equal(f.page.view().state,'OUTCOME_UNKNOWN');assert.equal(posts,1);assert.equal(JSON.stringify(f.page.view().preview.body),encoded);assert.equal(f.nodes.get('staffing-confirm').disabled,true);
  }finally{f.page.stop();}
 });
 test('OWNER_SOURCE_GUARD distinct digests admitted, historic restoration and stale/foreign source refused',async()=>{
- let details=sourceDetails(),s=snapshot(),posts=0;const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
+ let details=fillSource(),s=fillSnapshot(),posts=0;const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
   if(path.includes('/manager-snapshot'))return s;if(path.includes('/source-details?'))return details;if(opts.method==='POST'){posts++;throw Error('No write allowed');}throw Error('Unexpected path');}});
- try{await previewVacancy(f);assert.equal(f.page.view().preview.can_confirm,true);assert.equal(f.page.view().rows[0].capabilities.restore,false);assert.deepEqual(f.page.view().rows[0].restore_choices,[]);
+ try{await previewFill(f);assert.equal(f.page.view().preview.can_confirm,true);assert.equal(f.page.view().rows[0].capabilities.restore,false);assert.deepEqual(f.page.view().rows[0].restore_choices,[]);
   details={...details,authority_revision:99};await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(posts,0);assert.equal(f.page.view().state,'HELD');
-  details={...sourceDetails(),manager_id:id(99)};await f.nodes.get('staffing-refresh').fire('click');await settle();assert.equal(f.page.view().rows[0].capabilities.vacate,false);
+  details={...fillSource(),manager_id:id(99)};await f.nodes.get('staffing-refresh').fire('click');await settle();assert.equal(f.page.view().rows[0].capabilities.vacate,false);
  }finally{f.page.stop();}
 });
 test('EXPIRY_WITHDRAW actual currentness timer removes owner data and aborts callbacks on expired access',async()=>{
  const f=pageFixture({savedRequestsFactory:owningHelper,api:async path=>path.includes('/source-details?')?sourceDetails():snapshot()});
- try{await previewVacancy(f);assert.equal(f.page.view().preview.can_confirm,true);f.f.expire();for(const tick of f.timers.values())tick();
+ try{await selectSlot(f);assert.equal(f.nodes.get('staffing-vacancy-link').hidden,false);f.f.expire();for(const tick of f.timers.values())tick();
   assert.equal(f.page.view().state,'DENIED');assert.equal(f.nodes.get('staffing-action').hidden,true);assert.equal(f.nodes.get('staffing-preview-text').textContent,'');assert.equal(f.nodes.get('staffing-roster').children.length,0);
   await f.nodes.get('staffing-confirm').fire('click');assert.equal(f.page.view().state,'DENIED');
  }finally{f.page.stop();}
@@ -187,36 +208,47 @@ test('FILL_CHOICES actual page rejects missing/control names and previews new pe
   assert.equal(f.page.view().rows[0].capabilities.restore,false);assert.match(f.nodes.get('staffing-preview-text').textContent,/not restoration/);assert.equal(posts,0);
  }finally{f.page.stop();}
 });
-test('EXACT_SEPARATION_COMMAND same person/slot foreign command cannot finalize an accepted vacancy',async()=>{
- let body,command=id(99);const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
-  if(path.includes('/manager-snapshot'))return snapshot();if(path.includes('/source-details?'))return sourceDetails();
-  if(opts.method==='POST'){body=JSON.parse(opts.body);return {};}
-  if(path.includes('/staffing/operations/'))return outcome(body);
-  if(path.endsWith('/separation'))return {slot_id:slotId,employee_id:employeeId,separation_id:id(72),command_id:command,authority_revision:13,separated_at:'2026-10-11T17:00:00Z',state:'FINALIZED',native_inventory_state:'RECONCILED',assigned_devices_retained:[],database_active_sessions:0,database_activated_offline_contexts:0,phone_released:false};throw Error('Unexpected path');}});
- try{await previewVacancy(f);await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(f.page.view().state,'ACCEPTED');
-  await f.nodes.get('staffing-read-separation').fire('click');assert.equal(f.page.view().separation.state,'Pending');assert.match(f.nodes.get('staffing-status').textContent,/mismatched/);
-  command=id(71);await f.nodes.get('staffing-read-separation').fire('click');assert.equal(f.page.view().separation.state,'Complete');assert.match(f.nodes.get('staffing-separation-text').textContent,/No phone release/);
+test('EXACT_SEPARATION_COMMAND restored original cannot accept another separation command',async()=>{
+ const body={source_id:sourceId,effective_start:'2026-10-11',reason:'Saved original',expected_revision:12,employee_id:employeeId,idempotency_key:'retained-original',preview_digest:digest};
+ const receipt=outcome(body);
+ const vacancy={schema:'custodial.stable-vacancy-preview.v1',managerId,sourceId,slotId,employeeId,effectiveStart:body.effective_start,
+  weekStart:'2026-10-05',expectedRevision:12,projectionExpectedRevision:13,resultingRevision:14,idempotencyKey:body.idempotency_key,
+  publicationId:publication,previewDigest:digest,workerCandidateDigest:digest,reasonDigest:digest,registeredSourceDigest:digest,
+  currentSourceDigest:digest,replayDigest:digest,authorityDigest:digest,lunchDocumentIdentity:digest};
+ Object.assign(receipt.receipt.data,{worker_candidate_digest:digest,persisted_projection_digest:digest,paired_lunch_document_identity:digest,projection_authority_digest:digest});
+ receipt.receipt.data.current_projection.replay_digest=digest;
+ const record={schema:'custodial.scheduler-pending.v1',managerId,path:'/static-weekly/roster/'+slotId+'/vacate',body,encoded:JSON.stringify(body),state:'PENDING',vacancy};
+ let posts=0,command=id(99);
+ const savedRequests={pending:()=>record,retry:async()=>{record.state='ACCEPTED';record.receipt=receipt;return receipt;},run:()=>posts++};
+ const f=pageFixture({savedRequests,api:async(path)=>{
+  if(path.includes('/manager-snapshot'))return snapshot();
+  if(path.endsWith('/separation'))return {slot_id:slotId,employee_id:employeeId,separation_id:id(72),command_id:command,authority_revision:13,separated_at:'2026-10-11T17:00:00Z',state:'FINALIZED',native_inventory_state:'RECONCILED',assigned_devices_retained:[],database_active_sessions:0,database_activated_offline_contexts:0,phone_released:false};
+  throw Error('Unexpected path');
+ }});
+ try{await selectSlot(f);await f.nodes.get('staffing-check-outcome').fire('click');assert.equal(f.page.view().state,'ACCEPTED');
+  await f.nodes.get('staffing-read-separation').fire('click');assert.equal(f.page.view().separation.state,'Pending');
+  command=id(71);await f.nodes.get('staffing-read-separation').fire('click');assert.equal(f.page.view().separation.state,'Complete');assert.equal(posts,0);
  }finally{f.page.stop();}
 });
 test('EXPLICIT_REJECTION owning helper denial stays held, not acceptance/unknown/resend',async()=>{
  let posts=0;const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
-  if(path.includes('/manager-snapshot'))return snapshot();if(path.includes('/source-details?'))return sourceDetails();
+  if(path.includes('/manager-snapshot'))return fillSnapshot();if(path.includes('/source-details?'))return fillSource();
   if(opts.method==='POST'){posts++;throw Object.assign(Error('Synthetic stale request'),{status:409,serverRejected:true});}throw Error('No status call for a rejected request');}});
- try{await previewVacancy(f);await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(f.page.view().state,'HELD');assert.match(f.nodes.get('staffing-status').textContent,/explicitly rejected/);
+ try{await previewFill(f);await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(f.page.view().state,'HELD');assert.match(f.nodes.get('staffing-status').textContent,/explicitly rejected/);
   assert.equal(f.nodes.get('staffing-confirm').disabled,true);assert.equal(f.nodes.get('staffing-check-outcome').disabled,true);assert.equal(f.nodes.get('staffing-kind').disabled,true);
   await f.nodes.get('staffing-reason').fire('input');assert.equal(f.page.view().state,'HELD');await f.nodes.get('staffing-confirm').fire('click');assert.equal(posts,1);
  }finally{f.page.stop();}
 });
 test('CAPABILITY_WITHDRAW owner input callback immediately withdraws after permission ceiling changes',async()=>{
  const f=pageFixture({savedRequestsFactory:owningHelper,api:async path=>path.includes('/source-details?')?sourceDetails():snapshot()});
- try{await previewVacancy(f);f.f.readonly();await f.nodes.get('staffing-reason').fire('input');assert.equal(f.page.view().state,'DENIED');
+ try{await selectSlot(f);f.f.readonly();await f.nodes.get('staffing-reason').fire('input');assert.equal(f.page.view().state,'DENIED');
   assert.equal(f.nodes.get('staffing-form').hidden,true);assert.equal(f.nodes.get('staffing-roster').children.length,0);assert.equal(f.nodes.get('staffing-preview-text').textContent,'');
  }finally{f.page.stop();}
 });
 test('PUBLICATION_RECEIPT known publication cannot accept a no-publication mutation-only receipt',async()=>{
  let body;const f=pageFixture({savedRequestsFactory:owningHelper,api:async(path,opts)=>{
-  if(path.includes('/manager-snapshot'))return snapshot();if(path.includes('/source-details?'))return sourceDetails();if(opts.method==='POST'){body=JSON.parse(opts.body);return {};}
-  if(path.includes('/staffing/operations/')){const result=outcome(body);result.receipt.operation='vacate_roster_slot';result.receipt.revision=13;result.receipt.data={...result.receipt.data.mutation,completion_mode:'mutation_only',original_publication_id:null};return result;}throw Error('Unexpected path');}});
- try{await previewVacancy(f);await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(f.page.view().state,'OUTCOME_UNKNOWN');assert.equal(f.page.view().pending,true);assert.equal(f.nodes.get('staffing-confirm').disabled,true);
+  if(path.includes('/manager-snapshot'))return fillSnapshot();if(path.includes('/source-details?'))return fillSource();if(opts.method==='POST'){body=JSON.parse(opts.body);return {};}
+  if(path.includes('/staffing/operations/')){const result=fillOutcome(body);result.receipt.operation='fill_vacant_slot';result.receipt.revision=13;result.receipt.data={...result.receipt.data.mutation,completion_mode:'mutation_only',original_publication_id:null};return result;}throw Error('Unexpected path');}});
+ try{await previewFill(f);await f.nodes.get('staffing-confirm').fire('click');await settle();assert.equal(f.page.view().state,'OUTCOME_UNKNOWN');assert.equal(f.page.view().pending,true);assert.equal(f.nodes.get('staffing-confirm').disabled,true);
  }finally{f.page.stop();}
 });

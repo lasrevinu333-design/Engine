@@ -8,7 +8,7 @@ const key='custodial.manager.activation-requests.v1';
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function fixture({mobile=false,denyStorage=false,owner=true}={}){
  const storage=new Map(),calls=[],events={},elements={};let loseResponse=false,server=null;
- const device={device_id:'KIOSK_08',assigned_employee_id:employee,employee_name:'Synthetic Custodian',assignment_epoch:2};
+ const device={device_id:'KIOSK_08',active:true,assigned_employee_id:employee,employee_name:'Synthetic Custodian',assignment_epoch:2};
  const row={dataset:{device:'KIOSK_08'},querySelector:s=>controls[s]};
  const controls=Object.fromEntries(['[data-employee]','[data-activate]','[data-activation-status]','[data-activation-result]'].map(s=>[s,{value:employee,textContent:'',className:'',disabled:false,closest:()=>row}]));
  for(const id of ['phone-list','assignment-status','phone-search','refresh-assignments','assignment-toast'])
@@ -26,7 +26,9 @@ async function fixture({mobile=false,denyStorage=false,owner=true}={}){
   }
   if(!server)throw new Error('Synthetic request not found');return server;
  }
- const context={document:{getElementById:id=>elements[id]},window:{MemphisAuth:{readSession:()=>({permissions:{schema:'custodial.manager-permissions.v1',read:true,owner},trusted_device:true,access_level:'full_access',read_only:false}),opsManagerAuthHeaders:async()=>({Authorization:'Bearer synthetic','X-Device-Id':'synthetic-browser'}),hasPermission:action=>owner&&action==='write',requireOpsManagerSession:async()=>({token:'synthetic',device_id:'synthetic-browser'})}},
+ const manager={role:'ops_manager',manager_id:'12000000-0000-4000-8000-000000000007',credential_id:'13000000-0000-4000-8000-000000000007',
+  device_id:'synthetic-browser',token:'synthetic',expires_at:'2099-01-01T00:00:00Z',permissions:{schema:'custodial.manager-permissions.v1',read:true,owner},trusted_device:true,access_level:'full_access',read_only:!owner};
+ const context={document:{getElementById:id=>elements[id],addEventListener(){}},window:{addEventListener(){},setTimeout:()=>null,clearTimeout(){},MemphisAuth:{isOpsManager:s=>s===manager,readSession:()=>manager,opsManagerAuthHeaders:async()=>({Authorization:'Bearer synthetic','X-Device-Id':'synthetic-browser'}),hasPermission:action=>owner&&action==='write',requireOpsManagerSession:async()=>({token:'synthetic',device_id:'synthetic-browser'})}},
   localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>{if(denyStorage)throw new Error('Storage unavailable');storage.set(k,v);}},
   crypto:{randomUUID},fetch:async(url,options)=>({ok:true,json:async()=>({ok:true,data:await api(url.replace('https://memphis-zoo-mcp.onrender.com',''),options)})}),
   setTimeout,clearTimeout,confirm:()=>false,console};

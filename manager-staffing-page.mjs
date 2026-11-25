@@ -1,4 +1,4 @@
-import {createStaffingActions,staffingReaders} from './manager-staffing-actions.mjs?v=2026.11.11.current-roster';
+import {createStaffingActions,staffingReaders} from './manager-staffing-actions.mjs?v=20261125-r1';
 
 // Main mounts normal auth, approved service API and saved-request adapters.
 // This page never discovers an arbitrary endpoint or creates an auth/storage fallback.
@@ -26,12 +26,18 @@ export function mountStaffingPage({w=window,d=document,auth=w.MemphisAuth,author
   }
   function error(cause) {
     const v=controller?.view(),notes={choice_invalid:'Choose the exact position/date and supply a bounded reason and required employee name.',
+      reviewed_vacancy_required:'Open Weekly Schedule to review and confirm this stable vacancy.',
       action_unavailable:'This action is unavailable for the current source/person/date. Nothing was sent.',invalid_date:'Choose a valid service date.'};
     status.textContent=!v?.pending&&!v?.busy&&v?.state!=='DENIED'&&notes[cause?.code]||v?.message||'Staffing unavailable. No changes were sent.';
   }
   function fieldState() {
     const v=currentView,r=v?.rows.find(row=>row.slot_id===slot.value), locked=!v || v.read_only || v.busy || v.pending || unresolved(v.state) || v.state==='DENIED';
-    const modes=[['vacate','Vacate this stable position'],['fill','Fill with a new employee'],['restore','Restore the eligible existing employee']];
+    const vacancy=el('staffing-vacancy-link');
+    if(vacancy){
+      vacancy.hidden=locked||r?.capabilities.vacate!==true;
+      if(!vacancy.hidden)vacancy.href='./schedule-weekly.html?hub=manager&date='+encodeURIComponent(v.service_date)+'#vacancy-'+encodeURIComponent(r.slot_id);
+    }
+    const modes=[['fill','Fill with a new employee'],['restore','Restore the eligible existing employee']];
     const previous=kind.value;
     kind.replaceChildren(option('','Choose an available action'));
     for(const [value,label] of modes)if(r?.capabilities[value])kind.appendChild(option(value,label));

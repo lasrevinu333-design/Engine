@@ -19,7 +19,7 @@ for(const blocker of ['state.busy=true','state.manualBusy=true','state.accessDen
  "state.pending={state:'PENDING',encoded:'EXACT'}","state.pending={state:'ACCEPTED',encoded:'EXACT'}",
  "state.approvedPending={state:'PENDING',encoded:'EXACT'}","state.manualPending={state:'PENDING',encoded:'EXACT'}",
  'state.preview={}','state.staffingPreview={}','state.unresolvedPreview={}','state.coverallSelection={}',
- 'state.turnoverSelection={}','state.vacancySelection={}','els.action_confirm_dialog.open=true','els.turnover_dialog.open=true','vacancyEls.vacancy_dialog.open=true',
+ 'state.vacancySelection={}','els.action_confirm_dialog.open=true','vacancyEls.vacancy_dialog.open=true',
  'document.hidden=true','navigator.onLine=false',"document.getElementById('manual-activation-confirm').hidden=false"]){
  const f=fixture();f.run('installScheduleAutoRefresh()');f.run(blocker);const pending=f.json('[state.pending,state.approvedPending,state.manualPending]');
  await f.run('requestScheduleRefresh()');check(f.calls.length,0,'defer while '+blocker);check(f.run('state.scheduleRefreshQueued'),true,'remember queued read');
