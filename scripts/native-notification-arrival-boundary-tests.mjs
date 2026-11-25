@@ -61,7 +61,7 @@ const notificationOwnerContextNames=Object.freeze([
   ...Object.keys(receipts),'principalIdentity','protectedPrincipal','createEventNotificationOpenOutbox',
   'createNotificationPresentationMode','CUSTODIAL_RELEASE_CAPABILITIES','custodialNotificationEnabled',
   'createNotificationPresenter','createScheduleNotificationAuthority','createPrincipalNotificationScheduler',
-  'nativeApplicationSource','nativeVault','providerMirror','bridgeReady','feedbackOutbox','profileMatchesPrincipal',
+  'nativeApplicationSource','nativeVault','browserTestBuild','readNativePhonePresentation','providerMirror','bridgeReady','feedbackOutbox','profileMatchesPrincipal',
   'currentPrincipal','currentPrincipalIdentity','deviceId','security','localStorage','NATIVE_NOTIFICATION_OUTBOX_PREFIX',
   'Capacitor','safeNativeRoute','location','CustomEvent','window','document','requestEnvelope',
   'LocalNotifications','FirebaseMessaging','Network','App',
@@ -70,7 +70,7 @@ function assertNotificationOwnerContext(context,actualOwnerSource) {
   // This finite version-bound context contract is not a generic identifier parser.
   // Any owner-source change refuses before evaluation and requires its bindings
   // to be reviewed; missing current context names are reported directly.
-  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'e167f859ff48b431199fdf47b70e0815b673e68e1c56819f432768f792fa068c','Frozen notification owner changed; review the exact current import/closure dependencies');
+  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'884463c66da03dc486c306e8e58f74af312f243dfc89c2ba9493262c15d02a08','Frozen notification owner changed; review the exact current import/closure dependencies');
   for(const name of notificationOwnerContextNames)
     assert.ok(Object.hasOwn(context,name)&&context[name]!==undefined,'Missing notification owner context: '+name);
   assert.equal(context.nativeApplicationSource,null,'Fixture selects only the real existing null-default application-source route');
@@ -196,7 +196,8 @@ async function fixture({memory=new Map(),offline=true,capable=true,firebaseAvail
     Capacitor:{getPlatform:()=>platform,isPluginAvailable:name=>name==='FirebaseMessaging'?firebaseAvailable:name==='LocalNotifications'?localAvailable:false},
     // Existing legacy suite leaves the separately constructed native mirror suspended.
     // Its owning integration suite passes the actual mirror coordinator here.
-    nativeVault:true,providerMirror,bridgeReady:Promise.resolve(),feedbackOutbox:{save(){},flush(){}},profileMatchesPrincipal:()=>true,
+    nativeVault:true,browserTestBuild:false,readNativePhonePresentation(){throw Error('Notification workflow must not use the clock presentation port.');},
+    providerMirror,bridgeReady:Promise.resolve(),feedbackOutbox:{save(){},flush(){}},profileMatchesPrincipal:()=>true,
     currentPrincipal:()=>protectedPrincipal(active),deviceId:()=>deviceId,
     security:{native:true,getStatus:()=>({state:'enrolled',ready:true,available:true,quarantined:false,generation,deviceId,principal:active}),
       subscribe:fn=>{securityListeners.push(fn);return()=>{};},mutateProtectedWork:async(operation,options={})=>{

@@ -24,8 +24,32 @@ test('awake Home can be re-created after Back and quiet caches cannot reset its 
   current = { wake: 'next-wake', unlocked: false };
   assert.equal(await home.refresh(), false);
   principal = 'reassigned-principal';
+  current = { wake: 'reassigned-wake', unlocked: false };
   assert.equal(home.unlocked(), false);
-  assert.equal(await home.unlock(), false);
+  assert.equal(await home.unlock(), true);
+});
+
+test('the first Unlock waits for the original native wake and never follows a retired gesture', async () => {
+  for (const retire of [false, true]) {
+    let complete, reads = 0;
+    const clock = createPhonePresentation({
+      principal: () => 'assigned',
+      read: challenge => {
+        reads++;
+        if (challenge) return { wake: 'wake', unlocked: challenge === 'wake' };
+        return new Promise(resolve => { complete = resolve; });
+      },
+    });
+    const readiness = clock.refresh();
+    const gesture = clock.unlock();
+    await Promise.resolve();
+    assert.equal(reads, 1);
+    if (retire) clock.reset();
+    complete({ wake: 'wake', unlocked: false });
+    await readiness;
+    assert.equal(await gesture, !retire);
+    assert.equal(reads, retire ? 1 : 2);
+  }
 });
 
 test('late clock bridge reply after a pause or principal change cannot hide the clock', async () => {
@@ -66,7 +90,7 @@ test('tap and a deliberate upward swipe call the same unlock handler', () => {
 });
 
 test('interactive work pages show the clock on wake without replacing the active document', async () => {
-  for (const pathname of ['/messages.html', '/employee-schedule.html', '/events.html', '/employee-feedback.html']) {
+  for (const pathname of ['/messages.html', '/employee-schedule.html', '/events.html', '/employee-feedback.html', '/system-feedback.html']) {
     let locked = false;
     const callbacks = new Map(), events = new Map(), elements = new Map();
     const part = selector => elements.get(selector) ?? elements.set(selector, { textContent: '', addEventListener: (name, handler) => events.set(name, handler) }).get(selector);

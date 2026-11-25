@@ -61,6 +61,7 @@ export const CUSTODIAL_NATIVE_VAULT_REQUIRED_CLASS_DESCRIPTORS = Object.freeze([
   'Lorg/memphiszoo/custodial/vault/RemovalCoordinator;',
   'Lorg/memphiszoo/custodial/vault/CustodialPhoneLocationService;',
   'Lorg/memphiszoo/custodial/vault/RequestPolicy;',
+  'Lorg/memphiszoo/custodial/vault/PhonePresentation;',
 ]);
 
 export const CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS = Object.freeze([
@@ -88,6 +89,7 @@ export const CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS = Object.freeze([
   'getOfflineAuthorityState',
   'getState',
   'loadOfflineAuthoritySnapshot',
+  'phonePresentation',
   'providerApplyAction',
   'providerClaimNext',
   'providerClaimState',

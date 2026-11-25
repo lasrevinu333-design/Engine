@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 import {currentGpsQualification as profile,validateCurrentGpsQualification,assertCurrentGpsInventory,assertBoundCurrentGpsSource,normalizeCurrentGpsForHistoricalComparison as normalize,assertGpsHistoricalInventoryProjection} from './current-gps-qualification-source-boundary.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),sha=b=>createHash('sha256').update(b).digest('hex');
 let checks=0;const pass=name=>{checks++;console.log('PASS',name);};
-const counts=assertCurrentGpsInventory();assert.equal(counts.main,194);assert.equal(counts.tests,209);pass('actual current 194 main and 209 native tests bound without unknown callers');
+const counts=assertCurrentGpsInventory();assert.equal(counts.main,195);assert.equal(counts.tests,209);pass('actual current 195 main and 209 native tests bound without unknown callers');
 const oldMain=JSON.parse(readFileSync(join(root,'scripts/fixtures/current-approved-preservation-source-deltas.json'))).current_java_inventory;
 const oldContext=JSON.parse(readFileSync(join(root,'scripts/fixtures/current-provider-comparison-context.json')));
 assert.equal(assertGpsHistoricalInventoryProjection(oldMain,oldContext.current_test_java_inventory,oldContext.current_auxiliary_inventory).historical_main,193);pass('separate complete historical projection remains exactly193, never current');
@@ -47,14 +47,15 @@ try{
  paths.add('scripts/fixtures/current-gps-provider-storage-v85-overlay.json');
  paths.add('scripts/fixtures/current-gps-messenger-voice-v86-overlay.json');
  paths.add('scripts/fixtures/current-gps-messenger-audio-gap-v87-overlay.json');
+ paths.add('scripts/fixtures/current-gps-integration-repairs-overlay.json');
  paths.add('scripts/fixtures/current-gps-week-perimeter-20261119-source-qualification.json');paths.add('scripts/fixtures/current-phone-repairs-r79-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r63-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r61-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44b-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r44-source-qualification.json');paths.add('scripts/fixtures/current-audit-repairs-r42-source-qualification.json');paths.add('scripts/fixtures/current-manager-home-bfcache-r34-source-qualification.json');paths.add('scripts/fixtures/current-hub-entry-contract-r33-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-assignment-r32-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-display-r31-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-cache-r30-source-qualification.json');paths.add('scripts/fixtures/current-basecamp-hub-r29-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r22-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-r21-source-qualification.json');paths.add('scripts/fixtures/current-program-startup-messenger-source-qualification.json');paths.add('scripts/fixtures/current-web-readiness-source-qualification.json');paths.add('scripts/fixtures/current-reminder-timing-source-qualification.json');paths.add('scripts/fixtures/current-terracotta-departure-source-qualification.json');paths.add('scripts/fixtures/current-v80-presentation-source-qualification.json');paths.add('scripts/fixtures/current-schedule-diagnostic-source-qualification.json');paths.add('scripts/current-gps-qualification-source-boundary.mjs');paths.add('scripts/fixtures/current-gps-source-qualification.json');
  for(const path of paths){const target=join(temporary,path);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,readFileSync(join(root,path)));}
  // The exact package is now a bound dependency input; retain its actual bytes.
  // This validator and its profiles are .mjs and need no replacement package.
  const isolated=await import(pathToFileURL(join(temporary,'scripts/current-gps-qualification-source-boundary.mjs')));
- assert.equal(isolated.assertCurrentGpsInventory().main,194);
- const changeRows=[...profile.deltas,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];
- for(const row of changeRows){const path=join(temporary,row.path),before=readFileSync(path);writeFileSync(path,Buffer.concat([before,Buffer.from('\n')]));assert.throws(()=>isolated.assertCurrentGpsInventory());writeFileSync(path,before);assert.equal(isolated.assertCurrentGpsInventory().main,194);}
+ assert.equal(isolated.assertCurrentGpsInventory().main,195);
+ const changeRows=[...profile.deltas,...profile.auditRepairHistory,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];
+ for(const row of changeRows){const path=join(temporary,row.path),before=readFileSync(path);writeFileSync(path,Buffer.concat([before,Buffer.from('\n')]));assert.throws(()=>isolated.assertCurrentGpsInventory());writeFileSync(path,before);assert.equal(isolated.assertCurrentGpsInventory().main,195);}
  pass('later byte changes in every delta plus unchanged main/test/aux/proof/core are rejected without cached approval');
  const main=join(temporary,profile.main_java[0].path),test=join(temporary,profile.test_java[0].path);
  const stub=join(temporary,profile.auxiliary.find(row=>row.path.startsWith('scripts/fixtures/current-gps-lifecycle/stubs/')&&row.path.endsWith('.java')).path);
@@ -73,7 +74,7 @@ try{
  for(const row of profile.deltas.filter(x=>x.kind==='modified')){
   const original=join(temporary,row.path),actual=readFileSync(original,'utf8');writeFileSync(original,normalize(row.path,actual));assert.throws(()=>isolated.assertCurrentGpsInventory());writeFileSync(original,actual);
  }pass('genuine predecessor substitution is not actual current source');
- assert.equal(isolated.assertCurrentGpsInventory().main,194);
+ assert.equal(isolated.assertCurrentGpsInventory().main,195);
 }finally{rmSync(temporary,{recursive:true,force:false});}
 assertCurrentGpsInventory();
-console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:194,current_tests:209,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));
+console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:195,current_tests:209,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));

@@ -11,6 +11,7 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     weatherCurrent:byId('home-weather-current'),weatherIcon:byId('home-weather-icon'),weatherSummary:byId('home-weather-summary'),weather:byId('home-weather-freshness'),hours:byId('home-weather-hours'),hourlyFreshness:byId('home-hourly-freshness'),alerts:byId('home-weather-alerts'),alertFreshness:byId('home-alerts-freshness'),shift:byId('home-shift'),lunch:byId('home-lunch'),schedule:byId('home-schedule-freshness')};
   let facts=null,binding='',timer=null,securityBlocked=false,securityGeneration=0,protectedBinding='',updateSequence=0,pendingReady=null;
   let cachedProfileOnly=false,factsCachedProfileOnly=false,authenticatedProfile=null;
+  let currentUpdate=null;
   const healthy=value=>{try{return value!==null&&typeof value==='object'&&value.ready===true&&value.available===true&&value.quarantined===false;}catch{return false;}};
   function clearSchedule(){if(els.shift)els.shift.textContent='Schedule unavailable';if(els.lunch)els.lunch.textContent='Lunch unavailable';
     if(els.schedule){els.schedule.textContent='Phone identity must be verified.';els.schedule.dataset.stale='true';}}
@@ -184,37 +185,39 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
       const requireCurrent=()=>{
         if(signal?.aborted||!ownsRead())throw Object.assign(new Error('Schedule request invalidated'),{code:'schedule_request_invalidated'});
       };
-      requireCurrent();
-      const observedAvailability=await schedule.begin(id,{signal});
-      const cancelRead=async()=>{
-        if(!ownsRead())return;
-        await schedule.cancel(id,observedAvailability,ownsRead).catch(()=>{});
-        if(ownsRead())owner.redraw();
-      };
-      // Request the same displayed calendar day that acceptance/cache fencing
-      // requires; the server's default operational day changes at04:00.
-      let day, abort;
-      try{
+      return schedule.readExclusively(id,serviceDate,signal,async()=>{
         requireCurrent();
-        const interrupted=new Promise((_,reject)=>{
-          abort=()=>reject(Object.assign(new Error('Schedule read interrupted'),{name:'AbortError'}));
-          signal.addEventListener('abort',abort,{once:true});
-        });
-        const path=`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}&service_date=${encodeURIComponent(serviceDate)}`;
-        day=await Promise.race([interrupted,Promise.resolve().then(()=>{requireCurrent();return requestJson(path,{signal});})]);
-      }catch(error){
-        // Restore only this original ticket when JS stopped waiting without an
-        // HTTP result. Denial or malformed HTTP data cannot revive saved work.
-        const status=error?.status;
-        if(status===undefined||status===null||status===0)await cancelRead();
-        throw error;
-      }finally{if(abort)signal.removeEventListener('abort',abort);}
-      requireCurrent();
-      if(!admitted(captureSecurity({data:day})))throw Error('Schedule assignment changed');
-      requireCurrent();
-      const accepted=await schedule.accept(day,id,{signal,observedAvailability});
-      requireCurrent();
-      return accepted;
+        const observedAvailability=await schedule.begin(id,{signal});
+        const cancelRead=async()=>{
+          if(!ownsRead())return;
+          await schedule.cancel(id,observedAvailability,ownsRead).catch(()=>{});
+          if(ownsRead())owner.redraw();
+        };
+        // Request the same displayed calendar day that acceptance/cache fencing
+        // requires; the server's default operational day changes at04:00.
+        let day, abort;
+        try{
+          requireCurrent();
+          const interrupted=new Promise((_,reject)=>{
+            abort=()=>reject(Object.assign(new Error('Schedule read interrupted'),{name:'AbortError'}));
+            signal.addEventListener('abort',abort,{once:true});
+          });
+          const path=`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}&service_date=${encodeURIComponent(serviceDate)}`;
+          day=await Promise.race([interrupted,Promise.resolve().then(()=>{requireCurrent();return requestJson(path,{signal});})]);
+        }catch(error){
+          // Restore only this original ticket when JS stopped waiting without an
+          // HTTP result. Denial or malformed HTTP data cannot revive saved work.
+          const status=error?.status;
+          if(status===undefined||status===null||status===0)await cancelRead();
+          throw error;
+        }finally{if(abort)signal.removeEventListener('abort',abort);}
+        requireCurrent();
+        if(!admitted(captureSecurity({data:day})))throw Error('Schedule assignment changed');
+        requireCurrent();
+        const accepted=await schedule.accept(day,id,{signal,observedAvailability});
+        requireCurrent();
+        return accepted;
+      });
     }
     const response=await fetch(kind==='attendance'?ATTENDANCE:kind==='alerts'?HOME_WEATHER_ALERTS_URL:WEATHER,{cache:'no-store',credentials:'omit',signal});
     const body=await response.json();if(!response.ok||kind==='attendance'&&body.ok!==true)throw Error('Facts unavailable');
@@ -270,6 +273,18 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     }catch{return false;}
   }
   function update(force=false){
+    // Ordinary page and visibility events often arrive during a forced poll.
+    // Joining preserves the original read/cleanup ticket when the optional
+    // follow-up would otherwise be skipped by that source's freshness TTL.
+    const active=currentUpdate;
+    if(!force&&active&&active.owner===facts&&active.invocation===updateSequence
+      &&active.generation===securityGeneration&&active.date===zooServiceDate()){
+      const id=identity();
+      if(currentUpdate===active&&active.owner===facts&&active.invocation===updateSequence
+        &&active.generation===securityGeneration&&id&&id!==HOME_IDENTITY_SUPERSEDED
+        &&homeBinding(id)===active.binding&&cachedProfileOnly===active.cached)
+        return active.pending;
+    }
     const invocation=++updateSequence,generation=securityGeneration;
     const owns=()=>invocation===updateSequence&&generation===securityGeneration;
     if(securityBlocked&&pendingReady){
@@ -309,6 +324,10 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     if(!owns())return;
     const owner=facts,pending=owner.refresh({force});
     if(owner!==facts||!owns())return pending;
+    const joined={owner,pending,invocation,generation,date:zooServiceDate(),binding:next,cached:cachedProfileOnly};
+    currentUpdate=joined;
+    const complete=()=>{if(currentUpdate===joined)currentUpdate=null;};
+    void Promise.resolve(pending).then(complete,complete);
     if(!timer)timer=setInterval(()=>{if(!document.hidden&&isVisible()){facts?.redraw();update();}},30000);
     return pending;
   }
@@ -316,7 +335,7 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
   function retireResources(){
     // Detach the exact old resources before abort listeners can re-enter and
     // install a newer owner. Never clean shared slots after disposing it.
-    const owner=facts,oldTimer=timer;facts=null;binding='';timer=null;
+    const owner=facts,oldTimer=timer;facts=null;binding='';timer=null;currentUpdate=null;
     clearInterval(oldTimer);owner?.dispose();
   }
   window.addEventListener('pagehide',stop);
@@ -343,7 +362,10 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     const key=event.key;
     if(key!==null&&(!protectedBinding||!['mz_employee_schedule_snapshot:'+encodeURIComponent(protectedBinding),
       'mz_employee_schedule_snapshot:availability:'+encodeURIComponent(protectedBinding)].includes(key)))return;
-    ++securityGeneration;
+    // A peer ticket can carry a transient READING marker. The snapshot and
+    // mutation fences already verify its stamp. Only a full clear retires the
+    // local security generation.
+    if(key===null)++securityGeneration;
     const id=identity();if(id===HOME_IDENTITY_SUPERSEDED)return;
     if(!id)update();else facts?.redraw();
   });

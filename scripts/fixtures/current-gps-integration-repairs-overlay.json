@@ -1,0 +1,2065 @@
+{
+  "main_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java",
+      "bytes": 91084,
+      "sha256": "94814726458260c426e6e649c8a0d2a267bc112353b7b3e5ef6f7ecf26bbc099"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/PhonePresentation.java",
+      "bytes": 1314,
+      "sha256": "d4ccf8bad7b465213385d1f529e4707ee2554937e96ea0bf4e00f16117bba92b"
+    }
+  ],
+  "auxiliary": [
+    {
+      "path": "employee-schedule.html",
+      "bytes": 58306,
+      "sha256": "f3e2f628eccc006054e7ddb802a1052c9575a05a0067a36902b84e73651696d8"
+    },
+    {
+      "path": "memphis-recurring-schedule-target.js",
+      "bytes": 23315,
+      "sha256": "9367abe501f9a43d9cf1e8a90d5a0be54ed36e74fb6cd02c95186f2ccd9f0358"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+      "bytes": 9720,
+      "sha256": "a90c0d160885f56b641ea3baf0177e4e8cad774980e74b62d324ba4ada0d2614"
+    },
+    {
+      "path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+      "bytes": 64356,
+      "sha256": "345567d2863df1ee1e2f6d6d6923155dbf35743718607f63f58c8354af916f1b"
+    },
+    {
+      "path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+      "bytes": 41567,
+      "sha256": "40b9e5af234ab41c87c7f1a1424aa84244ac76425b71145992dfa448caf44e76"
+    },
+    {
+      "path": "mobile/src/custodial/bridge.js",
+      "bytes": 165330,
+      "sha256": "fff50ac718bd286f85083dbdf41781b26085c6786484de9ab1ec8c42827b4bcd"
+    },
+    {
+      "path": "mobile/src/custodial/employee-schedule-runtime.js",
+      "bytes": 61940,
+      "sha256": "3f596435b21b165e6213b050bb969bde2a49d87835be256a52bec99d0e404aad"
+    },
+    {
+      "path": "mobile/src/custodial/home-facts.js",
+      "bytes": 15719,
+      "sha256": "7a6e4b1409b2ca68f04ccf34c492707b517bd404b3c97eeb5575f51a957d091e"
+    },
+    {
+      "path": "mobile/src/custodial/index.html",
+      "bytes": 15063,
+      "sha256": "4ab111ce503ff854d84193c094c5182835b849394a7fd106c4b82ee43302f051"
+    },
+    {
+      "path": "mobile/src/custodial/native-security.js",
+      "bytes": 62475,
+      "sha256": "2fe8a7ac5819e83fdad1e70c9305fbebe2baacec774b2997f20bda77d5c9cf83"
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "bytes": 10572,
+      "sha256": "8f4729bd181bab44452b987d0188dc928e167b6469c221488f4ea1092464f840"
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "bytes": 6993,
+      "sha256": "18aadd33fff91767b6e10e23432e83c2cdb28c877785e284bace3543a75b326d"
+    },
+    {
+      "path": "scripts/custodial-core-release-gate.mjs",
+      "bytes": 7091,
+      "sha256": "685111405228dc5b7820765a0f6874036d9d15ab6246a02c78affe61d63a1a8a"
+    },
+    {
+      "path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "bytes": 65378,
+      "sha256": "04f2a2f1959de7523c7a26cd31acfecfb4f168ec9f8a91f3a159ddbfbb88d9a0"
+    },
+    {
+      "path": "scripts/custodial-core-release-gate-tests.mjs",
+      "bytes": 15809,
+      "sha256": "f3778050d523fe77445cf5a7c56fc364d722213722207371a7fb38ee7284bf09"
+    }
+  ],
+  "core_sources": [
+    {
+      "path": "mobile/scripts/build.mjs",
+      "bytes": 32191,
+      "sha256": "49316a3ce5d5470ac3648c62b05fb885c850e37fa7ef1f34ad66849d7d75b664"
+    },
+    {
+      "path": "mobile/src/custodial/app.js",
+      "bytes": 26703,
+      "sha256": "548efcfed7482e9f6b79a9e7eee989683969353e0d145ea3ea4d90502a14e258"
+    },
+    {
+      "path": "mobile/src/custodial/home-facts-dom.js",
+      "bytes": 25054,
+      "sha256": "145609f37fb7562164a1c22b0d065a2de326feb2ea2f395d30fea9ae84d0294b"
+    },
+    {
+      "path": "mobile/src/custodial/home-facts-runtime.js",
+      "bytes": 7877,
+      "sha256": "0a4d6d6991deef40af076b8ea19d5cf385172808e101926bd75416a0fbb45eb9"
+    },
+    {
+      "path": "mobile/src/custodial/schedule-home-convergence.js",
+      "bytes": 11896,
+      "sha256": "2e61c657fd44b82c26a74d25ba2f297ff90fe43268ed97dece973209b758c59c"
+    },
+    {
+      "path": "scripts/custodial-core-release-gate.mjs",
+      "bytes": 7091,
+      "sha256": "685111405228dc5b7820765a0f6874036d9d15ab6246a02c78affe61d63a1a8a"
+    },
+    {
+      "path": "scripts/custodial-employee-experience-contract-tests.mjs",
+      "bytes": 22995,
+      "sha256": "80bf50b129f93eb7737d03730676a7cf7d7afb981d7bccf11e3058e6c8678c88"
+    },
+    {
+      "path": "scripts/custodial-home-authenticated-restore-tests.mjs",
+      "bytes": 17920,
+      "sha256": "033a01185329b1e4ba53f7dbd602b0619b18a06690871e3b185135659a984c3c"
+    },
+    {
+      "path": "scripts/home-recurring-convergence-tests.mjs",
+      "bytes": 19623,
+      "sha256": "954ba5e923a1e118687856a9aaa780c8f7725b27e0fdf65a91336bd846f3eaac"
+    },
+    {
+      "path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "bytes": 65378,
+      "sha256": "04f2a2f1959de7523c7a26cd31acfecfb4f168ec9f8a91f3a159ddbfbb88d9a0"
+    },
+    {
+      "path": "scripts/provider-mirror-contract-tests.mjs",
+      "bytes": 9634,
+      "sha256": "26a07b0cc5480bb80fae47cefabc5184245a4f0377ba646a0f87a5dfad13fc07"
+    },
+    {
+      "path": "scripts/v80-correction-tests/phone-lock-tests.mjs",
+      "bytes": 2980,
+      "sha256": "b291197b54c7e6973031a178f5724bbeaa982359e2fedf2c5ff75b001e1e5071"
+    },
+    {
+      "path": "mobile/src/custodial/phone-presentation.js",
+      "bytes": 6184,
+      "sha256": "efdf2dd595605bb4fc2230242726f13640cca2a268b14d40a03a0ebde946b6dd"
+    },
+    {
+      "path": "mobile/src/custodial/custodial-phone-clock.css",
+      "bytes": 2919,
+      "sha256": "3955ac93f79e58cecb84146a1772b3dfef406d3170b36f1d74669b91c0a3ef2f"
+    },
+    {
+      "path": "scripts/custodial-phone-presentation-tests.mjs",
+      "bytes": 7147,
+      "sha256": "8f2e3334f61138a71e21aaf51722e7e12afd035d7d9e5ca7806caae89324158b"
+    },
+    {
+      "path": "scripts/schedule-cross-view-read-tests.mjs",
+      "bytes": 3764,
+      "sha256": "122fbbd242f9e009cabf299c6f38af76a01c9c7278324d71512ed2d6c86de5ba"
+    },
+    {
+      "path": "scripts/employee-schedule-recurring-delivery-tests.mjs",
+      "bytes": 34583,
+      "sha256": "04c082fdc7828de42491a6ab55cb403d6b321ab2084fb9c108403a093a33749f"
+    }
+  ],
+  "presentation_sources": [
+    {
+      "path": "trail-pages/custodial-index.css",
+      "bytes": 5298,
+      "sha256": "3cc28bbfca81f24e22b78e569e275fbb73e449998167a9cbc74029a4ae5f1321"
+    }
+  ],
+  "basename_aliases": {
+    "PhonePresentation.java": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/PhonePresentation.java"
+  },
+  "auditRepairHistory": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialNativeVaultPlugin.java",
+      "kind": "changed",
+      "prior_bytes": 90315,
+      "prior_sha256": "28a56ca310e12743534dbab48e791f4b0f75dc576d9d70eacf5f0d569637d0ce",
+      "current_sha256": "94814726458260c426e6e649c8a0d2a267bc112353b7b3e5ef6f7ecf26bbc099",
+      "hunks": [
+        {
+          "old_start": 180,
+          "old_count": 0,
+          "new_start": 181,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    private final PhonePresentation phoneClock = new PhonePresentation();"
+          ]
+        },
+        {
+          "old_start": 1093,
+          "old_count": 0,
+          "new_start": 1095,
+          "new_count": 14,
+          "before": [],
+          "after": [
+            "    @PluginMethod",
+            "    public void phonePresentation(PluginCall call) {",
+            "        execute(call, () -> {",
+            "            final Object originalWake = phoneClock.captureWake();",
+            "            if (originalWake == null || originalBrowserOwnerRetired) {",
+            "                resolve(call, Map.of(\"unlocked\", false));",
+            "                return;",
+            "            }",
+            "            NativeProviderPrincipal principal = applicationRuntime.readNotificationMutationPrincipal();",
+            "            resolve(call, phoneClock.observe(originalWake, principal == null ? null : principal.digest,",
+            "                call.getString(\"unlock_wake\")));",
+            "        });",
+            "    }",
+            ""
+          ]
+        },
+        {
+          "old_start": 1101,
+          "old_count": 0,
+          "new_start": 1117,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        phoneClock.resume();"
+          ]
+        },
+        {
+          "old_start": 1117,
+          "old_count": 0,
+          "new_start": 1134,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        phoneClock.pause();"
+          ]
+        },
+        {
+          "old_start": 1187,
+          "old_count": 0,
+          "new_start": 1205,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        phoneClock.pause();"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/PhonePresentation.java",
+      "kind": "added",
+      "current_sha256": "d4ccf8bad7b465213385d1f529e4707ee2554937e96ea0bf4e00f16117bba92b"
+    },
+    {
+      "path": "employee-schedule.html",
+      "kind": "changed",
+      "prior_bytes": 57646,
+      "prior_sha256": "9b4fef6cd667ce7056beac99b5df839cea0d987f21693c4a7d286f9a3d0ffbb6",
+      "current_sha256": "f3e2f628eccc006054e7ddb802a1052c9575a05a0067a36902b84e73651696d8",
+      "hunks": [
+        {
+          "old_start": 492,
+          "old_count": 1,
+          "new_start": 492,
+          "new_count": 2,
+          "before": [
+            "      const controller=new AbortController();activeRequest=controller;const timeout=setTimeout(()=>controller.abort(),15000);"
+          ],
+          "after": [
+            "      const controller=new AbortController();activeRequest=controller;",
+            "      const timeout=setTimeout(()=>controller.abort(),window.MemphisRecurringScheduleTarget.SCHEDULE_READ_TIMEOUT_MS);"
+          ]
+        },
+        {
+          "old_start": 504,
+          "old_count": 30,
+          "new_start": 505,
+          "new_count": 41,
+          "before": [
+            "        readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);",
+            "        const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(zooNow().date)}`,{cache:'no-store',signal:controller.signal}),controller.signal);",
+            "        // An HTTP response, including503 or malformed JSON, must not restore",
+            "        // old availability when its separate unavailable write failed.",
+            "        receivedAuthority=true;",
+            "        const payload=await readStep(response.json().catch(()=>null),controller.signal);",
+            "        if(!current(principal,version))return;",
+            "        if(!response.ok||!payload?.ok)throw new Error('network');",
+            "        if(!matches(payload.data,owns))throw new Error('identity');",
+            "        requireCaller(owns);",
+            "        if(payload.data.service_date!==zooNow().date)throw new Error('schedule_target_date');",
+            "        if(window.MemphisRecurringScheduleTarget.deliveryMode(payload.data)==='UNAVAILABLE'){",
+            "          clearPresentation();state('Schedule is unavailable. A current plan must be confirmed.',true);",
+            "          const persist=()=>{requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,payload.data.service_date,'UNAVAILABLE',observedAvailability);};",
+            "          try{await atomic(principal,persist,owns);}catch(error){requireCaller(owns);if(error?.code!=='schedule_request_invalidated')latchUnavailable(principal,observedAvailability);throw error;}requireCaller(owns);unavailableDays.delete(principal);return;",
+            "        }",
+            "        const prepared=await prepareRecurring(payload.data,owns);",
+            "        if(!current(principal,version)||!owns())return;",
+            "        // Render the hashed view itself, never an unbound duplicated area list.",
+            "        const displayData=prepared?{...payload.data,...(prepared.blocked?{projection_status:'blocked_recurring_authority',raw_items:[],current_items:[],full_day:true,shift:null}:prepared.view)}:payload.data;",
+            "        let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}",
+            "        if(!owns()||!current(principal,version)||!matches(displayData,owns)||!owns())return;",
+            "        const winner=snapshot(owns),rendered=winner?.data??displayData;requireCaller(owns);",
+            "        unavailableDays.delete(principal);",
+            "        cacheWarning=cacheWarning||winner?.cache_unconfirmed===true;",
+            "        const applied=render(rendered,{cacheWarning,owns});",
+            "        // Typed recurring ACK is deliberately not sent yet: exact native and",
+            "        // browser notification cancellation/rerouting must join application.",
+            "        // Rendering/cache alone cannot report the complete phone as updated.",
+            "        if(applied&&!cacheWarning&&!prepared&&!winner?.recurring_target)void reportApplied(rendered,principal,version,applied).catch(()=>{});"
+          ],
+          "after": [
+            "        const serviceDate=zooNow().date;",
+            "        await window.MemphisRecurringScheduleTarget.withScheduleReadLock(principal,serviceDate,controller.signal,async()=>{",
+            "          try{",
+            "            requireCaller(owns);",
+            "            if(zooNow().date!==serviceDate)throw new Error('schedule_target_date');",
+            "            readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);",
+            "            const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(serviceDate)}`,{cache:'no-store',signal:controller.signal}),controller.signal);",
+            "            // An HTTP response, including503 or malformed JSON, must not restore",
+            "            // old availability when its separate unavailable write failed.",
+            "            receivedAuthority=true;",
+            "            const payload=await readStep(response.json().catch(()=>null),controller.signal);",
+            "            if(!current(principal,version))return;",
+            "            if(!response.ok||!payload?.ok)throw new Error('network');",
+            "            if(!matches(payload.data,owns))throw new Error('identity');",
+            "            requireCaller(owns);",
+            "            if(payload.data.service_date!==zooNow().date)throw new Error('schedule_target_date');",
+            "            if(window.MemphisRecurringScheduleTarget.deliveryMode(payload.data)==='UNAVAILABLE'){",
+            "              clearPresentation();state('Schedule is unavailable. A current plan must be confirmed.',true);",
+            "              const persist=()=>{requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,payload.data.service_date,'UNAVAILABLE',observedAvailability);};",
+            "              try{await atomic(principal,persist,owns);}catch(error){requireCaller(owns);if(error?.code!=='schedule_request_invalidated')latchUnavailable(principal,observedAvailability);throw error;}requireCaller(owns);unavailableDays.delete(principal);return;",
+            "            }",
+            "            const prepared=await prepareRecurring(payload.data,owns);",
+            "            if(!current(principal,version)||!owns())return;",
+            "            // Render the hashed view itself, never an unbound duplicated area list.",
+            "            const displayData=prepared?{...payload.data,...(prepared.blocked?{projection_status:'blocked_recurring_authority',raw_items:[],current_items:[],full_day:true,shift:null}:prepared.view)}:payload.data;",
+            "            let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}",
+            "            if(!owns()||!current(principal,version)||!matches(displayData,owns)||!owns())return;",
+            "            const winner=snapshot(owns),rendered=winner?.data??displayData;requireCaller(owns);",
+            "            unavailableDays.delete(principal);",
+            "            cacheWarning=cacheWarning||winner?.cache_unconfirmed===true;",
+            "            const applied=render(rendered,{cacheWarning,owns});",
+            "            // Typed recurring ACK is deliberately not sent yet: exact native and",
+            "            // browser notification cancellation/rerouting must join application.",
+            "            // Rendering/cache alone cannot report the complete phone as updated.",
+            "            if(applied&&!cacheWarning&&!prepared&&!winner?.recurring_target)void reportApplied(rendered,principal,version,applied).catch(()=>{});",
+            "          }catch(error){",
+            "            if(!receivedAuthority&&readPrincipal&&ownsLifecycle())",
+            "              await cancelRead(readPrincipal,observedAvailability,ownsLifecycle).catch(()=>{});",
+            "            throw error;",
+            "          }",
+            "        });"
+          ]
+        },
+        {
+          "old_start": 537,
+          "old_count": 1,
+          "new_start": 548,
+          "new_count": 0,
+          "before": [
+            "        if(!receivedAuthority&&readPrincipal)await cancelRead(readPrincipal,observedAvailability,ownsRecovery).catch(()=>{});"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 559,
+          "old_count": 1,
+          "new_start": 570,
+          "new_count": 2,
+          "before": [
+            "      const generation=++securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;"
+          ],
+          "after": [
+            "      if(event.key===null)++securityGeneration;",
+            "      const generation=securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;"
+          ]
+        },
+        {
+          "old_start": 564,
+          "old_count": 1,
+          "new_start": 576,
+          "new_count": 1,
+          "before": [
+            "      if(owns()&&!securityBlocked)void load('storage');"
+          ],
+          "after": [
+            "      if(event.key===null&&owns()&&!securityBlocked)void load('storage-clear');"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "memphis-recurring-schedule-target.js",
+      "kind": "changed",
+      "prior_bytes": 22228,
+      "prior_sha256": "c4911c2e825a7e333cf2e80d4b3d453a1965668de011ff1536b503b37bef054d",
+      "current_sha256": "9367abe501f9a43d9cf1e8a90d5a0be54ed36e74fb6cd02c95186f2ccd9f0358",
+      "hunks": [
+        {
+          "old_start": 245,
+          "old_count": 0,
+          "new_start": 246,
+          "new_count": 20,
+          "before": [],
+          "after": [
+            "  async function withScheduleReadLock(scope,serviceDate,signal,operation){",
+            "    availabilityKey(scope);date(serviceDate);",
+            "    if(signal?.aborted)throw fail('schedule_request_invalidated');",
+            "    let locks,request,entered=false;",
+            "    try{locks=root.navigator?.locks;request=locks?.request;}catch{throw fail('schedule_atomic_storage_unavailable');}",
+            "    if(typeof request!=='function')throw fail('schedule_atomic_storage_unavailable');",
+            "    try{",
+            "      // The read owns its ticket through transport and completion. Protected",
+            "      // mutations still use the separate, short-held authority lock.",
+            "      return await request.call(locks,'memphis-schedule-read:'+encodeURIComponent(scope)+':'+serviceDate,",
+            "        {mode:'exclusive',signal},()=>{",
+            "          entered=true;",
+            "          if(signal?.aborted)throw fail('schedule_request_invalidated');",
+            "          return operation();",
+            "        });",
+            "    }catch(error){",
+            "      if(!entered)throw fail(signal?.aborted?'schedule_request_invalidated':'schedule_atomic_storage_unavailable');",
+            "      throw error;",
+            "    }",
+            "  }"
+          ]
+        },
+        {
+          "old_start": 273,
+          "old_count": 2,
+          "new_start": 293,
+          "new_count": 2,
+          "before": [
+            "  const api=Object.freeze({prepare,sha256Text,assertMonotonic,deliveryMode,assertSnapshot,assertSnapshotProgress,newestSnapshot,confirmedSnapshot,",
+            "    withScheduleLock,availability,assertAvailability,writeAvailability,availabilityKey,AVAILABILITY_PREFIX,CACHE_SCHEMA});"
+          ],
+          "after": [
+            "  const api=Object.freeze({SCHEDULE_READ_TIMEOUT_MS:15000,prepare,sha256Text,assertMonotonic,deliveryMode,assertSnapshot,assertSnapshotProgress,newestSnapshot,confirmedSnapshot,",
+            "    withScheduleLock,withScheduleReadLock,availability,assertAvailability,writeAvailability,availabilityKey,AVAILABILITY_PREFIX,CACHE_SCHEMA});"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/dist/esm/index.d.ts",
+      "kind": "changed",
+      "prior_bytes": 9616,
+      "prior_sha256": "7dbb8604be8eff53d2a15ff8ba2b630707224ee41e1ae43aa8e884930d6b646b",
+      "current_sha256": "a90c0d160885f56b641ea3baf0177e4e8cad774980e74b62d324ba4ada0d2614",
+      "hunks": [
+        {
+          "old_start": 80,
+          "old_count": 0,
+          "new_start": 81,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  phonePresentation(options?: { unlock_wake?: string }): Promise<{ wake?: string; unlocked: boolean }>;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/scripts/custodial-android-release-acceptance.schema.json",
+      "kind": "changed",
+      "prior_bytes": 64095,
+      "prior_sha256": "f5fa55d97f1ad694589bdb6d6d329ca5c23bb4de4bdc090d86b98c47d7c4a0ba",
+      "current_sha256": "345567d2863df1ee1e2f6d6d6923155dbf35743718607f63f58c8354af916f1b",
+      "hunks": [
+        {
+          "old_start": 1267,
+          "old_count": 2,
+          "new_start": 1267,
+          "new_count": 2,
+          "before": [
+            "          \"minItems\": 37,",
+            "          \"maxItems\": 37,"
+          ],
+          "after": [
+            "          \"minItems\": 38,",
+            "          \"maxItems\": 38,"
+          ]
+        },
+        {
+          "old_start": 1342,
+          "old_count": 0,
+          "new_start": 1343,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "            {",
+            "              \"const\": \"phonePresentation\"",
+            "            },"
+          ]
+        },
+        {
+          "old_start": 1404,
+          "old_count": 1,
+          "new_start": 1407,
+          "new_count": 2,
+          "before": [
+            "            \"Lorg/memphiszoo/custodial/vault/RequestPolicy;\""
+          ],
+          "after": [
+            "            \"Lorg/memphiszoo/custodial/vault/RequestPolicy;\",",
+            "            \"Lorg/memphiszoo/custodial/vault/PhonePresentation;\""
+          ]
+        },
+        {
+          "old_start": 1453,
+          "old_count": 0,
+          "new_start": 1458,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "            },",
+            "            \"Lorg/memphiszoo/custodial/vault/PhonePresentation;\": {",
+            "              \"$ref\": \"#/$defs/dexName\""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+      "kind": "changed",
+      "prior_bytes": 41488,
+      "prior_sha256": "0036addfa28855754bd2231b805cd08a9494520d31f4c1d27a72aaf24cabc30c",
+      "current_sha256": "40b9e5af234ab41c87c7f1a1424aa84244ac76425b71145992dfa448caf44e76",
+      "hunks": [
+        {
+          "old_start": 63,
+          "old_count": 0,
+          "new_start": 64,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  'Lorg/memphiszoo/custodial/vault/PhonePresentation;',"
+          ]
+        },
+        {
+          "old_start": 90,
+          "old_count": 0,
+          "new_start": 92,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  'phonePresentation',"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/bridge.js",
+      "kind": "changed",
+      "prior_bytes": 164999,
+      "prior_sha256": "a2a8068fd37a8bc0526307a788fcef5eac0e806ef59b5e67898d04ccea2aea30",
+      "current_sha256": "fff50ac718bd286f85083dbdf41781b26085c6786484de9ab1ec8c42827b4bcd",
+      "hunks": [
+        {
+          "old_start": 36,
+          "old_count": 0,
+          "new_start": 37,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  readNativePhonePresentation,"
+          ]
+        },
+        {
+          "old_start": 48,
+          "old_count": 0,
+          "new_start": 50,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import { installWorkPageClock } from './phone-presentation.js';"
+          ]
+        },
+        {
+          "old_start": 2941,
+          "old_count": 0,
+          "new_start": 2944,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    ...(nativeVault && !browserTestBuild ? { phonePresentation: readNativePhonePresentation } : {}),"
+          ]
+        },
+        {
+          "old_start": 3014,
+          "old_count": 0,
+          "new_start": 3018,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "  if (nativeVault && !browserTestBuild) {",
+            "    installWorkPageClock({ app: App, mobile: window.MemphisMobile, document, window });",
+            "  }",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/employee-schedule-runtime.js",
+      "kind": "changed",
+      "prior_bytes": 61064,
+      "prior_sha256": "ae2ed79e0c381f69265be876d5250b26bef43675796e0d63fee086bd2038b747",
+      "current_sha256": "3f596435b21b165e6213b050bb969bde2a49d87835be256a52bec99d0e404aad",
+      "hunks": [
+        {
+          "old_start": 518,
+          "old_count": 1,
+          "new_start": 518,
+          "new_count": 2,
+          "before": [
+            "      const controller=new AbortController();activeRequest=controller;const timeout=setTimeout(()=>controller.abort(),15000);"
+          ],
+          "after": [
+            "      const controller=new AbortController();activeRequest=controller;",
+            "      const timeout=setTimeout(()=>controller.abort(),window.MemphisRecurringScheduleTarget.SCHEDULE_READ_TIMEOUT_MS);"
+          ]
+        },
+        {
+          "old_start": 532,
+          "old_count": 16,
+          "new_start": 533,
+          "new_count": 54,
+          "before": [
+            "        diagnosticStage='D04';readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);",
+            "        diagnosticStage='D05';const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(zooNow().date)}`,{cache:'no-store',signal:controller.signal}),controller.signal);",
+            "        // An HTTP response, including503 or malformed JSON, must not restore",
+            "        // old availability when its separate unavailable write failed.",
+            "        receivedAuthority=true;diagnosticStage='D06';",
+            "        try{const status=response.status;diagnosticHttp=Number.isInteger(status)&&status>=100&&status<=599?status:0;}catch{diagnosticHttp=0;}",
+            "        requireCaller(owns);",
+            "        // Only primitive response text parsed here establishes diagnostic provenance.",
+            "        // Legacy object-returning adapters retain their existing payload path,",
+            "        // but their objects are never inspected by the new classifier.",
+            "        let payload=null,diagnosticPayload=null;",
+            "        const readText=response.text;requireCaller(owns);",
+            "        if(typeof readText==='function'){",
+            "          const body=await readStep(readText.call(response),controller.signal);requireCaller(owns);",
+            "          if(typeof body==='string'){",
+            "            try{payload=JSON.parse(body);diagnosticPayload=payload;}catch{payload=null;}"
+          ],
+          "after": [
+            "        const serviceDate=zooNow().date;",
+            "        await window.MemphisRecurringScheduleTarget.withScheduleReadLock(principal,serviceDate,controller.signal,async()=>{",
+            "          try{",
+            "            requireCaller(owns);",
+            "            if(zooNow().date!==serviceDate)throw new Error('schedule_target_date');",
+            "            diagnosticStage='D04';readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);",
+            "            diagnosticStage='D05';const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(serviceDate)}`,{cache:'no-store',signal:controller.signal}),controller.signal);",
+            "            // An HTTP response, including503 or malformed JSON, must not restore",
+            "            // old availability when its separate unavailable write failed.",
+            "            receivedAuthority=true;diagnosticStage='D06';",
+            "            try{const status=response.status;diagnosticHttp=Number.isInteger(status)&&status>=100&&status<=599?status:0;}catch{diagnosticHttp=0;}",
+            "            requireCaller(owns);",
+            "            // Only primitive response text parsed here establishes diagnostic provenance.",
+            "            // Legacy object-returning adapters retain their existing payload path,",
+            "            // but their objects are never inspected by the new classifier.",
+            "            let payload=null,diagnosticPayload=null;",
+            "            const readText=response.text;requireCaller(owns);",
+            "            if(typeof readText==='function'){",
+            "              const body=await readStep(readText.call(response),controller.signal);requireCaller(owns);",
+            "              if(typeof body==='string'){",
+            "                try{payload=JSON.parse(body);diagnosticPayload=payload;}catch{payload=null;}",
+            "              }",
+            "            }else{",
+            "              payload=await readStep(response.json().catch(()=>null),controller.signal);",
+            "            }",
+            "            requireCaller(owns);",
+            "            if(!current(principal,version))return;",
+            "            if(!response.ok||!payload?.ok){requireCaller(owns);diagnosticFailure=responseFailureLabel(diagnosticPayload);requireCaller(owns);throw new Error('network');}",
+            "            if(!matches(payload.data,owns))throw new Error('identity');",
+            "            requireCaller(owns);",
+            "            if(payload.data.service_date!==zooNow().date)throw new Error('schedule_target_date');",
+            "            if(window.MemphisRecurringScheduleTarget.deliveryMode(payload.data)==='UNAVAILABLE'){",
+            "              clearPresentation();state('Schedule is unavailable. A current plan must be confirmed.',true);",
+            "              const persist=()=>{requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,payload.data.service_date,'UNAVAILABLE',observedAvailability);};",
+            "              try{await atomic(principal,persist,owns);}catch(error){requireCaller(owns);if(error?.code!=='schedule_request_invalidated')latchUnavailable(principal,observedAvailability);throw error;}requireCaller(owns);unavailableDays.delete(principal);return;",
+            "            }",
+            "            diagnosticStage='D07';const prepared=await prepareRecurring(payload.data,owns);",
+            "            if(!current(principal,version)||!owns())return;",
+            "            // Render the hashed view itself, never an unbound duplicated area list.",
+            "            const displayData=prepared?{...payload.data,...(prepared.blocked?{projection_status:'blocked_recurring_authority',raw_items:[],current_items:[],full_day:true,shift:null}:prepared.view)}:payload.data;",
+            "            diagnosticStage='D08';let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}",
+            "            if(!owns()||!current(principal,version)||!matches(displayData,owns)||!owns())return;",
+            "            const winner=snapshot(owns),rendered=winner?.data??displayData;requireCaller(owns);",
+            "            unavailableDays.delete(principal);",
+            "            cacheWarning=cacheWarning||winner?.cache_unconfirmed===true;",
+            "            diagnosticStage='D09';const applied=render(rendered,{cacheWarning,owns});",
+            "            // Typed recurring ACK is deliberately not sent yet: exact native and",
+            "            // browser notification cancellation/rerouting must join application.",
+            "            // Rendering/cache alone cannot report the complete phone as updated.",
+            "            if(applied&&!cacheWarning&&!prepared&&!winner?.recurring_target)void reportApplied(rendered,principal,version,applied).catch(()=>{});",
+            "          }catch(error){",
+            "            if(!receivedAuthority&&readPrincipal&&ownsLifecycle())",
+            "              await cancelRead(readPrincipal,observedAvailability,ownsLifecycle).catch(()=>{});",
+            "            throw error;"
+          ]
+        },
+        {
+          "old_start": 549,
+          "old_count": 28,
+          "new_start": 588,
+          "new_count": 1,
+          "before": [
+            "        }else{",
+            "          payload=await readStep(response.json().catch(()=>null),controller.signal);",
+            "        }",
+            "        requireCaller(owns);",
+            "        if(!current(principal,version))return;",
+            "        if(!response.ok||!payload?.ok){requireCaller(owns);diagnosticFailure=responseFailureLabel(diagnosticPayload);requireCaller(owns);throw new Error('network');}",
+            "        if(!matches(payload.data,owns))throw new Error('identity');",
+            "        requireCaller(owns);",
+            "        if(payload.data.service_date!==zooNow().date)throw new Error('schedule_target_date');",
+            "        if(window.MemphisRecurringScheduleTarget.deliveryMode(payload.data)==='UNAVAILABLE'){",
+            "          clearPresentation();state('Schedule is unavailable. A current plan must be confirmed.',true);",
+            "          const persist=()=>{requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,payload.data.service_date,'UNAVAILABLE',observedAvailability);};",
+            "          try{await atomic(principal,persist,owns);}catch(error){requireCaller(owns);if(error?.code!=='schedule_request_invalidated')latchUnavailable(principal,observedAvailability);throw error;}requireCaller(owns);unavailableDays.delete(principal);return;",
+            "        }",
+            "        diagnosticStage='D07';const prepared=await prepareRecurring(payload.data,owns);",
+            "        if(!current(principal,version)||!owns())return;",
+            "        // Render the hashed view itself, never an unbound duplicated area list.",
+            "        const displayData=prepared?{...payload.data,...(prepared.blocked?{projection_status:'blocked_recurring_authority',raw_items:[],current_items:[],full_day:true,shift:null}:prepared.view)}:payload.data;",
+            "        diagnosticStage='D08';let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}",
+            "        if(!owns()||!current(principal,version)||!matches(displayData,owns)||!owns())return;",
+            "        const winner=snapshot(owns),rendered=winner?.data??displayData;requireCaller(owns);",
+            "        unavailableDays.delete(principal);",
+            "        cacheWarning=cacheWarning||winner?.cache_unconfirmed===true;",
+            "        diagnosticStage='D09';const applied=render(rendered,{cacheWarning,owns});",
+            "        // Typed recurring ACK is deliberately not sent yet: exact native and",
+            "        // browser notification cancellation/rerouting must join application.",
+            "        // Rendering/cache alone cannot report the complete phone as updated.",
+            "        if(applied&&!cacheWarning&&!prepared&&!winner?.recurring_target)void reportApplied(rendered,principal,version,applied).catch(()=>{});"
+          ],
+          "after": [
+            "        });"
+          ]
+        },
+        {
+          "old_start": 580,
+          "old_count": 1,
+          "new_start": 591,
+          "new_count": 0,
+          "before": [
+            "        if(!receivedAuthority&&readPrincipal)await cancelRead(readPrincipal,observedAvailability,ownsRecovery).catch(()=>{});"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 634,
+          "old_count": 1,
+          "new_start": 645,
+          "new_count": 2,
+          "before": [
+            "      const generation=++securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;nativeTypedRender=null;"
+          ],
+          "after": [
+            "      if(event.key===null)++securityGeneration;",
+            "      const generation=securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;nativeTypedRender=null;"
+          ]
+        },
+        {
+          "old_start": 639,
+          "old_count": 1,
+          "new_start": 651,
+          "new_count": 3,
+          "before": [
+            "      if(owns()&&!securityBlocked)void load('storage');"
+          ],
+          "after": [
+            "      // Peer snapshots converge through the shared fence. A storage event is",
+            "      // never a reason to reserve another ticket and restart the other view.",
+            "      if(event.key===null&&owns()&&!securityBlocked)void load('storage-clear');"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/home-facts.js",
+      "kind": "changed",
+      "prior_bytes": 15673,
+      "prior_sha256": "a3672e3fffcef9759f6f85737044aa61ec3dcf7c22a195a32443ee201c318b1d",
+      "current_sha256": "7a6e4b1409b2ca68f04ccf34c492707b517bd404b3c97eeb5575f51a957d091e",
+      "hunks": [
+        {
+          "old_start": 27,
+          "old_count": 1,
+          "new_start": 27,
+          "new_count": 1,
+          "before": [
+            "  const unavailable={shift:'Schedule unavailable',lunch:'Lunch unavailable',stale:true,detail:'Open Schedule for the latest assignments.'};"
+          ],
+          "after": [
+            "  const unavailable={shift:'Schedule unavailable',lunch:'Lunch unavailable',available:false,stale:true,detail:'Open Schedule for the latest assignments.'};"
+          ]
+        },
+        {
+          "old_start": 38,
+          "old_count": 1,
+          "new_start": 38,
+          "new_count": 1,
+          "before": [
+            "    return {shift:'Not scheduled today',lunch:'Not scheduled',...freshness,detail:freshness.label};"
+          ],
+          "after": [
+            "    return {shift:'Not scheduled today',lunch:'Not scheduled',available:true,...freshness,detail:freshness.label};"
+          ]
+        },
+        {
+          "old_start": 44,
+          "old_count": 1,
+          "new_start": 44,
+          "new_count": 1,
+          "before": [
+            "  return {shift:`${clock(start)}–${clock(end)}`,lunch,...freshness,detail:freshness.label};"
+          ],
+          "after": [
+            "  return {shift:`${clock(start)}–${clock(end)}`,lunch,available:true,...freshness,detail:freshness.label};"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/index.html",
+      "kind": "changed",
+      "prior_bytes": 16880,
+      "prior_sha256": "dbae26eb49510c9d9e40f3461e07c5a68c0b65b6454403c27cf58d5e87622561",
+      "current_sha256": "4ab111ce503ff854d84193c094c5182835b849394a7fd106c4b82ee43302f051",
+      "hunks": [
+        {
+          "old_start": 40,
+          "old_count": 7,
+          "new_start": 39,
+          "new_count": 0,
+          "before": [
+            "    .phoneLock{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:calc(max(18px,env(safe-area-inset-top)) + 16px) 20px calc(max(28px,env(safe-area-inset-bottom)) + 28px);background-image:linear-gradient(180deg,rgba(3,7,13,.48),rgba(3,7,13,.78)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-repeat:no-repeat;color:#f8fafc;touch-action:none;user-select:none;-webkit-user-select:none}",
+            "    .phoneLock[hidden]{display:none!important}.phoneLockPanel{width:min(520px,92vw);min-height:min(640px,86vh);border-radius:34px;padding:34px 24px 30px;background:linear-gradient(180deg,rgba(5,12,20,.46),rgba(5,12,20,.22));border:1px solid rgba(255,255,255,.14);box-shadow:0 22px 60px rgba(0,0,0,.38);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;text-align:center}",
+            "    .phoneLockBrand{margin-top:auto;font-size:.82rem;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--green);text-shadow:0 2px 12px rgba(0,0,0,.32)}",
+            "    .phoneLockClock{margin-top:12px;font-size:clamp(3rem,18vw,5.7rem);font-weight:900;line-height:.92;letter-spacing:-.08em;text-shadow:0 5px 24px rgba(0,0,0,.36)}",
+            "    .phoneLockDate{margin-top:12px;font-size:clamp(1.05rem,4.4vw,1.42rem);font-weight:900;letter-spacing:.04em;text-shadow:0 3px 16px rgba(0,0,0,.34)}",
+            "    .phoneLockName{margin-top:18px;padding:11px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.28);font-size:clamp(1.2rem,5vw,1.7rem);font-weight:900;color:#f7ffd9;text-shadow:0 2px 10px rgba(0,0,0,.45)}",
+            "    .phoneUnlock{margin-top:auto;min-width:min(250px,78vw);min-height:62px;padding:16px 24px;border:none;border-radius:18px;background:linear-gradient(180deg,#c7ef81,#9bd449);color:#102106;font-size:1.16rem;font-weight:900;box-shadow:0 12px 28px rgba(0,0,0,.3)}"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 59,
+          "old_count": 0,
+          "new_start": 53,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  <link rel=\"stylesheet\" href=\"./custodial-phone-clock.css\">"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/native-security.js",
+      "kind": "changed",
+      "prior_bytes": 62336,
+      "prior_sha256": "147354240f054a26f028dd02c4995663959a93aaa8edecd00c7f59595d19eefb",
+      "current_sha256": "2fe8a7ac5819e83fdad1e70c9305fbebe2baacec774b2997f20bda77d5c9cf83",
+      "hunks": [
+        {
+          "old_start": 42,
+          "old_count": 0,
+          "new_start": 43,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "export function readNativePhonePresentation(wake) {",
+            "  return CustodialNativeVault.phonePresentation(wake ? { unlock_wake: wake } : {});",
+            "}",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 10465,
+      "prior_sha256": "2b0940cf1d699ef6f3b98c623337a21cc955791b2820c3ff1caedcaf9b6d87fa",
+      "current_sha256": "8f4729bd181bab44452b987d0188dc928e167b6469c221488f4ea1092464f840",
+      "hunks": [
+        {
+          "old_start": 11,
+          "old_count": 1,
+          "new_start": 11,
+          "new_count": 1,
+          "before": [
+            "const counts=assertCurrentGpsInventory();assert.equal(counts.main,194);assert.equal(counts.tests,209);pass('actual current 194 main and 209 native tests bound without unknown callers');"
+          ],
+          "after": [
+            "const counts=assertCurrentGpsInventory();assert.equal(counts.main,195);assert.equal(counts.tests,209);pass('actual current 195 main and 209 native tests bound without unknown callers');"
+          ]
+        },
+        {
+          "old_start": 49,
+          "old_count": 0,
+          "new_start": 50,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            " paths.add('scripts/fixtures/current-gps-integration-repairs-overlay.json');"
+          ]
+        },
+        {
+          "old_start": 55,
+          "old_count": 3,
+          "new_start": 56,
+          "new_count": 3,
+          "before": [
+            " assert.equal(isolated.assertCurrentGpsInventory().main,194);",
+            " const changeRows=[...profile.deltas,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];",
+            " for(const row of changeRows){const path=join(temporary,row.path),before=readFileSync(path);writeFileSync(path,Buffer.concat([before,Buffer.from('\\n')]));assert.throws(()=>isolated.assertCurrentGpsInventory());writeFileSync(path,before);assert.equal(isolated.assertCurrentGpsInventory().main,194);}"
+          ],
+          "after": [
+            " assert.equal(isolated.assertCurrentGpsInventory().main,195);",
+            " const changeRows=[...profile.deltas,...profile.auditRepairHistory,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];",
+            " for(const row of changeRows){const path=join(temporary,row.path),before=readFileSync(path);writeFileSync(path,Buffer.concat([before,Buffer.from('\\n')]));assert.throws(()=>isolated.assertCurrentGpsInventory());writeFileSync(path,before);assert.equal(isolated.assertCurrentGpsInventory().main,195);}"
+          ]
+        },
+        {
+          "old_start": 76,
+          "old_count": 1,
+          "new_start": 77,
+          "new_count": 1,
+          "before": [
+            " assert.equal(isolated.assertCurrentGpsInventory().main,194);"
+          ],
+          "after": [
+            " assert.equal(isolated.assertCurrentGpsInventory().main,195);"
+          ]
+        },
+        {
+          "old_start": 79,
+          "old_count": 1,
+          "new_start": 80,
+          "new_count": 1,
+          "before": [
+            "console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:194,current_tests:209,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));"
+          ],
+          "after": [
+            "console.log(JSON.stringify({status:'PASS_CURRENT_GPS_SOURCE_QUALIFICATION',checks,current_main:195,current_tests:209,historical_main:193,historical_projection_only:true,runtime_admission:false,release_admission:false,physical_phone:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-provider-comparison-source-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 6993,
+      "prior_sha256": "9287a634c6bb5781b3009349ea5fa5073418b5740a050ccb7c1fed894b15b3d5",
+      "current_sha256": "18aadd33fff91767b6e10e23432e83c2cdb28c877785e284bace3543a75b326d",
+      "hunks": [
+        {
+          "old_start": 17,
+          "old_count": 1,
+          "new_start": 17,
+          "new_count": 1,
+          "before": [
+            "assert.equal(currentInventory.main,194);"
+          ],
+          "after": [
+            "assert.equal(currentInventory.main,195);"
+          ]
+        },
+        {
+          "old_start": 23,
+          "old_count": 1,
+          "new_start": 23,
+          "new_count": 1,
+          "before": [
+            "assert.equal(currentInventory.main-historicalInventory.historical_main,1);"
+          ],
+          "after": [
+            "assert.equal(currentInventory.main-historicalInventory.historical_main,2);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-core-release-gate.mjs",
+      "kind": "changed",
+      "prior_bytes": 7015,
+      "prior_sha256": "cd53076ff19c8c704cfc968faa26554b489b6fba328cf3c21519c9560752e40a",
+      "current_sha256": "685111405228dc5b7820765a0f6874036d9d15ab6246a02c78affe61d63a1a8a",
+      "hunks": [
+        {
+          "old_start": 52,
+          "old_count": 0,
+          "new_start": 53,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "  'schedule-cross-view-read-tests',",
+            "  'custodial-phone-presentation-tests',"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 65190,
+      "prior_sha256": "522b7e3e15aa51141e5fe62f0aa8e913304b056dbd9b5c05944d876d55f7afc7",
+      "current_sha256": "04f2a2f1959de7523c7a26cd31acfecfb4f168ec9f8a91f3a159ddbfbb88d9a0",
+      "hunks": [
+        {
+          "old_start": 64,
+          "old_count": 1,
+          "new_start": 64,
+          "new_count": 1,
+          "before": [
+            "  'nativeApplicationSource','nativeVault','providerMirror','bridgeReady','feedbackOutbox','profileMatchesPrincipal',"
+          ],
+          "after": [
+            "  'nativeApplicationSource','nativeVault','browserTestBuild','readNativePhonePresentation','providerMirror','bridgeReady','feedbackOutbox','profileMatchesPrincipal',"
+          ]
+        },
+        {
+          "old_start": 73,
+          "old_count": 1,
+          "new_start": 73,
+          "new_count": 1,
+          "before": [
+            "  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'e167f859ff48b431199fdf47b70e0815b673e68e1c56819f432768f792fa068c','Frozen notification owner changed; review the exact current import/closure dependencies');"
+          ],
+          "after": [
+            "  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'884463c66da03dc486c306e8e58f74af312f243dfc89c2ba9493262c15d02a08','Frozen notification owner changed; review the exact current import/closure dependencies');"
+          ]
+        },
+        {
+          "old_start": 199,
+          "old_count": 1,
+          "new_start": 199,
+          "new_count": 2,
+          "before": [
+            "    nativeVault:true,providerMirror,bridgeReady:Promise.resolve(),feedbackOutbox:{save(){},flush(){}},profileMatchesPrincipal:()=>true,"
+          ],
+          "after": [
+            "    nativeVault:true,browserTestBuild:false,readNativePhonePresentation(){throw Error('Notification workflow must not use the clock presentation port.');},",
+            "    providerMirror,bridgeReady:Promise.resolve(),feedbackOutbox:{save(){},flush(){}},profileMatchesPrincipal:()=>true,"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/scripts/build.mjs",
+      "kind": "changed",
+      "prior_bytes": 32095,
+      "prior_sha256": "055216019faa27a27f9ac3abe235c11a598db6df312b2ffb7d05b0893dd5afcd",
+      "current_sha256": "49316a3ce5d5470ac3648c62b05fb885c850e37fa7ef1f34ad66849d7d75b664",
+      "hunks": [
+        {
+          "old_start": 595,
+          "old_count": 0,
+          "new_start": 596,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  await cp(join(source, 'custodial-phone-clock.css'), join(dist, 'custodial-phone-clock.css'));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/app.js",
+      "kind": "changed",
+      "prior_bytes": 26619,
+      "prior_sha256": "dab171dbb27c9d798e1ffc41043a5d9fdfe976a8da89db3d8a3c962face8b2e0",
+      "current_sha256": "548efcfed7482e9f6b79a9e7eee989683969353e0d145ea3ea4d90502a14e258",
+      "hunks": [
+        {
+          "old_start": 3,
+          "old_count": 0,
+          "new_start": 4,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import { bindPhoneUnlock, createPhonePresentation } from './phone-presentation.js';"
+          ]
+        },
+        {
+          "old_start": 116,
+          "old_count": 2,
+          "new_start": 117,
+          "new_count": 4,
+          "before": [
+            "// Presentation permission is document-local, never restored from a prior tab/session.",
+            "let phoneUnlockedByTap = false;"
+          ],
+          "after": [
+            "const phoneClock = createPhonePresentation({",
+            "  principal: readinessPrincipal,",
+            "  read: window.MemphisMobile?.phonePresentation,",
+            "});"
+          ]
+        },
+        {
+          "old_start": 123,
+          "old_count": 2,
+          "new_start": 125,
+          "new_count": 0,
+          "before": [
+            "function phoneUnlockedSinceWake() { return phoneUnlockedByTap; }",
+            "function setPhoneUnlocked(value) { phoneUnlockedByTap = value === true; }"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 143,
+          "old_count": 2,
+          "new_start": 143,
+          "new_count": 0,
+          "before": [
+            "  // Every displayed lock needs a new explicit Unlock tap, including background restore.",
+            "  setPhoneUnlocked(false);"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 151,
+          "old_count": 2,
+          "new_start": 150,
+          "new_count": 6,
+          "before": [
+            "function unlockPhone() { setPhoneUnlocked(true); hidePhoneLock(); }",
+            "function relockPhone() { invalidateReadiness(); setPhoneUnlocked(false); if (profile) showPhoneLock(profile); }"
+          ],
+          "after": [
+            "async function unlockPhone() {",
+            "  if (els.phoneLock.hidden || !currentProfile(profile)) return;",
+            "  if (!await phoneClock.unlock()) await phoneClock.refresh();",
+            "  if (phoneClock.unlocked() && currentProfile(profile)) hidePhoneLock();",
+            "}",
+            "function relockPhone() { invalidateReadiness(); phoneClock.reset(); if (profile) showPhoneLock(profile); }"
+          ]
+        },
+        {
+          "old_start": 255,
+          "old_count": 1,
+          "new_start": 258,
+          "new_count": 2,
+          "before": [
+            "  showPhoneLock(cached);"
+          ],
+          "after": [
+            "  if (phoneClock.unlocked()) hidePhoneLock();",
+            "  else showPhoneLock(cached);"
+          ]
+        },
+        {
+          "old_start": 266,
+          "old_count": 1,
+          "new_start": 270,
+          "new_count": 1,
+          "before": [
+            "  if (phoneUnlockedSinceWake()) hidePhoneLock();"
+          ],
+          "after": [
+            "  if (phoneClock.unlocked()) hidePhoneLock();"
+          ]
+        },
+        {
+          "old_start": 359,
+          "old_count": 0,
+          "new_start": 364,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  await phoneClock.refresh();"
+          ]
+        },
+        {
+          "old_start": 434,
+          "old_count": 1,
+          "new_start": 439,
+          "new_count": 1,
+          "before": [
+            "els.phoneUnlock.addEventListener('click', unlockPhone);"
+          ],
+          "after": [
+            "bindPhoneUnlock(els.phoneLock, els.phoneUnlock, unlockPhone);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/home-facts-dom.js",
+      "kind": "changed",
+      "prior_bytes": 23217,
+      "prior_sha256": "c4842cd0b123bbc19a3ebc9929e84764738b382f5e943f6b16f74a5faf6e885e",
+      "current_sha256": "145609f37fb7562164a1c22b0d065a2de326feb2ea2f395d30fea9ae84d0294b",
+      "hunks": [
+        {
+          "old_start": 13,
+          "old_count": 0,
+          "new_start": 14,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  let currentUpdate=null;"
+          ]
+        },
+        {
+          "old_start": 166,
+          "old_count": 1,
+          "new_start": 167,
+          "new_count": 5,
+          "before": [
+            "    if(scheduleStatus){scheduleStatus.textContent=value.schedule.stale?'Schedule unavailable.':'';scheduleStatus.hidden=!value.schedule.stale;}"
+          ],
+          "after": [
+            "    if(scheduleStatus){",
+            "      scheduleStatus.textContent=value.schedule.stale",
+            "        ? (value.schedule.available?'Showing a saved schedule.':'Schedule unavailable.') : '';",
+            "      scheduleStatus.hidden=!value.schedule.stale;",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 173,
+          "old_count": 2,
+          "new_start": 178,
+          "new_count": 3,
+          "before": [
+            "      const currentRequest=()=>{",
+            "        if(signal?.aborted||owner!==facts||generation!==securityGeneration||invocation!==updateSequence)return false;"
+          ],
+          "after": [
+            "      const serviceDate=zooServiceDate();",
+            "      const ownsRead=()=>{",
+            "        if(owner!==facts||generation!==securityGeneration||invocation!==updateSequence||zooServiceDate()!==serviceDate)return false;"
+          ]
+        },
+        {
+          "old_start": 177,
+          "old_count": 1,
+          "new_start": 183,
+          "new_count": 1,
+          "before": [
+            "          &&!signal?.aborted&&homeBinding(captured.id)===originalBinding;"
+          ],
+          "after": [
+            "          &&zooServiceDate()===serviceDate&&homeBinding(captured.id)===originalBinding;"
+          ]
+        },
+        {
+          "old_start": 180,
+          "old_count": 1,
+          "new_start": 186,
+          "new_count": 1,
+          "before": [
+            "        if(!currentRequest())throw Object.assign(new Error('Schedule request invalidated'),{code:'schedule_request_invalidated'});"
+          ],
+          "after": [
+            "        if(signal?.aborted||!ownsRead())throw Object.assign(new Error('Schedule request invalidated'),{code:'schedule_request_invalidated'});"
+          ]
+        },
+        {
+          "old_start": 182,
+          "old_count": 7,
+          "new_start": 188,
+          "new_count": 1,
+          "before": [
+            "      requireCurrent();",
+            "      const observedAvailability=await schedule.begin(id,{signal});",
+            "      requireCurrent();",
+            "      // Request the same displayed calendar day that acceptance/cache fencing",
+            "      // requires; the server's default operational day changes at04:00.",
+            "      let day;try{day=await requestJson(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}&service_date=${encodeURIComponent(zooServiceDate())}`,{signal});}",
+            "      catch(error){"
+          ],
+          "after": [
+            "      return schedule.readExclusively(id,serviceDate,signal,async()=>{"
+          ]
+        },
+        {
+          "old_start": 190,
+          "old_count": 8,
+          "new_start": 190,
+          "new_count": 10,
+          "before": [
+            "        // A received HTTP failure is not a cancelled/offline request. Keep the",
+            "        // unresolved read if the transport could not persist UNAVAILABLE;",
+            "        // restoring its prior AVAILABLE would revive stale work on restart.",
+            "        let noResponse=false;",
+            "        try{const status=error?.status;noResponse=status===undefined||status===null||status===0;}catch{ /* Unreadable response metadata remains uncertain. */ }",
+            "        if(noResponse){",
+            "          requireCurrent();",
+            "          await schedule.cancel(id,observedAvailability).catch(()=>{});"
+          ],
+          "after": [
+            "        const observedAvailability=await schedule.begin(id,{signal});",
+            "        const cancelRead=async()=>{",
+            "          if(!ownsRead())return;",
+            "          await schedule.cancel(id,observedAvailability,ownsRead).catch(()=>{});",
+            "          if(ownsRead())owner.redraw();",
+            "        };",
+            "        // Request the same displayed calendar day that acceptance/cache fencing",
+            "        // requires; the server's default operational day changes at04:00.",
+            "        let day, abort;",
+            "        try{"
+          ]
+        },
+        {
+          "old_start": 199,
+          "old_count": 9,
+          "new_start": 201,
+          "new_count": 20,
+          "before": [
+            "        }",
+            "        throw error;",
+            "      }",
+            "      requireCurrent();",
+            "      if(!admitted(captureSecurity({data:day})))throw Error('Schedule assignment changed');",
+            "      requireCurrent();",
+            "      const accepted=await schedule.accept(day,id,{signal,observedAvailability});",
+            "      requireCurrent();",
+            "      return accepted;"
+          ],
+          "after": [
+            "          const interrupted=new Promise((_,reject)=>{",
+            "            abort=()=>reject(Object.assign(new Error('Schedule read interrupted'),{name:'AbortError'}));",
+            "            signal.addEventListener('abort',abort,{once:true});",
+            "          });",
+            "          const path=`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}&service_date=${encodeURIComponent(serviceDate)}`;",
+            "          day=await Promise.race([interrupted,Promise.resolve().then(()=>{requireCurrent();return requestJson(path,{signal});})]);",
+            "        }catch(error){",
+            "          // Restore only this original ticket when JS stopped waiting without an",
+            "          // HTTP result. Denial or malformed HTTP data cannot revive saved work.",
+            "          const status=error?.status;",
+            "          if(status===undefined||status===null||status===0)await cancelRead();",
+            "          throw error;",
+            "        }finally{if(abort)signal.removeEventListener('abort',abort);}",
+            "        requireCurrent();",
+            "        if(!admitted(captureSecurity({data:day})))throw Error('Schedule assignment changed');",
+            "        requireCurrent();",
+            "        const accepted=await schedule.accept(day,id,{signal,observedAvailability});",
+            "        requireCurrent();",
+            "        return accepted;",
+            "      });"
+          ]
+        },
+        {
+          "old_start": 262,
+          "old_count": 0,
+          "new_start": 276,
+          "new_count": 12,
+          "before": [],
+          "after": [
+            "    // Ordinary page and visibility events often arrive during a forced poll.",
+            "    // Joining preserves the original read/cleanup ticket when the optional",
+            "    // follow-up would otherwise be skipped by that source's freshness TTL.",
+            "    const active=currentUpdate;",
+            "    if(!force&&active&&active.owner===facts&&active.invocation===updateSequence",
+            "      &&active.generation===securityGeneration&&active.date===zooServiceDate()){",
+            "      const id=identity();",
+            "      if(currentUpdate===active&&active.owner===facts&&active.invocation===updateSequence",
+            "        &&active.generation===securityGeneration&&id&&id!==HOME_IDENTITY_SUPERSEDED",
+            "        &&homeBinding(id)===active.binding&&cachedProfileOnly===active.cached)",
+            "        return active.pending;",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 301,
+          "old_count": 0,
+          "new_start": 327,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "    const joined={owner,pending,invocation,generation,date:zooServiceDate(),binding:next,cached:cachedProfileOnly};",
+            "    currentUpdate=joined;",
+            "    const complete=()=>{if(currentUpdate===joined)currentUpdate=null;};",
+            "    void Promise.resolve(pending).then(complete,complete);"
+          ]
+        },
+        {
+          "old_start": 309,
+          "old_count": 1,
+          "new_start": 338,
+          "new_count": 1,
+          "before": [
+            "    const owner=facts,oldTimer=timer;facts=null;binding='';timer=null;"
+          ],
+          "after": [
+            "    const owner=facts,oldTimer=timer;facts=null;binding='';timer=null;currentUpdate=null;"
+          ]
+        },
+        {
+          "old_start": 336,
+          "old_count": 1,
+          "new_start": 365,
+          "new_count": 4,
+          "before": [
+            "    ++securityGeneration;"
+          ],
+          "after": [
+            "    // A peer ticket can carry a transient READING marker. The snapshot and",
+            "    // mutation fences already verify its stamp. Only a full clear retires the",
+            "    // local security generation.",
+            "    if(key===null)++securityGeneration;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/home-facts-runtime.js",
+      "kind": "changed",
+      "prior_bytes": 7638,
+      "prior_sha256": "d2b903344ab37a6c209b8f8e20efba1d77bcf23e17221803a2786686fdfbaf8c",
+      "current_sha256": "0a4d6d6991deef40af076b8ea19d5cf385172808e101926bd75416a0fbb45eb9",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import '../../../memphis-recurring-schedule-target.js';"
+          ]
+        },
+        {
+          "old_start": 84,
+          "old_count": 1,
+          "new_start": 85,
+          "new_count": 2,
+          "before": [
+            "          timeout=setTimeout(()=>controller.abort(),8000);"
+          ],
+          "after": [
+            "          const scheduleTarget=globalThis.MemphisRecurringScheduleTarget||globalThis.window?.MemphisRecurringScheduleTarget;",
+            "          timeout=setTimeout(()=>controller.abort(),kind==='schedule'?scheduleTarget.SCHEDULE_READ_TIMEOUT_MS:8000);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/schedule-home-convergence.js",
+      "kind": "changed",
+      "prior_bytes": 11690,
+      "prior_sha256": "90ff7a5dcfa87e0d94955f7004bae9acec6529b1a4c911b3ab77f0161e74822f",
+      "current_sha256": "2e61c657fd44b82c26a74d25ba2f297ff90fe43268ed97dece973209b758c59c",
+      "hunks": [
+        {
+          "old_start": 46,
+          "old_count": 2,
+          "new_start": 46,
+          "new_count": 5,
+          "before": [
+            "  async function cancel(id,ticket){if(ticket?.state!=='READING')return;",
+            "    await atomic(id,()=>{if(!current(id))throw failure('schedule_target_principal');api.writeAvailability(storage,id.protectedBinding,zooServiceDate(now()),ticket.priorState,ticket);});}"
+          ],
+          "after": [
+            "  async function cancel(id,ticket,owns=()=>true){if(ticket?.state!=='READING')return;",
+            "    await atomic(id,()=>{",
+            "      if(!owns()||!current(id)||ticket.serviceDate!==zooServiceDate(now()))throw failure('schedule_request_invalidated');",
+            "      api.writeAvailability(storage,id.protectedBinding,ticket.serviceDate,ticket.priorState,ticket);",
+            "    });}"
+          ]
+        },
+        {
+          "old_start": 98,
+          "old_count": 1,
+          "new_start": 101,
+          "new_count": 1,
+          "before": [
+            "      return {...result,stale:result.stale===true||fallback?.stale===true"
+          ],
+          "after": [
+            "      return {...result,stale:result.stale===true||!fallback||fallback.stale===true"
+          ]
+        },
+        {
+          "old_start": 169,
+          "old_count": 1,
+          "new_start": 172,
+          "new_count": 3,
+          "before": [
+            "  return {accept,resolve,capture,begin,cancel,isStorageKey:value=>typeof value==='string'&&(value.startsWith(prefix)||value.startsWith(api.AVAILABILITY_PREFIX))};"
+          ],
+          "after": [
+            "  return {accept,resolve,capture,begin,cancel,",
+            "    readExclusively:(id,day,signal,read)=>api.withScheduleReadLock(id.protectedBinding,day,signal,read),",
+            "    isStorageKey:value=>typeof value==='string'&&(value.startsWith(prefix)||value.startsWith(api.AVAILABILITY_PREFIX))};"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-core-release-gate.mjs",
+      "kind": "changed",
+      "prior_bytes": 7015,
+      "prior_sha256": "cd53076ff19c8c704cfc968faa26554b489b6fba328cf3c21519c9560752e40a",
+      "current_sha256": "685111405228dc5b7820765a0f6874036d9d15ab6246a02c78affe61d63a1a8a",
+      "hunks": [
+        {
+          "old_start": 52,
+          "old_count": 0,
+          "new_start": 53,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "  'schedule-cross-view-read-tests',",
+            "  'custodial-phone-presentation-tests',"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-employee-experience-contract-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 22882,
+      "prior_sha256": "cf3dcc839ec48a43bb1baf484316194423890fa5c7955d638950deff27c79715",
+      "current_sha256": "80bf50b129f93eb7737d03730676a7cf7d7afb981d7bccf11e3058e6c8678c88",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 1,
+          "new_start": 4,
+          "new_count": 1,
+          "before": [
+            "// Current document-local unlock behavior, including stale storage and relock controls."
+          ],
+          "after": [
+            "// Current native clock presentation and the stale browser-storage regression."
+          ]
+        },
+        {
+          "old_start": 60,
+          "old_count": 2,
+          "new_start": 60,
+          "new_count": 2,
+          "before": [
+            "assert.match(homeApp, /let phoneUnlockedByTap = false/);",
+            "assert.match(homeApp, /function setPhoneUnlocked\\(value\\) \\{ phoneUnlockedByTap = value === true; \\}/);"
+          ],
+          "after": [
+            "assert.match(homeApp, /createPhonePresentation\\(\\{\\s*principal: readinessPrincipal,\\s*read: window\\.MemphisMobile\\?\\.phonePresentation/);",
+            "assert.match(homeApp, /bindPhoneUnlock\\(els\\.phoneLock, els\\.phoneUnlock, unlockPhone\\)/);"
+          ]
+        },
+        {
+          "old_start": 132,
+          "old_count": 1,
+          "new_start": 132,
+          "new_count": 1,
+          "before": [
+            "assert.match(messages, /chatscope-mobile-overrides\\.css\\?v=release-2026\\.09\\.16\\.chatscope-v2/);"
+          ],
+          "after": [
+            "assert.match(messages, /chatscope-mobile-overrides\\.css\\?v=2026\\.11\\.14\\.messenger-toolbar-r53/);"
+          ]
+        },
+        {
+          "old_start": 143,
+          "old_count": 1,
+          "new_start": 143,
+          "new_count": 1,
+          "before": [
+            "assert.match(messenger, /!mobileThread && <button className=\"mz-button primary\"/);"
+          ],
+          "after": [
+            "assert.match(messenger, /<button className=\"mz-button primary\" type=\"button\" disabled=\\{!identity\\?\\.msg_user_id \\|\\| identity\\.read_only \\|\\| accessBlocked\\} onClick=\\{\\(\\) => void openNewConversation\\(\\)\\}>New<\\/button>/);"
+          ]
+        },
+        {
+          "old_start": 150,
+          "old_count": 1,
+          "new_start": 150,
+          "new_count": 1,
+          "before": [
+            "assert.match(messengerMobile, /\\.mz-chat-toolbar\\.thread-toolbar\\{grid-template-columns:var\\(--mz-chat-back-width\\) minmax\\(0,1fr\\);grid-template-areas:'back brand'!important\\}/);"
+          ],
+          "after": [
+            "assert.match(messengerMobile, /grid-template-areas:'back brand new assistant'!important/);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-home-authenticated-restore-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 17777,
+      "prior_sha256": "28c7ccd8ed354121bc2063b9cf8038bc56a2655af7da3e5d6e8428bf3be196a0",
+      "current_sha256": "033a01185329b1e4ba53f7dbd602b0619b18a06690871e3b185135659a984c3c",
+      "hunks": [
+        {
+          "old_start": 9,
+          "old_count": 0,
+          "new_start": 10,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import {bindPhoneUnlock,createPhonePresentation} from '../mobile/src/custodial/phone-presentation.js';"
+          ]
+        },
+        {
+          "old_start": 129,
+          "old_count": 1,
+          "new_start": 130,
+          "new_count": 1,
+          "before": [
+            "  const context={window,document,navigator:{onLine:false},sessionStorage,console,Date,Error,Promise,classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode,installHourlyForecastKeyboard,"
+          ],
+          "after": [
+            "  const context={window,document,navigator:{onLine:false},sessionStorage,console,Date,Error,Promise,classifyReadiness,createReadinessObservation,readinessPresentation,readinessSupportCode,installHourlyForecastKeyboard,bindPhoneUnlock,createPhonePresentation,"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/home-recurring-convergence-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 17551,
+      "prior_sha256": "c33cb70eef035d6af842c48ed5b860c53d5fa24d298f3cde29b9d76b6cc1b5d7",
+      "current_sha256": "954ba5e923a1e118687856a9aaa780c8f7725b27e0fdf65a91336bd846f3eaac",
+      "hunks": [
+        {
+          "old_start": 53,
+          "old_count": 0,
+          "new_start": 54,
+          "new_count": 35,
+          "before": [],
+          "after": [
+            " const scheduleAvailability=globalThis.MemphisRecurringScheduleTarget.availabilityKey(binding);",
+            " const realSetTimeout=globalThis.setTimeout,realClearTimeout=globalThis.clearTimeout;",
+            " const timeouts=new Map();",
+            " globalThis.setTimeout=(fn,ms,...args)=>{",
+            "  if(ms!==15000)return realSetTimeout(fn,ms,...args);",
+            "  const token={};timeouts.set(token,fn);return token;",
+            " };",
+            " globalThis.clearTimeout=token=>{if(!timeouts.delete(token))realClearTimeout(token);};",
+            " try{",
+            "  for(const timedOut of [false,true]){",
+            "   let respond,start;",
+            "   const started=new Promise(resolve=>{start=resolve;});",
+            "   requestHook=()=>new Promise(resolve=>{respond=resolve;start();});",
+            "   const refresh=app.update(true);",
+            "   await started;",
+            "   check(app.update(),refresh,'ordinary same-owner refresh joins the existing read');",
+            "   check(timeouts.size,1,'Home shares the full Schedule read budget');",
+            "   const saved=stored.get(key);",
+            "   check(JSON.parse(stored.get(scheduleAvailability)).state,'READING','pending signed read owns its fence');",
+            "   if(timedOut){",
+            "    for(const expire of timeouts.values())expire();",
+            "    await refresh;",
+            "    for(let i=0;i<4;i++)await new Promise(resolve=>setImmediate(resolve));",
+            "    check(JSON.parse(stored.get(scheduleAvailability)).state,'AVAILABLE','timeout releases the same-owner fence');",
+            "    check(element('home-schedule-freshness').dataset.stale,'true','restored facts remain marked saved');",
+            "    check(element('home-schedule-status').textContent,'Showing a saved schedule.','saved and unavailable schedules are distinct');",
+            "   }",
+            "   respond(structuredClone(next));",
+            "   await refresh;",
+            "   for(let i=0;i<4;i++)await new Promise(resolve=>setImmediate(resolve));",
+            "   check(element('home-shift').textContent,'7:00 AM–4:00 PM','verified same-owner shift remains usable');",
+            "   if(timedOut)check(stored.get(key),saved,'late reply cannot overwrite the retained row');",
+            "   else check(element('home-schedule-freshness').dataset.stale,'false','response within shared budget remains current');",
+            "  }",
+            " }finally{requestHook=null;globalThis.setTimeout=realSetTimeout;globalThis.clearTimeout=realClearTimeout;}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/native-notification-arrival-boundary-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 65190,
+      "prior_sha256": "522b7e3e15aa51141e5fe62f0aa8e913304b056dbd9b5c05944d876d55f7afc7",
+      "current_sha256": "04f2a2f1959de7523c7a26cd31acfecfb4f168ec9f8a91f3a159ddbfbb88d9a0",
+      "hunks": [
+        {
+          "old_start": 64,
+          "old_count": 1,
+          "new_start": 64,
+          "new_count": 1,
+          "before": [
+            "  'nativeApplicationSource','nativeVault','providerMirror','bridgeReady','feedbackOutbox','profileMatchesPrincipal',"
+          ],
+          "after": [
+            "  'nativeApplicationSource','nativeVault','browserTestBuild','readNativePhonePresentation','providerMirror','bridgeReady','feedbackOutbox','profileMatchesPrincipal',"
+          ]
+        },
+        {
+          "old_start": 73,
+          "old_count": 1,
+          "new_start": 73,
+          "new_count": 1,
+          "before": [
+            "  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'e167f859ff48b431199fdf47b70e0815b673e68e1c56819f432768f792fa068c','Frozen notification owner changed; review the exact current import/closure dependencies');"
+          ],
+          "after": [
+            "  assert.equal(createHash('sha256').update(actualOwnerSource).digest('hex'),'884463c66da03dc486c306e8e58f74af312f243dfc89c2ba9493262c15d02a08','Frozen notification owner changed; review the exact current import/closure dependencies');"
+          ]
+        },
+        {
+          "old_start": 199,
+          "old_count": 1,
+          "new_start": 199,
+          "new_count": 2,
+          "before": [
+            "    nativeVault:true,providerMirror,bridgeReady:Promise.resolve(),feedbackOutbox:{save(){},flush(){}},profileMatchesPrincipal:()=>true,"
+          ],
+          "after": [
+            "    nativeVault:true,browserTestBuild:false,readNativePhonePresentation(){throw Error('Notification workflow must not use the clock presentation port.');},",
+            "    providerMirror,bridgeReady:Promise.resolve(),feedbackOutbox:{save(){},flush(){}},profileMatchesPrincipal:()=>true,"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-mirror-contract-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 9609,
+      "prior_sha256": "9f6a558851ad2674431638e6742fb06a2a60f92bb915d8089fd6ab21bdcfeb33",
+      "current_sha256": "26a07b0cc5480bb80fae47cefabc5184245a4f0377ba646a0f87a5dfad13fc07",
+      "hunks": [
+        {
+          "old_start": 42,
+          "old_count": 2,
+          "new_start": 42,
+          "new_count": 2,
+          "before": [
+            "check([...plugin.matchAll(/@PluginMethod\\s+public void (\\w+)\\s*\\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.filter(name=>name!=='checkRemovalAdmission'),'historical additive method set before separately checked current removal admission');",
+            "check(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.length,37,'29 original plus seven finite methods and reviewed removal admission');"
+          ],
+          "after": [
+            "check([...plugin.matchAll(/@PluginMethod\\s+public void (\\w+)\\s*\\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.filter(name=>!['checkRemovalAdmission','phonePresentation'].includes(name)),'historical additive method set before separately checked current removal admission');",
+            "check(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.length,38,'Current exact WebView API includes the presentation-only clock');"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/v80-correction-tests/phone-lock-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 2699,
+      "prior_sha256": "b6606505f2f12584f2e610cce1f8ff3885cbe3636603138f4f152c0646899790",
+      "current_sha256": "b291197b54c7e6973031a178f5724bbeaa982359e2fedf2c5ff75b001e1e5071",
+      "hunks": [
+        {
+          "old_start": 3,
+          "old_count": 0,
+          "new_start": 4,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import {createPhonePresentation} from '../../mobile/src/custodial/phone-presentation.js';"
+          ]
+        },
+        {
+          "old_start": 8,
+          "old_count": 3,
+          "new_start": 9,
+          "new_count": 8,
+          "before": [
+            "function harness(source){",
+            " const names=['phoneUnlockedSinceWake','setPhoneUnlocked','showPhoneLock','hidePhoneLock','unlockPhone','relockPhone','showCachedPhoneIdentity','showHome'];",
+            " const funcs=names.map(name=>{const start=source.indexOf('function '+name+'(');assert.ok(start>=0);const rest=source.slice(start);const end=rest.indexOf('\\nfunction ',1);return end<0?rest:rest.slice(0,end);});"
+          ],
+          "after": [
+            "function harness(source,{historical=false}={}){",
+            " const names=['showPhoneLock','hidePhoneLock','unlockPhone','relockPhone','showCachedPhoneIdentity','showHome'];",
+            " if(historical)names.unshift('phoneUnlockedSinceWake','setPhoneUnlocked');",
+            " const funcs=names.map(name=>{",
+            "  const start=source.search(new RegExp('^(?:async )?function '+name+'\\\\(','m'));",
+            "  assert.ok(start>=0);const rest=source.slice(start),end=rest.search(/\\n(?:async )?function /);",
+            "  return end<0?rest:rest.slice(0,end);",
+            " });"
+          ]
+        },
+        {
+          "old_start": 13,
+          "old_count": 0,
+          "new_start": 20,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  phoneClock:createPhonePresentation({principal:()=> 'synthetic-assigned'}),"
+          ]
+        },
+        {
+          "old_start": 17,
+          "old_count": 1,
+          "new_start": 24,
+          "new_count": 1,
+          "before": [
+            "const old=harness(baseline);old.showCachedPhoneIdentity();assert.equal(old.els.phoneLock.hidden,false);old.showHome();assert.equal(old.els.phoneLock.hidden,true,'reproduces stale session auto-hide');"
+          ],
+          "after": [
+            "const old=harness(baseline,{historical:true});old.showCachedPhoneIdentity();assert.equal(old.els.phoneLock.hidden,false);old.showHome();assert.equal(old.els.phoneLock.hidden,true,'reproduces stale session auto-hide');"
+          ]
+        },
+        {
+          "old_start": 19,
+          "old_count": 3,
+          "new_start": 26,
+          "new_count": 3,
+          "before": [
+            "fresh.unlockPhone();assert.equal(fresh.els.phoneLock.hidden,true);fresh.showHome();assert.equal(fresh.els.phoneLock.hidden,true,'same tap survives home paint');",
+            "fresh.showCachedPhoneIdentity();fresh.showHome();assert.equal(fresh.els.phoneLock.hidden,false,'background restore displayed lock stays locked');",
+            "fresh.unlockPhone();fresh.relockPhone();fresh.showHome();assert.equal(fresh.els.phoneLock.hidden,false,'pause/resume relock persists');"
+          ],
+          "after": [
+            "await fresh.unlockPhone();assert.equal(fresh.els.phoneLock.hidden,true);fresh.showHome();assert.equal(fresh.els.phoneLock.hidden,true,'same tap survives home paint');",
+            "fresh.showCachedPhoneIdentity();fresh.showHome();assert.equal(fresh.els.phoneLock.hidden,true,'a same-owner cached refresh leaves an awake phone unlocked');",
+            "fresh.relockPhone();fresh.showHome();assert.equal(fresh.els.phoneLock.hidden,false,'pause/resume relock persists');"
+          ]
+        },
+        {
+          "old_start": 23,
+          "old_count": 2,
+          "new_start": 30,
+          "new_count": 2,
+          "before": [
+            "assert.ok(candidate.includes(\"els.phoneUnlock.addEventListener('click', unlockPhone)\"));",
+            "assert.equal((candidate.match(/setPhoneUnlocked\\(true\\)/g)||[]).length,1,'only explicit unlock owner grants');"
+          ],
+          "after": [
+            "assert.ok(candidate.includes('bindPhoneUnlock(els.phoneLock, els.phoneUnlock, unlockPhone)'));",
+            "assert.equal((candidate.match(/phoneClock\\.unlock\\(\\)/g)||[]).length,1,'only explicit unlock owner grants');"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/phone-presentation.js",
+      "kind": "added",
+      "current_sha256": "efdf2dd595605bb4fc2230242726f13640cca2a268b14d40a03a0ebde946b6dd"
+    },
+    {
+      "path": "mobile/src/custodial/custodial-phone-clock.css",
+      "kind": "added",
+      "current_sha256": "3955ac93f79e58cecb84146a1772b3dfef406d3170b36f1d74669b91c0a3ef2f"
+    },
+    {
+      "path": "scripts/custodial-phone-presentation-tests.mjs",
+      "kind": "added",
+      "current_sha256": "8f2e3334f61138a71e21aaf51722e7e12afd035d7d9e5ca7806caae89324158b"
+    },
+    {
+      "path": "scripts/schedule-cross-view-read-tests.mjs",
+      "kind": "added",
+      "current_sha256": "122fbbd242f9e009cabf299c6f38af76a01c9c7278324d71512ed2d6c86de5ba"
+    },
+    {
+      "path": "trail-pages/custodial-index.css",
+      "kind": "changed",
+      "prior_bytes": 6159,
+      "prior_sha256": "159ce17750bac032dd3fe9497a5d547394328d4dd53ac41a725407fadd83d576",
+      "current_sha256": "3cc28bbfca81f24e22b78e569e275fbb73e449998167a9cbc74029a4ae5f1321",
+      "hunks": [
+        {
+          "old_start": 51,
+          "old_count": 14,
+          "new_start": 50,
+          "new_count": 0,
+          "before": [
+            "    html[data-trail-theme=\"terracotta\"] .phoneLock {color:var(--trail-ink)",
+            "    }",
+            "    html[data-trail-theme=\"terracotta\"] .phoneLockPanel {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);color:var(--trail-ink)",
+            "    }",
+            "    html[data-trail-theme=\"terracotta\"] .phoneLockBrand {color:var(--trail-ink);text-shadow:none",
+            "    }",
+            "    html[data-trail-theme=\"terracotta\"] .phoneLockClock {text-shadow:none",
+            "    }",
+            "    html[data-trail-theme=\"terracotta\"] .phoneLockDate {text-shadow:none",
+            "    }",
+            "    html[data-trail-theme=\"terracotta\"] .phoneLockName {border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink);text-shadow:none",
+            "    }",
+            "    html[data-trail-theme=\"terracotta\"] .phoneUnlock {border:none;background:var(--trail-brand);color:var(--trail-on-brand);box-shadow:var(--trail-shadow)",
+            "    }"
+          ],
+          "after": []
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-core-release-gate-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 15743,
+      "prior_sha256": "525040e6ce6a5a7dacb7fa3ed6243c569f805c3cbb7b8d3da6ba85d827cc61f1",
+      "current_sha256": "f3778050d523fe77445cf5a7c56fc364d722213722207371a7fb38ee7284bf09",
+      "hunks": [
+        {
+          "old_start": 67,
+          "old_count": 1,
+          "new_start": 67,
+          "new_count": 1,
+          "before": [
+            " custodial-original-home-dom-tests custodial-home-facts-tests custodial-hourly-keyboard-contract-tests custodial-home-ready-profile-order-tests custodial-home-authenticated-restore-tests home-recurring-convergence-tests"
+          ],
+          "after": [
+            " custodial-original-home-dom-tests custodial-home-facts-tests custodial-hourly-keyboard-contract-tests custodial-home-ready-profile-order-tests custodial-home-authenticated-restore-tests home-recurring-convergence-tests schedule-cross-view-read-tests custodial-phone-presentation-tests"
+          ]
+        },
+        {
+          "old_start": 79,
+          "old_count": 1,
+          "new_start": 79,
+          "new_count": 1,
+          "before": [
+            "  assert.equal(expected.length, 65);"
+          ],
+          "after": [
+            "  assert.equal(expected.length, 67);"
+          ]
+        },
+        {
+          "old_start": 84,
+          "old_count": 1,
+          "new_start": 84,
+          "new_count": 1,
+          "before": [
+            "  assert.equal(expected.length,66);"
+          ],
+          "after": [
+            "  assert.equal(expected.length,68);"
+          ]
+        },
+        {
+          "old_start": 86,
+          "old_count": 1,
+          "new_start": 86,
+          "new_count": 1,
+          "before": [
+            "  assert.equal(expected.length,69);expected.push(...repairSuites);assert.equal(expected.length,79);assert.deepEqual(CORE_SUITES,expected);"
+          ],
+          "after": [
+            "  assert.equal(expected.length,71);expected.push(...repairSuites);assert.equal(expected.length,81);assert.deepEqual(CORE_SUITES,expected);"
+          ]
+        },
+        {
+          "old_start": 135,
+          "old_count": 1,
+          "new_start": 135,
+          "new_count": 1,
+          "before": [
+            "  assert.equal(calls.length, 79);"
+          ],
+          "after": [
+            "  assert.equal(calls.length, 81);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/employee-schedule-recurring-delivery-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 34196,
+      "prior_sha256": "e5b9cd02566e22bae4725f32d92128a348717a7f64877e15987c5a69735f1d38",
+      "current_sha256": "04c082fdc7828de42491a6ab55cb403d6b321ab2084fb9c108403a093a33749f",
+      "hunks": [
+        {
+          "old_start": 216,
+          "old_count": 1,
+          "new_start": 216,
+          "new_count": 1,
+          "before": [
+            "// via storage event while this page's subsequent HTTP request is offline."
+          ],
+          "after": [
+            "// via storage event with no automatic fetch, then on an explicit offline refresh."
+          ]
+        },
+        {
+          "old_start": 226,
+          "old_count": 1,
+          "new_start": 226,
+          "new_count": 3,
+          "before": [
+            " await waitFor(()=>failedReads===1,'post-storage refresh reached the offline HTTP port');"
+          ],
+          "after": [
+            " assert.equal(failedReads,0,'peer storage does not trigger a second network read');",
+            " a.events.get('online')();",
+            " await waitFor(()=>failedReads===1,'explicit refresh reached the offline HTTP port');"
+          ]
+        },
+        {
+          "old_start": 253,
+          "old_count": 1,
+          "new_start": 255,
+          "new_count": 1,
+          "before": [
+            " if(trigger==='storage')a.events.get('storage')({key});"
+          ],
+          "after": [
+            " if(trigger==='storage'){a.events.get('storage')({key});assert.equal(failures,0);a.events.get('online')();}"
+          ]
+        },
+        {
+          "old_start": 273,
+          "old_count": 1,
+          "new_start": 275,
+          "new_count": 2,
+          "before": [
+            " a.events.get('storage')({key});await waitFor(()=>failures===1,'different-frame storage event reaches offline port');await new Promise(r=>setTimeout(r,40));"
+          ],
+          "after": [
+            " a.events.get('storage')({key});assert.equal(failures,0);a.events.get('online')();",
+            " await waitFor(()=>failures===1,'different-frame explicit refresh reaches offline port');await new Promise(r=>setTimeout(r,40));"
+          ]
+        },
+        {
+          "old_start": 300,
+          "old_count": 1,
+          "new_start": 303,
+          "new_count": 2,
+          "before": [
+            "const storedBefore=frameA.disk.get(key);frameA.events.get('storage')({key});await waitFor(()=>changedFailures===1,'changed main frame storage refresh reaches offline port');await new Promise(r=>setTimeout(r,40));"
+          ],
+          "after": [
+            "const storedBefore=frameA.disk.get(key);frameA.events.get('storage')({key});assert.equal(changedFailures,0);frameA.events.get('online')();",
+            "await waitFor(()=>changedFailures===1,'changed main frame explicit refresh reaches offline port');await new Promise(r=>setTimeout(r,40));"
+          ]
+        },
+        {
+          "old_start": 335,
+          "old_count": 1,
+          "new_start": 339,
+          "new_count": 2,
+          "before": [
+            " await waitFor(()=>failed===1,'changed assignment storage/offline refresh');await new Promise(r=>setTimeout(r,40));"
+          ],
+          "after": [
+            " assert.equal(failed,0);a.events.get('online')();",
+            " await waitFor(()=>failed===1,'changed assignment explicit offline refresh');await new Promise(r=>setTimeout(r,40));"
+          ]
+        },
+        {
+          "old_start": 346,
+          "old_count": 0,
+          "new_start": 352,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            " assert.equal(failed,0);a.events.get('online')();"
+          ]
+        }
+      ]
+    }
+  ]
+}

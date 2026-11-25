@@ -66,6 +66,7 @@ try{
    requestHook=()=>new Promise(resolve=>{respond=resolve;start();});
    const refresh=app.update(true);
    await started;
+   check(app.update(),refresh,'ordinary same-owner refresh joins the existing read');
    check(timeouts.size,1,'Home shares the full Schedule read budget');
    const saved=stored.get(key);
    check(JSON.parse(stored.get(scheduleAvailability)).state,'READING','pending signed read owns its fence');

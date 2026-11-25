@@ -243,6 +243,26 @@
     try{return await request.call(locks,'memphis-schedule-authority:'+encodeURIComponent(scope),{mode:'exclusive'},()=>{entered=true;return operation();});}
     catch(error){if(!entered)throw fail('schedule_atomic_storage_unavailable');throw error;}
   }
+  async function withScheduleReadLock(scope,serviceDate,signal,operation){
+    availabilityKey(scope);date(serviceDate);
+    if(signal?.aborted)throw fail('schedule_request_invalidated');
+    let locks,request,entered=false;
+    try{locks=root.navigator?.locks;request=locks?.request;}catch{throw fail('schedule_atomic_storage_unavailable');}
+    if(typeof request!=='function')throw fail('schedule_atomic_storage_unavailable');
+    try{
+      // The read owns its ticket through transport and completion. Protected
+      // mutations still use the separate, short-held authority lock.
+      return await request.call(locks,'memphis-schedule-read:'+encodeURIComponent(scope)+':'+serviceDate,
+        {mode:'exclusive',signal},()=>{
+          entered=true;
+          if(signal?.aborted)throw fail('schedule_request_invalidated');
+          return operation();
+        });
+    }catch(error){
+      if(!entered)throw fail(signal?.aborted?'schedule_request_invalidated':'schedule_atomic_storage_unavailable');
+      throw error;
+    }
+  }
   function availabilityKey(scope){if(typeof scope!=='string'||!scope)throw fail('schedule_target_principal');return AVAILABILITY_PREFIX+encodeURIComponent(scope);}
   function availability(storage,scope,serviceDate){
     date(serviceDate);const raw=storage.getItem(availabilityKey(scope));if(raw===null)return null;
@@ -271,7 +291,7 @@
     return value;
   }
   const api=Object.freeze({SCHEDULE_READ_TIMEOUT_MS:15000,prepare,sha256Text,assertMonotonic,deliveryMode,assertSnapshot,assertSnapshotProgress,newestSnapshot,confirmedSnapshot,
-    withScheduleLock,availability,assertAvailability,writeAvailability,availabilityKey,AVAILABILITY_PREFIX,CACHE_SCHEMA});
+    withScheduleLock,withScheduleReadLock,availability,assertAvailability,writeAvailability,availabilityKey,AVAILABILITY_PREFIX,CACHE_SCHEMA});
   root.MemphisRecurringScheduleTarget=api;
   if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof window==='object'?window:globalThis);

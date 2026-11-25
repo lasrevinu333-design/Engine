@@ -50,6 +50,8 @@ export const CORE_SUITES = Object.freeze([
   'custodial-home-ready-profile-order-tests',
   'custodial-home-authenticated-restore-tests',
   'home-recurring-convergence-tests',
+  'schedule-cross-view-read-tests',
+  'custodial-phone-presentation-tests',
   'employee-schedule-recurring-delivery-tests',
   'employee-schedule-application-receipt-tests',
   'employee-schedule-cache-resilience-tests',

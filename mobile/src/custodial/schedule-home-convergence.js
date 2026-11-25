@@ -169,5 +169,7 @@ export function createScheduleHomeConvergence({identity,storage,mutate,captureMu
     unavailableDays.delete(homeBinding(id));
     return resolve(id,facts(row,id));
   }
-  return {accept,resolve,capture,begin,cancel,isStorageKey:value=>typeof value==='string'&&(value.startsWith(prefix)||value.startsWith(api.AVAILABILITY_PREFIX))};
+  return {accept,resolve,capture,begin,cancel,
+    readExclusively:(id,day,signal,read)=>api.withScheduleReadLock(id.protectedBinding,day,signal,read),
+    isStorageKey:value=>typeof value==='string'&&(value.startsWith(prefix)||value.startsWith(api.AVAILABILITY_PREFIX))};
 }

@@ -530,55 +530,65 @@ export function installEmployeeSchedule(options) {
         const isNative=native(owns);requireCaller(owns);
         if(isNative){diagnosticStage='D03';const mobile=window.MemphisMobile,request=mobile.requestJson;requireCaller(owns);await readStep(request.call(mobile,`/device-auth/status?device_id=${encodeURIComponent(id)}`,{signal:controller.signal}),controller.signal);}
         requireCaller(owns);const principal=identity(owns);if(!principal||!current(principal,version))throw new Error('identity');requireCaller(owns);
-        diagnosticStage='D04';readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);
-        diagnosticStage='D05';const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(zooNow().date)}`,{cache:'no-store',signal:controller.signal}),controller.signal);
-        // An HTTP response, including503 or malformed JSON, must not restore
-        // old availability when its separate unavailable write failed.
-        receivedAuthority=true;diagnosticStage='D06';
-        try{const status=response.status;diagnosticHttp=Number.isInteger(status)&&status>=100&&status<=599?status:0;}catch{diagnosticHttp=0;}
-        requireCaller(owns);
-        // Only primitive response text parsed here establishes diagnostic provenance.
-        // Legacy object-returning adapters retain their existing payload path,
-        // but their objects are never inspected by the new classifier.
-        let payload=null,diagnosticPayload=null;
-        const readText=response.text;requireCaller(owns);
-        if(typeof readText==='function'){
-          const body=await readStep(readText.call(response),controller.signal);requireCaller(owns);
-          if(typeof body==='string'){
-            try{payload=JSON.parse(body);diagnosticPayload=payload;}catch{payload=null;}
+        const serviceDate=zooNow().date;
+        await window.MemphisRecurringScheduleTarget.withScheduleReadLock(principal,serviceDate,controller.signal,async()=>{
+          try{
+            requireCaller(owns);
+            if(zooNow().date!==serviceDate)throw new Error('schedule_target_date');
+            diagnosticStage='D04';readPrincipal=principal;observedAvailability=await beginRead(principal,version,owns);requireCaller(owns);
+            diagnosticStage='D05';const response=await readStep(fetch(`${API}/my-day-summary?device_id=${encodeURIComponent(id)}&service_date=${encodeURIComponent(serviceDate)}`,{cache:'no-store',signal:controller.signal}),controller.signal);
+            // An HTTP response, including503 or malformed JSON, must not restore
+            // old availability when its separate unavailable write failed.
+            receivedAuthority=true;diagnosticStage='D06';
+            try{const status=response.status;diagnosticHttp=Number.isInteger(status)&&status>=100&&status<=599?status:0;}catch{diagnosticHttp=0;}
+            requireCaller(owns);
+            // Only primitive response text parsed here establishes diagnostic provenance.
+            // Legacy object-returning adapters retain their existing payload path,
+            // but their objects are never inspected by the new classifier.
+            let payload=null,diagnosticPayload=null;
+            const readText=response.text;requireCaller(owns);
+            if(typeof readText==='function'){
+              const body=await readStep(readText.call(response),controller.signal);requireCaller(owns);
+              if(typeof body==='string'){
+                try{payload=JSON.parse(body);diagnosticPayload=payload;}catch{payload=null;}
+              }
+            }else{
+              payload=await readStep(response.json().catch(()=>null),controller.signal);
+            }
+            requireCaller(owns);
+            if(!current(principal,version))return;
+            if(!response.ok||!payload?.ok){requireCaller(owns);diagnosticFailure=responseFailureLabel(diagnosticPayload);requireCaller(owns);throw new Error('network');}
+            if(!matches(payload.data,owns))throw new Error('identity');
+            requireCaller(owns);
+            if(payload.data.service_date!==zooNow().date)throw new Error('schedule_target_date');
+            if(window.MemphisRecurringScheduleTarget.deliveryMode(payload.data)==='UNAVAILABLE'){
+              clearPresentation();state('Schedule is unavailable. A current plan must be confirmed.',true);
+              const persist=()=>{requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,payload.data.service_date,'UNAVAILABLE',observedAvailability);};
+              try{await atomic(principal,persist,owns);}catch(error){requireCaller(owns);if(error?.code!=='schedule_request_invalidated')latchUnavailable(principal,observedAvailability);throw error;}requireCaller(owns);unavailableDays.delete(principal);return;
+            }
+            diagnosticStage='D07';const prepared=await prepareRecurring(payload.data,owns);
+            if(!current(principal,version)||!owns())return;
+            // Render the hashed view itself, never an unbound duplicated area list.
+            const displayData=prepared?{...payload.data,...(prepared.blocked?{projection_status:'blocked_recurring_authority',raw_items:[],current_items:[],full_day:true,shift:null}:prepared.view)}:payload.data;
+            diagnosticStage='D08';let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}
+            if(!owns()||!current(principal,version)||!matches(displayData,owns)||!owns())return;
+            const winner=snapshot(owns),rendered=winner?.data??displayData;requireCaller(owns);
+            unavailableDays.delete(principal);
+            cacheWarning=cacheWarning||winner?.cache_unconfirmed===true;
+            diagnosticStage='D09';const applied=render(rendered,{cacheWarning,owns});
+            // Typed recurring ACK is deliberately not sent yet: exact native and
+            // browser notification cancellation/rerouting must join application.
+            // Rendering/cache alone cannot report the complete phone as updated.
+            if(applied&&!cacheWarning&&!prepared&&!winner?.recurring_target)void reportApplied(rendered,principal,version,applied).catch(()=>{});
+          }catch(error){
+            if(!receivedAuthority&&readPrincipal&&ownsLifecycle())
+              await cancelRead(readPrincipal,observedAvailability,ownsLifecycle).catch(()=>{});
+            throw error;
           }
-        }else{
-          payload=await readStep(response.json().catch(()=>null),controller.signal);
-        }
-        requireCaller(owns);
-        if(!current(principal,version))return;
-        if(!response.ok||!payload?.ok){requireCaller(owns);diagnosticFailure=responseFailureLabel(diagnosticPayload);requireCaller(owns);throw new Error('network');}
-        if(!matches(payload.data,owns))throw new Error('identity');
-        requireCaller(owns);
-        if(payload.data.service_date!==zooNow().date)throw new Error('schedule_target_date');
-        if(window.MemphisRecurringScheduleTarget.deliveryMode(payload.data)==='UNAVAILABLE'){
-          clearPresentation();state('Schedule is unavailable. A current plan must be confirmed.',true);
-          const persist=()=>{requireCaller(owns);if(!current(principal,version))throw cacheError();requireCaller(owns);window.MemphisRecurringScheduleTarget.writeAvailability(localStorage,principal,payload.data.service_date,'UNAVAILABLE',observedAvailability);};
-          try{await atomic(principal,persist,owns);}catch(error){requireCaller(owns);if(error?.code!=='schedule_request_invalidated')latchUnavailable(principal,observedAvailability);throw error;}requireCaller(owns);unavailableDays.delete(principal);return;
-        }
-        diagnosticStage='D07';const prepared=await prepareRecurring(payload.data,owns);
-        if(!current(principal,version)||!owns())return;
-        // Render the hashed view itself, never an unbound duplicated area list.
-        const displayData=prepared?{...payload.data,...(prepared.blocked?{projection_status:'blocked_recurring_authority',raw_items:[],current_items:[],full_day:true,shift:null}:prepared.view)}:payload.data;
-        diagnosticStage='D08';let cacheWarning=false;try{await save(displayData,principal,prepared,version,observedAvailability,owns);}catch(error){if(error?.code?.startsWith('schedule_'))throw error;cacheWarning=true;}
-        if(!owns()||!current(principal,version)||!matches(displayData,owns)||!owns())return;
-        const winner=snapshot(owns),rendered=winner?.data??displayData;requireCaller(owns);
-        unavailableDays.delete(principal);
-        cacheWarning=cacheWarning||winner?.cache_unconfirmed===true;
-        diagnosticStage='D09';const applied=render(rendered,{cacheWarning,owns});
-        // Typed recurring ACK is deliberately not sent yet: exact native and
-        // browser notification cancellation/rerouting must join application.
-        // Rendering/cache alone cannot report the complete phone as updated.
-        if(applied&&!cacheWarning&&!prepared&&!winner?.recurring_target)void reportApplied(rendered,principal,version,applied).catch(()=>{});
+        });
       }catch(error){
         const ownsRecovery=ownsLifecycle;
         if(!ownsRecovery())return;
-        if(!receivedAuthority&&readPrincipal)await cancelRead(readPrincipal,observedAvailability,ownsRecovery).catch(()=>{});
         if(!ownsRecovery())return;
         let cached=null;try{cached=snapshot(ownsRecovery);}catch{ /* Unknown disk state is not empty authority. */ }
         if(!ownsRecovery())return;
@@ -632,12 +642,15 @@ export function installEmployeeSchedule(options) {
     window.addEventListener('storage',sourceWriter('EMPLOYEE_457',event=>{
       if(event.key!==null&&!(typeof event.key==='string'&&event.key.startsWith(PREFIX)))return;
       if(event.key!==null&&shownPrincipal&&event.key!==key(shownPrincipal)&&event.key!==window.MemphisRecurringScheduleTarget.availabilityKey(shownPrincipal))return;
-      const generation=++securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;nativeTypedRender=null;
+      if(event.key===null)++securityGeneration;
+      const generation=securityGeneration,version=loadVersion,owns=()=>!paused&&generation===securityGeneration&&version===loadVersion;nativeTypedRender=null;
       const principal=identity(owns);if(!owns())return;
       if(!principal){clearPresentation();state('Phone identity must be verified.',true);return;}
       if(event.key!==null&&event.key!==key(principal)&&event.key!==window.MemphisRecurringScheduleTarget.availabilityKey(principal))return;
       try{const row=snapshot(owns);if(!owns())return;if(row?.data)render(row.data,{offline:true,cacheWarning:row.cache_unconfirmed===true,owns});else clearPresentation();}catch{if(!owns())return;clearPresentation();state('Saved schedule could not be verified.',true);}
-      if(owns()&&!securityBlocked)void load('storage');
+      // Peer snapshots converge through the shared fence. A storage event is
+      // never a reason to reserve another ticket and restart the other view.
+      if(event.key===null&&owns()&&!securityBlocked)void load('storage-clear');
     }));
     window.addEventListener('pagehide',sourceWriter('EMPLOYEE_467',()=>{const retiring=activeRequest;activeRequest=null;paused=true;++securityGeneration;++loadVersion;queued=false;nativeTypedRender=null;
       clearInterval(timer);timer=0;clearTimeout(boundary);boundary=0;clearPresentation();retiring?.abort();}));

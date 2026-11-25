@@ -1264,8 +1264,8 @@
         },
         "plugin_method_names": {
           "type": "array",
-          "minItems": 37,
-          "maxItems": 37,
+          "minItems": 38,
+          "maxItems": 38,
           "uniqueItems": true,
           "prefixItems": [
             {
@@ -1341,6 +1341,9 @@
               "const": "loadOfflineAuthoritySnapshot"
             },
             {
+              "const": "phonePresentation"
+            },
+            {
               "const": "providerApplyAction"
             },
             {
@@ -1401,7 +1404,8 @@
             "Lorg/memphiszoo/custodial/vault/CancellationCoordinator;",
             "Lorg/memphiszoo/custodial/vault/RemovalCoordinator;",
             "Lorg/memphiszoo/custodial/vault/CustodialPhoneLocationService;",
-            "Lorg/memphiszoo/custodial/vault/RequestPolicy;"
+            "Lorg/memphiszoo/custodial/vault/RequestPolicy;",
+            "Lorg/memphiszoo/custodial/vault/PhonePresentation;"
           ],
           "properties": {
             "Lorg/memphiszoo/custodial/vault/CustodialNativeVaultPlugin;": {
@@ -1450,6 +1454,9 @@
               "$ref": "#/$defs/dexName"
             },
             "Lorg/memphiszoo/custodial/vault/RequestPolicy;": {
+              "$ref": "#/$defs/dexName"
+            },
+            "Lorg/memphiszoo/custodial/vault/PhonePresentation;": {
               "$ref": "#/$defs/dexName"
             }
           }

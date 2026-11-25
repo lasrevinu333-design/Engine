@@ -213,7 +213,7 @@ let cacheParentChecks=0;
 console.log(JSON.stringify({status:'PASS',cache_parent_checks:cacheParentChecks,scope:'Existing protected read-fence observations, actual disk versus unsaved local parent, fixed-clock repeated-empty commit; closed availability, schedule CAS and ACK preserved'}));
 
 // Additional report-only observation: another page's current commit arrives
-// via storage event while this page's subsequent HTTP request is offline.
+// via storage event with no automatic fetch, then on an explicit offline refresh.
 const storageDisplayResults=[];
 for(const mode of ['newer-current-empty','newer-import']){
  sharedBasecampDisk=new Map([['protected-cleaning-draft','unchanged'],['native-journal-reference','unchanged']]);
@@ -223,7 +223,9 @@ for(const mode of ['newer-current-empty','newer-import']){
  const b=await basecampFixture({patch:w=>{if(!oldEmpty)w.items=[];}});
  const diskItems=b.cache().data.basecamp_birthday_work.items.length;
  a.events.get('storage')({key});
- await waitFor(()=>failedReads===1,'post-storage refresh reached the offline HTTP port');
+ assert.equal(failedReads,0,'peer storage does not trigger a second network read');
+ a.events.get('online')();
+ await waitFor(()=>failedReads===1,'explicit refresh reached the offline HTTP port');
  await new Promise(r=>setTimeout(r,40));
  const displayed=a.el('areas').innerHTML.includes('TEST ONLY');
  storageDisplayResults.push({case:mode,failed_http_reads:failedReads,confirmed_disk_items:diskItems,
@@ -250,7 +252,7 @@ for(const trigger of ['storage','boundary'])for(const empty of [true,false]){
    shift:{active:true,start:'07:00',end:'16:00'},lunch:{start:'10:00',end:'11:00'}};
  }});
  const protectedText=a.disk.get(key),targetText=b.cache().recurring_target.viewJsonText;
- if(trigger==='storage')a.events.get('storage')({key});
+ if(trigger==='storage'){a.events.get('storage')({key});assert.equal(failures,0);a.events.get('online')();}
  else{const due=[...a.timers.values()].find(t=>t.delay>30000);assert.ok(due,'real schedule boundary callback captured');due.fn();}
  await waitFor(()=>failures===1,'snapshot variant reached the failing HTTP port');
  await new Promise(r=>setTimeout(r,40));
@@ -270,7 +272,8 @@ for(const empty of [true,false]){
  assert.equal(a.cache().recurring_target.target.authorityRevision,30);snapshotPresentationChecks++;
  const b=await basecampFixture({patch:w=>{if(empty)w.items=[];}});
  const diskText=a.disk.get(key);let failures=0;a.ctx.fetch=async()=>{failures++;throw Error('Synthetic offline different main frame');};
- a.events.get('storage')({key});await waitFor(()=>failures===1,'different-frame storage event reaches offline port');await new Promise(r=>setTimeout(r,40));
+ a.events.get('storage')({key});assert.equal(failures,0);a.events.get('online')();
+ await waitFor(()=>failures===1,'different-frame explicit refresh reaches offline port');await new Promise(r=>setTimeout(r,40));
  assert.equal(a.el('areas').innerHTML.includes('TEST ONLY'),!empty,'disk supplemental result reconciles without replacing higher unsaved main frame');snapshotPresentationChecks++;
  assert.equal(a.el('state-text').textContent,'Showing a saved schedule. Could not check for changes.','derived view is disclosed as unconfirmed, not a storage diagnosis');snapshotPresentationChecks++;
  assert.equal(a.disk.get(key),diskText,'derived view does not become persisted evidence');snapshotPresentationChecks++;
@@ -297,7 +300,8 @@ changedFrame={...changedFrame,...changedView,recurring_delivery:{...changedFrame
 changedFrame.basecamp_birthday_work={...frameA.work(),state:'unavailable',items:[]};frameA.setData(changedFrame);frameA.events.get('online')();
 await waitFor(()=>frameA.fetches()===2&&frameA.el('state-text').textContent.includes('Schedule unavailable'),'valid changed main frame admitted but cache write refused');
 const frameB=await basecampFixture();let changedFailures=0;frameA.ctx.fetch=async()=>{changedFailures++;throw Error('Synthetic offline changed main work');};
-const storedBefore=frameA.disk.get(key);frameA.events.get('storage')({key});await waitFor(()=>changedFailures===1,'changed main frame storage refresh reaches offline port');await new Promise(r=>setTimeout(r,40));
+const storedBefore=frameA.disk.get(key);frameA.events.get('storage')({key});assert.equal(changedFailures,0);frameA.events.get('online')();
+await waitFor(()=>changedFailures===1,'changed main frame explicit refresh reaches offline port');await new Promise(r=>setTimeout(r,40));
 const mixed={same_publication:changedFrame.publication_id===frameB.data().publication_id,same_projection:changedFrame.projection_id===frameB.data().projection_id,
  newer_main_work_visible:frameA.el('areas').innerHTML.includes('TEST DIFFERENT MAIN WORK'),
  older_private_note_visible:frameA.el('areas').innerHTML.includes('TEST ONLY'),
@@ -332,7 +336,8 @@ for(const mode of ['shift','work']){
  const data=changedPublishedFrame(31,mode);data.basecamp_birthday_work={...a.work(),state:'unavailable',items:[]};a.setData(data);a.events.get('online')();
  await waitFor(()=>a.fetches()===2&&a.el('state-text').textContent.includes('Schedule unavailable'),'unsaved changed frame preserves closed read fence');
  const b=await basecampFixture(),disk=a.disk.get(key);let failed=0;a.ctx.fetch=async()=>{failed++;throw Error('Synthetic offline changed assignment');};a.events.get('storage')({key});
- await waitFor(()=>failed===1,'changed assignment storage/offline refresh');await new Promise(r=>setTimeout(r,40));
+ assert.equal(failed,0);a.events.get('online')();
+ await waitFor(()=>failed===1,'changed assignment explicit offline refresh');await new Promise(r=>setTimeout(r,40));
  assert.ok(!a.el('areas').innerHTML.includes('TEST ONLY')&&a.el('areas').innerHTML.includes('Birthday assignments could not be checked.'));assignmentFrameChecks++;
  assert.equal(a.disk.get(key),disk);assignmentFrameChecks++;
  assert.ok(!a.requests.some(x=>x.options?.method==='POST'));assignmentFrameChecks++;
@@ -344,6 +349,7 @@ for(const mode of ['shift','work']){
  data.basecamp_birthday_work=a.work();data.basecamp_birthday_work.items[0].access_note='TEST NEW FRAME VERIFIED NOTE';a.setData(data);a.events.get('online')();
  await waitFor(()=>a.fetches()===2&&a.el('state-text').textContent.includes('Schedule unavailable'),'new work and its own private input remain unsaved behind original fence');
  const b=await basecampFixture(),disk=a.disk.get(key);let failed=0;a.ctx.fetch=async()=>{failed++;throw Error('Synthetic offline independently bound new frame');};a.events.get('storage')({key});
+ assert.equal(failed,0);a.events.get('online')();
  await waitFor(()=>failed===1,'own changed-frame work reaches offline observation');await new Promise(r=>setTimeout(r,40));
  assert.ok(a.el('areas').innerHTML.includes('TEST NEW FRAME VERIFIED NOTE')&&!a.el('areas').innerHTML.includes('TEST ONLY'),'verified private work tied to the actual new frame survives; the old frame cannot replace it');assignmentFrameChecks++;
  assert.equal(a.disk.get(key),disk);assignmentFrameChecks++;

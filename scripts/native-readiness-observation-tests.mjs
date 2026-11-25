@@ -44,7 +44,7 @@ const plugin=readFileSync(dir+'CustodialNativeVaultPlugin.java','utf8');
 assert.deepEqual([...plugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS);checks++;
 const schema=JSON.parse(readFileSync('mobile/scripts/custodial-android-release-acceptance.schema.json','utf8'));
 const arrays=[];const walk=o=>{if(!o||typeof o!=='object')return;if(o.plugin_method_names)arrays.push(o.plugin_method_names);for(const v of Object.values(o))walk(v);};walk(schema);
-check(arrays.some(v=>v.minItems===37&&v.maxItems===37&&JSON.stringify(v.prefixItems.map(x=>x.const))===JSON.stringify(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS)),'exact artifact allowlist includes reviewed removal admission, no wildcard');
+check(arrays.some(v=>v.minItems===38&&v.maxItems===38&&JSON.stringify(v.prefixItems.map(x=>x.const))===JSON.stringify(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS)),'exact artifact allowlist includes reviewed removal admission, no wildcard');
 
 // Execute actual additive wrapper. No status refresh or old mutating getter may
 // be called as a diagnostic fallback; unsupported old binary remains rejected.

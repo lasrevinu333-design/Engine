@@ -32,11 +32,13 @@ const NOTIFICATION_PRESENTATION_PROFILE_SHA='002b97402c22029e91bd108a77a191eec11
 const PROVIDER_STORAGE_PROFILE_SHA='166016cfdf0bb7218ccc6a99ca65f9fc700da9963670d11b9c9a7082ba18443c';
 const MESSENGER_VOICE_PROFILE_SHA='8205da75d596a8606ccb32e5c1f22b28325c0c2da5e09e450ec427c836c63d4a';
 const MESSENGER_EXPEDITED_PROFILE_SHA='c11825f767737556de3109058085a04a9829f1520c9a7290afb092ad56a21d34';
+const INTEGRATION_REPAIR_PROFILE_SHA='4a1829b74c4c68077d8b7b681dda8ec4224cf0906db818217103dacb6242ea46';
 const BASECAMP_R34_PROFILE_SHA='113e0647421cfbb6b3dc8cfc2a21757e15446f27bd65c64bc150ba41af4a2f36';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
- assert.ok([PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA,NOTIFICATION_DEADLINE_PROFILE_SHA,NOTIFICATION_PRESENTATION_PROFILE_SHA,PROVIDER_STORAGE_PROFILE_SHA,MESSENGER_VOICE_PROFILE_SHA,MESSENGER_EXPEDITED_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact registered source profile; independent review and runtime admission remain separate');
+ const integrationRepair=sha(JSON.stringify(value))===INTEGRATION_REPAIR_PROFILE_SHA;
+ assert.ok(integrationRepair||[PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA,NOTIFICATION_DEADLINE_PROFILE_SHA,NOTIFICATION_PRESENTATION_PROFILE_SHA,PROVIDER_STORAGE_PROFILE_SHA,MESSENGER_VOICE_PROFILE_SHA,MESSENGER_EXPEDITED_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact registered source profile; independent review and runtime admission remain separate');
  assert.equal(value.schema,'custodial.current-gps-source-qualification.v1');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
  for(const rows of [value.main_java,value.test_java,value.auxiliary,value.legacy_proofs,value.core_sources,...(value.presentation_sources?[value.presentation_sources]:[])]){
@@ -44,8 +46,8 @@ export function validateCurrentGpsQualification(value){
   for(const row of rows){assert.ok(!isAbsolute(row.path)&&!row.path.split('/').some(x=>!x||x==='.'||x==='..'));
    assert.match(row.sha256,/^[0-9a-f]{64}$/);assert.ok(Number.isSafeInteger(row.bytes)&&row.bytes>0);}
  }
- assert.equal(value.main_java.length,194);assert.equal(value.test_java.length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA,NOTIFICATION_DEADLINE_PROFILE_SHA,NOTIFICATION_PRESENTATION_PROFILE_SHA,PROVIDER_STORAGE_PROFILE_SHA,MESSENGER_VOICE_PROFILE_SHA,MESSENGER_EXPEDITED_PROFILE_SHA].includes(sha(JSON.stringify(value)))?209:208);
- assert.equal(value.deltas.filter(row=>row.kind==='added'&&row.path.endsWith('.java')).length,[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA,NOTIFICATION_DEADLINE_PROFILE_SHA,NOTIFICATION_PRESENTATION_PROFILE_SHA,PROVIDER_STORAGE_PROFILE_SHA,MESSENGER_VOICE_PROFILE_SHA,MESSENGER_EXPEDITED_PROFILE_SHA].includes(sha(JSON.stringify(value)))?2:1);
+ assert.equal(value.main_java.length,integrationRepair?195:194);assert.equal(value.test_java.length,integrationRepair||[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA,NOTIFICATION_DEADLINE_PROFILE_SHA,NOTIFICATION_PRESENTATION_PROFILE_SHA,PROVIDER_STORAGE_PROFILE_SHA,MESSENGER_VOICE_PROFILE_SHA,MESSENGER_EXPEDITED_PROFILE_SHA].includes(sha(JSON.stringify(value)))?209:208);
+ assert.equal(value.deltas.filter(row=>row.kind==='added'&&row.path.endsWith('.java')).length,integrationRepair||[TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA,NOTIFICATION_DEADLINE_PROFILE_SHA,NOTIFICATION_PRESENTATION_PROFILE_SHA,PROVIDER_STORAGE_PROFILE_SHA,MESSENGER_VOICE_PROFILE_SHA,MESSENGER_EXPEDITED_PROFILE_SHA].includes(sha(JSON.stringify(value)))?2:1);
  return value;
 }
 const originalProfile=JSON.parse(readFileSync(new URL('./fixtures/current-gps-source-qualification.json',import.meta.url),'utf8'));
@@ -97,7 +99,8 @@ assert.equal(sha(JSON.stringify(weekPerimeterProfile)),WEEK_PERIMETER_PROFILE_SH
 function applyNotificationOverlay(profile,relativePath,expected){
  const overlay=JSON.parse(readFileSync(new URL(relativePath,import.meta.url),'utf8'));
  const result={...profile};
- for(const key of ['main_java','test_java','auxiliary','core_sources','deltas']){
+ for(const key of ['main_java','test_java','auxiliary','core_sources','deltas','legacy_proofs','presentation_sources']){
+  if(!overlay[key])continue;
   const rows=new Map(profile[key].map(row=>[row.path,row]));
   for(const row of overlay[key]||[])rows.set(row.path,row);
   result[key]=[...rows.values()];
@@ -105,6 +108,11 @@ function applyNotificationOverlay(profile,relativePath,expected){
  result.basename_aliases={...profile.basename_aliases,...overlay.basename_aliases};
  if(overlay.presentationHistory)result.presentationHistory=overlay.presentationHistory;
  if(overlay.voiceHistory)result.voiceHistory=overlay.voiceHistory;
+ if(overlay.auditRepairHistory){
+  for(const group of ['main_java','test_java'])if(overlay[group])
+   result[group].sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);
+  result.auditRepairHistory=overlay.auditRepairHistory;
+ }
  assert.equal(sha(JSON.stringify(result)),expected,'Exact notification repair successor inventory');
  return result;
 }
@@ -118,7 +126,9 @@ const messengerVoiceProfile=applyNotificationOverlay(providerStorageProfile,
  './fixtures/current-gps-messenger-voice-v86-overlay.json',MESSENGER_VOICE_PROFILE_SHA);
 const messengerExpeditedProfile=applyNotificationOverlay(messengerVoiceProfile,
  './fixtures/current-gps-messenger-audio-gap-v87-overlay.json',MESSENGER_EXPEDITED_PROFILE_SHA);
-export const currentGpsQualification=freeze(validateCurrentGpsQualification(messengerExpeditedProfile));
+const integrationRepairProfile=applyNotificationOverlay(messengerExpeditedProfile,
+ './fixtures/current-gps-integration-repairs-overlay.json',INTEGRATION_REPAIR_PROFILE_SHA);
+export const currentGpsQualification=freeze(validateCurrentGpsQualification(integrationRepairProfile));
 const all=[...currentGpsQualification.main_java,...currentGpsQualification.test_java,...currentGpsQualification.auxiliary,...currentGpsQualification.core_sources,...(currentGpsQualification.presentation_sources||[])];
 const byPath=new Map(all.map(row=>[row.path,row]));
 const aliases=new Map(Object.entries(currentGpsQualification.basename_aliases));
@@ -172,8 +182,18 @@ export function assertBoundCurrentGpsSource(name,source){
  const path=canonical(name);assert.ok(path,'Known current GPS source required');assertCurrentGpsInventory();
  const row=byPath.get(path);assert.equal(Buffer.byteLength(source),row.bytes);assert.equal(sha(source),row.sha256,'Actual current bytes required; predecessor is comparison only');return source;
 }
+// Bind the complete current tree before supplying a historical comparison to
+// any of the archived GPS or provider contracts.
+function normalizeIntegrationRepair(name,source){
+ const path=canonical(name);
+ const change=currentGpsQualification.auditRepairHistory.find(row=>row.path===path);
+ if(!change||change.kind!=='changed'||sha(source)!==change.current_sha256)return source;
+ assertCurrentGpsInventory();
+ return reverseGps(change,source);
+}
 // Reverse only exact successor bytes for the previous presentation contracts.
 export function normalizeNotificationPresentationForComparison(name,source){
+ source=normalizeIntegrationRepair(name,source);
  const voice=currentGpsQualification.voiceHistory.find(candidate=>candidate.path===name||basename(candidate.path)===name);
  if(voice&&sha(source)===voice.current_sha256){
   assertCurrentGpsInventory();
@@ -186,6 +206,7 @@ export function normalizeNotificationPresentationForComparison(name,source){
 }
 export function normalizeCurrentGpsForHistoricalComparison(name,source){
  const path=canonical(name);if(!path)return source;
+ source=normalizeIntegrationRepair(path,source);
  const row=currentGpsQualification.deltas.find(row=>row.path===path);if(!row)return source;
  if(row.kind==='added'){
   assert.equal(sha(source),row.current_sha256,'New GPS type must remain actual; never invent an absent predecessor');return source;
@@ -205,16 +226,18 @@ function reverseGps(row,source){
 }
 export function assertGpsHistoricalInventoryProjection(oldMain,oldTests,oldAuxiliary){
  assertCurrentGpsInventory();
- function projected(rows){return rows.filter(row=>!currentGpsQualification.deltas.some(d=>d.path===row.path&&d.kind==='added')).map(row=>{
+ function projected(rows){
+  const added=new Set([...currentGpsQualification.deltas,...currentGpsQualification.auditRepairHistory]
+   .filter(d=>d.kind==='added').map(d=>d.path));
+  return rows.filter(row=>!added.has(row.path)).map(row=>{
   const delta=currentGpsQualification.deltas.find(d=>d.path===row.path);
-  if(!delta)return row;
-  const source=bytesAt(root,row.path).toString('utf8');
-  const prior=reverseGps(delta,source);
+  const source=normalizeIntegrationRepair(row.path,bytesAt(root,row.path).toString('utf8'));
+  const prior=delta?reverseGps(delta,source):source;
   return {path:row.path,bytes:Buffer.byteLength(prior),sha256:sha(prior)};
  });}
  assert.deepEqual(projected(currentGpsQualification.main_java),oldMain,'Explicit historical main inventory, not actual current count');
  assert.deepEqual(projected(currentGpsQualification.test_java),oldTests,'Explicit historical test inventory');
  const oldPaths=new Set(oldAuxiliary.map(row=>row.path));
  assert.deepEqual(projected(currentGpsQualification.auxiliary.filter(row=>oldPaths.has(row.path))).sort((a,b)=>a.path.localeCompare(b.path)),oldAuxiliary.map(({path,bytes,sha256})=>({path,bytes,sha256})).sort((a,b)=>a.path.localeCompare(b.path)),'Explicit historical auxiliary inventory');
- return {actual_main:194,historical_main:oldMain.length,historical_projection_only:true};
+ return {actual_main:currentGpsQualification.main_java.length,historical_main:oldMain.length,historical_projection_only:true};
 }

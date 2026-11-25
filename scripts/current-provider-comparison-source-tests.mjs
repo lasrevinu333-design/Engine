@@ -14,13 +14,13 @@ const sha=value=>createHash('sha256').update(value).digest('hex');
 const f6=JSON.parse(readFileSync(new URL('./fixtures/provider-event-decisions-byte-deltas.json',import.meta.url)));
 let checks=0;
 const currentInventory=assertCurrentGpsInventory();
-assert.equal(currentInventory.main,194);
+assert.equal(currentInventory.main,195);
 assert.equal(currentGpsQualification.main_java.length,currentInventory.main);
 assert.equal(assertCurrentProviderComparisonInventory(),currentInventory.main);
 const historicalInventory=assertGpsHistoricalInventoryProjection(approvedPreservationComparisonPins.current_java_inventory,context.current_test_java_inventory,context.current_auxiliary_inventory);
 assert.equal(historicalInventory.actual_main,currentInventory.main);
 assert.equal(historicalInventory.historical_main,193);
-assert.equal(currentInventory.main-historicalInventory.historical_main,1);
+assert.equal(currentInventory.main-historicalInventory.historical_main,2);
 // The historical projections above stay fixed. Keep the complete additions
 // check in sync with the approved web, perimeter and notification sources.
 const expectedAdditions=[

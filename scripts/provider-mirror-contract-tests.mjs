@@ -39,8 +39,8 @@ check(sha(normalizeCurrentNativeAudioSequence('AndroidManifest.xml',readFileSync
 const plugin=read('CustodialNativeVaultPlugin.java'),runtime=withoutReleaseAdmission(dir+'CustodialNativeRuntime.java',read('CustodialNativeRuntime.java'));
 const actualPlugin=readFileSync(dir+'CustodialNativeVaultPlugin.java','utf8');assertBoundCurrentProviderSource('CustodialNativeVaultPlugin.java',actualPlugin);
 check([...actualPlugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS,'actual current plugin matches the actual compiled verifier allowlist');
-check([...plugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.filter(name=>name!=='checkRemovalAdmission'),'historical additive method set before separately checked current removal admission');
-check(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.length,37,'29 original plus seven finite methods and reviewed removal admission');
+check([...plugin.matchAll(/@PluginMethod\s+public void (\w+)\s*\(/g)].map(m=>m[1]).sort(),CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.filter(name=>!['checkRemovalAdmission','phonePresentation'].includes(name)),'historical additive method set before separately checked current removal admission');
+check(CUSTODIAL_NATIVE_VAULT_PLUGIN_METHODS.length,38,'Current exact WebView API includes the presentation-only clock');
 for(const type of ['NativeProviderIngressRuntime','NativeProviderComponentRuntime']){assert.match(runtime,new RegExp('return '+type+'\\.SUSPENDED;'));checks++;}
 assert.match(runtime,/new NativeProviderRuntimeOwner.Delivery\(NativeProviderTime.Profiles.NONE,/);checks++;
 check(readdirSync(dir).filter(n=>n.endsWith('.java')).filter(n=>/new NativeProviderTime.Profile\(/.test(read(n))),[],'no arbitrary qualification added');

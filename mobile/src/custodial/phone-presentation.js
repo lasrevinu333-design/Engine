@@ -3,6 +3,8 @@
 export function createPhonePresentation({ principal, read }) {
   let observed = null;
   let sequence = 0;
+  let lifecycle = 0;
+  let pendingRead = null;
   const current = () => observed?.principal === principal() ? observed : null;
   async function update(unlock) {
     const owner = principal(), invocation = ++sequence;
@@ -16,11 +18,28 @@ export function createPhonePresentation({ principal, read }) {
     observed = { principal: owner, wake: result?.wake, unlocked: result?.unlocked === true };
     return observed.unlocked;
   }
+  function refresh() {
+    const owner = principal();
+    if (!owner) return Promise.resolve(false);
+    if (pendingRead?.owner === owner) return pendingRead.promise;
+    const flight = { owner, promise: update(false) };
+    pendingRead = flight;
+    return flight.promise.finally(() => {
+      if (pendingRead === flight) pendingRead = null;
+    });
+  }
+  async function unlock() {
+    const owner = principal(), epoch = lifecycle;
+    if (!owner) return false;
+    if (typeof read === 'function' && !current()?.wake) await refresh();
+    if (epoch !== lifecycle || owner !== principal()) return false;
+    return current()?.unlocked === true || update(true);
+  }
   return {
     unlocked: () => current()?.unlocked === true,
-    refresh: () => update(false),
-    unlock: () => update(true),
-    reset() { ++sequence; observed = null; },
+    refresh,
+    unlock,
+    reset() { ++lifecycle; ++sequence; observed = null; pendingRead = null; },
   };
 }
 
@@ -44,7 +63,7 @@ export function bindPhoneUnlock(surface, button, unlock, viewportHeight = () => 
   }, { passive: true });
 }
 
-const workPages = new Set(['/messages.html', '/employee-schedule.html', '/events.html', '/employee-feedback.html']);
+const workPages = new Set(['/messages.html', '/employee-schedule.html', '/events.html', '/employee-feedback.html', '/system-feedback.html']);
 
 export function installWorkPageClock({ app, mobile, document, window }) {
   if (!workPages.has(window.location.pathname) || typeof mobile.phonePresentation !== 'function') return;
