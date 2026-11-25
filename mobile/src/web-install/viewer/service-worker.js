@@ -1,6 +1,7 @@
 const CACHE_PREFIX = 'memphis-zoo-custodial-viewer-shell-';
-const CACHE = `${CACHE_PREFIX}__MZ_EXACT_CACHE_ID__`;
 const BASE = new URL('./', self.location.href);
+const FAMILY = `${CACHE_PREFIX}${encodeURIComponent(BASE.pathname)}:`;
+const CACHE = `${FAMILY}__MZ_EXACT_CACHE_ID__`;
 const PRECACHE = [
   './index.html', './offline.html', './manifest.webmanifest', './pwa-register.js',
   './mobile.css', './field-guide.css', './Zoo_Logo_ui.webp',
@@ -11,35 +12,48 @@ const absolute = (path) => new URL(path, BASE);
 const isSensitive = (request, url) => request.headers.has('authorization')
   || /(?:^|\/)(?:api|[^/]*-api)(?:\/|$)/i.test(url.pathname)
   || /\/(?:auth|rest|storage)\/v1\//i.test(url.pathname);
-self.addEventListener('install', (event) => event.waitUntil((async () => {
+const offlineUrl = absolute('./offline.html').href;
+const readOffline = request => caches.match(request, {cacheName:CACHE});
+self.addEventListener('install', event => event.waitUntil((async () => {
   const cache = await caches.open(CACHE);
-  for (const path of PRECACHE) {
-    const response = await fetch(absolute(path), { cache: 'reload', credentials: 'omit' });
-    if (!response.ok) throw new Error(`Viewer shell asset unavailable: ${path}`);
-    await cache.put(absolute(path), response);
+  try {
+    for (const path of PRECACHE) {
+      const response = await fetch(absolute(path), { cache: 'reload', credentials: 'omit' });
+      const control = response.headers.get('cache-control') || '';
+      if (!response.ok || /\b(?:no-store|private)\b/i.test(control)) throw new Error(`Offline shell asset unavailable: ${path}`);
+      await cache.put(absolute(path), response);
+    }
+  } catch (error) {
+    await caches.delete(CACHE);
+    throw error;
   }
-  await self.skipWaiting();
+  // Existing tabs stay with their original worker until the browser can
+  // safely activate this release. A partial install is never read.
 })()));
-self.addEventListener('activate', (event) => event.waitUntil((async () => {
+self.addEventListener('activate', event => event.waitUntil((async () => {
   const keys = await caches.keys();
-  await Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE).map((key) => caches.delete(key)));
+  await Promise.all(keys.filter(key => key.startsWith(FAMILY) && key !== CACHE).map(key => caches.delete(key)));
   await self.clients.claim();
 })()));
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE.pathname) || isSensitive(event.request, url)) return;
-  if (event.request.mode === 'navigate') {
-    event.respondWith(fetch(event.request).catch(() => caches.match(absolute('./offline.html'))));
+self.addEventListener('fetch', event => {
+  const {request} = event;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE.pathname) || isSensitive(request, url)) return;
+  if (request.mode === 'navigate') {
+    if (url.href === offlineUrl) {
+      event.respondWith(readOffline(offlineUrl).then(response => response || new Response('Offline', {status:503})));
+    } else {
+      event.respondWith(fetch(request, {cache:'no-cache'}).catch(() => Response.redirect(offlineUrl)));
+    }
     return;
   }
-  if (!['script', 'style', 'image', 'font'].includes(event.request.destination) || url.search) return;
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then(async (response) => {
-    const control = String(response.headers.get('cache-control') || '');
-    if (response.ok && !/\b(?:no-store|private)\b/i.test(control)) {
-      const cache = await caches.open(CACHE);
-      await cache.put(event.request, response.clone());
-    }
-    return response;
-  })));
+  if (!['script', 'style', 'image', 'font'].includes(request.destination)) return;
+  if (request.referrer === offlineUrl) {
+    event.respondWith(readOffline(request).then(response => response || fetch(request, {cache:'no-cache'})));
+  } else {
+    // Online HTML and its mutable asset URLs must come from the same current
+    // site, even while the next worker is still installing.
+    event.respondWith(fetch(request, {cache:'no-cache'}));
+  }
 });

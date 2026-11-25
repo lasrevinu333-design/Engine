@@ -25,6 +25,7 @@ let manager = {};
 let currentSession = null;
 let statusTimer = null;
 let refreshGeneration = 0;
+let pageActive = true;
 const sessionBinding=s=>s&&JSON.stringify([s.role,s.manager_id,s.credential_id,s.device_id,s.token,s.expires_at,s.auth_mode]);
 const currentHome=()=>!document.hidden&&!els.hub.hidden&&!!currentSession&&sessionBinding(currentSession)===sessionBinding(window.MemphisAuth?.readSession?.())&&Date.parse(currentSession.expires_at)>Date.now();
 const managerWeather=installManagerWeather({document,isVisible:currentHome});
@@ -94,26 +95,32 @@ function renderAuthenticated(session, person = {}) {
   for (const tile of [els.gemini, els.managerAccess, els.deviceSecurity]) if (tile) tile.hidden = !custodialAdmin;
 }
 
-function renderEnrollment(message = '') {
+function withdrawManagerView() {
   manager = {};
   currentSession = null;
-  refreshGeneration+=1;managerWeather.stop();context.clear();
+  managerWeather.stop();
+  context.clear();
   window.MemphisMobile?.adoptSession?.(null);
-  els.boot.hidden = true;
-  els.enrollment.hidden = false;
-  els.hub.hidden = true;
   els.identity.hidden = true;
-  els.enrollStatus.textContent = message;
-  els.enrollStatus.className = message ? 'status error' : 'status';
+  els.hub.hidden = true;
+  els.name.textContent = '';
+  els.title.textContent = '';
+  for (const element of [els.todayOverdue, els.todayDueSoon, els.todayInProgress, els.todayOpenProblems, els.todayGuestCount]) {
+    element.textContent = '—';
+    element.dataset.state = 'unavailable';
+  }
+  els.todaySource.textContent = '';
+  els.todayGuestMeta.textContent = '';
+  setHubStatus();
 }
 
-function keepCurrentAccessDuringFailure(error) {
-  if (currentSession?.token && Date.parse(currentSession.expires_at || '') > Date.now()) {
-    renderAuthenticated(currentSession, manager);
-    setHubStatus(`Could not update right now. Existing phone access was kept. ${error?.message || ''}`.trim(), 'error');
-    return;
-  }
-  showBoot(`Could not reach the Memphis Zoo service. No saved work was removed. ${error?.message || ''}`.trim(), true);
+function renderEnrollment(message = '') {
+  refreshGeneration += 1;
+  withdrawManagerView();
+  els.boot.hidden = true;
+  els.enrollment.hidden = false;
+  els.enrollStatus.textContent = message;
+  els.enrollStatus.className = message ? 'status error' : 'status';
 }
 
 async function request(path, { method = 'GET', body = null } = {}) {
@@ -214,14 +221,19 @@ async function refreshOperationalTruth(generation) {
   await Promise.allSettled([summary, attendance, context.refresh(), managerWeather.start()]);
 }
 
-async function refresh({ quiet = false } = {}) {
+async function refresh() {
+  if (!pageActive || document.hidden) return false;
   const generation = ++refreshGeneration;
-  if (!quiet && !currentSession) showBoot();
+  withdrawManagerView();
+  showBoot();
   try {
     const session=await window.MemphisAuth?.requireOpsManagerSession?.({forceRefresh:true,redirect:false,interactive:false,throwOnFailure:true});
     if(!session)throw Object.assign(new Error('Leadership browser enrollment is required.'),{status:401});
     const data={session};
     if (generation !== refreshGeneration) return false;
+    if (sessionBinding(session) !== sessionBinding(window.MemphisAuth?.readSession?.())) {
+      throw new Error('Manager access changed while it was being checked.');
+    }
     adopt(data);
     await refreshOperationalTruth(generation);
     if (generation !== refreshGeneration) return false;
@@ -234,7 +246,7 @@ async function refresh({ quiet = false } = {}) {
       renderEnrollment(error.message || 'This phone must be enrolled again.');
       return false;
     }
-    keepCurrentAccessDuringFailure(error);
+    showBoot('Manager access could not be checked. Try again when connected.', true);
     return false;
   }
 }
@@ -268,15 +280,28 @@ void Network.addListener('networkStatusChange', ({ connected }) => {
     banner.textContent = 'No connection. Manager information may be out of date.';
     document.body.appendChild(banner);
   } else {
-    void refresh({ quiet: Boolean(currentSession) });
+    void refresh();
   }
 });
 void App.addListener('resume', () => {
   void hideSystemStatusBar();
-  void refresh({ quiet: Boolean(currentSession) });
+  void refresh();
 });
-document.addEventListener('visibilitychange', () => { if(document.hidden){managerWeather.stop({clear:false});context.clear();refreshGeneration+=1;}else{void hideSystemStatusBar();if(currentSession)void refresh({quiet:true});} });
-window.addEventListener('pagehide',()=>{managerWeather.stop();context.clear();refreshGeneration+=1;clearTimeout(statusTimer);});
+function suspendManagerView() {
+  refreshGeneration += 1;
+  withdrawManagerView();
+  showBoot();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!pageActive) return;
+  if (document.hidden) suspendManagerView();
+  else { void hideSystemStatusBar(); void refresh(); }
+});
+window.addEventListener('pagehide', () => { pageActive=false; suspendManagerView(); });
+window.addEventListener('pageshow', event => {
+  if (event.persisted && !pageActive) { pageActive=true; void refresh(); }
+});
 void (async () => {
   await hideSystemStatusBar();
   showBoot();

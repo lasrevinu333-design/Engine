@@ -21,7 +21,14 @@ for (const [edition, expected] of Object.entries(editions)) {
   const base = `src/web-install/${edition}`;
   const manifest = JSON.parse(await read(`${base}/manifest.webmanifest`));
   assert.equal(manifest.name, expected.name);
-  assert.deepEqual([manifest.id, manifest.start_url, manifest.scope], [expected.path, expected.path, expected.path]);
+  assert.equal(manifest.id, undefined, 'The stable ID defaults to the scoped start URL.');
+  for (const prefix of ['', '/Engine']) {
+    const launch = new URL(prefix+expected.path, 'https://fixture.invalid');
+    const manifestUrl = new URL('manifest.webmanifest', launch);
+    assert.equal(new URL(manifest.start_url,manifestUrl).href,launch.href);
+    assert.equal(new URL(manifest.scope,manifestUrl).href,launch.href);
+    for (const icon of manifest.icons) assert.ok(new URL(icon.src,manifestUrl).href.startsWith(launch.href+'icons/'));
+  }
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.theme_color, expected.color);
   assert.deepEqual(manifest.icons.map(({ sizes }) => sizes), ['192x192', '512x512', '512x512']);
@@ -34,10 +41,11 @@ for (const [edition, expected] of Object.entries(editions)) {
   assert.equal((worker.match(/__MZ_EXACT_CACHE_ID__/g) || []).length, 1, 'worker cache must bind to the exact source tree');
   assert.match(worker, /credentials:\s*'omit'/, 'precache must not carry a browser credential');
   assert.match(worker, /request\.headers\.has\('authorization'\)/, 'authenticated requests must bypass the cache');
-  assert.match(worker, /\[?'script'.*'style'.*'image'.*'font'/s, 'only static asset destinations may be runtime cached');
   assert.match(worker, /no-store\|private/, 'private and no-store responses must not be cached');
-  assert.match(worker, /fetch\(event\.request\)\.catch\(\(\) => caches\.match\(absolute\('\.\/offline\.html'\)\)\)/,
-    'an unverified offline launch must show the fail-closed offline page');
+  assert.match(worker, /fetch\(request, \{cache:'no-cache'\}\)\.catch\(\(\) => Response\.redirect\(offlineUrl\)\)/);
+  assert.match(worker, /request\.referrer === offlineUrl/, 'only the offline document can request cached static assets');
+  assert.match(worker,/caches\.match\(request, \{cacheName:CACHE\}\)/,'read from the exact edition, base and source cache');
+  assert.doesNotMatch(worker,/skipWaiting\(/);
   assert.doesNotMatch(worker, /cache\.put\([^\n]*(?:api|auth|credential|session)/i, 'sensitive application data must never be cached');
   const prefix = worker.match(/CACHE_PREFIX\s*=\s*'([^']+)'/)?.[1];
   assert.ok(prefix);

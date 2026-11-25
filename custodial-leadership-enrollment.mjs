@@ -5,7 +5,7 @@ export const LEADERSHIP_DISPLAY_NAMES=Object.freeze(['Eric McKenney','Haley','Br
 // directory. The legacy server labels remain the exact challenge selectors.
 const FULL_MANAGER_NAMES=Object.freeze({Haley:'Haley Lejman',Jennifer:'Jennifer Sheffield',Annie:'Annie Feist'});
 const managerLabel=name=>Object.hasOwn(FULL_MANAGER_NAMES,name)?FULL_MANAGER_NAMES[name]:name;
-export async function mountLeadershipEnrollment({document:d=document,fetchImpl=fetch,serviceOrigin='',onSession=()=>{}}={}){
+export async function mountLeadershipEnrollment({document:d=document,fetchImpl=fetch,serviceOrigin='',onSession=()=>{},lifecycleTarget=null}={}){
  const id=name=>d.getElementById(name),pin=id('leadership-pin'),names=id('approved-name'),status=id('status'),pinForm=id('pin-form'),nameForm=id('name-form'),enrolled=id('enrolled'),check=id('check-session');
  if(!serviceOrigin){status.textContent='Preview is not connected. Leadership enrollment is not activated.';return{stop(){},configured:false};}
  const origin=new URL(serviceOrigin);
@@ -15,16 +15,28 @@ export async function mountLeadershipEnrollment({document:d=document,fetchImpl=f
  const text=(value,max=200)=>typeof value==='string'&&value.length>0&&value.length<=max;
  const controls=()=>{for(const e of [pin,names,id('verify-pin'),id('enroll-browser'),id('revoke-browser')])e.disabled=busy||mutationHeld;check.disabled=busy;};
  function clearChallenge(){selectedName=null;names.replaceChildren(new Option('Choose your name',''));for(const name of LEADERSHIP_DISPLAY_NAMES)names.add(new Option(managerLabel(name),name));nameForm.hidden=true;}
+ function stop(){
+  if(closed)return;
+  closed=true;controller?.abort();csrf=null;pin.value='';clearChallenge();
+  pinForm.hidden=true;enrolled.hidden=true;check.hidden=true;
+  id('claimed-name').textContent='';id('open-manager').hidden=true;
+  status.textContent='Checking this browser’s access…';
+  for(const [target,type,fn] of listeners)target.removeEventListener(type,fn);
+ }
+ if(lifecycleTarget)listen(lifecycleTarget,'pagehide',stop);
  async function acceptSession(body,{signedIn=false}={}){
   if(body?.ok!==true||typeof body.enrolled!=='boolean'||!text(body.csrfToken,4096))throw Error('Browser enrollment response is unverified.');
   const v=body.session;
   if(body.enrolled&&(v?.identityAssurance!=='SELF_ASSERTED_NAME'||!text(v.claimedAccount?.accountId)||!text(v.claimedAccount?.displayName)
     ||!text(v.cohort?.principalId)||!Number.isSafeInteger(v.cohort?.policyVersion)||v.cohort.policyVersion<1||!Array.isArray(v.cohort.permissions)||!v.managerSession))throw Error('Leadership enrollment identity/permission response is unverified.');
+  const finish=await onSession(body,{signedIn,current:()=>!closed});
+  if(closed)return;
   csrf=body.csrfToken;mutationHeld=false;clearChallenge();pin.value='';pinForm.hidden=true;nameForm.hidden=body.enrolled;enrolled.hidden=!body.enrolled;check.hidden=false;
   id('claimed-name').textContent=body.enrolled?managerLabel(v.claimedAccount.displayName):'';
   // Contact is deliberately not displayed here: Main verifies its provenance.
   status.textContent=body.enrolled?'This browser is ready for manager access.':'Choose your name to sign in.';
-  await onSession(body,{signedIn});return body;
+  if(typeof finish==='function')finish();
+  return body;
  }
  async function request(path,body){
   status.textContent=path==='/challenge'?'Checking the manager PIN…':path==='/enroll'?'Saving this browser’s sign-in…':path==='/revoke'?'Signing out of this browser…':'Checking this browser’s saved sign-in…';
@@ -61,22 +73,36 @@ export async function mountLeadershipEnrollment({document:d=document,fetchImpl=f
  listen(id('revoke-browser'),'click',()=>!mutationHeld&&perform(async()=>{await request('/revoke',{});acceptSession(await request('/session'));}));
  listen(check,'click',read);
  await read();
- return Object.freeze({configured:true,read,stop(){closed=true;controller?.abort();pin.value='';clearChallenge();for(const [e,type,fn]of listeners)e.removeEventListener(type,fn);}});
+ return Object.freeze({configured:true,read,stop});
 }
-if(typeof document!=='undefined'&&document.getElementById('leadership-pin'))mountLeadershipEnrollment({
+if(typeof document!=='undefined'&&document.getElementById('leadership-pin')){
+ let startup=0;
+ window.addEventListener('pagehide',()=>{startup++;});
+ const start=()=>{
+  const launched=++startup;
+  void mountLeadershipEnrollment({
+ lifecycleTarget:window,
  serviceOrigin:window.MemphisAuth?.backendOrigin||'',
- onSession:async (body,{signedIn=false}={})=>{
+ onSession:async (body,{signedIn=false,current}={})=>{
   const link=document.getElementById('open-manager');if(link)link.hidden=true;
   if(!body.enrolled)return;
   if(typeof window.MemphisAuth?.refreshLeadershipSession!=='function')throw Error('Manager session adapter unavailable.');
   const session=await window.MemphisAuth.refreshLeadershipSession();
+  if(!current())return;
   if(session.manager_id!==body.session.cohort.principalId||session.credential_id!==body.session.registrationId
    ||!window.MemphisAuth.isCustodialManagementAdmin(session))throw Error('Current server manager adapter binding changed.');
   const target=new URL('./start_page1.html',location.href),requested=new URLSearchParams(location.search).get('return');
   if(requested){const candidate=new URL(requested,location.href);if(candidate.origin===location.origin&&/\.html$/.test(candidate.pathname)&&!candidate.pathname.endsWith('/ops-manager-hub.html'))target.href=candidate.href;}
-  if(link){link.href=target.href;link.hidden=false;}
-  // An explicit visit without a return route remains the browser's sign-out
-  // screen. A completed sign-in or a protected-page return opens that page.
-  if(signedIn||requested)location.replace(target.href);
+  return ()=>{
+   if(!current())return;
+   if(link){link.href=target.href;link.hidden=false;}
+   if(signedIn||requested)location.replace(target.href);
+  };
  }
-}).catch(()=>{document.getElementById('status').textContent='Leadership enrollment configuration or manager adapter is unavailable.';});
+  }).catch(()=>{
+   if(startup===launched)document.getElementById('status').textContent='Leadership enrollment configuration or manager adapter is unavailable.';
+  });
+ };
+ window.addEventListener('pageshow',event=>{if(event.persisted)start();});
+ start();
+}
