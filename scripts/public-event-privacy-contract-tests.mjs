@@ -27,7 +27,7 @@ const row={id:'11111111-1111-4111-8111-111111111111',revision:1,name:'PUBLIC_EVE
  requirements:['Approved public setup'],custodial_notes:'Approved operational guidance'};
 const projection=data.events([row],Date.parse('2026-11-01T12:00:00Z'));
 const shown=JSON.stringify(projection);
-for(const value of ['PUBLIC_EVENT','PUBLIC_LOCATION','2026-11-02','9:30 a.m. Central','42','Approved public setup','Approved operational guidance'])assert.ok(shown.includes(value),'Public operational field: '+value);
+for(const value of ['PUBLIC_EVENT','PUBLIC_LOCATION','Monday, November 2','9:30 a.m. Central','42','Approved public setup','Approved operational guidance'])assert.ok(shown.includes(value),'Public operational field: '+value);
 for(const value of ['PRIVATE_INTERNAL_NOTE','PRIVATE_SOURCE_MAIL','PRIVATE_RAW_EMAIL'])assert.ok(!shown.includes(value),'Private source field must not render: '+value);
 assert.doesNotMatch(view,/node\([^\n]*r\.(?:notes|source_mail|raw_email)/);
 

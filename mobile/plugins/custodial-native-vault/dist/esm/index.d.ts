@@ -78,6 +78,7 @@ export interface CustodialNativeVaultPlugin {
     protected_work_admission: 'CLEAR' | 'PENDING' | 'RECOVERY_REQUIRED' | 'UNKNOWN'; read_only: true;
   }>;
   getState(): Promise<CustodialVaultState>;
+  phonePresentation(options?: { unlock_wake?: string }): Promise<{ wake?: string; unlocked: boolean }>;
   reportRecoveryDiagnostic(options: { reason: string; outcome: string; detail: string }): Promise<{ reported: true }>;
   attestScanIntent(options: { url: string }): Promise<{
     entry_id: string;

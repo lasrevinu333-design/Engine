@@ -24,7 +24,7 @@ export function sourceLabel(value, now=Date.now(), limit=60*minute, forcedStale=
   return {stale:forcedStale||age>limit,label:`${forcedStale||age>limit?'Last update':'Updated'} ${label}`};
 }
 export function scheduleFacts(data, identity, receivedAt, now=Date.now()) {
-  const unavailable={shift:'Schedule unavailable',lunch:'Lunch unavailable',stale:true,detail:'Open Schedule for the latest assignments.'};
+  const unavailable={shift:'Schedule unavailable',lunch:'Lunch unavailable',available:false,stale:true,detail:'Open Schedule for the latest assignments.'};
   if(!data||data.service_date!==zooServiceDate(now))return unavailable;
   const ids=[data.canonical_device_id,data.device_id].filter(Boolean).map(value=>String(value).toUpperCase());
   if(!ids.length||ids.some(value=>value!==identity.deviceId))return unavailable;
@@ -35,13 +35,13 @@ export function scheduleFacts(data, identity, receivedAt, now=Date.now()) {
   if(data.projection_status&&data.projection_status!=='current')return {...unavailable,detail:'Today’s schedule could not be verified.'};
   const freshness=sourceLabel(receivedAt,now,5*minute,data.stale===true);
   if(data.schedule_status==='off'||data.phase==='off_day'||data.shift?.active===false)
-    return {shift:'Not scheduled today',lunch:'Not scheduled',...freshness,detail:freshness.label};
+    return {shift:'Not scheduled today',lunch:'Not scheduled',available:true,...freshness,detail:freshness.label};
   const start=timeMinutes(data.shift?.shift_start??data.shift?.start),end=timeMinutes(data.shift?.shift_end??data.shift?.end);
   if(start===null||end===null||end<=start)return unavailable;
   const lunchStart=timeMinutes(data.lunch?.start??data.shift?.lunch_start),lunchEnd=timeMinutes(data.lunch?.end??data.shift?.lunch_end);
   const lunch=lunchStart!==null&&lunchEnd!==null&&lunchStart>=start&&lunchEnd<=end&&lunchEnd>lunchStart
     ? `${clock(lunchStart)}–${clock(lunchEnd)}`:'Lunch not published';
-  return {shift:`${clock(start)}–${clock(end)}`,lunch,...freshness,detail:freshness.label};
+  return {shift:`${clock(start)}–${clock(end)}`,lunch,available:true,...freshness,detail:freshness.label};
 }
 export function attendanceFacts(data,now=Date.now()) {
   const count=numeric(data?.attendance);

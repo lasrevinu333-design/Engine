@@ -270,7 +270,7 @@
     if(storage.getItem(availabilityKey(scope))!==encoded)throw fail('schedule_availability_write_failed');
     return value;
   }
-  const api=Object.freeze({prepare,sha256Text,assertMonotonic,deliveryMode,assertSnapshot,assertSnapshotProgress,newestSnapshot,confirmedSnapshot,
+  const api=Object.freeze({SCHEDULE_READ_TIMEOUT_MS:15000,prepare,sha256Text,assertMonotonic,deliveryMode,assertSnapshot,assertSnapshotProgress,newestSnapshot,confirmedSnapshot,
     withScheduleLock,availability,assertAvailability,writeAvailability,availabilityKey,AVAILABILITY_PREFIX,CACHE_SCHEMA});
   root.MemphisRecurringScheduleTarget=api;
   if(typeof module==='object'&&module.exports)module.exports=api;

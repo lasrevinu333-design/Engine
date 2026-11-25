@@ -34,6 +34,7 @@ import {
   getNativeCustodialOfflineAuthorityState,
   getNativeCustodialReadinessObservation,
   getNativeProviderMirrorBridge,
+  readNativePhonePresentation,
   isCustodialNativeVaultPlatform,
   nativeCustodialAuthorizedFetch,
   nativeCustodialEnroll,
@@ -46,6 +47,7 @@ import {
   resumeNativeCustodialEnrollment,
   verifyNativeCustodialScanEntry,
 } from './native-security.js';
+import { installWorkPageClock } from './phone-presentation.js';
 import {
   credentialRecoveryReasonForResponse,
   reconcileEnrollmentConfirmationRequired,
@@ -2939,6 +2941,7 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
     clearRollbackFence,
     saveCustodialHomeCache,
     readCustodialHomeCache,
+    ...(nativeVault && !browserTestBuild ? { phonePresentation: readNativePhonePresentation } : {}),
     principalIdentity: currentPrincipalIdentity,
     profileMatchesPrincipal: (value) => profileMatchesPrincipal(value, currentPrincipal()),
     verifyScanEntryAttestation,
@@ -3011,6 +3014,10 @@ export function installCustodialBridge({ nativeApplicationSource = null } = {}) 
     },
     notificationLifecycle: NATIVE_NOTIFICATION_LIFECYCLE,
   });
+
+  if (nativeVault && !browserTestBuild) {
+    installWorkPageClock({ app: App, mobile: window.MemphisMobile, document, window });
+  }
 
   const install = () => {
     window.MemphisAuth = {

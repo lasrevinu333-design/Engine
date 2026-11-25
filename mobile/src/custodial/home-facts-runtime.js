@@ -1,3 +1,4 @@
+import '../../../memphis-recurring-schedule-target.js';
 import { attendanceFacts, currentWeatherFacts, homeBinding, scheduleFacts, weatherFacts, weatherAlertsFacts, zooServiceDate } from './home-facts.js';
 
 // Fact panels never own the scan workflow, employee selection, or schedule writes.
@@ -81,7 +82,8 @@ export function createHomeFacts({identity,identityVersion=()=>0,sourceVersion=()
         if(!ownsFlight()||controller.signal.aborted){Promise.resolve(response).catch(()=>{});return;}
         const data=await Promise.race([response,new Promise((_,reject)=>{
           controller.signal.addEventListener('abort',()=>reject(Error('Facts update interrupted')),{once:true});
-          timeout=setTimeout(()=>controller.abort(),8000);
+          const scheduleTarget=globalThis.MemphisRecurringScheduleTarget||globalThis.window?.MemphisRecurringScheduleTarget;
+          timeout=setTimeout(()=>controller.abort(),kind==='schedule'?scheduleTarget.SCHEDULE_READ_TIMEOUT_MS:8000);
         })]);
         if(!ownsFlight()||controller.signal.aborted)return;
         if(!data)throw Error('Facts update returned no usable body');

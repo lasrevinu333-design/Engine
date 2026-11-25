@@ -1,6 +1,7 @@
 import { installHomeFacts } from './home-facts-dom.js';
 import { installHourlyForecastKeyboard } from './hourly-forecast-keyboard.js';
 import { classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode } from './readiness.js';
+import { bindPhoneUnlock, createPhonePresentation } from './phone-presentation.js';
 import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 import { StatusBar } from '@capacitor/status-bar';
@@ -113,15 +114,15 @@ function invalidateReadiness({refresh=true}={}) {
 const homeFactsUI=installHomeFacts({getProfile:()=>profile,getDeviceId:deviceId,isVisible:()=>!els.home.hidden,security,
   requestJson:(path,options)=>window.MemphisMobile.requestJson(path,options)});
 installHourlyForecastKeyboard(document.getElementById('home-weather-hours'));
-// Presentation permission is document-local, never restored from a prior tab/session.
-let phoneUnlockedByTap = false;
+const phoneClock = createPhonePresentation({
+  principal: readinessPrincipal,
+  read: window.MemphisMobile?.phonePresentation,
+});
 
 function safe(error) { return error instanceof Error ? error.message : String(error || 'Unknown error'); }
 function setStatus(element, text = '', kind = '') { element.textContent = text; element.className = `status${kind ? ` ${kind}` : ''}`; }
 function deviceId() { return String(security.getStatus().deviceId || '').trim().toUpperCase(); }
 function currentProfile(value) { return window.MemphisMobile?.profileMatchesPrincipal?.(value) === true; }
-function phoneUnlockedSinceWake() { return phoneUnlockedByTap; }
-function setPhoneUnlocked(value) { phoneUnlockedByTap = value === true; }
 function updatePhoneLockClock() {
   const now = new Date();
   els.phoneLockClock.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -140,16 +141,18 @@ function setEmployeeIdentity(value) {
 }
 function showPhoneLock(value = profile) {
   if (!setEmployeeIdentity(value)) return false;
-  // Every displayed lock needs a new explicit Unlock tap, including background restore.
-  setPhoneUnlocked(false);
   updatePhoneLockClock();
   if (!phoneLockClockTimer) phoneLockClockTimer = window.setInterval(updatePhoneLockClock, 1000);
   els.phoneLock.hidden = false;
   return true;
 }
 function hidePhoneLock() { els.phoneLock.hidden = true; }
-function unlockPhone() { setPhoneUnlocked(true); hidePhoneLock(); }
-function relockPhone() { invalidateReadiness(); setPhoneUnlocked(false); if (profile) showPhoneLock(profile); }
+async function unlockPhone() {
+  if (els.phoneLock.hidden || !currentProfile(profile)) return;
+  if (!await phoneClock.unlock()) await phoneClock.refresh();
+  if (phoneClock.unlocked() && currentProfile(profile)) hidePhoneLock();
+}
+function relockPhone() { invalidateReadiness(); phoneClock.reset(); if (profile) showPhoneLock(profile); }
 function showOnly(element) {
   for (const page of [els.home, els.boot, els.assignment]) page.hidden = page !== element;
   if (element !== els.home) { hidePhoneLock(); homeFactsUI.stop(); }
@@ -252,7 +255,8 @@ function showCachedPhoneIdentity() {
   const cached = cachedProfile();
   if (!cached || !employeeName(cached) || !currentProfile(cached)) return null;
   profile = cached;
-  showPhoneLock(cached);
+  if (phoneClock.unlocked()) hidePhoneLock();
+  else showPhoneLock(cached);
   return cached;
 }
 function showHome(value = profile) {
@@ -263,7 +267,7 @@ function showHome(value = profile) {
   profile = value;
   setEmployeeIdentity(value);
   showOnly(els.home);
-  if (phoneUnlockedSinceWake()) hidePhoneLock();
+  if (phoneClock.unlocked()) hidePhoneLock();
   else showPhoneLock(value);
   // The existing restore coordinator starts optional facts after its last pass.
   return true;
@@ -357,6 +361,7 @@ async function restoreNow({ quiet = false } = {}) {
       return showNoConnection();
     }
   }
+  await phoneClock.refresh();
   const cached = showCachedPhoneIdentity();
   try { await window.MemphisScanSync?.recoverLocalCompletionIntents?.(); } catch (error) {
     return error?.code === 'custodial_native_network_unavailable'
@@ -431,7 +436,7 @@ function restore(options = {}) {
   return restoreRunning;
 }
 
-els.phoneUnlock.addEventListener('click', unlockPhone);
+bindPhoneUnlock(els.phoneLock, els.phoneUnlock, unlockPhone);
 security.subscribe((status) => {
   const assignmentState = `${status.state || ''}|${status.deviceId || ''}|${status.quarantined === true}|${status.generation}|${window.MemphisMobile?.principalIdentity?.() || ''}`;
   const changed = assignmentState !== previousAssignmentState;

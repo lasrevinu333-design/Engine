@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import './feedback-outbox-binding-tests.mjs';
-// Current document-local unlock behavior, including stale storage and relock controls.
+// Current native clock presentation and the stale browser-storage regression.
 import './v80-correction-tests/phone-lock-tests.mjs';
 // Existing actual-owner suite covers exact send acknowledgements AND deletion receipts.
 import './message-send-receipt-tests.mjs';
@@ -57,8 +57,8 @@ assert.match(home, /id="phone-lock-name"/);
 assert.match(home, /id="phone-unlock"/);
 assert.match(homeApp, /els\.phoneLockName\.textContent = name/);
 assert.doesNotMatch(homeApp, /PHONE_UNLOCKED_KEY|mz_custodial_phone_unlocked_since_wake_v1/);
-assert.match(homeApp, /let phoneUnlockedByTap = false/);
-assert.match(homeApp, /function setPhoneUnlocked\(value\) \{ phoneUnlockedByTap = value === true; \}/);
+assert.match(homeApp, /createPhonePresentation\(\{\s*principal: readinessPrincipal,\s*read: window\.MemphisMobile\?\.phonePresentation/);
+assert.match(homeApp, /bindPhoneUnlock\(els\.phoneLock, els\.phoneUnlock, unlockPhone\)/);
 assert.match(homeApp, /App\.addListener\('pause', \(\) => \{ relockPhone\(\); \}\)/);
 assert.doesNotMatch(home, /Karen Robinson|Daniel Morgan|NOCX/);
 assert.match(home, /You are cleaning|id="active-cleaning-text"/);
@@ -129,7 +129,7 @@ assert.match(schedule, /memphis:schedule-refresh/);
 
 assert.match(messages, /<title>Messages<\/title>/);
 assert.match(messages, /chatscope-messenger\.css\?v=release-2026\.09\.16\.chatscope-v2/);
-assert.match(messages, /chatscope-mobile-overrides\.css\?v=release-2026\.09\.16\.chatscope-v2/);
+assert.match(messages, /chatscope-mobile-overrides\.css\?v=2026\.11\.14\.messenger-toolbar-r53/);
 assert.match(messages, /chatscope-messenger\.js\?v=release-2026\.09\.16\.chatscope-v2/);
 assert.match(messenger, /<h2>\{EMPLOYEE_CONTEXT \? 'New Message' : 'Start Conversation'\}<\/h2>/);
 assert.match(messenger, /Tap the person you want to message/);
@@ -140,14 +140,14 @@ assert.match(messenger, /disabled=\{busy \|\| pendingGroup\.held \|\| \(pendingG
 assert.doesNotMatch(messenger, /Create Group|selectedUserIds|openMemphis/);
 assert.match(messenger, /function SwipeConversation/);
 assert.match(messenger, />Delete<\/button>/);
-assert.match(messenger, /!mobileThread && <button className="mz-button primary"/);
+assert.match(messenger, /<button className="mz-button primary" type="button" disabled=\{!identity\?\.msg_user_id \|\| identity\.read_only \|\| accessBlocked\} onClick=\{\(\) => void openNewConversation\(\)\}>New<\/button>/);
 assert.match(messenger, /!EMPLOYEE_CONTEXT && <ConversationHeader\.Back/);
 assert.match(messenger, /!EMPLOYEE_CONTEXT && <button className="mz-button mz-chat-mobile-back"/);
 assert.match(messenger, /info=\{EMPLOYEE_CONTEXT \? ''/);
 assert.match(messengerMobile, /\.mz-chat-swipe-content\{position:relative;background:#0c1622;/);
 assert.match(messengerMobile, /\.cs-conversation-header__content \.cs-conversation-header__user-name,\.cs-conversation-header__content \.cs-conversation-header__info\{background-color:transparent!important\}/);
 assert.match(messengerMobile, /\.mz-chat-new-list>\.mz-chat-empty\{height:auto;min-height:112px;/);
-assert.match(messengerMobile, /\.mz-chat-toolbar\.thread-toolbar\{grid-template-columns:var\(--mz-chat-back-width\) minmax\(0,1fr\);grid-template-areas:'back brand'!important\}/);
+assert.match(messengerMobile, /grid-template-areas:'back brand new assistant'!important/);
 assert.match(messengerMobile, /\.mz-chat-shell\{width:100%;max-width:1100px;min-width:0;display:grid;grid-template-columns:minmax\(0,1fr\);grid-template-rows:auto minmax\(0,1fr\)/);
 assert.match(messengerMobile, /\.mz-chat-toolbar\{height:auto!important;min-height:80px;min-width:0;max-width:100%/);
 assert.match(messengerMobile, /\.mz-chat-stage\{height:auto!important;min-height:0;min-width:0;max-width:100%\}/);

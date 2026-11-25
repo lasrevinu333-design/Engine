@@ -163,42 +163,52 @@ export function installHomeFacts({getProfile,getDeviceId,isVisible,security,requ
     }
 
     const scheduleStatus=byId('home-schedule-status');
-    if(scheduleStatus){scheduleStatus.textContent=value.schedule.stale?'Schedule unavailable.':'';scheduleStatus.hidden=!value.schedule.stale;}
+    if(scheduleStatus){
+      scheduleStatus.textContent=value.schedule.stale
+        ? (value.schedule.available?'Showing a saved schedule.':'Schedule unavailable.') : '';
+      scheduleStatus.hidden=!value.schedule.stale;
+    }
     els.shift.textContent=value.schedule.shift;els.lunch.textContent=value.schedule.lunch;els.schedule.textContent=value.schedule.detail;els.schedule.dataset.stale=String(value.schedule.stale);
   }
   async function request(kind,id,signal){
     if(cachedProfileOnly)throw Error('Only saved facts are available.');
     if(kind==='schedule'){
       const owner=facts,generation=securityGeneration,invocation=updateSequence,originalBinding=homeBinding(id);
-      const currentRequest=()=>{
-        if(signal?.aborted||owner!==facts||generation!==securityGeneration||invocation!==updateSequence)return false;
+      const serviceDate=zooServiceDate();
+      const ownsRead=()=>{
+        if(owner!==facts||generation!==securityGeneration||invocation!==updateSequence||zooServiceDate()!==serviceDate)return false;
         const captured=captureSecurity();
         return admitted(captured)&&owner===facts&&generation===securityGeneration&&invocation===updateSequence
-          &&!signal?.aborted&&homeBinding(captured.id)===originalBinding;
+          &&zooServiceDate()===serviceDate&&homeBinding(captured.id)===originalBinding;
       };
       const requireCurrent=()=>{
-        if(!currentRequest())throw Object.assign(new Error('Schedule request invalidated'),{code:'schedule_request_invalidated'});
+        if(signal?.aborted||!ownsRead())throw Object.assign(new Error('Schedule request invalidated'),{code:'schedule_request_invalidated'});
       };
       requireCurrent();
       const observedAvailability=await schedule.begin(id,{signal});
-      requireCurrent();
+      const cancelRead=async()=>{
+        if(!ownsRead())return;
+        await schedule.cancel(id,observedAvailability,ownsRead).catch(()=>{});
+        if(ownsRead())owner.redraw();
+      };
       // Request the same displayed calendar day that acceptance/cache fencing
       // requires; the server's default operational day changes at04:00.
-      let day;try{day=await requestJson(`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}&service_date=${encodeURIComponent(zooServiceDate())}`,{signal});}
-      catch(error){
+      let day, abort;
+      try{
         requireCurrent();
-        // A received HTTP failure is not a cancelled/offline request. Keep the
-        // unresolved read if the transport could not persist UNAVAILABLE;
-        // restoring its prior AVAILABLE would revive stale work on restart.
-        let noResponse=false;
-        try{const status=error?.status;noResponse=status===undefined||status===null||status===0;}catch{ /* Unreadable response metadata remains uncertain. */ }
-        if(noResponse){
-          requireCurrent();
-          await schedule.cancel(id,observedAvailability).catch(()=>{});
-          requireCurrent();
-        }
+        const interrupted=new Promise((_,reject)=>{
+          abort=()=>reject(Object.assign(new Error('Schedule read interrupted'),{name:'AbortError'}));
+          signal.addEventListener('abort',abort,{once:true});
+        });
+        const path=`/schedule-api/my-day-summary?device_id=${encodeURIComponent(id.deviceId)}&service_date=${encodeURIComponent(serviceDate)}`;
+        day=await Promise.race([interrupted,Promise.resolve().then(()=>{requireCurrent();return requestJson(path,{signal});})]);
+      }catch(error){
+        // Restore only this original ticket when JS stopped waiting without an
+        // HTTP result. Denial or malformed HTTP data cannot revive saved work.
+        const status=error?.status;
+        if(status===undefined||status===null||status===0)await cancelRead();
         throw error;
-      }
+      }finally{if(abort)signal.removeEventListener('abort',abort);}
       requireCurrent();
       if(!admitted(captureSecurity({data:day})))throw Error('Schedule assignment changed');
       requireCurrent();

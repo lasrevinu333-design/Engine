@@ -48,20 +48,6 @@
     }
     html[data-trail-theme="terracotta"] .action:focus-visible {outline:4px solid var(--trail-focus);outline-offset:3px
     }
-    html[data-trail-theme="terracotta"] .phoneLock {color:var(--trail-ink)
-    }
-    html[data-trail-theme="terracotta"] .phoneLockPanel {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);color:var(--trail-ink)
-    }
-    html[data-trail-theme="terracotta"] .phoneLockBrand {color:var(--trail-ink);text-shadow:none
-    }
-    html[data-trail-theme="terracotta"] .phoneLockClock {text-shadow:none
-    }
-    html[data-trail-theme="terracotta"] .phoneLockDate {text-shadow:none
-    }
-    html[data-trail-theme="terracotta"] .phoneLockName {border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink);text-shadow:none
-    }
-    html[data-trail-theme="terracotta"] .phoneUnlock {border:none;background:var(--trail-brand);color:var(--trail-on-brand);box-shadow:var(--trail-shadow)
-    }
     html[data-trail-theme="terracotta"] .stateCard {border:1px solid var(--trail-border);background:var(--trail-surface);box-shadow:var(--trail-shadow);color:var(--trail-ink)
     }
     html[data-trail-theme="terracotta"] .stateCard p {color:var(--trail-ink)

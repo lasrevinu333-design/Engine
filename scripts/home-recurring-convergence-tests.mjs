@@ -51,6 +51,40 @@ try{
  await app.update(true);
  check(element('home-shift').textContent,'7:00 AM–4:00 PM','current authenticated facts displayed');
  check(element('home-schedule-freshness').dataset.stale,'false','successful matched facts fresh');
+ const scheduleAvailability=globalThis.MemphisRecurringScheduleTarget.availabilityKey(binding);
+ const realSetTimeout=globalThis.setTimeout,realClearTimeout=globalThis.clearTimeout;
+ const timeouts=new Map();
+ globalThis.setTimeout=(fn,ms,...args)=>{
+  if(ms!==15000)return realSetTimeout(fn,ms,...args);
+  const token={};timeouts.set(token,fn);return token;
+ };
+ globalThis.clearTimeout=token=>{if(!timeouts.delete(token))realClearTimeout(token);};
+ try{
+  for(const timedOut of [false,true]){
+   let respond,start;
+   const started=new Promise(resolve=>{start=resolve;});
+   requestHook=()=>new Promise(resolve=>{respond=resolve;start();});
+   const refresh=app.update(true);
+   await started;
+   check(timeouts.size,1,'Home shares the full Schedule read budget');
+   const saved=stored.get(key);
+   check(JSON.parse(stored.get(scheduleAvailability)).state,'READING','pending signed read owns its fence');
+   if(timedOut){
+    for(const expire of timeouts.values())expire();
+    await refresh;
+    for(let i=0;i<4;i++)await new Promise(resolve=>setImmediate(resolve));
+    check(JSON.parse(stored.get(scheduleAvailability)).state,'AVAILABLE','timeout releases the same-owner fence');
+    check(element('home-schedule-freshness').dataset.stale,'true','restored facts remain marked saved');
+    check(element('home-schedule-status').textContent,'Showing a saved schedule.','saved and unavailable schedules are distinct');
+   }
+   respond(structuredClone(next));
+   await refresh;
+   for(let i=0;i<4;i++)await new Promise(resolve=>setImmediate(resolve));
+   check(element('home-shift').textContent,'7:00 AM–4:00 PM','verified same-owner shift remains usable');
+   if(timedOut)check(stored.get(key),saved,'late reply cannot overwrite the retained row');
+   else check(element('home-schedule-freshness').dataset.stale,'false','response within shared budget remains current');
+  }
+ }finally{requestHook=null;globalThis.setTimeout=realSetTimeout;globalThis.clearTimeout=realClearTimeout;}
  offline=true;await app.update(true);
  check(element('home-shift').textContent,'7:00 AM–4:00 PM','offline preserves known current shift');
  check(element('home-schedule-freshness').dataset.stale,'true','failed fetch cannot re-fresh shared cached schedule');

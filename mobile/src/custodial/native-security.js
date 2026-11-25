@@ -40,6 +40,10 @@ export function getNativeProviderMirrorBridge() {
   return createNativeProviderMirrorBridge(CustodialNativeVault);
 }
 
+export function readNativePhonePresentation(wake) {
+  return CustodialNativeVault.phonePresentation(wake ? { unlock_wake: wake } : {});
+}
+
 function isLocalBrowserTestRuntime() {
   if (!browserTestBuild || typeof location === 'undefined') return false;
   return location.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(location.hostname);

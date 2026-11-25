@@ -593,6 +593,7 @@ if (edition === 'manager') {
   };
   await buildSharedNativeFiles();
   await injectNativeScripts('memphis-custodial-bridge.js');
+  await cp(join(source, 'custodial-phone-clock.css'), join(dist, 'custodial-phone-clock.css'));
   await cp(join(source, 'index.html'), join(dist, 'index.html'));
   await cp(join(source, 'index.html'), join(dist, 'start_page1.html'));
   await buildJavascript({ entryPoints: [join(source, 'app.js')], bundle: true, format: 'iife', outfile: join(dist, 'mobile-custodial.js'), target: ['es2022'],

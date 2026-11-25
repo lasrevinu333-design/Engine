@@ -43,8 +43,11 @@ export function createScheduleHomeConvergence({identity,storage,mutate,captureMu
     }
     if(!ticket)throw failure('schedule_availability_write_failed');return ticket;
   }
-  async function cancel(id,ticket){if(ticket?.state!=='READING')return;
-    await atomic(id,()=>{if(!current(id))throw failure('schedule_target_principal');api.writeAvailability(storage,id.protectedBinding,zooServiceDate(now()),ticket.priorState,ticket);});}
+  async function cancel(id,ticket,owns=()=>true){if(ticket?.state!=='READING')return;
+    await atomic(id,()=>{
+      if(!owns()||!current(id)||ticket.serviceDate!==zooServiceDate(now()))throw failure('schedule_request_invalidated');
+      api.writeAvailability(storage,id.protectedBinding,ticket.serviceDate,ticket.priorState,ticket);
+    });}
   const current=id=>id?.protectedBinding&&homeBinding(identity())===homeBinding(id);
   const failure=code=>Object.assign(new Error(code),{code});
   function unavailable(id,blocked=false){return {service_date:zooServiceDate(now()),canonical_device_id:id.deviceId,
@@ -95,7 +98,7 @@ export function createScheduleHomeConvergence({identity,storage,mutate,captureMu
       // cannot replace a missing shared row, including historical V4 bytes.
       if(!row)return unavailable(id);
       const result=facts(row,id);
-      return {...result,stale:result.stale===true||fallback?.stale===true
+      return {...result,stale:result.stale===true||!fallback||fallback.stale===true
         ||Boolean(row.recurring_target&&fallback?.schedule_target_digest!==row.recurring_target.targetDigest)};}
     catch{return unavailable(id);}
   }

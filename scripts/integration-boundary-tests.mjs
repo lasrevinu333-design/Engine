@@ -33,11 +33,11 @@ test('current online response renders and records the exact typed v2 snapshot',a
  assert.equal(row.schema_version,'employee-schedule-snapshot.v2');assert.equal(row.device_id,'KIOSK_08');assert.equal(row.principal,'race-principal');
  assert.equal(row.recurring_target.target.authorityRevision,19);assert.equal(row.data.employee_id,scheduleId(2));
 });
-test('ordinary disconnected transport retains verified same-principal coverage quietly',async()=>{
+test('ordinary disconnected transport retains verified same-principal coverage with the saved-schedule notice',async()=>{
  const f=await mountedSchedule(),before=f.stored.get(currentScheduleKey);
  f.context.fetch=async()=>{throw new TypeError('Synthetic disconnected transport');};await f.load();await f.settle();
  assert.equal(f.node('content').hidden,false);assert.equal(f.stored.get(currentScheduleKey),before);assert.match(f.node('areas').innerHTML,/Old Area/);
- assert.equal(f.node('state-text').textContent,'');
+ assert.equal(f.node('state-text').textContent,'Showing a saved schedule. Could not check for changes.');
 });
 for(const [name,change]of[
  ['old employee',r=>{r.data.employee_id=scheduleId(90);}],['different assignment',r=>{r.data.assignment_epoch=6;}],

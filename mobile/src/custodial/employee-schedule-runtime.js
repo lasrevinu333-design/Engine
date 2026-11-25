@@ -515,7 +515,8 @@ export function installEmployeeSchedule(options) {
       if(paused)return;
       nativeTypedRender=null;
       if(loading){queued=true;++loadVersion;activeRequest?.abort();return;}loading=true;const version=++loadVersion;if(reason==='launch')state('Loading…');
-      const controller=new AbortController();activeRequest=controller;const timeout=setTimeout(()=>controller.abort(),15000);
+      const controller=new AbortController();activeRequest=controller;
+      const timeout=setTimeout(()=>controller.abort(),window.MemphisRecurringScheduleTarget.SCHEDULE_READ_TIMEOUT_MS);
       // Immutable caller authority is created before the first bridge callback.
       // Inner helpers may never adopt a later global version after reentry.
       const generation=securityGeneration;

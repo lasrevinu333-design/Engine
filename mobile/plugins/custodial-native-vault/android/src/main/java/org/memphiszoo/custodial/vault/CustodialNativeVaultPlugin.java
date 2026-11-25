@@ -178,6 +178,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     private RemovalCoordinator removal;
     private volatile CustodialNativeRuntime applicationRuntime;
     private final AtomicReference<Object> providerForegroundEpoch=new AtomicReference<>();
+    private final PhonePresentation phoneClock = new PhonePresentation();
     private final AtomicBoolean providerRecoveryQueued=new AtomicBoolean();
     // Only a bounded non-sensitive native causal code survives startup refusal.
     // No failed constructor becomes an EMPTY/active state or a fallback engine.
@@ -1091,6 +1092,20 @@ public final class CustodialNativeVaultPlugin extends Plugin {
         });
     }
 
+    @PluginMethod
+    public void phonePresentation(PluginCall call) {
+        execute(call, () -> {
+            final Object originalWake = phoneClock.captureWake();
+            if (originalWake == null || originalBrowserOwnerRetired) {
+                resolve(call, Map.of("unlocked", false));
+                return;
+            }
+            NativeProviderPrincipal principal = applicationRuntime.readNotificationMutationPrincipal();
+            resolve(call, phoneClock.observe(originalWake, principal == null ? null : principal.digest,
+                call.getString("unlock_wake")));
+        });
+    }
+
     @Override
     protected void handleOnResume() {
         if(originalBrowserOwnerRetired||applicationRuntime==null)return;
@@ -1099,6 +1114,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
             ||activity==null||activity.isFinishing()||activity.isDestroyed())return;
         // The actual native lifecycle produces a fresh opaque withdrawal
         // identity. It is never a principal, clock, manager or effect grant.
+        phoneClock.resume();
         providerForegroundEpoch.set(new Object());queueProviderRecovery();
         var locationView=activity.getWindow().getDecorView();
         locationView.post(this::queuePhoneLocationStart);
@@ -1115,6 +1131,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
 
     @Override
     protected void handleOnPause() {
+        phoneClock.pause();
         Object epoch=providerForegroundEpoch.getAndSet(null);
         queueProviderDetach(applicationRuntime,epoch);
     }
@@ -1185,6 +1202,7 @@ public final class CustodialNativeVaultPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         originalBrowserOwnerRetired=true;
+        phoneClock.pause();
         Object epoch=providerForegroundEpoch.getAndSet(null);
         try{queueProviderDetach(applicationRuntime,epoch);}
         finally{

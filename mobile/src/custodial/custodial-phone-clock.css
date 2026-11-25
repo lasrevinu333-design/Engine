@@ -1,0 +1,24 @@
+.phoneLock{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:calc(max(18px,env(safe-area-inset-top)) + 16px) 20px calc(max(28px,env(safe-area-inset-bottom)) + 28px);background-image:linear-gradient(180deg,rgba(3,7,13,.48),rgba(3,7,13,.78)),url('./dashboard-bg_optimized.webp');background-size:cover;background-position:center;background-repeat:no-repeat;color:#f8fafc;touch-action:none;user-select:none;-webkit-user-select:none}
+.phoneLock[hidden]{display:none!important}.phoneLockPanel{width:min(520px,92vw);min-height:min(640px,86vh);border-radius:34px;padding:34px 24px 30px;background:linear-gradient(180deg,rgba(5,12,20,.46),rgba(5,12,20,.22));border:1px solid rgba(255,255,255,.14);box-shadow:0 22px 60px rgba(0,0,0,.38);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;text-align:center}
+.phoneLockBrand{margin-top:auto;font-size:.82rem;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--green,#b7e66a);text-shadow:0 2px 12px rgba(0,0,0,.32)}
+.phoneLockClock{margin-top:12px;font-size:clamp(3rem,18vw,5.7rem);font-weight:900;line-height:.92;letter-spacing:-.08em;text-shadow:0 5px 24px rgba(0,0,0,.36)}
+.phoneLockDate{margin-top:12px;font-size:clamp(1.05rem,4.4vw,1.42rem);font-weight:900;letter-spacing:.04em;text-shadow:0 3px 16px rgba(0,0,0,.34)}
+.phoneLockName{margin-top:18px;padding:11px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.28);font-size:clamp(1.2rem,5vw,1.7rem);font-weight:900;color:#f7ffd9;text-shadow:0 2px 10px rgba(0,0,0,.45)}
+.phoneUnlock{margin-top:auto;min-width:min(250px,78vw);min-height:62px;padding:16px 24px;border:none;border-radius:18px;background:linear-gradient(180deg,#c7ef81,#9bd449);color:#102106;font-size:1.16rem;font-weight:900;box-shadow:0 12px 28px rgba(0,0,0,.3)}
+.phoneLockDialog{box-sizing:border-box;width:100%;height:100%;max-width:none;max-height:none;margin:0;border:0;background-color:#111827;font-family:Arial,sans-serif}
+.phoneLockDialog:not([open]){display:none}
+.phoneLockDialog::backdrop{background:#111827}
+html[data-trail-theme="terracotta"] .phoneLock {color:var(--trail-ink)
+}
+html[data-trail-theme="terracotta"] .phoneLockPanel {background:var(--trail-surface);border:1px solid var(--trail-border);box-shadow:var(--trail-shadow);color:var(--trail-ink)
+}
+html[data-trail-theme="terracotta"] .phoneLockBrand {color:var(--trail-ink);text-shadow:none
+}
+html[data-trail-theme="terracotta"] .phoneLockClock {text-shadow:none
+}
+html[data-trail-theme="terracotta"] .phoneLockDate {text-shadow:none
+}
+html[data-trail-theme="terracotta"] .phoneLockName {border:1px solid var(--trail-border);background:var(--trail-surface);color:var(--trail-ink);text-shadow:none
+}
+html[data-trail-theme="terracotta"] .phoneUnlock {border:none;background:var(--trail-brand);color:var(--trail-on-brand);box-shadow:var(--trail-shadow)
+}
