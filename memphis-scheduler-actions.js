@@ -693,11 +693,12 @@ function create({auth,api,baseUrl,storage=root.localStorage,onState=()=>{},nonce
   },
   async run(path,body){if(read())throw Error('Resolve the saved scheduler request before submitting another change.');identity();
    if(commandRoute(path)&&path.endsWith('/cancel'))throw Error('Cancel only the exact saved unpublished preparation through its original control.');
+   if(ownerPaths.has(path))throw Error('Use the protected Stable vacancy review in Weekly Schedule.');
    if(staffingOperation(path)==='vacate_roster_slot')throw Error('Review the genuine vacancy candidate first. Old saved vacancy work may only read its original outcome.');
    if(!authorized(auth,path,body)||!Number.isSafeInteger(body?.expected_revision)||body.expected_revision<0||typeof body.idempotency_key!=='string'||!body.idempotency_key)throw Error('This scheduler change is not authorized or complete.');
    const r={schema:'custodial.scheduler-pending.v1',base,managerId:owner.managerId,path,body:copy(body),encoded:JSON.stringify(body),state:'PENDING',receipt:null,error:null};if(staffingOperation(path))staffingRequest(r);save(r);return send(r);
   },
-  async retry(){const r=read();if(!r)throw Error('No saved scheduler request.');if(r.state==='REJECTED')throw Error('This request was conclusively rejected. Refresh and dismiss it before entering a corrected change.');if(r.state==='ACCEPTED')return r.receipt;if(isStaffingCommand(r)){if(sending)throw Error('Staffing request is already in progress.');sending=true;try{return await reviewCommand(r);}finally{sending=false;}}if(staffingOperation(r.path)){if(sending)throw Error('Staffing request is already in progress.');sending=true;try{return await readStaffing(r);}finally{sending=false;}}return send({...r,state:'PENDING',error:null});},
+  async retry(){const r=read();if(!r)throw Error('No saved scheduler request.');if(ownerPaths.has(r.path))throw Error('The legacy turnover original is retained. No request was resent.');if(r.state==='REJECTED')throw Error('This request was conclusively rejected. Refresh and dismiss it before entering a corrected change.');if(r.state==='ACCEPTED')return r.receipt;if(isStaffingCommand(r)){if(sending)throw Error('Staffing request is already in progress.');sending=true;try{return await reviewCommand(r);}finally{sending=false;}}if(staffingOperation(r.path)){if(sending)throw Error('Staffing request is already in progress.');sending=true;try{return await readStaffing(r);}finally{sending=false;}}return send({...r,state:'PENDING',error:null});},
   acknowledge(snapshot){const r=read();if(!r||r.state!=='ACCEPTED')return false;const p=receiptProjection(r.receipt);
    if(isStaffingCommand(r)){
     return acknowledgeStaffing([snapshot]);

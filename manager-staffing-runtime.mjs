@@ -1,4 +1,4 @@
-import {mountStaffingPage} from './manager-staffing-page.mjs?v=2026.11.11.current-roster';
+import {mountStaffingPage} from './manager-staffing-page.mjs?v=20261125-r1';
 
 const native=w=>w.MemphisCustodialSecurity?.native===true||w.MemphisMobile?.edition==='custodial'
   ||w.MemphisMobileBuildIdentity?.edition==='custodial'||w.Capacitor?.isNativePlatform?.()===true;

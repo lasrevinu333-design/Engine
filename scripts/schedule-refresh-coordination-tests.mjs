@@ -21,9 +21,9 @@ for(const action of ['publishDraft()','reverseChange({target:{closest:()=>({data
 for(const preserveDayInput of [false,true]){
  const f=fixture();f.run('installScheduleAutoRefresh()');
  if(preserveDayInput){f.choice.checked=true;f.emit('document','change',{target:f.choice});}
- f.node('turnover-dialog').showModal();f.emit('document','input',{target:{closest:selector=>selector.includes('#turnover-form')?{}:null}});
- await f.run('requestScheduleRefresh()');f.run('closeTurnoverDialog()');await f.fire(0);
- check(f.run('state.scheduleInputDirty'),preserveDayInput,'closing turnover preserves actual day choice');
+ f.node('vacancy-dialog').showModal();f.emit('document','input',{target:{closest:selector=>selector.includes('#vacancy-form')?{}:null}});
+ await f.run('requestScheduleRefresh()');f.run('closeVacancyDialog()');await f.fire(0);
+ check(f.run('state.scheduleInputDirty'),preserveDayInput,'closing vacancy preserves actual day choice');
  check(f.calls.length,preserveDayInput?0:2,'close releases read only without remaining choice');await f.cleanup();
 }
 for(const phase of ['auth','fetch','body']){
@@ -44,7 +44,7 @@ for(const phase of ['auth','fetch','body']){
  const action=f.run("confirmAction('Synthetic review').then(approved=>{if(approved)return busy(()=>recordWrite('confirmed'));})");
  await f.run('requestScheduleRefresh()');f.node('action-confirm-dialog').close('cancel');await action;await f.fire(0);
  check(f.writes.length,0,'cancelled confirmation never writes');check(f.calls.length,2,'cancelled confirmation releases queued read');
- f.node('turnover-dialog').showModal();await f.run('requestScheduleRefresh()');f.run('closeTurnoverDialog()');
+ f.node('vacancy-dialog').showModal();await f.run('requestScheduleRefresh()');f.run('closeVacancyDialog()');
  check([...f.timers.values()].filter(t=>t.delay===0).length,1,'close owns only one deferred task');await f.cleanup();
 }
 // The real API cannot acquire a new principal after any asynchronous phase.

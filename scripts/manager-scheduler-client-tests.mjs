@@ -1329,160 +1329,27 @@ function pageFixture(){
  vm.runInContext('globalThis.page={state,els,renderChanges,renderApprovedPreview,renderApprovedCapacity,publishDraft,generateDraft,applyDayChanges,rebuildCurrentProjection,reverseChange,refreshSnapshot,api,init,mondayOf,setControls,confirmStaffingPreview,resumeStaffingPreview,displayStaffingPreview,vacancyEls,openTurnoverDialog,openVacancyDialog,loadVacancySource,submitVacancy,renderVacancyPreview,renderRoster};',context);
  return{...f,context,nodes,page:context.page};
 }
-function serverDayTurnoverFixture(){
- const f=pageFixture(),s={week_start:'2026-10-05',week_end:'2026-10-11',current_service_date:'2026-10-06',projection_status:'current',authority_revision:42,
-  current_publication:{publication_id:PID},availability:[],roster:[{slot_id:CID,week_staffing:[
-   {service_date:'2026-10-05',person_id:MID,person_name:'Local Monday person'},
-   {service_date:'2026-10-06',person_id:SOURCE,person_name:'Server Tuesday person'},
-   {service_date:'2026-10-07',person_id:SOURCE,person_name:'Same person next day'}]}]};
- let nonces=0,localReads=0;f.page.state.snapshot=s;f.auth.getCSTDateString=()=>{localReads++;return '2026-10-12';};
- f.page.els.week_start.value=s.week_start;f.page.els.service_date.value='2026-10-05';
- f.page.els.turnover_dialog.showModal=()=>{};f.page.els.turnover_dialog.close=()=>{};
- f.context.crypto={randomUUID:()=>{nonces++;return CID;}};
- f.page.state.actions=A.create({auth:f.auth,api:f.api,baseUrl:'https://scheduler.onrender.com',storage:f.storage,onState:r=>f.page.state.pending=r});
- vm.runInContext('busy=async(work)=>work();refreshSnapshot=async()=>{};globalThis.submitFromSource=submitTurnover;',f.context);
- const open=(mode='departed')=>f.page.openTurnoverDialog({target:{closest:()=>({dataset:{turnoverSlot:CID,turnoverMode:mode}})}});
- return{...f,s,open,submit:()=>f.context.submitFromSource({preventDefault(){}}),nonces:()=>nonces,localReads:()=>localReads};
-}
-test('TURNOVER_ORIGINAL_PRINCIPAL_NEW: successor owner cannot inherit original open review with remounted current actions',async()=>{
- const f=serverDayTurnoverFixture();f.open();const original=f.page.state.turnoverSelection;let closes=0;
- f.page.els.turnover_dialog.close=()=>{closes++;};f.patch({manager_id:PID});
- // Existing Source auth/action DATA fixture, not actual manager authority.
- // Remount the actual actions helper for CURRENT synthetic owner without
- // reopening/changing the original dialog or server-day/person tuple.
- f.page.state.actions=A.create({auth:f.auth,api:f.api,baseUrl:'https://scheduler.onrender.com',storage:f.storage,onState:r=>f.page.state.pending=r});
- f.setMode('offline');let error;try{await f.submit();}catch(caught){error=caught;}
- assert.equal(f.calls.length,0,'Successor owner inherited old review and reached recorded sender');
- assert.match(error?.message||'',/Manager access changed/);assert.equal(f.nonces(),0);assert.equal(closes,0);
- assert.equal(f.map.size,0);assert.equal(f.page.state.turnoverSelection,original);
-});
-test('TURNOVER_ORIGINAL_PRINCIPAL_NEW: manager credential device changes and revocation refuse before new command or close',async()=>{
- for(const patch of [{manager_id:PID},{credential_id:SOURCE},{device_id:'successor-device'},
-  {read_only:true},{credential_id:null},{permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:false}}]){
-  const f=serverDayTurnoverFixture();f.open();const original=f.page.state.turnoverSelection;let closes=0;
-  f.page.els.turnover_dialog.close=()=>{closes++;};f.patch(patch);
-  await assert.rejects(f.submit(),/Manager access changed|not available|not authorized/);
-  assert.equal(f.nonces(),0);assert.equal(closes,0);assert.equal(f.calls.length,0);assert.equal(f.map.size,0);
-  assert.equal(f.page.state.turnoverSelection,original);
- }
-});
-test('TURNOVER_ORIGINAL_PRINCIPAL_NEW: private principal is detached frozen identity without token authority',()=>{
- const f=serverDayTurnoverFixture(),expected=A.principal(f.auth);f.open();const selected=f.page.state.turnoverSelection;
- assert.ok(Object.isFrozen(selected)&&Object.isFrozen(selected.principal));
- assert.deepEqual(Object.keys(selected.principal).sort(),['credentialId','deviceId','managerId']);
- assert.deepEqual({...selected.principal},expected);assert.equal(A.same(selected.principal,A.principal(f.auth)),true);
- for(const key of Object.keys(selected.principal)){
-  assert.equal(Reflect.set(selected.principal,key,'changed'),false);assert.equal(Reflect.deleteProperty(selected.principal,key),false);
-  assert.equal(Reflect.defineProperty(selected.principal,key,{value:'changed'}),false);
- }
- f.patch({manager_id:PID,credential_id:SOURCE,device_id:'new-device'});
- assert.deepEqual({...selected.principal},expected);assert.equal(A.same(selected.principal,A.principal(f.auth)),false);
- assert.equal(f.nonces(),0);assert.equal(f.calls.length,0);assert.equal(f.map.size,0);
-});
-test('TURNOVER_ORIGINAL_PRINCIPAL_NEW: queued and close-callback principal changes refuse before persistence or send',async()=>{
- for(const patch of [{manager_id:PID},{credential_id:SOURCE},{device_id:'new-device'},{read_only:true}]){
-  const queued=serverDayTurnoverFixture();queued.open();const original=queued.page.state.turnoverSelection;let release,closes=0;
-  queued.page.els.turnover_dialog.close=()=>{closes++;};
-  queued.context.waitPrincipalCheck=new Promise(resolve=>release=resolve);
-  vm.runInContext('busy=async(work)=>{await waitPrincipalCheck;return work();};',queued.context);
-  const pending=queued.submit();queued.patch(patch);release();
-  await assert.rejects(pending,/Manager access changed|not available|not authorized/);
-  assert.equal(closes,0);assert.equal(queued.calls.length,0);assert.equal(queued.map.size,0);
-  assert.equal(queued.page.state.turnoverSelection,original);assert.equal(queued.nonces(),1,'Only pre-queue original key allocation; no successor command');
-  const closing=serverDayTurnoverFixture();closing.open();const selected=closing.page.state.turnoverSelection;
-  closing.page.els.turnover_dialog.close=()=>closing.patch(patch);
-  await assert.rejects(closing.submit(),/Manager access changed|not available|not authorized/);
-  assert.equal(closing.calls.length,0);assert.equal(closing.map.size,0);assert.equal(closing.page.state.turnoverSelection,selected);
- }
-});
 test('TURNOVER_ORIGINAL_PRINCIPAL_NEW: unchanged principal retains one unknown original and blocks successor resubmission',async()=>{
- // Existing synthetic auth/DOM/transport data only. No actual manager,
- // endpoint authorization, browser, HTTP/SQL or performed-work claim.
- for(const mode of ['departed','replace']){
-  const f=serverDayTurnoverFixture();f.open(mode);const selected=f.page.state.turnoverSelection;
-  f.patch({device_id:'fixture-browser'});assert.equal(A.same(selected.principal,A.principal(f.auth)),true);
-  f.page.els.replacement_name.value='Original reviewed replacement';f.setMode('offline');
-  await assert.rejects(f.submit(),/network unavailable/);
-  const saved=f.page.state.actions.pending(),encoded=saved.encoded;
-  assert.equal(saved.state,'PENDING');assert.equal(saved.managerId,selected.principal.managerId);
-  assert.equal(f.calls.length,1);assert.equal(f.nonces(),1);assert.equal(f.page.state.turnoverSelection,null);
-  const originalStored=[...f.map.entries()];
-  f.patch({manager_id:PID});assert.throws(()=>f.open(mode),/Resolve the saved scheduler request/);
-  await assert.rejects(f.submit(),/Resolve the saved scheduler request/);
-  assert.throws(()=>f.page.state.actions.pending(),/Manager access changed/);
-  assert.deepEqual([...f.map.entries()],originalStored);assert.equal(saved.encoded,encoded);
-  assert.equal(f.calls.length,1);assert.equal(f.nonces(),1);
+ const f=fixture();f.patch({read_only:false,permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:true}});
+ for(const path of ['/static-weekly/employees/departed','/static-weekly/employees/replacements']){
+  f.map.clear();
+  const action=f.create(),body={slot_id:CID,expected_revision:42,week_start:'2026-10-05',reason:'Retained request',idempotency_key:'exact-old-command'};
+  await assert.rejects(action.run(path,body),/Stable vacancy/);assert.equal(f.map.size,0);assert.equal(f.calls.length,0);
+  const base='https://scheduler.onrender.com',raw=JSON.stringify({schema:'custodial.scheduler-pending.v1',base,managerId:MID,path,body,
+    encoded:JSON.stringify(body),state:'PENDING',receipt:null,error:null});
+  f.map.set('mz_scheduler_dated_operation_v1:'+encodeURIComponent(base)+':'+MID,raw);
+  assert.equal(action.pending().encoded,JSON.stringify(body));
+  await assert.rejects(action.retry(),/original is retained/);assert.equal(f.calls.length,0);assert.equal([...f.map.values()][0],raw);
  }
 });
-test('SERVER_DATE_TURNOVER_NEW: wrong local week cannot disable server-current roster or select local incumbent',()=>{
- const f=pageFixture(),s={week_start:'2026-10-05',week_end:'2026-10-11',current_service_date:'2026-10-06',
-  projection_status:'current',authority_revision:42,current_publication:{publication_id:PID},availability:[],roster:[{slot_id:CID,
-   week_staffing:[{service_date:'2026-10-05',person_id:MID,person_name:'Monday original'},{service_date:'2026-10-06',person_id:SOURCE,person_name:'Server Tuesday original'}]}]};
- f.page.state.snapshot=s;f.auth.getCSTDateString=()=> '2026-10-12';f.page.els.turnover_dialog.showModal=()=>{};
- f.page.renderRoster(s,[{slot_id:CID,person_id:SOURCE,person_name:'Server Tuesday original',availability_state:'working'}]);
- const buttons=[...f.page.els.roster_list.innerHTML.matchAll(/<button\b[^>]*>/g)].map(match=>match[0]);
- assert.equal(buttons.length,2);assert.ok(!buttons[0].includes('disabled'),'Server-current week must not depend on client clock');
- f.page.openTurnoverDialog({target:{closest:()=>({dataset:{turnoverSlot:CID,turnoverMode:'departed'}})}});
- assert.equal(f.page.state.turnoverSelection.date,'2026-10-06');assert.equal(f.page.state.turnoverSelection.personId,SOURCE);
- assert.equal(f.page.els.turnover_current.textContent,'Server Tuesday original');assert.equal(f.page.els.turnover_effective_date.value,'2026-10-06');
- assert.equal(f.calls.length,0);assert.equal(f.map.size,0);
-});
-test('SERVER_DATE_TURNOVER_NEW: missing invalid or out-of-week server day never falls back to local or selected day',async()=>{
- for(const date of [undefined,null,'','2026-02-30','2026-10-06 ','2026-10-04','2026-10-12']){
-  const f=serverDayTurnoverFixture(),originalSelection=f.page.state.turnoverSelection;f.s.current_service_date=date;
-  f.page.renderRoster(f.s,[{slot_id:CID,person_id:SOURCE,person_name:'Retained person'}]);
-  const buttons=[...f.page.els.roster_list.innerHTML.matchAll(/<button\b[^>]*>/g)].map(m=>m[0]);
-  assert.ok(buttons.every(button=>button.includes('disabled')));
-  assert.throws(()=>f.open(),/current operational week/);assert.equal(f.page.state.turnoverSelection,originalSelection);
-  assert.equal(f.calls.length,0);assert.equal(f.map.size,0);assert.equal(f.nonces(),0);assert.equal(f.localReads(),0);
+test('SERVER_DATE_TURNOVER_NEW: missing invalid or out-of-week server day never falls back to local or selected day',()=>{
+ const f=pageFixture(),row={slot_id:CID,slot_label:'Valid position',incumbencies:[{person_id:MID,person_name:'Current employee',effective_start:'2026-09-01',effective_end:null}],
+  week_staffing:[{service_date:'2026-10-05',person_id:MID,person_name:'Current employee',employee_active:true,availability_state:'working'}]};
+ for(const current_service_date of [null,'2026-10-99','2026-10-12']){
+  const s={week_start:'2026-10-05',week_end:'2026-10-11',current_service_date,projection_status:'current',current_publication:{publication_id:SOURCE},availability:[],roster:[row]};
+  f.page.renderRoster(s,[row]);assert.match(f.page.els.roster_list.innerHTML,/data-turnover-mode="vacate" disabled/);
  }
-});
-test('SERVER_DATE_TURNOVER_NEW: original server day person revision publication and dialog stay bound before submit',async()=>{
- for(const change of ['day','missing-day','invalid-day','person','revision','publication','week','effective-day','mode']){
-  const f=serverDayTurnoverFixture();f.open();const original=f.page.state.turnoverSelection;
-  assert.ok(Object.isFrozen(original));assert.equal(original.personId,SOURCE);assert.equal(original.date,'2026-10-06');
-  if(change==='day')f.s.current_service_date='2026-10-07';if(change==='missing-day')delete f.s.current_service_date;
-  if(change==='invalid-day')f.s.current_service_date='2026-02-30';if(change==='person')f.s.roster[0].week_staffing[1].person_id=MID;
-  if(change==='revision')f.s.authority_revision++;if(change==='publication')f.s.current_publication={publication_id:SOURCE};
-  if(change==='week')f.s.week_start='2026-10-06';if(change==='effective-day')f.page.els.turnover_effective_date.value='2026-10-05';
-  if(change==='mode')f.page.els.turnover_mode.value='replace';
-  await assert.rejects(f.submit(),/staffing record changed/);
-  assert.equal(f.page.state.turnoverSelection,original);assert.equal(f.calls.length,0);assert.equal(f.map.size,0);assert.equal(f.nonces(),0);assert.equal(f.localReads(),0);
- }
-});
-test('SERVER_DATE_TURNOVER_NEW: date withdrawal while queued or closing dialog refuses without dispatch',async()=>{
- const queued=serverDayTurnoverFixture();queued.open();let release;
- queued.context.waitBeforeTurnover=new Promise(resolve=>release=resolve);
- vm.runInContext('busy=async(work)=>{await waitBeforeTurnover;return work();};',queued.context);
- const pending=queued.submit();queued.s.current_service_date='2026-10-07';release();
- await assert.rejects(pending,/staffing record changed/);assert.equal(queued.calls.length,0);assert.equal(queued.map.size,0);
- const closing=serverDayTurnoverFixture();closing.open();const original=closing.page.state.turnoverSelection;
- closing.page.els.turnover_dialog.close=()=>{closing.s.current_service_date='2026-10-07';};
- await assert.rejects(closing.submit(),/staffing record changed/);
- assert.equal(closing.page.state.turnoverSelection,original);assert.equal(closing.calls.length,0);assert.equal(closing.map.size,0);
-});
-test('SERVER_DATE_TURNOVER_NEW: actual authorization unchanged and unknown awaited original is retained without resubmit',async()=>{
- // Existing auth/action/transport DATA fixture only, NOT a real manager or
- // endpoint policy/HTTP/SQL/performed-work claim. No authorized() override.
- for(const mode of ['departed','replace']){
-  const f=serverDayTurnoverFixture(),route=mode==='replace'?'/static-weekly/employees/replacements':'/static-weekly/employees/departed';
-  assert.equal(A.authorized(f.auth,route,{}),true,'Existing synthetic owner contract, not new admission');
-  f.open(mode);f.page.els.replacement_name.value='Original replacement review';
-  f.setMode('offline');let release;f.setPending(new Promise(resolve=>release=resolve));
-  const pending=f.submit();const saved=f.page.state.actions.pending(),encoded=saved.encoded;
-  assert.equal(f.calls.length,1);assert.equal(saved.state,'PENDING');assert.equal(saved.path,route);
-  assert.equal(f.page.els.service_date.value,'2026-10-06');assert.equal(f.page.state.turnoverSelection,null);
-  const sent=JSON.parse(encoded);assert.equal(sent.slot_id,CID);assert.equal(sent.expected_revision,42);assert.equal(sent.week_start,'2026-10-05');
-  assert.equal(Object.hasOwn(sent,'service_date'),false);assert.equal(Object.hasOwn(sent,'effective_start'),false);
-  if(mode==='replace')assert.equal(sent.new_employee_name,'Original replacement review');
-  f.s.current_service_date='2026-10-07';release();await assert.rejects(pending,/network unavailable/);
-  assert.equal(f.page.state.actions.pending().encoded,encoded);assert.equal(f.page.state.actions.pending().state,'PENDING');
-  assert.throws(()=>f.open(mode),/Resolve the saved scheduler request/);await assert.rejects(f.submit(),/Resolve the saved scheduler request/);
-  assert.equal(f.calls.length,1);assert.equal(f.nonces(),1);assert.equal(f.localReads(),0);
- }
- const denied=serverDayTurnoverFixture();denied.patch({read_only:true});
- for(const route of ['/static-weekly/employees/departed','/static-weekly/employees/replacements'])assert.equal(A.authorized(denied.auth,route,{}),false);
- assert.throws(()=>denied.open(),/not available|not authorized/);assert.equal(denied.calls.length,0);assert.equal(denied.map.size,0);
+ assert.equal(f.calls.length,0);
 });
 test('ROSTER_LITERAL_DEVICE_NEW: actual roster renderer escapes original labels without changing controls',()=>{
  // Existing VM/DOM recording only: innerHTML is recorded, not browser-parsed.
@@ -1496,32 +1363,32 @@ test('ROSTER_LITERAL_DEVICE_NEW: actual roster renderer escapes original labels 
  const before=JSON.stringify(s);
  const render=(view=s,rows=[row])=>{f.page.renderRoster(view,rows);return f.page.els.roster_list.innerHTML;};
  const html=render();
- assert.ok(html.includes('<small>KIOSK08, legacy desk phone, legacy &amp; &lt;label&gt; &quot;desk&quot; &#39;alpha&#39;, &lt;span data-device=&quot;inert&quot; onpointerover=&quot;INERT_MARKER&quot;&gt;phone&lt;/span&gt;</small>'),html);
+ assert.ok(html.includes('<small>Current phone assignment: KIOSK08, legacy desk phone, legacy &amp; &lt;label&gt; &quot;desk&quot; &#39;alpha&#39;, &lt;span data-device=&quot;inert&quot; onpointerover=&quot;INERT_MARKER&quot;&gt;phone&lt;/span&gt;</small>'),html);
  assert.ok(!html.includes('<label>')&&!html.includes('<span data-device="inert"'));
  assert.ok(html.includes('<strong>Worker &amp; &lt;Name&gt;</strong>'));
  assert.equal(JSON.stringify(s),before,'Rendering must not normalize/delete original identifiers or row data');
  const buttons=value=>[...value.matchAll(/<button\b[^>]*>/g)].map(match=>match[0]);
- let controls=buttons(html);assert.equal(controls.length,2);
+ let controls=buttons(html);assert.equal(controls.length,1);
  assert.ok(controls.every(button=>!button.includes('hidden')&&!button.includes('disabled')));
- assert.ok(controls[0].includes('data-turnover-mode="departed"')&&controls[1].includes('data-turnover-mode="vacate"'));
+ assert.ok(controls[0].includes('data-turnover-mode="vacate"'));
  for(const device_ids of [undefined,[],['']]){
-  const normal={...row,device_ids};assert.ok(render(s,[normal]).includes('<small>No phone</small>'));
+  const normal={...row,device_ids};assert.ok(render(s,[normal]).includes('<small>Current phone assignment: No current phone</small>'));
  }
  for(const device_ids of [['KIOSK08'],['legacy desk phone','phone-2019']]){
-  assert.ok(render(s,[{...row,device_ids}]).includes('<small>'+device_ids.join(', ')+'</small>'));
+  assert.ok(render(s,[{...row,device_ids}]).includes('<small>Current phone assignment: '+device_ids.join(', ')+'</small>'));
  }
  const absent=render(s,[{...row,availability_state:'departed_named_absent'}]);
  assert.ok(absent.includes('<small>Absent until replacement</small>'));assert.ok(!absent.includes('INERT_MARKER'));
- assert.ok(buttons(absent)[0].includes('data-turnover-mode="replace"'));
+ assert.ok(buttons(absent)[0].includes('data-turnover-mode="vacate"'));
  f.patch({read_only:true,permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:false}});
  controls=buttons(render());assert.ok(controls.every(button=>button.includes('hidden')&&button.includes('disabled')));
  f.patch({read_only:false,permissions:{schema:'custodial.manager-permissions.v1',read:true,owner:true}});
  controls=buttons(render({...s,current_publication:null}));
- assert.ok(controls.every(button=>button.includes('disabled')));assert.ok(controls[0].includes('Publish the weekly baseline first'));
+ assert.ok(controls.every(button=>button.includes('disabled')));
  controls=buttons(render({...s,week_start:'2026-10-12',week_end:'2026-10-18'}));
- assert.ok(controls.every(button=>button.includes('disabled')));assert.ok(controls[0].includes('Open the current week to change employees'));
+ assert.ok(controls.every(button=>button.includes('disabled')));
  f.page.state.pending={state:'PENDING'};controls=buttons(render());
- assert.ok(!controls[0].includes('disabled')&&controls[1].includes('disabled'));f.page.state.pending=null;
+ assert.ok(controls[0].includes('disabled'));f.page.state.pending=null;
  assert.equal(render(s,[{...row,contractor_capacity:true}]),'<div class="empty">No employee slots.</div>');
  assert.equal(render(s,[]),'<div class="empty">No employee slots.</div>');
  assert.equal(f.calls.length,0);assert.equal(f.map.size,0);assert.equal(JSON.stringify(s),before);
@@ -2372,26 +2239,6 @@ test('scheduler workflow: dismissing rejected preview forces a new review even a
  vm.runInContext(`refreshSnapshot=async()=>{};globalThis.dismissFromSource=typeof dismissRejectedScheduleRequest==='function'?dismissRejectedScheduleRequest:${inline||'undefined'};`,f.context);
  await f.context.dismissFromSource();assert.equal(discarded,1);assert.equal(dated,0);assert.equal(f.page.state.preview,null);assert.equal(f.nodes.get('approved-preview-panel').hidden,true);
 });
-test('scheduler workflow: roster form keeps unknown departure/replacement requests for exact owner-only resume',async()=>{
- for(const mode of ['departed','replace']){const f=pageFixture();f.page.state.snapshot={...snapshot,authority_revision:42,week_end:'2026-10-11',current_service_date:'2026-10-05',roster:[{slot_id:CID,week_staffing:[{service_date:'2026-10-05',person_id:MID,person_name:'Current incumbent'}]}]};f.page.els.service_date.value='2026-10-05';f.page.els.turnover_dialog.showModal=()=>{};f.page.els.turnover_dialog.close=()=>{};
-  f.page.state.actions=A.create({auth:f.auth,api:f.api,baseUrl:'https://scheduler.onrender.com',storage:f.storage,onState:r=>f.page.state.pending=r});let refreshed=0;
-  f.context.api=f.api;f.context.refreshCount=()=>refreshed++;f.context.crypto={randomUUID:()=>CID};vm.runInContext('busy=async(work)=>work();refreshSnapshot=async()=>refreshCount();globalThis.openFromSource=openTurnoverDialog;globalThis.submitFromSource=submitTurnover;',f.context);
-  f.context.openFromSource({target:{closest:()=>({dataset:{turnoverSlot:CID,turnoverMode:mode}})}});f.page.els.replacement_name.value='New dated incumbent';
-  f.setMode('offline');await assert.rejects(f.context.submitFromSource({preventDefault(){}}));const saved=f.page.state.actions.pending();assert.equal(saved?.state,'PENDING');assert.equal(refreshed,0);
-  assert.equal(saved.path,mode==='replace'?'/static-weekly/employees/replacements':'/static-weekly/employees/departed');assert.equal(saved.body.slot_id,CID);assert.equal(saved.body.expected_revision,42);if(mode==='replace')assert.equal(saved.body.new_employee_name,'New dated incumbent');
-  f.setMode('accept');await f.page.state.actions.retry();assert.equal(f.calls[0].options.body,f.calls[1].options.body);assert.equal(f.page.state.actions.acknowledge(snapshot),true);
-  const delegate=fixture();await assert.rejects(delegate.create().run(saved.path,saved.body),/not authorized/);assert.equal(delegate.calls.length,0);
- }
-});
-test('scheduler workflow: roster confirmation refuses a dialog bound to an older revision or another dated employee',async()=>{
- for(const change of ['revision','person']){const f=pageFixture();f.page.state.snapshot={...snapshot,authority_revision:42,week_end:'2026-10-11',current_service_date:'2026-10-05',roster:[{slot_id:CID,week_staffing:[{service_date:'2026-10-05',person_id:MID,person_name:'Monday incumbent'},{service_date:'2026-10-06',person_id:SOURCE,person_name:'Tuesday incumbent'}]}]};f.page.els.service_date.value='2026-10-06';f.page.els.turnover_dialog.showModal=()=>{};f.page.els.turnover_dialog.close=()=>{};
-  let sent=0;f.page.state.actions={run:async()=>{sent++;}};f.context.crypto={randomUUID:()=>CID};vm.runInContext('busy=async(work)=>work();refreshSnapshot=async()=>{};globalThis.openFromSource=openTurnoverDialog;globalThis.submitFromSource=submitTurnover;',f.context);
-  f.context.openFromSource({target:{closest:()=>({dataset:{turnoverSlot:CID,turnoverMode:'departed'}})}});assert.equal(f.page.els.turnover_current.textContent,'Monday incumbent');
-  if(change==='revision')f.page.state.snapshot.authority_revision=43;else f.page.state.snapshot.roster[0].week_staffing[0].person_id=SOURCE;
-  await assert.rejects(f.context.submitFromSource({preventDefault(){}}),/staffing record changed/);assert.equal(sent,0);
- }
-});
-
 // Existing source-only DOM seam, extended for the owning print controller.
 // Actual SHA-256/file verification runs; fixture HTTP is not real SQL/browser.
 async function printFixture({entryRevision=43,readbackRevision=43,corrupt=false,pin=true,denied=false,search=null,documentPatch={},readbackPatch={},distinctLanguages=false}={}){

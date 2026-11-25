@@ -83,17 +83,7 @@
     <div class="dialogActions"><button class="btn" id="vacancy-cancel" type="button">Cancel review</button><button class="btn primary" id="vacancy-submit" type="submit" disabled>Review affected vacancy plan</button></div>
   </form>
 </dialog>
-<dialog id="turnover-dialog" aria-labelledby="turnover-title">
-  <form id="turnover-form" class="turnoverForm">
-    <div class="dialogHeader"><div><h2 id="turnover-title">Employee change</h2><p id="turnover-current"></p></div><button class="iconBtn" id="turnover-close" type="button" title="Close" aria-label="Close"><span data-lucide="x"></span></button></div>
-    <input id="turnover-slot" type="hidden">
-    <input id="turnover-mode" type="hidden">
-    <div class="field" id="replacement-name-field"><label for="replacement-name">New employee name</label><input id="replacement-name" type="text" minlength="2" maxlength="160" autocomplete="off"></div>
-    <div class="field"><label for="turnover-effective-date">Effective today</label><input id="turnover-effective-date" type="date" required readonly></div>
-    <div class="field"><label for="turnover-reason">Reason</label><input id="turnover-reason" type="text" maxlength="500" required></div>
-    <div class="dialogActions"><button class="btn" id="turnover-cancel" type="button">Cancel</button><button class="btn primary" id="turnover-submit" type="submit"><span data-lucide="check"></span><span id="turnover-submit-label">Apply</span></button></div>
-  </form>
-</dialog>
+
 <dialog id="action-confirm-dialog" aria-labelledby="action-confirm-title" aria-describedby="action-confirm-message">
   <form method="dialog" class="turnoverForm">
     <div class="dialogHeader"><div><h2 id="action-confirm-title">Confirm change</h2></div></div>
@@ -105,8 +95,8 @@
 <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
 <script src="./memphis-ui.js?v=release-2026.07.19.custodial-v3.12"></script>
 <script src="./memphis-approved-schedule.js?v=2026.10.07.initial-selection"></script>
-<script src="./memphis-scheduler-actions.js?v=2026.11.22.projection-receipt"></script>
-<script src="./schedule-weekly.js?v=2026.11.11.current-roster"></script>
+<script src="./memphis-scheduler-actions.js?v=20261125-r1"></script>
+<script src="./schedule-weekly.js?v=20261125-r1"></script>
 
 </body>
 </html>

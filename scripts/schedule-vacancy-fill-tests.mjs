@@ -144,7 +144,7 @@ function staffingFillFixture({selected='2026-10-12',eligibility=null,lost=false,
 {
  const hub=readFileSync(new URL('../start_page1.html',import.meta.url),'utf8'),page=readFileSync(new URL('../staffing-management.html',import.meta.url),'utf8');
  assert.match(hub,/<a id="staffing-link"[^>]*href="\.\/staffing-management\.html\?hub=manager"/);checks++;
- assert.match(page,/<script type="module" src="\.\/manager-staffing-runtime\.mjs\?v=2026\.11\.11\.current-roster"><\/script>/);checks++;
+ assert.match(page,/<script type="module" src="\.\/manager-staffing-runtime\.mjs\?v=20261125-r1"><\/script>/);checks++;
 }
 {
  const f=staffingFillFixture();try{

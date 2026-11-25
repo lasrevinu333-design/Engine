@@ -121,10 +121,10 @@ export function createStaffingActions({auth, authority, api, savedRequests=null,
       || record.encoded!==JSON.stringify(record.body) || !object(record.body)) throw problem('saved_request_invalid','Original saved request identity is unavailable. Nothing was resent.');
     const b=record.body, vacancy=/^\/static-weekly\/roster\/([a-f0-9-]+)\/vacate$/.exec(record.path||''), fill=/^\/static-weekly\/roster\/vacant-slots\/([a-f0-9-]+)\/fill$/.exec(record.path||'');
     const kind=vacancy?'vacate':fill?'fill':record.path==='/static-weekly/employees/restores'?'restore':null;
-    const slot=vacancy?.[1]||fill?.[1]||b.slot_id, fields=['source_id','effective_start','reason','expected_revision','idempotency_key',...(kind==='fill'?['new_employee_name']:['employee_id']),...(kind==='restore'?['slot_id']:[])];
+    const slot=vacancy?.[1]||fill?.[1]||b.slot_id, fields=['source_id','effective_start','reason','expected_revision','idempotency_key',...(kind==='fill'?['new_employee_name']:['employee_id']),...(kind==='restore'?['slot_id']:[]),...(kind==='vacate'&&Object.hasOwn(b,'preview_digest')?['preview_digest']:[])];
     if (!kind || !UUID.test(slot||'') || !UUID.test(b.source_id||'') || !date(b.effective_start) || !text(b.reason,1,500)
       || !integer(b.expected_revision) || !text(b.idempotency_key,1,200) || Object.keys(b).length!==fields.length || fields.some(k=>!Object.hasOwn(b,k))
-      || (kind==='fill'?!text(b.new_employee_name,2,160):!UUID.test(b.employee_id||''))) throw problem('saved_request_invalid','This saved request cannot be rebound to a staffing action. Preserve it for its owning page.');
+      || (kind==='fill'?!text(b.new_employee_name,2,160):!UUID.test(b.employee_id||'')) || (Object.hasOwn(b,'preview_digest')&&!SHA.test(b.preview_digest))) throw problem('saved_request_invalid','This saved request cannot be rebound to a staffing action. Preserve it for its owning page.');
     return {kind,path:record.path,body:copy(b),slot_id:slot,slot_label:'Original saved stable position',employee_name:null,source_digest:null,publication_id:null,can_confirm:false,blocked_reason:'Original request only; confirmation cannot be resent.'};
   }
   function capabilities(slotId) {
@@ -138,7 +138,7 @@ export function createStaffingActions({auth, authority, api, savedRequests=null,
     const capable=Array.isArray(v.vacancyCapableSlotIds) && v.vacancyCapableSlotIds.includes(slotId);
     const today=auth.getCSTDateString?.(new Date(now()));
     return {vacate:capable && serviceDate===today && fact.person_id!==null && fact.employee_active===true && fact.effective_start<serviceDate && !fact.future_incumbency,
-      fill:capable && vacant && staffingWeek(serviceDate)===serviceDate && serviceDate>=staffingWeek(today),
+      fill:capable && vacant && !r.incumbencies.length && staffingWeek(serviceDate)===serviceDate && serviceDate>=staffingWeek(today),
       restore:vacant && serviceDate>=today && restoreChoices(slotId).length===1,
       reason:'Existing-person reactivation is not position-pattern restoration. Review the current approved pattern through Schedule; registered history is not eligibility.'};
   }
@@ -188,7 +188,7 @@ export function createStaffingActions({auth, authority, api, savedRequests=null,
     const cap=capabilities(input.slot_id); if (!cap[kind]) throw problem('action_unavailable',cap.reason||'The source/person/date does not authorize this action.');
     const target=row(snapshot.roster.find(s=>s.slot_id===input.slot_id));
     const body={source_id:sourceId(),effective_start:serviceDate,reason:input.reason.trim(),expected_revision:snapshot.authority_revision};
-    if (kind==='vacate') body.employee_id=target.person_id;
+    if (kind==='vacate') throw problem('reviewed_vacancy_required','Open Weekly Schedule to review and confirm this stable vacancy.');
     if (kind==='fill') { const name=typeof input.new_employee_name==='string'&&!/[\x00-\x1f\x7f]/.test(input.new_employee_name)?input.new_employee_name.trim().replace(/\s+/g,' '):null;
       if (!text(name,2,160)) throw problem('choice_invalid','Enter the new employee’s name.'); body.new_employee_name=name; }
     if (kind==='restore') { const choices=restoreChoices(input.slot_id);
@@ -262,7 +262,9 @@ export function createStaffingActions({auth, authority, api, savedRequests=null,
       if ([401,403].includes(error?.status) || error?.code==='AUTH_WITHDRAWN') withdraw();
       if (mine===generation && state!=='DENIED') {
         if (sent) {
-          let rejected=false;try{const saved=savedRequests.pending();rejected=matchesRecord(saved)&&saved.state==='REJECTED';}catch{}
+          let saved;try{saved=savedRequests.pending();}catch{}
+          if(saved===null){original=null;preview=null;set('HELD','The helper stopped before saving this request. Refresh and review the current roster.');throw error;}
+          const rejected=matchesRecord(saved)&&saved.state==='REJECTED';
           set(rejected?'HELD':'OUTCOME_UNKNOWN',rejected?'The original staffing request was explicitly rejected. It remains saved for owning-helper resolution; no acceptance or new action is implied.':'Original staffing outcome is unknown. Do not resend, replace the request, or change its person/source/date.');
         }
         else {preview=null;set('HELD','The preview was held before submission. Refresh current source/revision. No staffing change was sent.');}
