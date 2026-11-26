@@ -462,7 +462,10 @@
         const row = Array.isArray(rows) ? rows[0] : rows;
         if (!row) throw new Error('Parser returned no event row.');
         loadPayloadIntoForm({ ...row, source_text: source, source_format: 'paste' });
-        setStatus(row.needs_review ? 'Parsed, but scope/venue needs review before saving.' : 'Parsed into form. Review the preview before saving.', Boolean(row.needs_review));
+        const dateInferred = row.warnings?.includes('ambiguous_date');
+        const note = row.needs_review ? 'Parsed, but scope/venue needs review before saving.'
+          : 'Parsed into form. Review the preview before saving.';
+        setStatus(dateInferred ? `${note} Confirm the inferred date.` : note, Boolean(row.needs_review || dateInferred));
       }, isCurrent);
     }
 

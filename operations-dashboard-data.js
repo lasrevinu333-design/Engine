@@ -223,9 +223,10 @@
   }
   function attendance(payload){const d=payload?.data;
     if(payload?.ok!==true||count(d?.attendance)===null)return{value:'Unavailable',note:'Gate count source unavailable.',stale:true};
-    const time=d.source_timestamp||d.fetched_at||d.updated_at,unknown=instant(time)===null||typeof d.stale!=='boolean';
+    const time=d.source_timestamp||d.fetched_at||d.updated_at,at=instant(time);
+    const unknown=at===null||typeof d.stale!=='boolean';
     return{value:d.attendance.toLocaleString('en-US'),note:`${stamp(time)}${unknown?' · Freshness unknown':d.stale?' · Stale source':''}`,
-      stale:unknown||d.stale};
+      stale:unknown||d.stale,sourceDay:at===null?null:localDate(at)};
   }
   function weather(payload,now=Date.now()){
     const c=payload?.current,at=typeof c?.time==='number'?c.time*1000:NaN;

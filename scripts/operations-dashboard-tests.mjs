@@ -497,6 +497,27 @@ const loaded=async(f,{operations=payload,scan=[{ticket_id:'1',location_name:'Fix
  const calls=[];await f.controller.refresh({headers:{Authorization:'Bearer SYNTHETIC','X-Device-Id':'SYNTHETIC'},isCurrent:()=>true,summary,fetchImpl:async(url,options)=>{
   calls.push({url,options});return{ok:true,json:async()=>url.endsWith('/operations')?operations:url.includes('attendance')?{ok:true,data:{attendance:12,stale:false,source_timestamp:'2026-10-05T17:00:00Z'}}:null};}});return calls;
 };
+for(const audience of ['manager','public_readonly'])test(`gate count expires at Chicago midnight for ${audience}`,async()=>{
+ const f=fixture({audience});
+ const card=f.elements['ops-attendance'],note=f.elements['ops-attendance-note'];
+ const refresh=data=>f.controller.refresh({headers:{},isCurrent:()=>true,summary:{open_tickets:[]},fetchImpl:async url=>({
+   ok:!url.includes('attendance')||Boolean(data),
+   json:async()=>url.includes('attendance')?{ok:true,data}:null,
+ })});
+ const oldDay={attendance:1234,stale:false,source_timestamp:'2026-11-27T05:59:50Z'};
+ try{
+  f.setNow(Date.parse('2026-11-27T05:59:55Z'));
+  await refresh(oldDay);assert.equal(card.textContent,'1,234');assert.equal(note.dataset.stale,'false');
+  await refresh(null);assert.equal(card.textContent,'1,234');assert.equal(note.dataset.stale,'true');
+  await refresh(oldDay);assert.equal(note.dataset.stale,'false');
+  f.setNow(Date.parse('2026-11-27T06:00:10Z'));
+  f.controller.tick();assert.equal(card.textContent,'Unavailable');assert.equal(note.dataset.stale,'true');
+  await refresh(oldDay);assert.equal(card.textContent,'Unavailable');
+  await refresh(null);assert.equal(card.textContent,'Unavailable');
+  await refresh({attendance:0,stale:false,source_timestamp:'2026-11-27T06:00:05Z'});
+  assert.equal(card.textContent,'0');assert.equal(note.dataset.stale,'false');
+ }finally{f.clean();}
+});
 test('narrow map starts centered, preserves user pan on refresh, and recenters after resize',async()=>{
  for(const audience of ['manager','public_readonly']){
   const f=fixture({audience}),stage=f.elements['dashboard-map'];

@@ -122,9 +122,19 @@
       if(focused)Array.from(content.querySelectorAll('[data-location-select]')).find(n=>n.dataset.locationSelect===focused)?.focus({preventScroll:true});
     }
     function renderHighLow(){txt('ops-weather-high-low',lastWeather?.day===DATA.localDate(now())?lastWeather.highLow:pendingFeeds.has('weather')?'Loading high/low…':'High/low unavailable.');}
+    function currentAttendance(){
+      if(lastAttendance&&lastAttendance.sourceDay!==DATA.localDate(now()))lastAttendance=null;
+      return lastAttendance;
+    }
+    function showAttendance(value,note,stale){
+      txt('ops-attendance',value);
+      txt('ops-attendance-note',note);
+      el('ops-attendance-note').dataset.stale=String(stale);
+    }
     function tick(){if(!active||closed)return;
       if(!bound()){unavailable();return;}
       renderHighLow();
+      if(lastAttendance&&!currentAttendance())showAttendance('Unavailable','Current gate count unavailable.',true);
       const at=new Date(now());txt('ops-clock',new Intl.DateTimeFormat('en-US',{timeZone:DATA.ZONE,hour:'numeric',minute:'2-digit',second:'2-digit'}).format(at));
       txt('ops-date',new Intl.DateTimeFormat('en-US',{timeZone:DATA.ZONE,weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(at));
       const minute=Math.floor(now()/60000);
@@ -206,7 +216,10 @@
       // Snapshot the safe record presentation at admission, not from mutable
       // caller rows after an unrelated awaited feed. Never infer from pin text.
       if(!preserveSummary){pendingFeeds.delete('summary');summary=next;cleaning=cleaningView(next,approved(),now());}
-      txt('ops-attendance',lastAttendance?lastAttendance.value:'Loading…');txt('ops-attendance-note',lastAttendance?`${lastAttendance.note} · Updating… Last received count.`:'Loading gate count…');
+      const retainedAttendance=currentAttendance();
+      showAttendance(retainedAttendance?.value??'Loading…',
+        retainedAttendance?`${retainedAttendance.note} · Updating… Last received count.`:'Loading gate count…',
+        retainedAttendance?.stale??true);
       txt('ops-weather',lastWeather?lastWeather.value:'Loading…');txt('ops-weather-note',lastWeather?`${lastWeather.note} · Updating… Last received forecast.`:'Loading weather…');
       txt('ops-hour',lastWeather?`${lastWeather.hour} · Updating…`:'Loading next-hour forecast…');
       renderFeeds();
@@ -221,9 +234,15 @@
       const tasks=[
         load(`${API}/dashboard-api/current-attendance`).catch(()=>null).then(value=>{
           if(!publish())return;pendingFeeds.delete('attendance');const attendance=DATA.attendance(value);
-          if(attendance.value!=='Unavailable')lastAttendance=attendance;
-          txt('ops-attendance',attendance.value==='Unavailable'&&lastAttendance?lastAttendance.value:attendance.value);
-          txt('ops-attendance-note',attendance.value==='Unavailable'&&lastAttendance?`${lastAttendance.note} · Update delayed`:attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);
+          const retained=currentAttendance();
+          if(attendance.sourceDay===DATA.localDate(now())){
+            lastAttendance=attendance;
+            showAttendance(attendance.value,attendance.note,attendance.stale);
+          }else if(retained){
+            showAttendance(retained.value,`${retained.note} · Update delayed`,true);
+          }else{
+            showAttendance('Unavailable','Current gate count unavailable.',true);
+          }
           renderFeeds();
         }),
         load(WEATHER,false).catch(()=>null).then(value=>{
@@ -302,7 +321,7 @@
       const preserveOwner=active&&!closed&&sameOwner();
       if(!preserveBoard||!preserveOwner)closeBoard({history:false,focus:false});
       if(!preserveMap||!preserveOwner)void exitMap();
-      txt('ops-attendance','Unavailable');txt('ops-attendance-note','Current gate count unavailable.');txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderHighLow();renderFeeds();}
+      showAttendance('Unavailable','Current gate count unavailable.',true);txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderHighLow();renderFeeds();}
     function suspend(){active=false;if(tickerFrame!==null)window.cancelAnimationFrame(tickerFrame);tickerFrame=null;tickerTime=null;unavailable();panel.hidden=true;el('ops-locations-button').hidden=true;}
     function activate(renderer){if(closed)return;map=renderer;owner=publicRead?null:session();active=publicRead||!!owner;
       if(active){for(const kind of ['summary','operations','attendance','weather'])pendingFeeds.add(kind);
