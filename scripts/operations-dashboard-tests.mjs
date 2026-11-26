@@ -31,7 +31,7 @@ function dashboardRefreshFixture(){
   roles:['CUSTODIAL_MANAGER'],permissions:{schema:'custodial.manager-permissions.v1',read:true,close_scan_tickets:true}};
  const node=id=>{if(!nodes.has(id)){const classes=new Set(),events=new Map();nodes.set(id,{id,textContent:'',innerHTML:'',disabled:false,open:false,value:'',returnValue:'',
   classList:{toggle(k,on){on?classes.add(k):classes.delete(k);},add:k=>classes.add(k),remove:k=>classes.delete(k)},
-  querySelectorAll(){return [];},addEventListener(type,callback,options){const list=events.get(type)||[];list.push({callback,once:options?.once});events.set(type,list);},
+  childNodes:[],replaceChildren(...children){this.childNodes=children;},querySelectorAll(){return [];},addEventListener(type,callback,options){const list=events.get(type)||[];list.push({callback,once:options?.once});events.set(type,list);},
   close(){this.open=false;const list=events.get('close')||[];events.set('close',list.filter(entry=>!entry.once));for(const entry of list)entry.callback();},showModal(){this.open=true;},focus(){}});}return nodes.get(id);};
  const response=data=>({ok:true,status:200,json:async()=>data});
  const summary=(label,{active=false}={})=>({ok:true,data:{meta:{version:label},restrooms:[{location_code:label,location_name:label,
