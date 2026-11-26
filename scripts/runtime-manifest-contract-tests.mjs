@@ -259,12 +259,12 @@ assert.equal(current311Source.populated_capture.rollback_verified,true);
 assert.equal(current311Source.preserved_source304_binding_sha256,createHash('sha256').update(current304Bytes).digest('hex'));
 for(const flag of ['production','release_admission','frontend_pair_admission','full_program_or_physical_acceptance'])assert.equal(current311Source[flag],false);
 const CANONICAL_SCHEMA_FINGERPRINT = current311Source.schema_fingerprint;
-const ACTIVE_SCHEMA_TRANSITION = current311Source.schema_transition;
-assert.equal(ACTIVE_SCHEMA_TRANSITION.from_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
-assert.equal(ACTIVE_SCHEMA_TRANSITION.to_fingerprint,CANONICAL_SCHEMA_FINGERPRINT);
-assert.equal(ACTIVE_SCHEMA_TRANSITION.transition_id,'custodial-existing235-to-current311-20261104');
-assert.equal(ACTIVE_SCHEMA_TRANSITION.expires_at,'2026-11-05T01:00:00Z');
-assert.notEqual(ACTIVE_SCHEMA_TRANSITION.transition_id,current304Source.schema_transition.transition_id);
+const HISTORICAL311_SCHEMA_TRANSITION = current311Source.schema_transition;
+assert.equal(HISTORICAL311_SCHEMA_TRANSITION.from_fingerprint,PRIOR294_SCHEMA_TRANSITION.from_fingerprint);
+assert.equal(HISTORICAL311_SCHEMA_TRANSITION.to_fingerprint,CANONICAL_SCHEMA_FINGERPRINT);
+assert.equal(HISTORICAL311_SCHEMA_TRANSITION.transition_id,'custodial-existing235-to-current311-20261104');
+assert.equal(HISTORICAL311_SCHEMA_TRANSITION.expires_at,'2026-11-05T01:00:00Z');
+assert.notEqual(HISTORICAL311_SCHEMA_TRANSITION.transition_id,current304Source.schema_transition.transition_id);
 const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 
 function createFrontendGitFixture({
@@ -276,7 +276,7 @@ function createFrontendGitFixture({
   writeFileSync(resolve(fixtureRoot, FRONTEND_MANIFEST_NAME), `${JSON.stringify({
     release_id: 'release-test',
     schema_fingerprint: CANONICAL_SCHEMA_FINGERPRINT,
-    schema_transition: ACTIVE_SCHEMA_TRANSITION,
+    schema_transition: HISTORICAL311_SCHEMA_TRANSITION,
     asset_hashes_sha256: {},
   }, null, 2)}\n`);
   writeFileSync(resolve(fixtureRoot, FRONTEND_DEPLOYMENT_MANIFEST_NAME), `${JSON.stringify({
@@ -315,10 +315,10 @@ assert.equal(
   CANONICAL_SCHEMA_FINGERPRINT,
   'the candidate deployment manifest must declare the exact source-captured backend schema fingerprint',
 );
-assert.deepEqual(frontendManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
-  'the release manifest must declare the exact active backend transition');
-assert.deepEqual(frontendDeploymentManifest.schema_transition, ACTIVE_SCHEMA_TRANSITION,
-  'the deployment manifest must declare the exact active backend transition');
+assert.equal(Object.hasOwn(frontendManifest, 'schema_transition'), false,
+  'the settled release manifest must keep the expired transition out of active authority');
+assert.equal(Object.hasOwn(frontendDeploymentManifest, 'schema_transition'), false,
+  'the settled deployment manifest must keep the expired transition out of active authority');
 assert.ok(
   scanPageSource.includes(`REQUIRED_BACKEND_SCHEMA_FINGERPRINT:"${CANONICAL_SCHEMA_FINGERPRINT}"`),
   'the employee scan page must require the exact manifest target schema',

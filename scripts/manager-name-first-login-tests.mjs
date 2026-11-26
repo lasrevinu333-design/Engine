@@ -1,9 +1,9 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {mountLeadershipEnrollment} from '../custodial-leadership-enrollment.mjs';
 import {readFileSync} from 'node:fs';import vm from 'node:vm';
-const ids=['leadership-pin','approved-name','status','pin-form','name-form','enrolled','check-session','verify-pin','enroll-browser','revoke-browser','claimed-name'];
-const session={identityAssurance:'SELF_ASSERTED_NAME',claimedAccount:{accountId:'account-eric',displayName:'Eric Operle'},cohort:{principalId:'cohort',policyVersion:1,permissions:['custodialManagementAdmin']},managerSession:{token:'synthetic-not-persisted'}};
-async function fixture({remembered=false,rememberedName='Eric Operle',challenge='valid',uncertainEnroll=false,pause=async()=>{}}={}){
+const ids=['leadership-pin','approved-name','status','pin-form','name-form','enrolled','check-session','verify-pin','enroll-browser','revoke-browser','claimed-name','open-manager'];
+const session={registrationId:'registration',identityAssurance:'SELF_ASSERTED_NAME',claimedAccount:{accountId:'account-eric',displayName:'Eric Operle'},cohort:{principalId:'cohort',policyVersion:1,permissions:['custodialManagementAdmin']},managerSession:{token:'synthetic-not-persisted'}};
+async function fixture({remembered=false,rememberedName='Eric Operle',challenge='valid',uncertainEnroll=false,pause=async()=>{},browser=null}={}){
  const oldOption=globalThis.Option;globalThis.Option=class{constructor(text,value){this.text=text;this.value=value;}};
  const elements=new Map(ids.map(id=>[id,{value:'',textContent:'',hidden:false,disabled:false,listeners:new Map(),options:[],
   addEventListener(t,f){this.listeners.set(t,f);},removeEventListener(t){this.listeners.delete(t);},replaceChildren(...o){this.options=o;this.value='';},add(o){this.options.push(o);},focus(){}}]));
@@ -19,9 +19,34 @@ async function fixture({remembered=false,rememberedName='Eric Operle',challenge=
   else if(path.endsWith('/revoke'))enrolled=false;else throw Error('Unexpected endpoint');
   await pause(path);return{ok:status===200,status,json:async()=>value};
  };
- const controller=await mountLeadershipEnrollment({document:{getElementById:e},fetchImpl,serviceOrigin:'https://fixture.invalid',onSession:v=>accepted.push(v)});
+ let controller,closePage;
+ const nav=[];
+ if(browser){
+  const location=new URL('https://lasrevinu333-design.github.io/Engine/ops-manager-hub.html');
+  if(browser.requested)location.searchParams.set('return',browser.requested);
+  location.replace=url=>nav.push(url);
+  const listeners=new Map();
+  const window={
+   MemphisAuth:{backendOrigin:'https://fixture.invalid',
+    refreshLeadershipSession:async()=>({manager_id:'cohort',credential_id:browser.credentialId??'registration'}),
+    isCustodialManagementAdmin:()=>true},
+   addEventListener(type,fn){if(!listeners.has(type))listeners.set(type,new Set());listeners.get(type).add(fn);},
+   removeEventListener(type,fn){listeners.get(type)?.delete(fn);},
+  };
+  closePage=()=>{for(const fn of [...listeners.get('pagehide')??[]])fn();};
+  const source=readFileSync(new URL('../custodial-leadership-enrollment.mjs',import.meta.url),'utf8');
+  vm.runInNewContext(source.replace(/^export /gm,''),{
+   document:{getElementById:e},window,location,fetch:fetchImpl,Option:globalThis.Option,
+   URL,URLSearchParams,AbortController,setTimeout,clearTimeout,
+  });
+  await new Promise(resolve=>setImmediate(resolve));
+ }else{
+  controller=await mountLeadershipEnrollment({document:{getElementById:e},fetchImpl,serviceOrigin:'https://fixture.invalid',onSession:v=>accepted.push(v)});
+ }
  const submit=id=>e(id).listeners.get('submit')?.({preventDefault(){}}),click=id=>e(id).listeners.get('click')?.();
- return{e,calls,accepted,submit,click,controller,async signIn(){e('approved-name').value='Eric Operle';await submit('name-form');e('leadership-pin').value='0000';await submit('pin-form');},close(){controller.stop();globalThis.Option=oldOption;}};
+ return{e,calls,accepted,nav,submit,click,controller,async signIn(){e('approved-name').value='Eric Operle';await submit('name-form');e('leadership-pin').value='0000';await submit('pin-form');},close(){
+  try{controller?.stop();closePage?.();}finally{globalThis.Option=oldOption;}
+ }};
 }
 test('name first, transient PIN second, exact verified account enrolls once',async()=>{const f=await fixture();try{
  assert.equal(f.e('name-form').hidden,false);assert.equal(f.e('pin-form').hidden,true);assert.equal(f.calls.length,1);
@@ -53,20 +78,29 @@ test('PIN and browser-save progress remain visible while each request is pending
  }finally{f.close();}
 });
 test('verified remembered sign-in opens the requested manager page; unverified binding never navigates',async()=>{
- const source=readFileSync(new URL('../custodial-leadership-enrollment.mjs',import.meta.url),'utf8');
- const callback=source.slice(source.indexOf('onSession:async (body,')+'onSession:'.length,source.indexOf('\n}).catch'));
- for(const requested of ['/Engine/operations-dashboard.html','https://untrusted.invalid/dashboard.html']){
-  const nav=[],link={hidden:true},location=new URL('https://lasrevinu333-design.github.io/Engine/ops-manager-hub.html?return='+encodeURIComponent(requested));location.replace=url=>nav.push(url);
-  const accepted={...session,registrationId:'registration'},verified={manager_id:'cohort',credential_id:'registration'};
-  const auth={refreshLeadershipSession:async()=>verified,isCustodialManagementAdmin:()=>true};
-  const invoke=vm.runInNewContext('('+callback+')',{window:{MemphisAuth:auth},document:{getElementById:()=>link},location,URL,URLSearchParams});
-  await invoke({enrolled:false});assert.equal(nav.length,0);
-  await invoke({enrolled:true,session:accepted});assert.equal(nav.length,1);
-  assert.equal(new URL(nav[0]).pathname,requested.startsWith('/Engine/')?requested:'/Engine/start_page1.html');
-  location.search='';await invoke({enrolled:true,session:accepted});assert.equal(nav.length,1);assert.equal(link.hidden,false);
-  await invoke({enrolled:true,session:accepted},{signedIn:true});assert.equal(nav.length,2);
-  verified.credential_id='different';await assert.rejects(invoke({enrolled:true,session:accepted}),/binding changed/);assert.equal(nav.length,2);
+ for(const [requested,expected] of [['/Engine/operations-dashboard.html','/Engine/operations-dashboard.html'],
+  ['https://untrusted.invalid/dashboard.html','/Engine/start_page1.html']]){
+  const f=await fixture({remembered:true,browser:{requested}});
+  try{
+   assert.deepEqual(f.nav.map(url=>new URL(url).pathname),[expected]);
+   assert.deepEqual(f.calls.map(call=>call.path),['/custodial-leadership-api/session']);
+  }finally{f.close();}
  }
+ const remembered=await fixture({remembered:true,browser:{}});
+ try{assert.deepEqual(remembered.nav,[]);assert.equal(remembered.e('open-manager').hidden,false);}
+ finally{remembered.close();}
+ const explicit=await fixture({browser:{}});
+ try{
+  assert.deepEqual(explicit.nav,[]);
+  await explicit.signIn();
+  assert.deepEqual(explicit.nav.map(url=>new URL(url).pathname),['/Engine/start_page1.html']);
+ }finally{explicit.close();}
+ const mismatched=await fixture({remembered:true,browser:{requested:'/Engine/operations-dashboard.html',credentialId:'different'}});
+ try{
+  assert.deepEqual(mismatched.nav,[]);
+  assert.equal(mismatched.e('open-manager').hidden,true);
+  assert.match(mismatched.e('status').textContent,/unconfirmed/);
+ }finally{mismatched.close();}
 });
 test('remembered server registration reopens without name, PIN or new enrollment',async()=>{const f=await fixture({remembered:true});try{
  assert.equal(f.e('name-form').hidden,true);assert.equal(f.e('pin-form').hidden,true);assert.equal(f.e('enrolled').hidden,false);assert.equal(f.calls.length,1);
