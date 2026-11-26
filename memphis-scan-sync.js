@@ -1073,6 +1073,19 @@
       && action.client_id === candidate && payload?.p_client_event_id === candidate
       && payload.p_session_uuid === parts[1];
   }
+  function sameQueuedGpsFix(before, after) {
+    if (!exactGpsOperationIdentity(before, before.operation_id) || !exactGpsOperationIdentity(after, after.operation_id)) return false;
+    const prior = before.payload, next = after.payload;
+    const observedAt = Date.parse(next.p_observed_at);
+    if (!Number.isFinite(observedAt) || Date.parse(prior.p_observed_at) !== observedAt) return false;
+    for (const key of ['p_session_uuid','p_device_identifier','p_location_code']) {
+      if (prior[key] !== next[key]) return false;
+    }
+    const original = before.replay_binding, incoming = after.replay_binding;
+    if (!original || !incoming) return false;
+    return ['client_session_id','occurrence_id','context_id','snapshot_id','employee_id','assignment_epoch']
+      .every(key => original[key] === incoming[key]);
+  }
   function canonicalizeSemanticValue(value) {
     if (Array.isArray(value)) return value.map(canonicalizeSemanticValue);
     if (value && typeof value === 'object') {
@@ -2174,8 +2187,18 @@
           try {
           queueOpeningCheckpoint(context);
           const existingRows = (lookup.result || []).map(normalizeRecord);
-          const exact = existingRows.find((item) => item.logical_key === record.logical_key
+          const exactKey = existingRows.find((item) => item.logical_key === record.logical_key
             && safeText(item.semantic_fingerprint) === safeText(record.semantic_fingerprint));
+          const gpsFix = exactGpsOperationIdentity(record, record.operation_id);
+          // A cached fix can predate this producer's deterministic identity.
+          // Find the original under the same queue lock and authority, leaving
+          // its ID, payload, state and correlation intact.
+          const exact = gpsFix ? existingRows.find(item => sameQueuedGpsFix(item, record)) : exactKey;
+          if (gpsFix && exactKey && !sameQueuedGpsFix(exactKey, record)) {
+            conflict = Object.assign(new Error('This GPS fix has a different retained owner or capture.'),
+              {code:'gps_fix_custody_conflict',queue_record_id:exactKey.id});
+            return;
+          }
           if (exact) {
             if (exact.dead_letter === true || exact.recoverable === false) {
               conflict = Object.assign(new Error('This operation is already in durable recovery and requires explicit resolution.'), {

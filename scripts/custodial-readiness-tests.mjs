@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { installHourlyForecastKeyboard } from '../mobile/src/custodial/hourly-forecast-keyboard.js';
+import { bindPhoneUnlock, createPhonePresentation, setPhoneClockPresentation } from '../mobile/src/custodial/phone-presentation.js';
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 const moduleSource = read('mobile/src/custodial/readiness.js');
 const { classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode } = await import(`data:text/javascript;base64,${Buffer.from(moduleSource).toString('base64')}`);
@@ -132,6 +133,7 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
     MemphisUI: { resolveOpenScanSession: () => ({ state: session, session: { location_name: 'Original Fixture Place', immutable: 'original-finish' } }), isUnstartedScanSession: () => false },
     MemphisScanSync: { ready: Promise.resolve(true), listActions: async () => { calls.push('readonly-queue'); return queue; }, recoverLocalCompletionIntents: async () => { calls.push('existing-recovery'); }, reconcileStartupRecovery: async () => ({ state: startup }) },
     MemphisMobile: { whenReady: async () => {}, resumePendingSecurityWorkflow: async () => {}, principalIdentity: () => principal,
+      phonePresentation: async () => ({ wake: 'fixture-wake', unlocked: true }),
       readCustodialHomeCache: () => ({ profile: oldProfile }), saveCustodialHomeCache: async () => true,
       profileMatchesPrincipal: value => value?.fixture_principal === principal && status.state === 'enrolled',
       getReadinessObservation: async () => { calls.push('readonly-native'); const captured = { ...nativeState }; await readinessGate; if(localReadinessFailure)throw Error('Synthetic protected local observation failure'); return captured; },
@@ -144,6 +146,7 @@ function fixture({ connected = true, anchored = true, pending = [], nativePendin
       } },
   };
   const context = { window, document: { getElementById: element }, navigator: { onLine: connected }, console,queueMicrotask,
+    bindPhoneUnlock, createPhonePresentation, setPhoneClockPresentation,
     __MZ_CUSTODIAL_OWNER_TEST_SUPPORT__: ownerTestSupport,
     sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     classifyReadiness, createReadinessObservation, readinessPresentation, readinessSupportCode, installHourlyForecastKeyboard, installHomeFacts: () => ({ stop() {}, update() {}, authenticatedProfileRestored() { return true; }, async restoreProfileFacts() { return true; } }),

@@ -34,7 +34,7 @@ await test('wrong-device and ambiguous sessions cannot be sampled',()=>{
 await test('fresh coordinate is queued with original capture time and active identity',async()=>{
   const s=storage(row()),queued=[];
   const lifecycle=createActiveGpsLifecycle({storage:s,deviceId:()=>DEVICE,geolocation:geo(),
-    enqueue:async action=>queued.push(action),randomUuid:()=> '30000000-0000-4000-8000-000000000003',
+    enqueue:async action=>queued.push(action),
     setTimer:()=>1,clearTimer:()=>{}});
   const result=await lifecycle.reconcile('test');
   assert.equal(result.state,'queued');assert.equal(queued.length,1);
@@ -84,10 +84,24 @@ await test('a new document lifecycle resumes the same active cleaning without ch
   const s=storage(row()),queued=[];
   const make=timestamp=>createActiveGpsLifecycle({storage:s,deviceId:()=>DEVICE,
     geolocation:geo({position:{coords:{latitude:35.15,longitude:-90.04,accuracy:5},timestamp}}),
-    enqueue:async action=>queued.push(action),randomUuid:()=>crypto.randomUUID(),setTimer:()=>1,clearTimer:()=>{}});
+    enqueue:async action=>queued.push(action),setTimer:()=>1,clearTimer:()=>{}});
   const first=make(Date.parse('2026-09-18T18:00:00Z'));await first.reconcile('page_one');first.dispose();
   const second=make(Date.parse('2026-09-18T18:01:00Z'));await second.reconcile('page_two');second.dispose();
   assert.equal(queued.length,2);assert.ok(queued.every(action=>action.payload.p_session_uuid===SESSION_A));
+});
+await test('a cached fix retains one operation and original body across new documents',async()=>{
+  const s=storage({...row(),offline_authority_assignment_epoch:3}),attempts=[];
+  const make=()=>createActiveGpsLifecycle({storage:s,deviceId:()=>DEVICE,geolocation:geo(),
+    enqueue:async action=>attempts.push(action),setTimer:()=>1,clearTimer:()=>{}});
+  const first=make(),second=make();
+  await first.reconcile('page_load');first.dispose();
+  await second.reconcile('page_show');second.dispose();
+  assert.equal(attempts.length,2);
+  assert.match(attempts[0].client_id,/^gps:[0-9a-f-]+:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.deepEqual(attempts[0],attempts[1]);
+  s.setItem('session:'+SESSION_A,JSON.stringify({...row(),offline_authority_assignment_epoch:4}));
+  const successor=make();await successor.reconcile();successor.dispose();
+  assert.notEqual(attempts[2].client_id,attempts[0].client_id);
 });
 await test('finish state on next document prevents further location requests',async()=>{
   const s=storage(row()),queued=[];let calls=0;

@@ -9,6 +9,7 @@ import java.nio.file.*;
 import java.nio.file.attribute.*;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import org.json.JSONObject;
 
 /** Disk primitive for retained enrollment partitions. This is not inventory,
@@ -21,13 +22,16 @@ final class NativeRetainedEnrollmentRealmStore {
     static final String DIRECTORY="custodial-retained-enrollment-realms-v1";
     static final String AAD="org.memphiszoo.custodial.retained-enrollment-realms.v1";
     static final String FAILURE="custodial_retained_enrollment_realm_unavailable";
+    static final String RESERVATION_HELD="custodial_retained_enrollment_reservation_unverified";
     private static final String SCHEMA="custodial.retained-enrollment-realm.v1";
     private static final int MAX=4*1024*1024;
-    private final Path root,directory,current,pending,reservation,lock,realms;
+    private static final int ENVELOPE_MAGIC=0x4d5a5231;
+    private static final Map<Path,Object> PROCESS_LOCKS=new ConcurrentHashMap<>();
+    private final Path root,directory,current,pending,reservation,reservationStage,lock,realms;
     private final Object rootKey,directoryKey,lockKey,realmsKey;
     private final UserPrincipal owner;
     private final CredentialCipher cipher;
-    private final Object monitor=new Object();
+    private final Object monitor;
 
     static final class State {
         final String realm,previousRealm,previousSha256,operationId,binding,sha256,rootIdentity;
@@ -46,16 +50,31 @@ final class NativeRetainedEnrollmentRealmStore {
             if(nativeNoBackupRoot==null||existingKeyCipher==null||!nativeNoBackupRoot.isAbsolute()
                 ||!nativeNoBackupRoot.normalize().equals(nativeNoBackupRoot)
                 ||!nativeNoBackupRoot.toRealPath().equals(nativeNoBackupRoot))throw unavailable();
-            root=nativeNoBackupRoot;var a=directory(root);owner=a.owner();rootKey=a.fileKey();
-            cipher=existingKeyCipher;directory=root.resolve(DIRECTORY);
-            boolean existed=exists(directory);
-            if(!initialize&&!existed)throw unavailable();
-            ensureDirectory(directory);directoryKey=directory(directory).fileKey();
-            realms=directory.resolve("realms");boolean bootstrap=!existed||emptyBootstrap(directory,realms);
-            if(!exists(realms)&&!bootstrap)throw unavailable();ensureDirectory(realms);realmsKey=directory(realms).fileKey();
-            current=directory.resolve("current.bin");pending=directory.resolve("prepared.bin");reservation=directory.resolve("reservation.bin");lock=directory.resolve("owner.lock");
-            if(!exists(lock)){if(!bootstrap)throw unavailable();writeNew(lock,new byte[]{0});forceDirectory(directory);}
-            lockKey=regular(lock).fileKey();requireBase();
+            root=nativeNoBackupRoot;
+            monitor=PROCESS_LOCKS.computeIfAbsent(root,ignored->new Object());
+            synchronized(monitor){
+                var a=directory(root);owner=a.owner();rootKey=a.fileKey();
+                cipher=existingKeyCipher;directory=root.resolve(DIRECTORY);
+                boolean existed=exists(directory);
+                if(!initialize&&!existed)throw unavailable();
+                ensureDirectory(directory);directoryKey=directory(directory).fileKey();
+                realms=directory.resolve("realms");boolean bootstrap=!existed||emptyBootstrap(directory,realms);
+                if(!exists(realms)&&!bootstrap)throw unavailable();
+                ensureDirectory(realms);realmsKey=directory(realms).fileKey();
+                current=directory.resolve("current.bin");
+                pending=directory.resolve("prepared.bin");
+                reservation=directory.resolve("reservation.bin");
+                reservationStage=directory.resolve("reservation.bin.stage");
+                lock=directory.resolve("owner.lock");
+                if(!exists(lock)){
+                    if(!bootstrap)throw unavailable();
+                    // Only the lock inode matters. Never replace an active lock.
+                    try{Files.createFile(lock,PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));}
+                    catch(FileAlreadyExistsException concurrent){regular(lock);}
+                }
+                lockKey=regular(lock).fileKey();requireBase();
+                if(bootstrap){forceDirectory(directory);forceDirectory(root);}
+            }
         }catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(FAILURE,e);}
     }
     State read()throws VaultFailure {synchronized(monitor){
@@ -63,7 +82,7 @@ final class NativeRetainedEnrollmentRealmStore {
             requireBase();
             // An interrupted prepared transition has exactly one original
             // continuation. Ordinary startup must not invent a new partition.
-            if(exists(pending)||exists(reservation))throw unavailable();
+            if(exists(reservationStage)||exists(pending)||exists(reservation))throw unavailable();
             return current();
         }catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(FAILURE,e);}
     }}
@@ -71,7 +90,10 @@ final class NativeRetainedEnrollmentRealmStore {
      * decision, UUID, encryption, root, old-state restoration or deletion. */
     State finishPrepared()throws VaultFailure {synchronized(monitor){
         try(FileChannel c=FileChannel.open(lock,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS);FileLock held=c.lock()){
-            requireBase();if(exists(reservation))return finishReserved();if(!exists(pending))return current();
+            requireBase();
+            if(exists(reservationStage))publishReservationStage();
+            if(exists(reservation))return finishReserved();
+            if(!exists(pending))return current();
             byte[] bytes=readFile(pending);State prepared=decode(bytes);
             State before=currentForPrepared(prepared);
             if(before.realm.equals(prepared.realm)){
@@ -80,13 +102,13 @@ final class NativeRetainedEnrollmentRealmStore {
                 JSONObject data=bindingEnvelope(bytes);
                 if(!before.realm.equals(prepared.previousRealm)||!before.sha256.equals(data.getString("previous_sha256")))throw unavailable();
             }
-            if(!exists(transition(prepared.realm))){writeNew(transition(prepared.realm),bytes);forceDirectory(directory);}
+            publishTransition(prepared,bytes);
             requireTransitionAndRoot(prepared,bytes);promotePrepared();return requireExact(prepared);
         }catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(FAILURE,e);}
     }}
     State advance(State expected,String nextRealm,String operationId,String originalBinding)throws VaultFailure {synchronized(monitor){
         try(FileChannel c=FileChannel.open(lock,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS);FileLock held=c.lock()){
-            requireBase();if(exists(pending)||exists(reservation)||expected==null)throw unavailable();
+            requireBase();if(exists(reservationStage)||exists(pending)||exists(reservation)||expected==null)throw unavailable();
             State before=current();if(!before.realm.equals(expected.realm)||!before.sha256.equals(expected.sha256))throw unavailable();
             uuid(nextRealm);uuid(operationId);
             if(nextRealm.equals(before.realm)||originalBinding==null||originalBinding.isEmpty()
@@ -100,16 +122,34 @@ final class NativeRetainedEnrollmentRealmStore {
                 .put("operation_id",operationId).put("original_binding",originalBinding)
                 .put("root_identity",rootKey.toString()).put("keep_all_original_work",true)
                 .put("keep_all_existing_keys",true).put("work_accepted",false);
-            writeNew(reservation,encryptDocument(intent));forceDirectory(directory);
+            createStage(reservationStage,encryptDocument(intent));
+            publishReservationStage();
             return finishReserved();
         }catch(VaultFailure e){throw e;}catch(Exception e){throw new VaultFailure(FAILURE,e);}
     }}
-    private State finishReserved()throws Exception {
-        JSONObject intent=decryptDocument(readFile(reservation));
+    private JSONObject readReservation(Path path)throws Exception {
+        JSONObject intent;
+        try{intent=decryptDocument(readFile(path));}
+        catch(Exception unreadable){throw new VaultFailure(RESERVATION_HELD,unreadable);}
         keys(intent,"schema","realm","previous_realm","previous_sha256","operation_id","original_binding","root_identity",
             "keep_all_original_work","keep_all_existing_keys","work_accepted");
         if(!"custodial.retained-enrollment-realm-reservation.v1".equals(intent.getString("schema")))throw unavailable();
-        validateCommon(intent);String next=intent.getString("realm");
+        validateCommon(intent);return intent;
+    }
+    private void publishReservationStage()throws Exception {
+        if(exists(reservation)||exists(pending))throw unavailable();
+        JSONObject intent=readReservation(reservationStage);
+        String next=intent.getString("realm");
+        State before=current();
+        if(!before.realm.equals(intent.getString("previous_realm"))||!before.sha256.equals(intent.getString("previous_sha256"))
+            ||exists(realms.resolve(next))||exists(transition(next)))throw unavailable();
+        // A complete file from an interrupted sync can still own the exact
+        // reservation. Sync it again before making the final name visible.
+        try(FileChannel c=FileChannel.open(reservationStage,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS)){c.force(true);}
+        promoteNew(reservationStage,reservation);
+    }
+    private State finishReserved()throws Exception {
+        JSONObject intent=readReservation(reservation);String next=intent.getString("realm");
         State before;
         if(!exists(current)&&LEGACY.equals(intent.getString("previous_realm"))){
             try(DirectoryStream<Path> entries=Files.newDirectoryStream(directory,"transition-*.bin")){
@@ -125,23 +165,32 @@ final class NativeRetainedEnrollmentRealmStore {
             Files.delete(reservation);forceDirectory(directory);return requireExact(before);
         }
         if(!before.realm.equals(intent.getString("previous_realm"))||!before.sha256.equals(intent.getString("previous_sha256")))throw unavailable();
+        // Old versions could leave final-name partial files. An authentic
+        // reservation and its verified predecessor still own this transition.
+        // Preserve a provably truncated prepared artifact before resuming.
+        if(exists(pending)){
+            byte[] staged=readFile(pending,true);
+            if(truncatedEnvelope(staged)){
+                requireEmptyReservedRoot(next);
+                if(exists(transition(next)))throw unavailable();
+                retainTruncated(pending);
+            }
+        }
         State after;byte[] bytes;
         if(exists(pending)){
             bytes=readFile(pending);after=decode(bytes);if(!matchesReservation(after,intent))throw unavailable();
         }else{
             if(exists(transition(next)))throw unavailable();
             Path nextRoot=realms.resolve(next);
-            if(exists(nextRoot)){
-                var attributes=directory(nextRoot);if(!attributes.owner().equals(owner))throw unavailable();
-                try(DirectoryStream<Path> entries=Files.newDirectoryStream(nextRoot)){if(entries.iterator().hasNext())throw unavailable();}
-            }else ensureDirectory(nextRoot);
+            if(exists(nextRoot))requireEmptyReservedRoot(next);
+            else ensureDirectory(nextRoot);
             forceDirectory(realms);
             JSONObject document=new JSONObject(intent.toString()).put("schema",SCHEMA)
                 .put("new_root_identity",directory(nextRoot).fileKey().toString());
             bytes=encryptDocument(document);after=decode(bytes);
-            writeNew(pending,bytes);forceDirectory(directory);
+            publishNew(pending,bytes);
         }
-        if(!exists(transition(next))){writeNew(transition(next),bytes);forceDirectory(directory);}
+        publishTransition(after,bytes);
         requireTransitionAndRoot(after,bytes);promotePrepared();State observed=requireExact(after);
         Files.delete(reservation);forceDirectory(directory);return observed;
     }
@@ -149,6 +198,25 @@ final class NativeRetainedEnrollmentRealmStore {
         return state.realm.equals(intent.getString("realm"))&&state.previousRealm.equals(intent.getString("previous_realm"))
             &&state.previousSha256.equals(intent.getString("previous_sha256"))&&state.operationId.equals(intent.getString("operation_id"))
             &&state.binding.equals(intent.getString("original_binding"));
+    }
+    private void requireEmptyReservedRoot(String realm)throws Exception {
+        Path path=realms.resolve(realm);
+        if(!exists(path)||!directory(path).owner().equals(owner))throw unavailable();
+        try(DirectoryStream<Path> entries=Files.newDirectoryStream(path)){if(entries.iterator().hasNext())throw unavailable();}
+    }
+    private void publishTransition(State state,byte[] exactBytes)throws Exception {
+        requireRealmRoot(state);
+        Path path=transition(state.realm);
+        if(exists(path)){
+            byte[] previous=readFile(path,true);
+            if(Arrays.equals(previous,exactBytes))return;
+            if(previous.length>=exactBytes.length||!Arrays.equals(previous,Arrays.copyOf(exactBytes,previous.length)))throw unavailable();
+            retainTruncated(path);
+        }
+        publishNew(path,exactBytes);
+    }
+    private void retainTruncated(Path path)throws Exception {
+        promoteNew(path,directory.resolve("retained-incomplete-"+UUID.randomUUID()+".evidence"));
     }
     private byte[] encryptDocument(JSONObject document)throws Exception {
         char[] clear=document.toString().toCharArray();try{return encode(cipher.encryptWithExistingKey(clear));}
@@ -189,6 +257,9 @@ final class NativeRetainedEnrollmentRealmStore {
     }
     private void requireTransitionAndRoot(State state,byte[] bytes)throws Exception {
         if(!Arrays.equals(bytes,readFile(transition(state.realm))))throw unavailable();
+        requireRealmRoot(state);
+    }
+    private void requireRealmRoot(State state)throws Exception {
         var a=directory(realms.resolve(state.realm));if(!a.fileKey().toString().equals(state.rootIdentity)||!a.owner().equals(owner))throw unavailable();
         requireBase();
     }
@@ -201,7 +272,7 @@ final class NativeRetainedEnrollmentRealmStore {
     private JSONObject decryptDocument(byte[] bytes)throws Exception {
         char[] clear=null;try{
             try(DataInputStream in=new DataInputStream(new ByteArrayInputStream(bytes))){
-                if(in.readInt()!=0x4d5a5231)throw unavailable();
+                if(in.readInt()!=ENVELOPE_MAGIC)throw unavailable();
                 EncryptedSecret encrypted=new EncryptedSecret(readString(in),readString(in),MAX);
                 if(in.available()!=0)throw unavailable();clear=cipher.decrypt(encrypted);
             }
@@ -237,22 +308,51 @@ final class NativeRetainedEnrollmentRealmStore {
     }
     private static byte[] encode(EncryptedSecret value)throws Exception {
         ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(DataOutputStream out=new DataOutputStream(bytes)){
-            out.writeInt(0x4d5a5231);writeString(out,value.ciphertext);writeString(out,value.iv);
+            out.writeInt(ENVELOPE_MAGIC);writeString(out,value.ciphertext);writeString(out,value.iv);
         }if(bytes.size()>MAX)throw unavailable();return bytes.toByteArray();
     }
     private static void writeString(DataOutputStream out,String value)throws Exception {byte[] bytes=value.getBytes(StandardCharsets.UTF_8);if(bytes.length<1||bytes.length>MAX)throw unavailable();out.writeInt(bytes.length);out.write(bytes);}
     private static String readString(DataInputStream in)throws Exception {int size=in.readInt();if(size<1||size>MAX||size>in.available())throw unavailable();byte[] bytes=new byte[size];in.readFully(bytes);return new String(bytes,StandardCharsets.UTF_8);}
-    private byte[] readFile(Path path)throws Exception {
-        var before=regular(path);long size=before.size();if(size<1||size>MAX)throw unavailable();
+    private static boolean truncatedEnvelope(byte[] bytes){
+        ByteBuffer content=ByteBuffer.wrap(bytes);
+        for(int shift=24;shift>=0;shift-=8){
+            if(!content.hasRemaining())return true;
+            if(content.get()!=(byte)(ENVELOPE_MAGIC>>>shift))return false;
+        }
+        for(int fields=0;fields<2;fields++){
+            if(content.remaining()<Integer.BYTES)return true;
+            int length=content.getInt();
+            if(length<1||length>MAX)return false;
+            if(length>content.remaining())return true;
+            content.position(content.position()+length);
+        }
+        return false;
+    }
+    private byte[] readFile(Path path)throws Exception {return readFile(path,false);}
+    private byte[] readFile(Path path,boolean allowEmpty)throws Exception {
+        var before=regular(path);long size=before.size();if((!allowEmpty&&size==0)||size>MAX)throw unavailable();
         byte[] bytes=new byte[(int)size];try(FileChannel c=FileChannel.open(path,StandardOpenOption.READ,LinkOption.NOFOLLOW_LINKS)){
             ByteBuffer buffer=ByteBuffer.wrap(bytes);while(buffer.hasRemaining())if(c.read(buffer)<0)throw unavailable();
             if(c.read(ByteBuffer.allocate(1))!=-1)throw unavailable();
         }var after=regular(path);if(!before.fileKey().equals(after.fileKey())||after.size()!=size)throw unavailable();return bytes;
     }
-    private void writeNew(Path path,byte[] bytes)throws Exception {
-        try(FileChannel c=FileChannel.open(path,StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS)){
+    private void createStage(Path path,byte[] bytes)throws Exception {
+        try(FileChannel c=FileChannel.open(path,Set.of(StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS),
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))){
+            if(path.equals(reservationStage))forceDirectory(directory);
             ByteBuffer buffer=ByteBuffer.wrap(bytes);while(buffer.hasRemaining())c.write(buffer);c.force(true);
         }regular(path);if(!Arrays.equals(bytes,readFile(path)))throw unavailable();
+    }
+    private void publishNew(Path path,byte[] bytes)throws Exception {
+        Path stage=directory.resolve("write-"+UUID.randomUUID()+".staged");
+        createStage(stage,bytes);
+        promoteNew(stage,path);
+    }
+    private void promoteNew(Path source,Path destination)throws Exception {
+        requireBase();regular(source);
+        if(exists(destination))throw unavailable();
+        Files.move(source,destination,StandardCopyOption.ATOMIC_MOVE);
+        forceDirectory(directory);regular(destination);
     }
     private static boolean emptyBootstrap(Path dir,Path realms)throws Exception {
         try(DirectoryStream<Path> entries=Files.newDirectoryStream(dir)){
@@ -264,7 +364,10 @@ final class NativeRetainedEnrollmentRealmStore {
         return true;
     }
     private void ensureDirectory(Path path)throws Exception {
-        if(!exists(path))Files.createDirectory(path,PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+        if(!exists(path)){
+            try{Files.createDirectory(path,PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));}
+            catch(FileAlreadyExistsException concurrent){directory(path);}
+        }
         if(!directory(path).owner().equals(owner))throw unavailable();
     }
     private PosixFileAttributes regular(Path path)throws Exception {

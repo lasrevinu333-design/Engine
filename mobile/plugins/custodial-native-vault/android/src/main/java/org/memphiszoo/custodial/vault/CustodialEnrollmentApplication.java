@@ -25,12 +25,13 @@ public final class CustodialEnrollmentApplication extends Application {
     private File originalRoot,currentRoot;
     private String realm=NativeRetainedEnrollmentRealmStore.LEGACY;
     private String pointerSha="";
+    private VaultFailure startupFailure;
 
     @Override protected void attachBaseContext(Context base){
         super.attachBaseContext(base);
         try{
             originalRoot=super.getNoBackupFilesDir().getCanonicalFile();currentRoot=originalRoot;
-            if(Files.exists(originalRoot.toPath().resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY),LinkOption.NOFOLLOW_LINKS)){
+            if(!Files.notExists(originalRoot.toPath().resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY),LinkOption.NOFOLLOW_LINKS)){
                 var store=existingStore();
                 // Only completion of an already encrypted durable pointer
                 // intent; never a new inventory/finalizer/manager decision.
@@ -44,12 +45,25 @@ public final class CustodialEnrollmentApplication extends Application {
                 // previous origin's local/session/IDB data is left untouched.
                 WebView.setDataDirectorySuffix(browserSuffix(realm));
             }
-        }catch(Exception e){throw new IllegalStateException(NativeRetainedEnrollmentRealmStore.FAILURE,e);}
+        }catch(Exception e){
+            if(Build.VERSION.SDK_INT<28)throw new IllegalStateException(NativeRetainedEnrollmentRealmStore.FAILURE,e);
+            startupFailure=e instanceof VaultFailure failure?failure:new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE,e);
+            currentRoot=null;
+            // Keep the existing maintenance receiver available for a
+            // bounded diagnosis. This process must not open any WebView or
+            // ordinary employee storage while its realm is unresolved.
+            WebView.disableWebView();
+        }
+    }
+    public static boolean employeeRealmReady(Context context){
+        return context!=null&&context.getApplicationContext() instanceof CustodialEnrollmentApplication application
+            &&application.startupFailure==null&&application.currentRoot!=null;
     }
     static void requireRetainedPartitionSupport()throws VaultFailure {
         if(Build.VERSION.SDK_INT<28)throw new VaultFailure("custodial_retained_enrollment_webview_partition_unsupported");
     }
     @Override public SharedPreferences getSharedPreferences(String name,int mode){
+        if(startupFailure!=null&&PROTECTED.contains(name))throw new IllegalStateException(startupFailure.code,startupFailure);
         return super.getSharedPreferences(preferenceName(name,realm),mode);
     }
     /** Custodial private journals only. Other SDKs keep Android's original
@@ -71,8 +85,11 @@ public final class CustodialEnrollmentApplication extends Application {
             new AndroidKeystoreCipher(NativeRetainedEnrollmentRealmStore.AAD,4*1024*1024),false);
     }
     static CustodialEnrollmentApplication actual(Context context)throws VaultFailure {
-        if(context==null||!(context.getApplicationContext() instanceof CustodialEnrollmentApplication application)
-            ||application.originalRoot==null||application.currentRoot==null)throw new VaultFailure("custodial_retained_enrollment_application_required");
+        if(context==null||!(context.getApplicationContext() instanceof CustodialEnrollmentApplication application))
+            throw new VaultFailure("custodial_retained_enrollment_application_required");
+        if(application.startupFailure!=null)throw application.startupFailure;
+        if(application.originalRoot==null||application.currentRoot==null)
+            throw new VaultFailure("custodial_retained_enrollment_application_required");
         return application;
     }
     NativeRetainedEnrollmentRealmStore retainedStoreForProtectedRead()throws VaultFailure {
@@ -104,7 +121,8 @@ public final class CustodialEnrollmentApplication extends Application {
     /** Ordinary owners must keep the partition selected at process startup.
      * A committed maintenance transition cannot be adopted by a stale runtime. */
     void requireStartupPartitionCurrent()throws VaultFailure {
-        if(!Files.exists(originalRoot.toPath().resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY),LinkOption.NOFOLLOW_LINKS)){
+        if(startupFailure!=null)throw startupFailure;
+        if(Files.notExists(originalRoot.toPath().resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY),LinkOption.NOFOLLOW_LINKS)){
             if(!NativeRetainedEnrollmentRealmStore.LEGACY.equals(realm)||!pointerSha.isEmpty())throw new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE);
             return;
         }

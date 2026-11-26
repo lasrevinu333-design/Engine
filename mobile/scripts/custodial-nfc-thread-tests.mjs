@@ -40,9 +40,12 @@ public class NfcThreadProbe {
   Intent(String action){this(action,null);} Intent(String action,Tag tag){this.action=action;this.tag=tag;}
   String getAction(){return action;} Tag getParcelableExtra(String ignored){return tag;} }
  static class NfcAdapter { static final String ACTION_NDEF_DISCOVERED="ndef",EXTRA_TAG="tag"; }
+ static class CustodialEnrollmentApplication {
+  static boolean employeeRealmReady(NfcThreadProbe activity){return activity.realmReady;}
+ }
  final CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);
  final List<String> events=Collections.synchronizedList(new ArrayList<>());
- Thread caller; boolean destroyed;
+ Thread caller; boolean destroyed; boolean realmReady=true;
  boolean isDestroyed(){return destroyed;}
  boolean isFinishing(){return false;}
  String readPhysicalNfcUrl(Tag tag){
@@ -77,6 +80,9 @@ public class NfcThreadProbe {
    int before=p.events.size();
    Intent noTag=new Intent("view");check(p.normalizeExternalIntent(noTag)==noTag,"no Tag leaves existing protected URL gate intact");
    p.onTagDiscovered(null);p.drain();check(p.events.size()==before,"null Tag cannot mint proof");
+   p.realmReady=false;p.onTagDiscovered(new Tag("held",false));p.drain();
+   check(p.events.size()==before,"unresolved enrollment cannot start a physical scan");
+   p.realmReady=true;
    p.physicalNfcExecutor.shutdownNow();p.onTagDiscovered(new Tag("closed",false));
    check(p.events.size()==before,"late callback after shutdown preserves no new scan");
    System.out.println("PASS: "+assertions+" assertions using actual generated worker/normalizer/reader methods, real Java executor and synthetic Tag/Intent/RF adapters. No physical or Android lifecycle PASS.");

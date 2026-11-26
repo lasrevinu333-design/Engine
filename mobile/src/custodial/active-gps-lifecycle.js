@@ -2,6 +2,9 @@ const ACTIVE_STATUSES = new Set(['active', 'server-active', 'offline-provisional
 // Match the existing GPS evaluator/path-model and backend default clock lead.
 // This local guard supplements, and cannot replace, the server's clock policy.
 const FUTURE_TOLERANCE_MS = 30000;
+// UUIDv5 namespace for this producer only. This is an idempotency key, not
+// authentication. The existing queue and server still verify the work owner.
+const FIX_NAMESPACE = new Uint8Array([0x1d,0xfe,0xfc,0x72,0x42,0xc7,0x46,0xb9,0xa1,0xfd,0x34,0xa3,0x8c,0x25,0x13,0x91]);
 
 const clean = (value) => String(value || '').trim();
 const uuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clean(value));
@@ -20,8 +23,24 @@ function normalizedSession(row, expectedDevice) {
     deviceId,
     locationCode: location,
     employeeId: clean(row.offline_authority_employee_id || row.employee_id).toLowerCase() || null,
+    assignmentEpoch: Number.isSafeInteger(row.offline_authority_assignment_epoch) ? row.offline_authority_assignment_epoch : null,
     startedAt: clean(row.started_at) || null,
   });
+}
+
+async function fixIdentity(session, observedAt) {
+  const name = new TextEncoder().encode(JSON.stringify([
+    session.clientSessionId, session.deviceId, session.locationCode,
+    session.employeeId, session.assignmentEpoch, observedAt,
+  ]));
+  const source = new Uint8Array(FIX_NAMESPACE.length + name.length);
+  source.set(FIX_NAMESPACE);
+  source.set(name, FIX_NAMESPACE.length);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-1', source));
+  digest[6] = (digest[6] & 0x0f) | 0x50;
+  digest[8] = (digest[8] & 0x3f) | 0x80;
+  const hex = Array.from(digest.subarray(0, 16), byte => byte.toString(16).padStart(2, '0')).join('');
+  return [hex.slice(0,8), hex.slice(8,12), hex.slice(12,16), hex.slice(16,20), hex.slice(20)].join('-');
 }
 
 export function resolveActiveGpsSession(storage, deviceId) {
@@ -65,7 +84,6 @@ export function createActiveGpsLifecycle({
   deviceId,
   enqueue,
   geolocation,
-  randomUuid = () => crypto.randomUUID(),
   now = () => Date.now(),
   setTimer = (fn, ms) => setInterval(fn, ms),
   clearTimer = (id) => clearInterval(id),
@@ -93,7 +111,7 @@ export function createActiveGpsLifecycle({
     return resolveActiveGpsSession(storage, deviceId());
   }
 
-  async function capture(reason = 'timer') {
+  async function capture() {
     if (disposed) return Object.freeze({ state: 'disposed' });
     const before = current();
     if (before.state !== 'active') {
@@ -143,7 +161,13 @@ export function createActiveGpsLifecycle({
       if (lastSessionId === requested.clientSessionId && watermarkInCurrentClock && sample.timestamp <= lastObservedAt) {
         return Object.freeze({ state: 'duplicate_capture' });
       }
-      const eventId = `gps:${requested.clientSessionId}:${randomUuid()}`;
+      const observedAt = new Date(sample.timestamp).toISOString();
+      const fixId = await fixIdentity(requested, observedAt);
+      if (disposed) return Object.freeze({ state: 'disposed' });
+      if (JSON.stringify(current().session) !== JSON.stringify(requested)) {
+        return Object.freeze({ state: 'session_changed' });
+      }
+      const eventId = `gps:${requested.clientSessionId}:${fixId}`;
       const payload = Object.freeze({
         p_location_code: requested.locationCode,
         p_device_identifier: requested.deviceId,
@@ -152,8 +176,8 @@ export function createActiveGpsLifecycle({
         p_accuracy_m: sample.accuracy,
         p_session_uuid: requested.clientSessionId,
         p_client_event_id: eventId,
-        p_correlation_id: `gps:${requested.clientSessionId}:${reason}:${sample.timestamp}`,
-        p_observed_at: new Date(sample.timestamp).toISOString(),
+        p_correlation_id: eventId,
+        p_observed_at: observedAt,
       });
       await enqueue(Object.freeze({
         type: 'evaluate_location_proximity_v2',
@@ -173,10 +197,10 @@ export function createActiveGpsLifecycle({
 
   function ensureTimer() {
     if (timer != null || disposed) return;
-    timer = setTimer(() => { void capture('timer'); }, intervalMs);
+    timer = setTimer(() => { void capture(); }, intervalMs);
   }
 
-  async function reconcile(reason = 'reconcile') {
+  async function reconcile() {
     const resolved = current();
     if (resolved.state !== 'active') {
       stopTimer();
@@ -185,7 +209,7 @@ export function createActiveGpsLifecycle({
       return Object.freeze({ state: resolved.state });
     }
     ensureTimer();
-    return capture(reason);
+    return capture();
   }
   function dispose() {
     disposed = true;

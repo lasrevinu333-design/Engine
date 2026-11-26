@@ -325,6 +325,52 @@ async function openHarness(context, { backendVersion, backendSchema } = {}) {
   return page;
 }
 
+test('cached active GPS across two document owners preserves the legacy protected queue original', async ({ context }) => {
+  const one = await openHarness(context);
+  const two = await openHarness(context);
+  for (const page of [one,two]) {
+    await page.evaluate(async () => {
+      window.__testGpsLifecycle = (await import('/mobile/src/custodial/active-gps-lifecycle.js')).createActiveGpsLifecycle;
+    });
+  }
+  await context.setOffline(true);
+  const observed = Date.now()-1000;
+  const originalId = 'gps:'+SESSION_ID+':47835dcd-9561-4d1e-bbd7-69ae32e6b9a5';
+  const session = {
+    session_uuid:SESSION_ID,client_session_id:SESSION_ID,device_id:DEVICE_ID,location_code:'FIXTURE1',status:'server-active',
+    started_at:new Date(observed-60000).toISOString(),offline_authority_assignment_epoch:7,
+  };
+  const original = {
+    type:'evaluate_location_proximity_v2',client_id:originalId,
+    payload:{p_session_uuid:SESSION_ID,p_device_identifier:DEVICE_ID,p_location_code:'FIXTURE1',
+      p_latitude:35.1,p_longitude:-90.1,p_accuracy_m:8,p_client_event_id:originalId,
+      p_correlation_id:'prepinned-original-correlation',p_observed_at:new Date(observed).toISOString()},
+  };
+  const before = await one.evaluate(async ({session,original}) => {
+    localStorage.setItem('session:'+session.session_uuid,JSON.stringify(session));
+    await window.MemphisScanSync.enqueue(original);
+    return await window.MemphisScanSync.listActions();
+  },{session,original});
+  expect(before).toHaveLength(1);
+  const capture = (page,timestamp) => page.evaluate(async ({timestamp,device}) => {
+    const lifecycle = window.__testGpsLifecycle({
+      storage:localStorage,deviceId:()=>device,
+      enqueue:action=>window.MemphisScanSync.enqueue(action),
+      geolocation:{getCurrentPosition:done=>done({timestamp,coords:{latitude:35.1,longitude:-90.1,accuracy:8}})},
+    });
+    try{return (await lifecycle.capture()).state;}
+    finally{lifecycle.dispose();}
+  },{timestamp,device:DEVICE_ID});
+  expect(await capture(two,observed)).toBe('queued');
+  expect(await two.evaluate(() => window.MemphisScanSync.listActions())).toEqual(before);
+  expect(await capture(one,observed+500)).toBe('queued');
+  expect(await capture(two,observed+500)).toBe('queued');
+  const current = await two.evaluate(() => window.MemphisScanSync.listActions());
+  expect(current).toHaveLength(2);
+  expect(current.find(item=>item.operation_id===originalId)).toEqual(before[0]);
+  expect(current.find(item=>item.operation_id!==originalId).payload.p_observed_at).toBe(new Date(observed+500).toISOString());
+});
+
 async function seedExactQueueRecord(page, record) {
   await seedQueueDatabase(page, 4, [record]);
   return record;

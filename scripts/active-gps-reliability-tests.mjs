@@ -18,7 +18,15 @@ test('capture older than Start is advisory unavailable, not current work evidenc
 test('different records sharing one occurrence UUID are ambiguous',()=>{const f=fixture();try{f.map.set('session:duplicate',JSON.stringify({...f.row,location_code:'OTHER'}));assert.equal(resolveActiveGpsSession(f.storage,'KIOSK_08').state,'ambiguous');}finally{f.lifecycle.dispose();}});
 test('provider that never calls back is bounded and later captures can recover',async()=>{let done;const f=fixture({geo:{getCurrentPosition:fn=>done=fn}});try{const pending=f.lifecycle.capture();assert.equal(f.timers.size,1);[...f.timers.values()][0]();assert.equal((await pending).state,'gps_unavailable');const next=f.lifecycle.capture();done(position);assert.equal((await next).state,'queued');assert.equal(f.timers.size,0);}finally{f.lifecycle.dispose();}});
 test('dispose settles only owned capture and ignores late provider callbacks',async()=>{let done;const f=fixture({geo:{getCurrentPosition:fn=>done=fn}});const pending=f.lifecycle.capture();f.lifecycle.dispose();assert.equal(await Promise.race([pending.then(v=>v.state),new Promise(resolve=>setTimeout(()=>resolve('unsettled'),25))]),'disposed');done(position);assert.equal(f.queued.length,0);assert.equal(f.timers.size,0);});
-test('a successfully queued original sample is not announced after disposal',async()=>{let settle;const f=fixture({enqueue:()=>new Promise(r=>settle=r)});const pending=f.lifecycle.capture();await Promise.resolve();await Promise.resolve();f.lifecycle.dispose();settle();await pending;assert.equal(f.states.some(s=>s.state==='queued'),false);});
+test('a successfully queued original sample is not announced after disposal',async()=>{
+ let settle,entered;const admission=new Promise(resolve=>{entered=resolve;});
+ const f=fixture({enqueue:()=>new Promise(resolve=>{settle=resolve;entered();})});
+ const pending=f.lifecycle.capture();
+ await admission;
+ f.lifecycle.dispose();settle();
+ assert.equal((await pending).state,'queued');
+ assert.equal(f.states.some(s=>s.state==='queued'),false);
+});
 test('future capture is rejected without consuming the next fresh sample',async()=>{
  const now=started+60000;let timestamp=now+30001;
  const f=fixture({now:()=>now,geo:{getCurrentPosition:done=>done({...position,timestamp})}});

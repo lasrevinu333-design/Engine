@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import com.getcapacitor.BridgeActivity;
+import org.memphiszoo.custodial.vault.CustodialEnrollmentApplication;
 import org.memphiszoo.custodial.vault.LegacyCustodialNfcUrl;
 import org.memphiszoo.custodial.vault.NativeNfcScanAuthority;
 import org.memphiszoo.custodial.vault.NativeNfcScanHandoff;
@@ -212,6 +213,7 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
     public void onResume() {
         super.onResume();
         hideCustodialNavigationBar();
+        if (!CustodialEnrollmentApplication.employeeRealmReady(this)) return;
         NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
         if (adapter != null) adapter.enableReaderMode(this, this,
             NfcAdapter.FLAG_READER_NFC_A | NfcAdapter.FLAG_READER_NFC_B | NfcAdapter.FLAG_READER_NFC_F | NfcAdapter.FLAG_READER_NFC_V,
@@ -227,6 +229,7 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
 
     @Override
     public void onTagDiscovered(Tag tag) {
+        if (!CustodialEnrollmentApplication.employeeRealmReady(this)) return;
         enqueuePhysicalNfcTag(tag);
     }
 
@@ -238,6 +241,7 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
 
     @Override
     protected void load() {
+        if (!CustodialEnrollmentApplication.employeeRealmReady(this)) return;
         // Same Capacitor construction/lifecycle, with our pre-plugin gate installed
         // before initial intent dispatch. No manual plugin registration.
         bridge = bridgeBuilder.addPlugins(initialPlugins).setConfig(config).create();
@@ -254,14 +258,24 @@ public class MainActivity extends BridgeActivity implements NfcAdapter.ReaderCal
             setShowWhenLocked(false);
             setTurnScreenOn(false);
         }
-        setIntent(normalizeExternalIntent(getIntent()));
+        boolean enrollmentReady = CustodialEnrollmentApplication.employeeRealmReady(this);
+        if (enrollmentReady) setIntent(normalizeExternalIntent(getIntent()));
+        else setIntent(new Intent(Intent.ACTION_MAIN));
         super.onCreate(savedInstanceState);
+        if (!enrollmentReady) {
+            android.widget.TextView status = new android.widget.TextView(this);
+            status.setText("Custodial enrollment needs recovery. Saved work has been left in place.");
+            status.setGravity(android.view.Gravity.CENTER);
+            status.setTextSize(18);
+            setContentView(status);
+        }
         hideCustodialNavigationBar();
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
-        Intent normalized = normalizeExternalIntent(intent);
+        Intent normalized = CustodialEnrollmentApplication.employeeRealmReady(this)
+            ? normalizeExternalIntent(intent) : new Intent(Intent.ACTION_MAIN);
         setIntent(normalized);
         super.onNewIntent(normalized);
     }

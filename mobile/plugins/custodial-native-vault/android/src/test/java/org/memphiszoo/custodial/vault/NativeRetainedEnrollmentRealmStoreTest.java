@@ -3,6 +3,7 @@ package org.memphiszoo.custodial.vault;
 import java.nio.file.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
@@ -35,6 +36,100 @@ public final class NativeRetainedEnrollmentRealmStoreTest {
     }
     static Path fixture(Path parent,String name)throws Exception {return Files.createDirectory(parent.resolve(name));}
     static String id(){return UUID.randomUUID().toString();}
+    static void requireRetainedBytes(Path directory,byte[] expected)throws Exception{
+        try(DirectoryStream<Path> files=Files.newDirectoryStream(directory,"retained-incomplete-*.evidence")){
+            var entries=files.iterator();
+            check(entries.hasNext());
+            check(Arrays.equals(Files.readAllBytes(entries.next()),expected));
+            check(!entries.hasNext());
+        }
+    }
+    static void testStageRecovery(Path parent)throws Exception{
+        for(String scenario:List.of("staged","torn-stage","torn-reservation","torn-prepared","foreign-prepared")){
+            Path root=fixture(parent,scenario),dir=root.resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY);
+            var cipher=new SyntheticExistingCipher();cipher.failEncryptAt=2;
+            var store=new NativeRetainedEnrollmentRealmStore(root,cipher);
+            String next=id(),operation=id(),binding="exact original binding";
+            refuses(()->store.advance(store.read(),next,operation,binding));
+            cipher.failEncryptAt=0;
+            Path reservation=dir.resolve("reservation.bin");
+            byte[] valid=Files.readAllBytes(reservation),partial=Arrays.copyOf(valid,8);
+            if(scenario.equals("staged")||scenario.equals("torn-stage")){
+                Files.move(reservation,dir.resolve("reservation.bin.stage"));
+                Files.delete(dir.resolve("realms").resolve(next)); // Only the empty synthetic root.
+            }
+            if(scenario.equals("torn-reservation")||scenario.equals("torn-stage")){
+                Path interrupted=scenario.equals("torn-stage")?dir.resolve("reservation.bin.stage"):reservation;
+                Files.write(interrupted,partial,StandardOpenOption.TRUNCATE_EXISTING);
+                var reopened=new NativeRetainedEnrollmentRealmStore(root,cipher,false);
+                refuses(reopened::read);
+                try{reopened.finishPrepared();throw new AssertionError("unauthenticated reservation accepted");}
+                catch(VaultFailure failure){check(failure.code.equals(NativeRetainedEnrollmentRealmStore.RESERVATION_HELD));}
+                check(Arrays.equals(Files.readAllBytes(interrupted),partial));
+                check(!Files.exists(dir.resolve("current.bin")));
+                continue;
+            }
+            if(!scenario.equals("staged")){
+                Files.write(dir.resolve("prepared.bin"),scenario.equals("torn-prepared")?partial:new byte[]{7,8,9});
+            }
+            var reopened=new NativeRetainedEnrollmentRealmStore(root,cipher,false);
+            refuses(reopened::read);
+            if(scenario.equals("foreign-prepared")){
+                refuses(reopened::finishPrepared);
+                check(Arrays.equals(Files.readAllBytes(dir.resolve("prepared.bin")),new byte[]{7,8,9}));
+                check(Arrays.equals(Files.readAllBytes(reservation),valid));
+                continue;
+            }
+            var result=reopened.finishPrepared();
+            check(result.realm.equals(next)&&result.operationId.equals(operation)&&result.binding.equals(binding));
+            check(!Files.exists(reservation)&&!Files.exists(dir.resolve("reservation.bin.stage")));
+            check(reopened.finishPrepared().sha256.equals(result.sha256));
+            if(scenario.equals("torn-prepared"))requireRetainedBytes(dir,partial);
+        }
+        Path root=fixture(parent,"torn-transition"),dir=root.resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY);
+        var cipher=new SyntheticExistingCipher();
+        var store=new NativeRetainedEnrollmentRealmStore(root,cipher);
+        var expected=store.advance(store.read(),id(),id(),"original transition");
+        Path original=dir.resolve("transition-"+expected.realm+".bin");
+        byte[] encrypted=Files.readAllBytes(original),partial=Arrays.copyOf(encrypted,8);
+        Files.move(dir.resolve("current.bin"),dir.resolve("prepared.bin"));
+        Files.write(original,partial,StandardOpenOption.TRUNCATE_EXISTING);
+        var reopened=new NativeRetainedEnrollmentRealmStore(root,cipher,false);
+        var actual=reopened.finishPrepared();
+        check(expected.sha256.equals(actual.sha256)&&expected.operationId.equals(actual.operationId));
+        check(Arrays.equals(Files.readAllBytes(original),encrypted));
+        requireRetainedBytes(dir,partial);
+        check(reopened.finishPrepared().sha256.equals(actual.sha256));
+    }
+    static void testConcurrentReaders(Path root,SyntheticExistingCipher cipher,String expected)throws Exception{
+        var firstRead=new CountDownLatch(1);
+        var allowRead=new CountDownLatch(1);
+        CredentialCipher blockingCipher=new CredentialCipher(){
+            public EncryptedSecret encrypt(char[] clear)throws VaultFailure{return cipher.encrypt(clear);}
+            public char[] decrypt(EncryptedSecret encrypted)throws VaultFailure{
+                firstRead.countDown();
+                try{if(!allowRead.await(5,TimeUnit.SECONDS))throw new AssertionError("fixture lock did not release");}
+                catch(InterruptedException error){Thread.currentThread().interrupt();throw new AssertionError(error);}
+                return cipher.decrypt(encrypted);
+            }
+            public void destroyKey(){throw new AssertionError("key removal forbidden");}
+        };
+        var first=new NativeRetainedEnrollmentRealmStore(root,blockingCipher,false);
+        var second=new NativeRetainedEnrollmentRealmStore(root,cipher,false);
+        ExecutorService threads=Executors.newFixedThreadPool(2);
+        try{
+            Future<NativeRetainedEnrollmentRealmStore.State> one=threads.submit(first::read);
+            check(firstRead.await(5,TimeUnit.SECONDS));
+            var secondEntered=new CountDownLatch(1);
+            Future<NativeRetainedEnrollmentRealmStore.State> two=threads.submit(()->{secondEntered.countDown();return second.read();});
+            check(secondEntered.await(5,TimeUnit.SECONDS));
+            try{two.get(100,TimeUnit.MILLISECONDS);throw new AssertionError("second reader ran while the first held the lock");}
+            catch(TimeoutException serialized){check(true);}
+            finally{allowRead.countDown();}
+            check(one.get(5,TimeUnit.SECONDS).sha256.equals(expected));
+            check(two.get(5,TimeUnit.SECONDS).sha256.equals(expected));
+        }finally{allowRead.countDown();threads.shutdownNow();}
+    }
     public static void main(String[] args)throws Exception {
         if(args.length!=1)throw new IllegalArgumentException("new owned absolute fixture parent required");
         Path parent=Path.of(args[0]);Files.createDirectory(parent);
@@ -100,6 +195,8 @@ public final class NativeRetainedEnrollmentRealmStoreTest {
         Files.write(foreignDir.resolve("unexpected.bin"),new byte[]{1});refuses(()->new NativeRetainedEnrollmentRealmStore(foreignBootstrap,key));
         check(Arrays.equals(new byte[]{1},Files.readAllBytes(foreignDir.resolve("unexpected.bin"))));
         for(var e:originals.entrySet())check(Arrays.equals(e.getValue(),Files.readAllBytes(e.getKey())));
+        testStageRecovery(parent);
+        testConcurrentReaders(root,key,b.sha256);
         System.out.println("PASS "+assertions+" storage assertions; SYNTHETIC_JCE_ONLY; Android/browser/owning-finalizer/reassignment NOT_QUALIFIED");
     }
 }
