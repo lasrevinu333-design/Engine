@@ -159,9 +159,19 @@
       "sha256": "c840c532f293ef3012d4ed0d3cc035aacbbdea73789c8ba20f14885b0d2655f2"
     },
     {
+      "path": "phone-assignments.html",
+      "bytes": 2590,
+      "sha256": "672ee742afb6960b6f89f81f41426147284d10aeae009a1157ea5ec85c1a3440"
+    },
+    {
       "path": "schedule-employee-day.html",
       "bytes": 30173,
       "sha256": "28c57548ef515f0d78de0064ce074387b9c3ee5b5bb2fd896f708e5d7631cf5d"
+    },
+    {
+      "path": "staffing-management.html",
+      "bytes": 5757,
+      "sha256": "b490856b84f80c65a4e27881d69fce28641345159ea9b1b57c4f081cfa836d66"
     },
     {
       "path": "start_page1.html",
@@ -2054,6 +2064,27 @@
       ]
     },
     {
+      "path": "phone-assignments.html",
+      "kind": "changed",
+      "prior_bytes": 2576,
+      "prior_sha256": "2738e7e851da80ac207d0dc247ea9a06708ccf469426e0b694c631dd68df9eaa",
+      "current_sha256": "672ee742afb6960b6f89f81f41426147284d10aeae009a1157ea5ec85c1a3440",
+      "hunks": [
+        {
+          "old_start": 43,
+          "old_count": 1,
+          "new_start": 43,
+          "new_count": 1,
+          "before": [
+            "  <script src=\"./phone-assignments.js?v=20261125-r1\"></script>"
+          ],
+          "after": [
+            "  <script src=\"./phone-assignments.js?v=20261126-assignment-epoch\"></script>"
+          ]
+        }
+      ]
+    },
+    {
       "path": "schedule-employee-day.html",
       "kind": "changed",
       "prior_bytes": 27340,
@@ -2796,6 +2827,27 @@
           ],
           "after": [
             "console.log(JSON.stringify({status:'PASS_BEST_EFFORT_RELEASE_INPUTS',negative_controls:negatives,version_code:latest,retained_versions:[81,82,83,84,85,86,87],profile_count:1,build:false,installed:false,physical_audio:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "staffing-management.html",
+      "kind": "changed",
+      "prior_bytes": 5747,
+      "prior_sha256": "9df62c023fba7326a1e2d07e00296f4380caed4e3e90ec9f30ae77029ab5305a",
+      "current_sha256": "b490856b84f80c65a4e27881d69fce28641345159ea9b1b57c4f081cfa836d66",
+      "hunks": [
+        {
+          "old_start": 51,
+          "old_count": 1,
+          "new_start": 51,
+          "new_count": 1,
+          "before": [
+            "<script type=\"module\" src=\"./manager-staffing-runtime.mjs?v=20261125-r1\"></script>"
+          ],
+          "after": [
+            "<script type=\"module\" src=\"./manager-staffing-runtime.mjs?v=20261126-initial-fill\"></script>"
           ]
         }
       ]

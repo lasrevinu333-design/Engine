@@ -149,6 +149,7 @@
   function rowView(device) {
     const current = device.employee_name || 'Unassigned';
     const editable=ownerAccess()&&device.active===true;
+    const assignmentReady=state.data?.assignment_contract==='assignment.epoch.v1';
     const search = `${device.device_id} ${device.device_name || ''} ${current}`.toLowerCase();
     const needle = String(els.search.value || '').trim().toLowerCase();
     const hidden = needle && !search.includes(needle);
@@ -162,7 +163,7 @@
       <div class="phoneControls">
         <select class="uxSelect" ${editable?'':'disabled'} data-employee aria-label="Employee for ${escapeHtml(device.device_id)}">${employeeOptions(device)}</select>
       </div>
-      ${editable?'<div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button></div>':`<div class="phoneLastSeen">${device.active===true?'Read-only phone assignment information':'Inactive kiosk'}</div>`}
+      ${editable&&assignmentReady?'<div class="phoneActionRow"><button class="uxButton primary compact" data-save type="button">Save Assignment</button></div>':`<div class="phoneLastSeen">${editable?'Assignment updates are temporarily unavailable. Refresh before making changes.':device.active===true?'Read-only phone assignment information':'Inactive kiosk'}</div>`}
       <div class="rowStatus" data-row-status></div>
       ${editable?`<div class="phoneActivation">
         <p>Saving an assignment does not activate the phone. Activation uses the trusted maintenance computer with this phone connected by USB; saved work is retained.</p>
@@ -266,6 +267,8 @@
   }
   async function saveRow(row) {
     if(!ownerAccess())return showToast('Changing phone assignments is owner-only.','error');
+    if(state.data?.assignment_contract!=='assignment.epoch.v1')
+      return showToast('Assignment updates are temporarily unavailable. Refresh before making changes.','error');
     const owner=settledOwner;if(!sameAuthority(owner)){withdrawAuthority();return;}
     const deviceId = row.dataset.device;
     const employeeId = row.querySelector('[data-employee]').value || null;
