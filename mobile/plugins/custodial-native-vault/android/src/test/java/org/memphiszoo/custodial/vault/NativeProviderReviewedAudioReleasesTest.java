@@ -28,16 +28,32 @@ public class NativeProviderReviewedAudioReleasesTest {
     private static NativeProviderAudioAdmission.Entry entry(String clock,String backend,String composition,long version,NativeProviderAudioPolicy policy) throws VaultFailure {
         return new NativeProviderAudioAdmission.Entry(version,"SYNTHETIC_ONLY",clock,backend,composition,policy);
     }
-    @Test public void actualReviewedRegistrySelectsOnlyItsPairedV80SourceInputs() throws Exception {
-        assertEquals(1,NativeProviderReviewedAudioReleases.entries().length);
-        assertNull(NativeProviderAudioAdmission.compiled(app(),clock()));
-        NativeProviderReleaseAdmission.Release release=NativeProviderReviewedReleases.entries()[0];
-        NativeProviderAppIdentity candidate=NativeProviderAppIdentity.fromPackaged(NativeProviderAppIdentity.PACKAGE,"1.0.0",80,NativeProviderAppIdentityTest.packaged(80));
-        NativeProviderReleaseAdmission.Selected selected=NativeProviderReleaseAdmission.compiled(release.profile.platform,candidate);
-        assertNotNull(selected);assertTrue(release.profile.bestEffort);
-        NativeProviderAudioPolicy actual=NativeProviderAudioAdmission.compiled(candidate,selected);
-        assertNotNull(actual);assertEquals("com.google.android.tts",actual.engine);
-        assertEquals("en-us-x-iol-local",actual.voice);assertEquals(900,actual.rateMilli);
+    @Test public void actualReviewedRegistriesSelectTheirExactPairedInputs() throws Exception {
+        NativeProviderReleaseAdmission.Release[] releases = NativeProviderReviewedReleases.entries();
+        assertEquals(8, releases.length);
+        assertEquals(releases.length, NativeProviderReviewedAudioReleases.entries().length);
+        assertNull(NativeProviderAudioAdmission.compiled(app(), clock()));
+        for (int index = 0; index < releases.length; index++) {
+            NativeProviderReleaseAdmission.Release release = releases[index];
+            assertEquals(81L + index, release.versionCode);
+            NativeProviderAppIdentity candidate = NativeProviderAppIdentity.fromPackaged(
+                NativeProviderAppIdentity.PACKAGE, release.versionName, release.versionCode,
+                NativeProviderAppIdentityTest.packaged(release.versionCode));
+            NativeProviderReleaseAdmission.Selected selected = NativeProviderReleaseAdmission.compiled(
+                release.profile.platform, candidate);
+            assertNotNull(selected);
+            assertTrue(release.profile.bestEffort);
+            NativeProviderAudioPolicy actual = NativeProviderAudioAdmission.compiled(candidate, selected);
+            assertNotNull(actual);
+            assertEquals("com.google.android.tts", actual.engine);
+            assertEquals("en-us-x-iol-local", actual.voice);
+            assertEquals(900, actual.rateMilli);
+        }
+        for (long unknown : new long[]{80L, 89L}) {
+            NativeProviderAppIdentity candidate = NativeProviderAppIdentity.fromPackaged(
+                NativeProviderAppIdentity.PACKAGE, "1.0.0", unknown, NativeProviderAppIdentityTest.packaged(unknown));
+            assertNull(NativeProviderReleaseAdmission.compiled(releases[0].profile.platform, candidate));
+        }
     }
     @Test public void syntheticEntryUsesExactNativeClockFingerprintAndEvidence() throws Exception {
         NativeProviderAudioPolicy p=policy();

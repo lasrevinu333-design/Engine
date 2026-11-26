@@ -38,7 +38,7 @@ const RETAINED_FEEDBACK_PROFILE_SHA='bfa5fa1084c8953a9243e8469742383717d2b5ec4b8
 const WEB_LIFECYCLE_PROFILE_SHA='a414732e10fde9ddf4978fd67985984573588198e2c48bbad7181b2b3556dbb3';
 const MANAGER_RECOVERY_PROFILE_SHA='190aad455944e05763a647ce2313257a94107f800f7095837afab4c6677a4670';
 const STAFFING_TRANSITION_PROFILE_SHA='36197b398477eb4f42fa22d3ca1beeae15eba900e6ce3b2be48eb1b3588d509d';
-const AUDITED_V88_PROFILE_SHA='79bb25b6989c8e37531b75a5f159bce5f075b49814be0ee1da0906e965d216af';
+const AUDITED_V88_PROFILE_SHA='b52a212c4db95c9e4bc04d7283de3d1d17072ae7329c8e870c74253e126e4c7a';
 const BASECAMP_R34_PROFILE_SHA='113e0647421cfbb6b3dc8cfc2a21757e15446f27bd65c64bc150ba41af4a2f36';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};

@@ -23,6 +23,11 @@
   ],
   "test_java": [
     {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleasesTest.java",
+      "bytes": 5957,
+      "sha256": "13820090644ca12ec9f20758ad27d3e67f46f00e40ae8d67bfccada9f94f0315"
+    },
+    {
       "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedEnrollmentRealmStoreTest.java",
       "bytes": 17751,
       "sha256": "a12cb05bf034224b2ebe62d82fda8ef16c1191cb237b9561eb4718be0f016cbb"
@@ -1169,6 +1174,61 @@
             "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
             "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
             "      }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleasesTest.java",
+      "kind": "changed",
+      "prior_bytes": 5140,
+      "prior_sha256": "10893661e54d485fcbd26b57ac415a1e1359e366b9198f33aae9d1a949b137b5",
+      "current_sha256": "13820090644ca12ec9f20758ad27d3e67f46f00e40ae8d67bfccada9f94f0315",
+      "hunks": [
+        {
+          "old_start": 31,
+          "old_count": 10,
+          "new_start": 31,
+          "new_count": 26,
+          "before": [
+            "    @Test public void actualReviewedRegistrySelectsOnlyItsPairedV80SourceInputs() throws Exception {",
+            "        assertEquals(1,NativeProviderReviewedAudioReleases.entries().length);",
+            "        assertNull(NativeProviderAudioAdmission.compiled(app(),clock()));",
+            "        NativeProviderReleaseAdmission.Release release=NativeProviderReviewedReleases.entries()[0];",
+            "        NativeProviderAppIdentity candidate=NativeProviderAppIdentity.fromPackaged(NativeProviderAppIdentity.PACKAGE,\"1.0.0\",80,NativeProviderAppIdentityTest.packaged(80));",
+            "        NativeProviderReleaseAdmission.Selected selected=NativeProviderReleaseAdmission.compiled(release.profile.platform,candidate);",
+            "        assertNotNull(selected);assertTrue(release.profile.bestEffort);",
+            "        NativeProviderAudioPolicy actual=NativeProviderAudioAdmission.compiled(candidate,selected);",
+            "        assertNotNull(actual);assertEquals(\"com.google.android.tts\",actual.engine);",
+            "        assertEquals(\"en-us-x-iol-local\",actual.voice);assertEquals(900,actual.rateMilli);"
+          ],
+          "after": [
+            "    @Test public void actualReviewedRegistriesSelectTheirExactPairedInputs() throws Exception {",
+            "        NativeProviderReleaseAdmission.Release[] releases = NativeProviderReviewedReleases.entries();",
+            "        assertEquals(8, releases.length);",
+            "        assertEquals(releases.length, NativeProviderReviewedAudioReleases.entries().length);",
+            "        assertNull(NativeProviderAudioAdmission.compiled(app(), clock()));",
+            "        for (int index = 0; index < releases.length; index++) {",
+            "            NativeProviderReleaseAdmission.Release release = releases[index];",
+            "            assertEquals(81L + index, release.versionCode);",
+            "            NativeProviderAppIdentity candidate = NativeProviderAppIdentity.fromPackaged(",
+            "                NativeProviderAppIdentity.PACKAGE, release.versionName, release.versionCode,",
+            "                NativeProviderAppIdentityTest.packaged(release.versionCode));",
+            "            NativeProviderReleaseAdmission.Selected selected = NativeProviderReleaseAdmission.compiled(",
+            "                release.profile.platform, candidate);",
+            "            assertNotNull(selected);",
+            "            assertTrue(release.profile.bestEffort);",
+            "            NativeProviderAudioPolicy actual = NativeProviderAudioAdmission.compiled(candidate, selected);",
+            "            assertNotNull(actual);",
+            "            assertEquals(\"com.google.android.tts\", actual.engine);",
+            "            assertEquals(\"en-us-x-iol-local\", actual.voice);",
+            "            assertEquals(900, actual.rateMilli);",
+            "        }",
+            "        for (long unknown : new long[]{80L, 89L}) {",
+            "            NativeProviderAppIdentity candidate = NativeProviderAppIdentity.fromPackaged(",
+            "                NativeProviderAppIdentity.PACKAGE, \"1.0.0\", unknown, NativeProviderAppIdentityTest.packaged(unknown));",
+            "            assertNull(NativeProviderReleaseAdmission.compiled(releases[0].profile.platform, candidate));",
+            "        }"
           ]
         }
       ]
