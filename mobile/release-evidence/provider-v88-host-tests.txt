@@ -1,11 +1,11 @@
-Candidate source c24bc73e0acecf78b906c0f0cef2c0de65aa710c
+Candidate source 38020485dc4d3b65aa91e8673ff9f71b4ea3adff
 All native production Java compiled against Android API 36 with the existing pinned generated scope and dependencies.
-NativeProviderClockOwnerTest, NativeProviderTimeTest, NativeProviderJobLifecycleTest, NativeProviderRuntimeOwnerTest, NativeProviderBestEffortTest, NativeProviderAudioSequenceTest
+NativeProviderClockOwnerTest, NativeProviderTimeTest, NativeProviderJobLifecycleTest, NativeProviderRuntimeOwnerTest, NativeProviderBestEffortTest, NativeProviderAudioSequenceTest, NativeProviderCompositionTest, NativeProviderFirebaseDispatchTest, NativeProviderRegistrationCoordinatorTest, ProviderRecordStoreTest, NativeProviderReviewedAudioReleasesTest
 JUnit version 4.13.2
-......................................................................................
-Time: 3.227
+.................................................................................................................................................................
+Time: 7.251
 
-OK (86 tests)
+OK (161 tests)
 
 NativeRetainedEnrollmentRealmStoreTest
 PASS 98 storage assertions; SYNTHETIC_JCE_ONLY; Android/browser/owning-finalizer/reassignment NOT_QUALIFIED

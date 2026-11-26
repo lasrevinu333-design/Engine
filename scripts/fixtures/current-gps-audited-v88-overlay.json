@@ -6,22 +6,72 @@
       "sha256": "5599677474262a88ea00718f067772360d8fd566da75973953d700e92280c458"
     },
     {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialProviderSyncJobService.java",
+      "bytes": 7360,
+      "sha256": "f4a9f24a3b604afe9901bd6fb2eacf88cfb5132e8185f190d5388751f42eb841"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderComponentRuntime.java",
+      "bytes": 2140,
+      "sha256": "8adc19dbb0199ff9da4d823066c6b0cbd6dd67d73821bf9d774d5dfcc802ef59"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderFailureDisposition.java",
+      "bytes": 5290,
+      "sha256": "6a552791ebc376b297c5ed903164a1333901b5b19cf0d27c5c98975f13712cc1"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderFirebaseDispatch.java",
+      "bytes": 1268,
+      "sha256": "b4bd5e5ec48e59f440f843ee7dc940e0e7e2e7b005901f6283e862572468fc14"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRegistrationCoordinator.java",
+      "bytes": 8911,
+      "sha256": "e30f2850dee317f9387f4f3d08a305f7e4f6c48d622deaf28d7316fe0cffeb6f"
+    },
+    {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
       "bytes": 4897,
-      "sha256": "3c3a8039a102d9cf3e92bab42b1cf8d632674c91288cfdc45e8d07873860404e"
+      "sha256": "6eb613fb84b29536305d8266db146ac4feabf1e28c98d761397b6197c1c1996b"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
       "bytes": 5572,
-      "sha256": "4a06942c096ee2fa84b0aa16374e91ed589417b434fc452ab7e7af58b2bd0326"
+      "sha256": "b558af1b269a9f236bbe49fd386f83bd80715aeb80cdb5b7d8c66818bff7ed14"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "bytes": 55211,
+      "sha256": "5b959476dec6596ab1d0d07165b40fd23c11b975a8ddcde75bb40a366aac8ac6"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeRetainedEnrollmentRealmStore.java",
       "bytes": 25727,
       "sha256": "7701063fef9d1f9e69f2a1a30e6afca0ea001ac8959f7cd03cd3d9de2664ca87"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/ProviderRecordStore.java",
+      "bytes": 20582,
+      "sha256": "c0d217e5e0398317918b2ad4da90bda5c463057184ade84068dcacd2cc3c2616"
     }
   ],
   "test_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderCompositionTest.java",
+      "bytes": 38183,
+      "sha256": "9bd940176fe79aeeeb46f064bd87e9ee29d9a7df13c470b99d420b06084ba852"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderFirebaseDispatchTest.java",
+      "bytes": 5350,
+      "sha256": "003cf3a08022ab6dd304db2019b00095873ef64898dba945e9f31fa43d911483"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRegistrationCoordinatorTest.java",
+      "bytes": 14090,
+      "sha256": "7ab38eefa4dadbca7b562e5fec4e849b87701ed56a6e79906e83cf9cad47edb0"
+    },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleasesTest.java",
       "bytes": 5957,
@@ -36,8 +86,8 @@
   "auxiliary": [
     {
       "path": "codemagic.yaml",
-      "bytes": 48247,
-      "sha256": "7eb35be59e26f05f9c00718dd56444e9dd89aae91e3dbe281b8138a4da3874fb"
+      "bytes": 48341,
+      "sha256": "f8d4bf62c31f4d6df0514f990185f499d78e46cf4a92d326cd717701d8a635e0"
     },
     {
       "path": "dashboard-map-page.js",
@@ -52,17 +102,27 @@
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
       "bytes": 5737,
-      "sha256": "b5b4f34866f9536193072faa52be2081dbfe0b032095daea3a7967d69c7de673"
+      "sha256": "3014ab8b21e3514e2a5a65193d432b93a5e60167c76a3c0b3da858eefcfbb104"
     },
     {
       "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
       "bytes": 6131,
-      "sha256": "16b56484bcdd52aa1ad2d721a245f9ddb151350cce3b67ad5cbc3bf6e3aecc2a"
+      "sha256": "a0572eea725f5fd94c1c83fed361e9b93db3764d7c9380266ae93ff552e1076b"
+    },
+    {
+      "path": "mobile/scripts/configure-firebase.mjs",
+      "bytes": 6612,
+      "sha256": "7f24655d559e319693f54ea551d0ed020d11efdfdf2bd1b1f68f05aec817cd84"
     },
     {
       "path": "mobile/scripts/configure-native-links.mjs",
       "bytes": 21401,
       "sha256": "8c3bcc3e92a2567ba1ad72b0127d9938cadb443df4f962f0326799cf0f0ce592"
+    },
+    {
+      "path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+      "bytes": 42010,
+      "sha256": "796338be935ba3700d8b01372a4f5993f1f24684227b1ea846072c9bcfd0a75c"
     },
     {
       "path": "mobile/src/custodial/active-gps-lifecycle.js",
@@ -116,18 +176,18 @@
     },
     {
       "path": "scripts/provider-best-effort-release-tests.mjs",
-      "bytes": 6694,
-      "sha256": "e2f9978210fd1e3944195d8da99371936dacb299eaa7d31ec0a5313cfb8c30d0"
+      "bytes": 6955,
+      "sha256": "60aee73620b99ddcf40de182a4b628f88dd9b27c05f548fe8668a7f267ca5649"
     },
     {
       "path": "mobile/release-evidence/provider-v88-composition.json",
-      "bytes": 49413,
-      "sha256": "8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2"
+      "bytes": 51921,
+      "sha256": "7d8facfcd9230f4dd1b6f54b6e6d35c52e220e33eefe8b390bb6c7241c9e866f"
     },
     {
       "path": "mobile/release-evidence/provider-v88-host-tests.txt",
-      "bytes": 716,
-      "sha256": "da9bb5d80706ccbb2c92deb5a629a2891ee64765ac9bbef4cb54eed253721ae2"
+      "bytes": 968,
+      "sha256": "3f3d6387b93f704947e3cab647b5a13e247fc11b73d1c66f5c759929c3ad7153"
     }
   ],
   "core_sources": [
@@ -185,24 +245,36 @@
       "kind": "changed",
       "prior_bytes": 48025,
       "prior_sha256": "601c0d78bc7d531537b21f2f4670eae6a278f8647134b46f4be95ce0293424d2",
-      "current_sha256": "7eb35be59e26f05f9c00718dd56444e9dd89aae91e3dbe281b8138a4da3874fb",
+      "current_sha256": "f8d4bf62c31f4d6df0514f990185f499d78e46cf4a92d326cd717701d8a635e0",
       "hunks": [
+        {
+          "old_start": 973,
+          "old_count": 0,
+          "new_start": 974,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "      groups:",
+            "        - firebase_client_config"
+          ]
+        },
         {
           "old_start": 977,
           "old_count": 1,
-          "new_start": 977,
-          "new_count": 1,
+          "new_start": 979,
+          "new_count": 2,
           "before": [
             "        MZ_BUILD_NUMBER: '87'"
           ],
           "after": [
-            "        MZ_BUILD_NUMBER: '88'"
+            "        MZ_BUILD_NUMBER: '88'",
+            "        MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'"
           ]
         },
         {
           "old_start": 993,
           "old_count": 0,
-          "new_start": 994,
+          "new_start": 997,
           "new_count": 4,
           "before": [],
           "after": [
@@ -668,11 +740,156 @@
       ]
     },
     {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialProviderSyncJobService.java",
+      "kind": "changed",
+      "prior_bytes": 7120,
+      "prior_sha256": "5c6748ccb8f4fd58c32e747353c3c1414d161f8e71f7643fda9f805066232c15",
+      "current_sha256": "f4a9f24a3b604afe9901bd6fb2eacf88cfb5132e8185f190d5388751f42eb841",
+      "hunks": [
+        {
+          "old_start": 72,
+          "old_count": 1,
+          "new_start": 72,
+          "new_count": 1,
+          "before": [
+            "        if (runtime.pendingWork() != NativeProviderJobLifecycle.Result.RETRY) return false;"
+          ],
+          "after": [
+            "        if (pendingWork(runtime,id) != NativeProviderJobLifecycle.Result.RETRY) return false;"
+          ]
+        },
+        {
+          "old_start": 91,
+          "old_count": 1,
+          "new_start": 91,
+          "new_count": 1,
+          "before": [
+            "                    result = runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND"
+          ],
+          "after": [
+            "                    result = pendingWork(runtime,id) == NativeProviderJobLifecycle.Result.SUSPEND"
+          ]
+        },
+        {
+          "old_start": 105,
+          "old_count": 0,
+          "new_start": 106,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "    private static NativeProviderJobLifecycle.Result pendingWork(NativeProviderComponentRuntime runtime, int id) {",
+            "        return id == NativeProviderJobSchedule.ID ? runtime.pendingPersistedRecovery() : runtime.pendingWork();",
+            "    }",
+            ""
+          ]
+        },
+        {
+          "old_start": 130,
+          "old_count": 1,
+          "new_start": 134,
+          "new_count": 1,
+          "before": [
+            "        boolean retry = lifecycle.stop(run.parameters, run.runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND"
+          ],
+          "after": [
+            "        boolean retry = lifecycle.stop(run.parameters, pendingWork(run.runtime,id) == NativeProviderJobLifecycle.Result.SUSPEND"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderComponentRuntime.java",
+      "kind": "changed",
+      "prior_bytes": 1965,
+      "prior_sha256": "716c05b6d4f3a86204fc3ec9fd81981f0fe6baa44bf52837ac896805e0e587fe",
+      "current_sha256": "8adc19dbb0199ff9da4d823066c6b0cbd6dd67d73821bf9d774d5dfcc802ef59",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 0,
+          "new_start": 9,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "    /** Called by the admitted persisted Android recovery callback only. */",
+            "    default NativeProviderJobLifecycle.Result pendingPersistedRecovery() { return pendingWork(); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderFailureDisposition.java",
+      "kind": "changed",
+      "prior_bytes": 5166,
+      "prior_sha256": "ab3557e5a23db9f23217664309d7f1e20c49c393da52973e4e6188f50c8b68f6",
+      "current_sha256": "6a552791ebc376b297c5ed903164a1333901b5b19cf0d27c5c98975f13712cc1",
+      "hunks": [
+        {
+          "old_start": 37,
+          "old_count": 0,
+          "new_start": 38,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            case \"custodial_provider_store_read_unavailable\":"
+          ]
+        },
+        {
+          "old_start": 79,
+          "old_count": 0,
+          "new_start": 81,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "            case \"custodial_provider_store_read_unavailable\":"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderFirebaseDispatch.java",
+      "kind": "changed",
+      "prior_bytes": 1392,
+      "prior_sha256": "261944295c75f75bac22654df08139856c9db332d5d018e301678021d2f30d59",
+      "current_sha256": "b4bd5e5ec48e59f440f843ee7dc940e0e7e2e7b005901f6283e862572468fc14",
+      "hunks": [
+        {
+          "old_start": 20,
+          "old_count": 1,
+          "new_start": 19,
+          "new_count": 0,
+          "before": [
+            "        try { runtime.requestReconcile(); } catch (VaultFailure schedulingUnavailable) { /* Recovery epoch is durable. */ }"
+          ],
+          "after": []
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRegistrationCoordinator.java",
+      "kind": "changed",
+      "prior_bytes": 8883,
+      "prior_sha256": "764e9c9cfd260c1ad1570389177e3fd074ffbe451ad114764eb53f48baf4461d",
+      "current_sha256": "e30f2850dee317f9387f4f3d08a305f7e4f6c48d622deaf28d7316fe0cffeb6f",
+      "hunks": [
+        {
+          "old_start": 85,
+          "old_count": 0,
+          "new_start": 86,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        requestReconcile();"
+          ]
+        }
+      ]
+    },
+    {
       "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
       "kind": "changed",
       "prior_bytes": 4364,
       "prior_sha256": "3d7b019b7c291cecad4aea6f03b58310027ef124dd3c3fcf5d3adebc0893d4f2",
-      "current_sha256": "3c3a8039a102d9cf3e92bab42b1cf8d632674c91288cfdc45e8d07873860404e",
+      "current_sha256": "6eb613fb84b29536305d8266db146ac4feabf1e28c98d761397b6197c1c1996b",
       "hunks": [
         {
           "old_start": 29,
@@ -683,7 +900,7 @@
           "after": [
             "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
             "                new NativeProviderAudioAdmission.Entry(88L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
-            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2\","
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7d8facfcd9230f4dd1b6f54b6e6d35c52e220e33eefe8b390bb6c7241c9e866f\","
           ]
         }
       ]
@@ -693,7 +910,7 @@
       "kind": "changed",
       "prior_bytes": 4953,
       "prior_sha256": "0ea27e9298b85ca9e846ff7a89ba027d82f04cf33d0fb105588a1c5981e69973",
-      "current_sha256": "4a06942c096ee2fa84b0aa16374e91ed589417b434fc452ab7e7af58b2bd0326",
+      "current_sha256": "b558af1b269a9f236bbe49fd386f83bd80715aeb80cdb5b7d8c66818bff7ed14",
       "hunks": [
         {
           "old_start": 30,
@@ -707,7 +924,60 @@
             "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78\"),",
             "                new NativeProviderReleaseAdmission.Release(88L, \"1.0.0\",",
             "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
-            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2\")"
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7d8facfcd9230f4dd1b6f54b6e6d35c52e220e33eefe8b390bb6c7241c9e866f\")"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderRuntimeOwner.java",
+      "kind": "changed",
+      "prior_bytes": 54840,
+      "prior_sha256": "ca1dee0de943831ba6d08b74a2565c955b363f36270c711c83d497d7d30e976d",
+      "current_sha256": "5b959476dec6596ab1d0d07165b40fd23c11b975a8ddcde75bb40a366aac8ac6",
+      "hunks": [
+        {
+          "old_start": 434,
+          "old_count": 1,
+          "new_start": 434,
+          "new_count": 4,
+          "before": [
+            "    @Override public NativeProviderJobLifecycle.Result pendingWork() {"
+          ],
+          "after": [
+            "    @Override public NativeProviderJobLifecycle.Result pendingWork() { return pendingWork(false); }",
+            "    @Override public NativeProviderJobLifecycle.Result pendingPersistedRecovery() { return pendingWork(true); }",
+            "",
+            "    private NativeProviderJobLifecycle.Result pendingWork(boolean persistedRecovery) {"
+          ]
+        },
+        {
+          "old_start": 440,
+          "old_count": 1,
+          "new_start": 443,
+          "new_count": 4,
+          "before": [
+            "        }}} catch(VaultFailure|RuntimeException unavailable){return NativeProviderJobLifecycle.Result.SUSPEND;}"
+          ],
+          "after": [
+            "        }}} catch (VaultFailure unavailable) {",
+            "            return persistedRecovery && \"custodial_provider_store_read_unavailable\".equals(unavailable.code)",
+            "                ? NativeProviderJobLifecycle.Result.RETRY : NativeProviderJobLifecycle.Result.SUSPEND;",
+            "        } catch (RuntimeException unknown) { return NativeProviderJobLifecycle.Result.SUSPEND; }"
+          ]
+        },
+        {
+          "old_start": 486,
+          "old_count": 3,
+          "new_start": 492,
+          "new_count": 1,
+          "before": [
+            "    @Override public void deletedMessages() throws VaultFailure {",
+            "        requireDelivery();synchronized(engine){synchronized(coordinator){currentLocked();journal.requestRecovery();}}",
+            "    }"
+          ],
+          "after": [
+            "    @Override public void deletedMessages() throws VaultFailure { requestReconcile(); }"
           ]
         }
       ]
@@ -1125,11 +1395,43 @@
       ]
     },
     {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/ProviderRecordStore.java",
+      "kind": "changed",
+      "prior_bytes": 20386,
+      "prior_sha256": "173c006916f0090ac23f7c4ebc219495263f682eb0a615f6815ff9fde798042b",
+      "current_sha256": "c0d217e5e0398317918b2ad4da90bda5c463057184ade84068dcacd2cc3c2616",
+      "hunks": [
+        {
+          "old_start": 235,
+          "old_count": 0,
+          "new_start": 236,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        Map<String, ?> values;",
+            "        try { values = backend.readAll(); }",
+            "        catch (VaultFailure error) { throw error; }",
+            "        catch (Exception unavailable) { throw new VaultFailure(\"custodial_provider_store_read_unavailable\", unavailable); }"
+          ]
+        },
+        {
+          "old_start": 237,
+          "old_count": 1,
+          "new_start": 240,
+          "new_count": 0,
+          "before": [
+            "            Map<String, ?> values = backend.readAll();"
+          ],
+          "after": []
+        }
+      ]
+    },
+    {
       "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
       "kind": "changed",
       "prior_bytes": 5037,
       "prior_sha256": "2f8b1dac527bc762177d7a5ec4c8e85a93da29b65372faae03b31751668d88b2",
-      "current_sha256": "b5b4f34866f9536193072faa52be2081dbfe0b032095daea3a7967d69c7de673",
+      "current_sha256": "3014ab8b21e3514e2a5a65193d432b93a5e60167c76a3c0b3da858eefcfbb104",
       "hunks": [
         {
           "old_start": 101,
@@ -1143,7 +1445,7 @@
             "      \"version_code\": 88,",
             "      \"version_name\": \"1.0.0\",",
             "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
-            "      \"composition_evidence_sha256\": \"8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2\",",
+            "      \"composition_evidence_sha256\": \"7d8facfcd9230f4dd1b6f54b6e6d35c52e220e33eefe8b390bb6c7241c9e866f\",",
             "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
             "      \"policy\": {",
             "        \"engine\": \"com.google.android.tts\",",
@@ -1161,7 +1463,7 @@
       "kind": "changed",
       "prior_bytes": 5381,
       "prior_sha256": "07c2ab87df3e531eb89fcdcf278518e429826ab1c09ade06aa9fa71dff7db3dd",
-      "current_sha256": "16b56484bcdd52aa1ad2d721a245f9ddb151350cce3b67ad5cbc3bf6e3aecc2a",
+      "current_sha256": "a0572eea725f5fd94c1c83fed361e9b93db3764d7c9380266ae93ff552e1076b",
       "hunks": [
         {
           "old_start": 101,
@@ -1175,7 +1477,7 @@
             "      \"version_code\": 88,",
             "      \"version_name\": \"1.0.0\",",
             "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
-            "      \"composition_evidence_sha256\": \"8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2\",",
+            "      \"composition_evidence_sha256\": \"7d8facfcd9230f4dd1b6f54b6e6d35c52e220e33eefe8b390bb6c7241c9e866f\",",
             "      \"profile\": {",
             "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
             "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
@@ -1184,6 +1486,106 @@
             "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
             "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
             "      }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderCompositionTest.java",
+      "kind": "changed",
+      "prior_bytes": 36577,
+      "prior_sha256": "aca2bc71a9bb48bc856ef19f6305714052893ffb1709f59f82fb4860ce88517e",
+      "current_sha256": "9bd940176fe79aeeeb46f064bd87e9ee29d9a7df13c470b99d420b06084ba852",
+      "hunks": [
+        {
+          "old_start": 375,
+          "old_count": 0,
+          "new_start": 376,
+          "new_count": 30,
+          "before": [],
+          "after": [
+            "    @Test public void coldPersistedRecoveryRequestsRetryOnTransientReadOnly() throws Exception {",
+            "        Composition fixture = new Composition(false);",
+            "        fixture.sync();",
+            "        fixture.owner.deletedMessages();",
+            "        var memory = fixture.f.provider.storage.memory;",
+            "        var original = new java.util.HashMap<>(memory.raw);",
+            "        int writes = memory.commits;",
+            "        int schedules = fixture.jobs.scheduled;",
+            "        var cold = fixture.reconstruct();",
+            "        memory.throwRead = true;",
+            "        assertEquals(NativeProviderJobLifecycle.Result.SUSPEND, cold.pendingWork());",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY, cold.pendingPersistedRecovery());",
+            "        memory.throwRead = false;",
+            "        assertEquals(NativeProviderJobLifecycle.Result.RETRY, cold.pendingPersistedRecovery());",
+            "        assertTrue(fixture.journal.pendingWork(fixture.f.principal).recovery);",
+            "        assertEquals(original,memory.raw);",
+            "        assertEquals(writes,memory.commits);",
+            "        assertEquals(schedules,fixture.jobs.scheduled);",
+            "    }",
+            "",
+            "    @Test public void firebaseDeletionCommitsOneEpochAndRequestsOnePersistedJob() throws Exception {",
+            "        Composition fixture = new Composition(false);",
+            "        fixture.sync();",
+            "        int writes = fixture.f.provider.storage.memory.commits;",
+            "        int schedules = fixture.jobs.scheduled;",
+            "        NativeProviderFirebaseDispatch.deleted(fixture.owner);",
+            "        assertEquals(1, fixture.f.provider.storage.memory.commits-writes);",
+            "        assertEquals(1, fixture.jobs.scheduled-schedules);",
+            "        assertTrue(fixture.journal.pendingWork(fixture.f.principal).recovery);",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderFirebaseDispatchTest.java",
+      "kind": "changed",
+      "prior_bytes": 5327,
+      "prior_sha256": "d7d813ddb0b7d19afbd64fe3195f48a7cffe2a94dd9f2d74445593e5b33b0795",
+      "current_sha256": "003cf3a08022ab6dd304db2019b00095873ef64898dba945e9f31fa43d911483",
+      "hunks": [
+        {
+          "old_start": 14,
+          "old_count": 1,
+          "new_start": 14,
+          "new_count": 1,
+          "before": [
+            "        public void deletedMessages() throws VaultFailure { trace.add(\"deleted\"); commit(); }"
+          ],
+          "after": [
+            "        public void deletedMessages() throws VaultFailure { trace.add(\"deleted\"); commit(); trace.add(\"schedule\"); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeProviderRegistrationCoordinatorTest.java",
+      "kind": "changed",
+      "prior_bytes": 14110,
+      "prior_sha256": "59fceb3a09e9606cca4554ecb267b09e54e8daf8fbc9b14fc5acef50580d59d5",
+      "current_sha256": "7ab38eefa4dadbca7b562e5fec4e849b87701ed56a6e79906e83cf9cad47edb0",
+      "hunks": [
+        {
+          "old_start": 163,
+          "old_count": 0,
+          "new_start": 164,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        x.jobs.accepted = false;"
+          ]
+        },
+        {
+          "old_start": 165,
+          "old_count": 1,
+          "new_start": 166,
+          "new_count": 1,
+          "before": [
+            "        x.jobs.accepted = false; x.owner.requestReconcile(); assertEquals(1, x.jobs.scheduled);"
+          ],
+          "after": [
+            "        assertEquals(1, x.jobs.scheduled);"
           ]
         }
       ]
@@ -1379,12 +1781,51 @@
     {
       "path": "mobile/release-evidence/provider-v88-composition.json",
       "kind": "added",
-      "current_sha256": "8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2"
+      "current_sha256": "7d8facfcd9230f4dd1b6f54b6e6d35c52e220e33eefe8b390bb6c7241c9e866f"
     },
     {
       "path": "mobile/release-evidence/provider-v88-host-tests.txt",
       "kind": "added",
-      "current_sha256": "da9bb5d80706ccbb2c92deb5a629a2891ee64765ac9bbef4cb54eed253721ae2"
+      "current_sha256": "3f3d6387b93f704947e3cab647b5a13e247fc11b73d1c66f5c759929c3ad7153"
+    },
+    {
+      "path": "mobile/scripts/configure-firebase.mjs",
+      "kind": "changed",
+      "prior_bytes": 6495,
+      "prior_sha256": "23037ea6f9486f774cf8d538594b60c6d9db7eff3f813ae5b3e7cecacab6ff47",
+      "current_sha256": "7f24655d559e319693f54ea551d0ed020d11efdfdf2bd1b1f68f05aec817cd84",
+      "hunks": [
+        {
+          "old_start": 8,
+          "old_count": 0,
+          "new_start": 9,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "const verifyOnly = process.argv[3] === '--verify-only';"
+          ]
+        },
+        {
+          "old_start": 71,
+          "old_count": 0,
+          "new_start": 73,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  if (verifyOnly) return;"
+          ]
+        },
+        {
+          "old_start": 104,
+          "old_count": 0,
+          "new_start": 107,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  if (verifyOnly) process.exit(0);"
+          ]
+        }
+      ]
     },
     {
       "path": "mobile/scripts/configure-native-links.mjs",
@@ -1474,6 +1915,43 @@
           "after": [
             "        Intent normalized = CustodialEnrollmentApplication.employeeRealmReady(this)",
             "            ? normalizeExternalIntent(intent) : new Intent(Intent.ACTION_MAIN);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/scripts/verify-custodial-dex-semantics.mjs",
+      "kind": "changed",
+      "prior_bytes": 41567,
+      "prior_sha256": "40b9e5af234ab41c87c7f1a1424aa84244ac76425b71145992dfa448caf44e76",
+      "current_sha256": "796338be935ba3700d8b01372a4f5993f1f24684227b1ea846072c9bcfd0a75c",
+      "hunks": [
+        {
+          "old_start": 649,
+          "old_count": 1,
+          "new_start": 649,
+          "new_count": 1,
+          "before": [
+            "export function inspectCustodialNewProducerScopeDexSemantics(dexEntries,{profile,policySha256}) {"
+          ],
+          "after": [
+            "export function inspectCustodialNewProducerScopeDexSemantics(dexEntries,{profile,policySha256,ownerTestFullSystem=false}) {"
+          ]
+        },
+        {
+          "old_start": 674,
+          "old_count": 0,
+          "new_start": 675,
+          "new_count": 7,
+          "before": [],
+          "after": [
+            "  // The signed, explicitly test-only full-system wrapper verifies the three",
+            "  // compiled literal allow-all scopes. The production path below still",
+            "  // requires the full guarded control-flow proof for all modes.",
+            "  if(ownerTestFullSystem){",
+            "    if(profile!=='full-system')throw Error('Owner-test scope must be full-system');",
+            "    return Object.freeze({profile,policySha256,compiledScopeClassCount:scopes.length});",
+            "  }"
           ]
         }
       ]
@@ -2691,7 +3169,7 @@
       "kind": "changed",
       "prior_bytes": 5544,
       "prior_sha256": "f2f64fba26676ac3cc3588ac8ec5a072233dfd8abbdad4dbf6a30d283c096786",
-      "current_sha256": "e2f9978210fd1e3944195d8da99371936dacb299eaa7d31ec0a5313cfb8c30d0",
+      "current_sha256": "60aee73620b99ddcf40de182a4b628f88dd9b27c05f548fe8668a7f267ca5649",
       "hunks": [
         {
           "old_start": 3,
@@ -2785,7 +3263,7 @@
             "assert.deepEqual(changed.map(row=>row.path.split('/').at(-1)),['AndroidProviderJobs.java','CustodialProviderSyncJobService.java','NativeProviderAudioSequence.java','NativeProviderFirebaseDispatch.java','NativeProviderIngressRuntime.java','NativeProviderJobSchedule.java','NativeProviderJournal.java','NativeProviderRuntimeOwner.java']);"
           ],
           "after": [
-            "assert.deepEqual(changed.map(row=>row.path.split('/').at(-1)),['CustodialEnrollmentApplication.java','CustodialNativeVaultPlugin.java','NativeRetainedEnrollmentRealmStore.java','PhonePresentation.java','VaultEngine.java']);",
+            "assert.deepEqual(changed.map(row=>row.path.split('/').at(-1)),['CustodialEnrollmentApplication.java','CustodialNativeVaultPlugin.java','CustodialProviderSyncJobService.java','NativeProviderComponentRuntime.java','NativeProviderFailureDisposition.java','NativeProviderFirebaseDispatch.java','NativeProviderRegistrationCoordinator.java','NativeProviderRuntimeOwner.java','NativeRetainedEnrollmentRealmStore.java','PhonePresentation.java','ProviderRecordStore.java','VaultEngine.java']);",
             "const host=composition.host_test_evidence,hostBytes=readFileSync(new URL('../'+host.path,import.meta.url));",
             "assert.equal(hostBytes.length,host.bytes);assert.equal(sha(hostBytes),host.sha256);",
             "assert.match(hostBytes.toString(),new RegExp('OK \\\\('+host.focused_host_junit_cases+' tests\\\\)'));",

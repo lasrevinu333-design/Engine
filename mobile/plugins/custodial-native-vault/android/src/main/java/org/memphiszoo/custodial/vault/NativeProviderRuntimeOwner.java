@@ -431,13 +431,19 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
         NativeProviderAuthority.Current current=reconcileLocked();
         if(current.principal==null)throw new VaultFailure("custodial_provider_waiting_native_principal");return current;
     }
-    @Override public NativeProviderJobLifecycle.Result pendingWork() {
+    @Override public NativeProviderJobLifecycle.Result pendingWork() { return pendingWork(false); }
+    @Override public NativeProviderJobLifecycle.Result pendingPersistedRecovery() { return pendingWork(true); }
+
+    private NativeProviderJobLifecycle.Result pendingWork(boolean persistedRecovery) {
         if(!supportedProfile())return NativeProviderJobLifecycle.Result.SUSPEND;
         try { synchronized(engine){synchronized(coordinator){
             NativeProviderAuthority.Current current=currentLocked();NativeProviderJournal.Work work=journal.pendingWork(current.principal);
             if(work.networkPending()||!work.quarantined.isEmpty()||unconfirmedDisplayLocked(current.principal)||(audio!=null&&audio.busy()))return NativeProviderJobLifecycle.Result.RETRY;
             return journal.pendingOsCancellations().isEmpty()?NativeProviderJobLifecycle.Result.DRAINED:NativeProviderJobLifecycle.Result.RETRY;
-        }}} catch(VaultFailure|RuntimeException unavailable){return NativeProviderJobLifecycle.Result.SUSPEND;}
+        }}} catch (VaultFailure unavailable) {
+            return persistedRecovery && "custodial_provider_store_read_unavailable".equals(unavailable.code)
+                ? NativeProviderJobLifecycle.Result.RETRY : NativeProviderJobLifecycle.Result.SUSPEND;
+        } catch (RuntimeException unknown) { return NativeProviderJobLifecycle.Result.SUSPEND; }
     }
     /** Read-only scheduling hint for a live original awaiting OS display.
      * No new clock interval, display receipt, audio acquisition or OS effect. */
@@ -483,9 +489,7 @@ final class NativeProviderRuntimeOwner implements NativeProviderRemovalCoordinat
         }
         publishMirrorHint();
     }
-    @Override public void deletedMessages() throws VaultFailure {
-        requireDelivery();synchronized(engine){synchronized(coordinator){currentLocked();journal.requestRecovery();}}
-    }
+    @Override public void deletedMessages() throws VaultFailure { requestReconcile(); }
     @Override public void requestReconcile() throws VaultFailure {
         requireDelivery();synchronized(engine){synchronized(coordinator){currentLocked();journal.requestRecovery();}}
         NativeProviderJobSchedule.request(NativeProviderJobLifecycle.Result.RETRY,delivery.jobs);

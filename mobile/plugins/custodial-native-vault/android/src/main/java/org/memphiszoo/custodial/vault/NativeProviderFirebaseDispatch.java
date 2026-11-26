@@ -17,7 +17,6 @@ final class NativeProviderFirebaseDispatch {
     }
     static void deleted(NativeProviderIngressRuntime runtime) throws VaultFailure {
         runtime.deletedMessages();
-        try { runtime.requestReconcile(); } catch (VaultFailure schedulingUnavailable) { /* Recovery epoch is durable. */ }
     }
     private NativeProviderFirebaseDispatch() {}
 }

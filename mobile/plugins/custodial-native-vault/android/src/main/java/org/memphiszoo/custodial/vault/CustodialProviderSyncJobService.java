@@ -69,7 +69,7 @@ public final class CustodialProviderSyncJobService extends JobService {
             return false;
         }
         final NativeProviderComponentRuntime runtime = CustodialNativeRuntime.providerComponents(getApplicationContext());
-        if (runtime.pendingWork() != NativeProviderJobLifecycle.Result.RETRY) return false;
+        if (pendingWork(runtime,id) != NativeProviderJobLifecycle.Result.RETRY) return false;
         try {
             NativeProviderJobLifecycle.Invocation invocation = lifecycle.begin(parameters, SystemClock::elapsedRealtime);
             Run run = new Run(parameters, runtime, invocation); active = run;
@@ -88,7 +88,7 @@ public final class CustodialProviderSyncJobService extends JobService {
                     if (result == null) result = NativeProviderJobLifecycle.Result.RETRY;
                 } catch (Exception failure) {
                     diagnostic("native_sync_refused", failure);
-                    result = runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND
+                    result = pendingWork(runtime,id) == NativeProviderJobLifecycle.Result.SUSPEND
                         ? NativeProviderJobLifecycle.Result.SUSPEND : NativeProviderJobLifecycle.Result.RETRY;
                 }
                 if (result == NativeProviderJobLifecycle.Result.SUSPEND) diagnostic("native_sync_suspended", null);
@@ -101,6 +101,10 @@ public final class CustodialProviderSyncJobService extends JobService {
             // No successful start was returned: Android owns this callback's completion.
             lifecycle.stop(parameters, NativeProviderJobLifecycle.Result.RETRY); return false;
         }
+    }
+
+    private static NativeProviderJobLifecycle.Result pendingWork(NativeProviderComponentRuntime runtime, int id) {
+        return id == NativeProviderJobSchedule.ID ? runtime.pendingPersistedRecovery() : runtime.pendingWork();
     }
 
     private static void diagnostic(String event, Throwable failure) {
@@ -127,7 +131,7 @@ public final class CustodialProviderSyncJobService extends JobService {
         // JobParameters may be reconstructed across Binder. Resolve the fixed
         // ID to the invocation that actually received onStartJob.
         if (run == null || run.parameters.getJobId() != id) return false;
-        boolean retry = lifecycle.stop(run.parameters, run.runtime.pendingWork() == NativeProviderJobLifecycle.Result.SUSPEND
+        boolean retry = lifecycle.stop(run.parameters, pendingWork(run.runtime,id) == NativeProviderJobLifecycle.Result.SUSPEND
             ? NativeProviderJobLifecycle.Result.SUSPEND : NativeProviderJobLifecycle.Result.RETRY);
         finishDeferredRecovery();
         return retry && id == NativeProviderJobSchedule.ID;

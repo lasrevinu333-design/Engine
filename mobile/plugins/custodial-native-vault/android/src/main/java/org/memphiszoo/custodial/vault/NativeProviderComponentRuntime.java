@@ -6,6 +6,8 @@ package org.memphiszoo.custodial.vault;
 interface NativeProviderComponentRuntime {
     /** Nonblocking native admission classification. Never returns DRAINED for unknown state. */
     NativeProviderJobLifecycle.Result pendingWork();
+    /** Called by the admitted persisted Android recovery callback only. */
+    default NativeProviderJobLifecycle.Result pendingPersistedRecovery() { return pendingWork(); }
     /** Work runs only under the supplied cancellable invocation and its budget. */
     NativeProviderJobLifecycle.Result synchronize(NativeProviderJobLifecycle.Invocation invocation) throws VaultFailure;
     /** Bounded local commit/readback only; preserves original journal identity; no HTTP. */

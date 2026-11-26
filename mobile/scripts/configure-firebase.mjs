@@ -6,6 +6,7 @@ const mobileRoot = resolve(new URL('..', import.meta.url).pathname);
 const repositoryRoot = resolve(mobileRoot, '..');
 const edition = String(process.env.MZ_APP_EDITION || 'manager').toLowerCase();
 const platform = String(process.argv[2] || '').toLowerCase();
+const verifyOnly = process.argv[3] === '--verify-only';
 const apiBase = String(process.env.MZ_API_BASE || 'https://memphis-zoo-mcp.onrender.com').replace(/\/+$/, '');
 const appIdentifiers = {
   manager: 'org.memphiszoo.ops',
@@ -69,6 +70,7 @@ async function write(path, bytes, source) {
   if (digest !== expected) {
     throw new Error(`Firebase ${platform} client configuration digest mismatch: expected ${expected}, received ${digest}.`);
   }
+  if (verifyOnly) return;
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, bytes);
   const provenanceDirectory = join(repositoryRoot, 'build', 'provenance');
@@ -102,6 +104,7 @@ if (platform === 'android') {
     throw new Error(`Invalid GoogleService-Info.plist for ${appIdentifier}.`);
   }
   await write(join(mobileRoot, 'ios/App/App/GoogleService-Info.plist'), bytes, source);
+  if (verifyOnly) process.exit(0);
   const appDelegatePath = join(mobileRoot, 'ios/App/App/AppDelegate.swift');
   let appDelegate = await readFile(appDelegatePath, 'utf8');
   if (!appDelegate.includes('capacitorDidRegisterForRemoteNotifications')) {

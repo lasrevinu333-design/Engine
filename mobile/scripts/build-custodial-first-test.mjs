@@ -7,11 +7,12 @@ import {resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {verifyAndroidApkBackupSecurity} from './verify-android-apk-backup.mjs';
-import {assertCustodialReleaseManifest,resolveCustodialAndroidTools} from './verify-custodial-android-release.mjs';
+import {assertCustodialReleaseManifest,assertZipalignVerification,parseApksignerVerification,resolveCustodialAndroidTools} from './verify-custodial-android-release.mjs';
 import {readCustodialBuildScope} from './custodial-new-producer-scope-policy.mjs';
 import {readReviewedProviderRelease} from './custodial-provider-release-policy.mjs';
+import {verifyCustodialOwnerTestContents} from './verify-custodial-owner-test-contents.mjs';
 const mobile=resolve(fileURLToPath(new URL('..',import.meta.url))),root=resolve(mobile,'..');
-const env={...process.env,MZ_APP_EDITION:'custodial',MZ_SHELL_START:'1',MZ_CUSTODIAL_OWNER_TEST_SUPPORT:'1'};
+const env={...process.env,MZ_APP_EDITION:'custodial',MZ_SHELL_START:'1',MZ_CUSTODIAL_OWNER_TEST_SUPPORT:'1',MZ_REQUIRE_PINNED_FIREBASE_CONFIG:'1'};
 assert.match(env.MZ_BUILD_NUMBER||'',/^[1-9]\d*$/,'Set the explicitly allocated MZ_BUILD_NUMBER');
 assert.equal(env.MZ_RELEASE_VERSION,'1.0.0','Use the maintained Custodial versionName');
 assert.ok(!env.PROJECT_BUILD_NUMBER&&!env.BUILD_NUMBER,'Use only MZ_BUILD_NUMBER for this test artifact');
@@ -27,6 +28,7 @@ if(signingConfigured){
 }
 function run(command,args,cwd=mobile,capture=false){return execFileSync(command,args,{cwd,env,stdio:capture?['ignore','pipe','pipe']:'inherit',encoding:capture?'utf8':undefined,maxBuffer:32*1024*1024});}
 function node(script,args=[]){return run(process.execPath,[join(mobile,'scripts',script),...args]);}
+node('configure-firebase.mjs',['android','--verify-only']);
 const sourceCommit=run('git',['rev-parse','HEAD'],root,true).trim();
 const sourceTree=run('git',['rev-parse','HEAD^{tree}'],root,true).trim();
 assert.equal(run('git',['status','--porcelain','--untracked-files=normal'],root,true).trim(),'','Commit source and refresh its normal manifest before building');
@@ -55,14 +57,14 @@ run(join(mobile,'android/gradlew'),['--no-daemon','--max-workers=2','--dependenc
 const output=join(root,'build/first-test');mkdirSync(output,{recursive:true});
 const unsigned=join(output,`custodial-first-test-${env.MZ_BUILD_NUMBER}-unsigned.apk`);
 copyFileSync(join(mobile,'android/app/build/outputs/apk/release/app-release-unsigned.apk'),unsigned);
-let artifact=unsigned,signer=null;
+let artifact=unsigned,signing=null,alignment=null;
 if(signingConfigured){
  artifact=join(output,`custodial-first-test-${env.MZ_BUILD_NUMBER}.apk`);
- run(tool('zipalign'),['-f','-p','4',unsigned,artifact]);
+ run(tool('zipalign'),['-f','-P','16','4',unsigned,artifact]);
  run(tool('apksigner'),['sign','--ks',env.CM_KEYSTORE_PATH,'--ks-key-alias',env.CM_KEY_ALIAS,'--ks-pass','env:CM_KEYSTORE_PASSWORD','--key-pass','env:CM_KEY_PASSWORD',artifact]);
  const signature=run(tool('apksigner'),['verify','--verbose','--print-certs',artifact],mobile,true);
- signer=signature.match(/Signer #1 certificate SHA-256 digest: ([a-f0-9]+)/)?.[1];
- assert.equal(signer,JSON.parse(readFileSync(join(mobile,'release-policies/custodial-android.json'))).fleet_signer_sha256,'TEST update must use the existing fleet signer');
+ signing=parseApksignerVerification(signature);
+ alignment=assertZipalignVerification({status:0,output:run(tool('zipalign'),['-c','-P','16','-v','4',artifact],mobile,true)});
 }
 const badging=run(tool('aapt2'),['dump','badging',artifact],mobile,true);
 const xml=run(tool('aapt2'),['dump','xmltree',artifact,'--file','AndroidManifest.xml'],mobile,true);
@@ -82,8 +84,12 @@ const backup=verifyAndroidApkBackupSecurity(artifact,{aapt2Path:tool('aapt2')});
 // aapt2 badging may omit testOnly; the compiled manifest remains authoritative.
 // This is a negative check only, never a production admission.
 assert.throws(()=>assertCustodialReleaseManifest({manifestDump:xml,badgingDump:badging,expectedBuildNumber:Number(env.MZ_BUILD_NUMBER),enforceStagedRecoveryCeiling:false}),/must not be testOnly|Compiled Android manifest and aapt2 badging metadata differ/);
+const zipEntries=run('unzip',['-Z1',artifact],mobile,true).split('\n').filter(Boolean);
+const contents=verifyCustodialOwnerTestContents({mobile,zipEntries,manifestDump:xml,
+ readEntry:name=>execFileSync('unzip',['-p',artifact,name],{cwd:mobile,env,maxBuffer:32*1024*1024}),
+ versionCode:Number(env.MZ_BUILD_NUMBER),versionName:env.MZ_RELEASE_VERSION,sourceCommit,sourceTree});
 const bytes=readFileSync(artifact);
-const receipt={schema:'custodial.owner-first-test-artifact.v1',purpose:'OWNER_TEST_ONLY',production_admission:false,physical_acceptance:false,install_performed:false,source_commit:sourceCommit,source_tree:sourceTree,package_name:'org.memphiszoo.custodial',version_code:Number(env.MZ_BUILD_NUMBER),version_name:env.MZ_RELEASE_VERSION,scope:'full-system',test_only:true,debuggable:false,production_verifier_rejected:true,backup_policy:backup.policy,artifact,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),signer_sha256:signer,retained_data_update_signer_verified:!!signer,clock_audio_qualification:'NOT_CREATED_BY_TEST_BUILD',limitations:['Physical testing is owner work.','Production release admission remains separate.','Native clock/audio qualification is not fabricated by this route.']};
+const receipt={schema:'custodial.owner-first-test-artifact.v1',purpose:'OWNER_TEST_ONLY',production_admission:false,physical_acceptance:false,install_performed:false,source_commit:sourceCommit,source_tree:sourceTree,package_name:'org.memphiszoo.custodial',version_code:Number(env.MZ_BUILD_NUMBER),version_name:env.MZ_RELEASE_VERSION,scope:'full-system',test_only:true,debuggable:false,production_verifier_rejected:true,backup_policy:backup.policy,artifact,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),signer_sha256:signing?.signer_sha256??null,signing,alignment,contents,retained_data_update_signer_verified:!!signing,clock_audio_qualification:'NOT_CREATED_BY_TEST_BUILD',limitations:['Physical testing is owner work.','Production release admission remains separate.','Native clock/audio qualification is not fabricated by this route.']};
 writeFileSync(join(output,'artifact.json'),JSON.stringify(receipt,null,2)+'\n');
 writeFileSync(join(output,'manifest.txt'),xml);writeFileSync(join(output,'badging.txt'),badging);
 console.log(JSON.stringify(receipt,null,2));

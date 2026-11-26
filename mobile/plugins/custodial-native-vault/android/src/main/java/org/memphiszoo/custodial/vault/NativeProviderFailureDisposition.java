@@ -35,6 +35,7 @@ enum NativeProviderFailureDisposition {
             case "custodial_provider_waiting_native_principal":
             case "custodial_provider_operation_stale":
             case "custodial_provider_clock_operation_stale": return NATIVE_AUTHORITY_CHANGED;
+            case "custodial_provider_store_read_unavailable":
             case "custodial_provider_corrupt_preserved":
             case "custodial_provider_key_missing_preserved":
             case "custodial_provider_journal_corrupt_preserved":
@@ -77,6 +78,7 @@ enum NativeProviderFailureDisposition {
             case "custodial_provider_waiting_native_principal":
             case "custodial_provider_operation_stale":
             case "custodial_provider_clock_operation_stale":
+            case "custodial_provider_store_read_unavailable":
             case "custodial_provider_corrupt_preserved":
             case "custodial_provider_key_missing_preserved":
             case "custodial_provider_journal_corrupt_preserved":

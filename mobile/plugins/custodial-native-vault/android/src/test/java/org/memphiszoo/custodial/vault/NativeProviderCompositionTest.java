@@ -373,4 +373,34 @@ public final class NativeProviderCompositionTest {
             assertEquals(before,x.f.provider.storage.memory.raw);assertTrue(x.paths.isEmpty());assertEquals(0,x.surface.shows);assertEquals(0,compatibility[0]);
         }
     }
+    @Test public void coldPersistedRecoveryRequestsRetryOnTransientReadOnly() throws Exception {
+        Composition fixture = new Composition(false);
+        fixture.sync();
+        fixture.owner.deletedMessages();
+        var memory = fixture.f.provider.storage.memory;
+        var original = new java.util.HashMap<>(memory.raw);
+        int writes = memory.commits;
+        int schedules = fixture.jobs.scheduled;
+        var cold = fixture.reconstruct();
+        memory.throwRead = true;
+        assertEquals(NativeProviderJobLifecycle.Result.SUSPEND, cold.pendingWork());
+        assertEquals(NativeProviderJobLifecycle.Result.RETRY, cold.pendingPersistedRecovery());
+        memory.throwRead = false;
+        assertEquals(NativeProviderJobLifecycle.Result.RETRY, cold.pendingPersistedRecovery());
+        assertTrue(fixture.journal.pendingWork(fixture.f.principal).recovery);
+        assertEquals(original,memory.raw);
+        assertEquals(writes,memory.commits);
+        assertEquals(schedules,fixture.jobs.scheduled);
+    }
+
+    @Test public void firebaseDeletionCommitsOneEpochAndRequestsOnePersistedJob() throws Exception {
+        Composition fixture = new Composition(false);
+        fixture.sync();
+        int writes = fixture.f.provider.storage.memory.commits;
+        int schedules = fixture.jobs.scheduled;
+        NativeProviderFirebaseDispatch.deleted(fixture.owner);
+        assertEquals(1, fixture.f.provider.storage.memory.commits-writes);
+        assertEquals(1, fixture.jobs.scheduled-schedules);
+        assertTrue(fixture.journal.pendingWork(fixture.f.principal).recovery);
+    }
 }

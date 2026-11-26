@@ -161,8 +161,9 @@ public final class NativeProviderRegistrationCoordinatorTest {
     }
     @Test public void recoveryAndSchedulerQuotaFailuresPreserveWorkWithoutDuplicateJobs() throws Exception {
         Fixture x = new Fixture(false); long before = x.meta().getLong("recovery_epoch");
+        x.jobs.accepted = false;
         x.owner.deletedMessages(); assertEquals(before + 1, x.meta().getLong("recovery_epoch"));
-        x.jobs.accepted = false; x.owner.requestReconcile(); assertEquals(1, x.jobs.scheduled);
+        assertEquals(1, x.jobs.scheduled);
         assertEquals(before + 1, x.meta().getLong("recovery_epoch"));
         x.jobs.accepted = true; x.owner.requestReconcile(); x.owner.requestReconcile(); assertEquals(2, x.jobs.scheduled);
         NativeProviderHttpTest.preserveSyntheticOriginal(x.f); x.owner.requestReconcile();

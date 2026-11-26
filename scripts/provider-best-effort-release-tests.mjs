@@ -42,7 +42,7 @@ const changed=composition.release_independent_sources.flatMap(entry=>{
  return entry.sha256===prior?[]:[{path:entry.path,prior_sha256:prior,current_sha256:entry.sha256}];
 });
 assert.deepEqual(changed,composition.repair.source_changes);
-assert.deepEqual(changed.map(row=>row.path.split('/').at(-1)),['CustodialEnrollmentApplication.java','CustodialNativeVaultPlugin.java','NativeRetainedEnrollmentRealmStore.java','PhonePresentation.java','VaultEngine.java']);
+assert.deepEqual(changed.map(row=>row.path.split('/').at(-1)),['CustodialEnrollmentApplication.java','CustodialNativeVaultPlugin.java','CustodialProviderSyncJobService.java','NativeProviderComponentRuntime.java','NativeProviderFailureDisposition.java','NativeProviderFirebaseDispatch.java','NativeProviderRegistrationCoordinator.java','NativeProviderRuntimeOwner.java','NativeRetainedEnrollmentRealmStore.java','PhonePresentation.java','ProviderRecordStore.java','VaultEngine.java']);
 const host=composition.host_test_evidence,hostBytes=readFileSync(new URL('../'+host.path,import.meta.url));
 assert.equal(hostBytes.length,host.bytes);assert.equal(sha(hostBytes),host.sha256);
 assert.match(hostBytes.toString(),new RegExp('OK \\('+host.focused_host_junit_cases+' tests\\)'));

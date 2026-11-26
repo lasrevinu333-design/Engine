@@ -104,7 +104,7 @@
       "version_code": 88,
       "version_name": "1.0.0",
       "backend_protocol_evidence_sha256": "54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952",
-      "composition_evidence_sha256": "8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2",
+      "composition_evidence_sha256": "7d8facfcd9230f4dd1b6f54b6e6d35c52e220e33eefe8b390bb6c7241c9e866f",
       "clock_fingerprint": "a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785",
       "policy": {
         "engine": "com.google.android.tts",

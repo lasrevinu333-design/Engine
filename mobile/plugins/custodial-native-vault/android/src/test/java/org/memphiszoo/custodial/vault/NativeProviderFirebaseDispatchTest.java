@@ -11,7 +11,7 @@ public final class NativeProviderFirebaseDispatchTest {
         final List<String> trace = new ArrayList<>(); boolean failCommit, failSchedule;
         public long captureToken(String token) throws VaultFailure { trace.add("token"); commit(); return 1; }
         public void receive(NativeProviderPayload payload) throws VaultFailure { trace.add("receive"); commit(); }
-        public void deletedMessages() throws VaultFailure { trace.add("deleted"); commit(); }
+        public void deletedMessages() throws VaultFailure { trace.add("deleted"); commit(); trace.add("schedule"); }
         public void requestReconcile() throws VaultFailure { trace.add("schedule"); if (failSchedule) throw new VaultFailure("synthetic_quota"); }
         void commit() throws VaultFailure { if (failCommit) throw new VaultFailure("synthetic_commit"); }
     }

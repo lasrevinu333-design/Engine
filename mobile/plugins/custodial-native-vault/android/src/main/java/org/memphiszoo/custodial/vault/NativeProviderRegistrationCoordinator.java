@@ -83,6 +83,7 @@ final class NativeProviderRegistrationCoordinator implements NativeProviderIngre
     }
     @Override public void deletedMessages() throws VaultFailure {
         synchronized (engine) { synchronized (coordinator) { reconcile(); journal.requestRecovery(); } }
+        requestReconcile();
     }
     @Override public void requestReconcile() throws VaultFailure {
         NativeProviderJobLifecycle.Result pending;

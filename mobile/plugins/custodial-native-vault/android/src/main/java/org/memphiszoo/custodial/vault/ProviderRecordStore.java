@@ -233,8 +233,11 @@ final class ProviderRecordStore {
     }
 
     private Map<String, String> readRaw() throws VaultFailure {
+        Map<String, ?> values;
+        try { values = backend.readAll(); }
+        catch (VaultFailure error) { throw error; }
+        catch (Exception unavailable) { throw new VaultFailure("custodial_provider_store_read_unavailable", unavailable); }
         try {
-            Map<String, ?> values = backend.readAll();
             if (values == null) throw new IllegalArgumentException("null namespace");
             Map<String, String> result = new TreeMap<>();
             for (Map.Entry<String, ?> entry : values.entrySet()) {
