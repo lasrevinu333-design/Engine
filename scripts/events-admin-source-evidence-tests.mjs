@@ -32,21 +32,28 @@ run('resetForm(true)');eq(json('buildPayloadFromForm()').source_text,null,'reset
 eq(json('buildPayloadFromForm()').source_format,'manual_form','new manual event is not falsely spreadsheet');
 run("loadPayloadIntoForm({raw_text:'original raw fallback',source_format:'paste'})");
 eq(json('buildPayloadFromForm()').source_text,'original raw fallback','normalizer fallback remains source-bound');
-run(`readImportRows=async()=>[{text:'Original source A'},{text:'Original source B'}];
+const originalReader=run('readImportRows');
+const mockRow=text=>({text,fields:['Event Name'],sheet_name:'CSV'});
+sandbox.mockRows=[mockRow('Original source A'),mockRow('Original source B')];
+run(`readImportRows=async()=>mockRows;
  globalThis.providerRows=[];apiBase=async()=>providerRows;`);
 node('import-file').files=[{name:'synthetic.csv'}];
 run("providerRows=[{source_index:1,event_name:'B'},{source_index:0,event_name:'A'}]");
 await run('parseUploadedFile()');
+eq(run('state.parsedImportRows.length'),0,'scope preview does not send workbook values');
+eq(node('parse-file-btn').textContent,'Parse included fields','scope preview exposes its confirmation action');
+await run('parseUploadedFile()');
 eq(json('state.parsedImportRows.map(r=>r.source_text)'),['Original source B','Original source A'],'reordered parser results bind by exact source_index');
 eq(json('state.parsedImportRows.map(r=>r.source_format)'),['csv','csv'],'CSV provenance retained');
 const original=json('state.parsedImportRows');
+const submitImport=async()=>{if(!run('state.preparedImport'))await run('parseUploadedFile()');return run('parseUploadedFile()');};
 for(const invalid of [null,false,'0',-1,2,0.5,{},[]]){
  sandbox.invalid=invalid;run('providerRows=[{source_index:invalid,event_name:"invalid"}]');
- await assert.rejects(()=>run('parseUploadedFile()'),/source identity/);checks++;
+ await assert.rejects(submitImport,/source identity/);checks++;
  eq(json('state.parsedImportRows'),original,'malformed/out-of-range identity cannot replace prior preview');
  assert.match(node('status-pill').textContent,/source identity/i);checks++;
 }
-run('providerRows=[{source_index:0},{source_index:0}]');await assert.rejects(()=>run('parseUploadedFile()'),/source identity/);checks++;
+run('providerRows=[{source_index:0},{source_index:0}]');await assert.rejects(submitImport,/source identity/);checks++;
 eq(json('state.parsedImportRows'),original,'duplicate input identity rejects whole import result');
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const tick=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
@@ -79,7 +86,8 @@ for(const action of ['reset','edit-other','manual-edit','clear-intake','paste-in
  eq(json('state.parsedImportRows'),before,'changed file retains prior import preview');
 }
 {
- const gate=deferred();sandbox.pendingParse=gate.promise;run("readImportRows=async()=>[{text:'Old import'}];apiBase=async()=>pendingParse");
+ const gate=deferred();sandbox.pendingParse=gate.promise;sandbox.mockRows=[mockRow('Old import')];run('readImportRows=async()=>mockRows;apiBase=async()=>pendingParse');
+ await run('parseUploadedFile()');
  const before=json('state.parsedImportRows');const request=run('parseUploadedFile()');await tick();
  run("loadPayloadIntoForm({id:'other-event',event_name:'Selected event'})");gate.resolve([{source_index:0,event_name:'Old import'}]);await request;
  eq(json('state.parsedImportRows'),before,'late imported result cannot replace current selection context');
@@ -89,5 +97,41 @@ for(const action of ['reset','edit-other','manual-edit','clear-intake','paste-in
  run('state.saving=true;globalThis.parseCalls=0;apiBase=async()=>{parseCalls++;return[];}');
  await run("parseIntoForm('during save',els.parseBtn)");await run('parseUploadedFile()');
  eq(run('parseCalls'),0,'save ownership fences new intake requests');run('state.saving=false');
+}
+{
+ const vendor={};
+ vm.runInNewContext(readFileSync(new URL('../vendor/xlsx-0.20.3.full.min.js',import.meta.url),'utf8'),vendor);
+ const xlsx=vendor.XLSX,workbook=xlsx.utils.book_new();
+ const visible=xlsx.utils.aoa_to_sheet([['Event Name','Notes','Payroll','Date','Start Time'],
+  ['Visible, "Named"','COLUMN_NOT_VISIBLE','UNRELATED_VISIBLE',46352,0.5],
+  ['ROW_NOT_VISIBLE','other','more',46352,0.5]]);
+ visible['!cols']=[{}, {hidden:true}];visible['!rows']=[{},{},{hidden:true}];
+ visible.D2.z='yyyy-mm-dd';visible.E2.z='hh:mm';
+ xlsx.utils.book_append_sheet(workbook,visible,'Admitted');
+ for(const name of ['Hidden','VeryHidden']){
+  xlsx.utils.book_append_sheet(workbook,xlsx.utils.aoa_to_sheet([['Event Name'],['SHEET_NOT_VISIBLE']]),name);
+  xlsx.utils.book_set_sheet_visibility(workbook,name,name==='Hidden'?1:2);
+ }
+ const file={name:'fixture.xlsx',size:16000,arrayBuffer:async()=>xlsx.write(workbook,{type:'array',bookType:'xlsx',cellStyles:true})};
+ sandbox.window.XLSX=xlsx;sandbox.originalReader=originalReader;
+ node('import-file').files=[file];node('import-file').events.change();
+ run("readImportRows=originalReader;globalThis.sent=[];apiBase=async(_base,_path,options)=>{sent.push(...options.body.texts);return [{source_index:0,event_name:'Visible'}];};");
+ await run('parseUploadedFile()');
+ eq(json('sent'),[],'hidden workbook data is never uploaded before scope review');
+ assert.match(node('import-preview').innerHTML,/Admitted/);checks++;
+ assert.doesNotMatch(node('import-preview').innerHTML,/VeryHidden|Payroll|COLUMN_NOT_VISIBLE/);checks++;
+ await run('parseUploadedFile()');
+ const [row]=json('sent');
+ assert.match(row,/Visible, "Named"/);checks++;
+ assert.match(row,/Date: 2026-11-26/);checks++;
+ assert.match(row,/Start Time: 12:00:00/);checks++;
+ assert.doesNotMatch(row,/COLUMN_NOT_VISIBLE|UNRELATED_VISIBLE|ROW_NOT_VISIBLE|SHEET_NOT_VISIBLE/);checks++;
+ run('loadPayloadIntoForm(state.parsedImportRows[0])');
+ eq(json('buildPayloadFromForm().source_text'),row,'only admitted exact row text can be retained on save');
+ sandbox.csv='Event Name,Payroll,Notes\n"Event, A",UNRELATED_CSV,"Quote ""example"""\n';
+ const [csv]=json('parseCsvRows(csv)');
+ assert.match(csv.text,/Event, A/);checks++;
+ assert.match(csv.text,/Quote "example"/);checks++;
+ assert.doesNotMatch(csv.text,/Payroll|UNRELATED_CSV/);checks++;
 }
 console.log(JSON.stringify({status:'PASS_EVENT_SOURCE_EVIDENCE_UI',checks,boundary:'Actual inline handlers with synthetic DOM/parser transport; no AI, DB, browser or physical proof'}));

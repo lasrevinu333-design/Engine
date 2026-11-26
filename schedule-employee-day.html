@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Employee Daily Schedule</title>
   <script src="./memphis-auth.js?v=release-2026.07.19.custodial-v3.12"></script>
+<script src="./memphis-scheduler-actions.js?v=release-2026.07.19.custodial-v3.12"></script>
 <script defer src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
   <style>
     :root{
@@ -17,7 +18,8 @@
     .toolbar,.summary,.employeeCard,.openCard{border:1px solid var(--line);border-radius:22px;background:var(--panel);box-shadow:var(--shadow)}
     .toolbar{padding:14px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}.title{font-size:clamp(1.45rem,2.2vw,2.25rem);font-weight:900;line-height:1}.sub{color:var(--muted);font-size:.86rem;margin-top:5px}.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:end}.field{display:grid;gap:6px;min-width:142px}.field label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:900}.field input,.field select{min-height:42px;border:none;border-radius:12px;padding:8px 12px;font-size:.96rem;background:#fff;color:#111827}.btn{border:none;border-radius:12px;min-height:42px;padding:8px 14px;font-weight:900;cursor:pointer}.btn.primary{background:var(--lime);color:#071018}.btn.blue{background:var(--blue);color:#071018}.btn.ghost{background:rgba(255,255,255,.09);color:var(--text);border:1px solid var(--line)}.btn.small{min-height:34px;padding:6px 10px;font-size:.82rem}.status{color:var(--muted);min-height:22px;padding:0 4px}.summary{padding:14px 16px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:10px 12px}.statLabel{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:900}.statValue{font-size:1.45rem;font-weight:900;margin-top:4px}.list{display:grid;gap:12px}.employeeCard{overflow:hidden}.employeeHeader{padding:14px 16px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;background:rgba(255,255,255,.035)}.employeeName{font-size:1.2rem;font-weight:900}.employeeMeta{color:var(--muted);font-size:.84rem;margin-top:5px;line-height:1.35}.pillRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;font-size:.74rem;font-weight:900;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08)}.pill.ok{background:rgba(34,197,94,.18);color:#dcffe9}.pill.warn{background:rgba(250,204,21,.18);color:#fff2b1}.assignmentTable{width:100%;border-collapse:collapse}.assignmentTable th,.assignmentTable td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;vertical-align:top}.assignmentTable th{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#d6efb2;background:rgba(255,255,255,.03)}.assignmentSections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px}.assignmentSection{min-width:0;border:1px solid rgba(255,255,255,.10);border-radius:18px;overflow:hidden;background:rgba(255,255,255,.035)}.phaseBlock{border-top:1px solid rgba(255,255,255,.08)}.phaseTitle{padding:13px 16px 8px;font-size:.82rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#d6efb2;background:rgba(255,255,255,.025)}.phaseRows{display:grid}.phaseRow{display:grid;grid-template-columns:minmax(220px,1fr);gap:12px;align-items:center;padding:11px 16px;border-top:1px solid rgba(255,255,255,.06)}.phaseArea{font-weight:900}.phaseTime{font-weight:900;text-align:right;color:#f8fbff}.time{font-weight:900;white-space:nowrap}.area{font-weight:900}.notes{color:var(--muted);font-size:.86rem;line-height:1.35}.mobileAssignments{display:none}.assignmentCard{border-top:1px solid rgba(255,255,255,.08);padding:13px 16px;display:grid;gap:5px}.assignmentTop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.assignmentTime{font-weight:900;font-size:1.02rem;white-space:nowrap}.assignmentArea{font-weight:900;font-size:1.04rem}.assignmentCode,.assignmentNote{color:var(--muted);font-size:.84rem;line-height:1.25}.empty{padding:24px;color:var(--muted);text-align:center}.openCard{padding:14px 16px}.openTitle{font-weight:900;font-size:1.1rem}.openGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px}.openItem{border:1px solid rgba(250,204,21,.35);background:rgba(250,204,21,.12);border-radius:14px;padding:10px}.printHint{display:none;color:#111827}
     @media(max-width:900px){.toolbar{grid-template-columns:1fr}.actions{justify-content:stretch}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.employeeHeader{grid-template-columns:1fr}.assignmentTable{display:none}.mobileAssignments{display:block}.assignmentSections{grid-template-columns:1fr;padding:10px}.phaseRow{grid-template-columns:1fr}.phaseTime{text-align:left;color:var(--muted)}.employeeName{font-size:1.35rem}.employeeMeta{font-size:.95rem}.btn.small{width:100%;min-height:42px}.page{padding-left:10px;padding-right:10px}}
-    @media print{body{background:#fff;color:#111827}.page{max-width:none;padding:0}.toolbar,.status,.summary,.btn,.openCard{display:none}.employeeCard{box-shadow:none;border:1px solid #ddd;break-inside:avoid;background:#fff;color:#111827;margin-bottom:14px}.employeeHeader{background:#f3f4f6;color:#111827}.employeeMeta,.notes{color:#374151}.assignmentSections{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px}.assignmentSection{background:#fff;border-color:#ddd}.phaseTitle{background:#f3f4f6;color:#111827}.phaseRow{border-color:#ddd}.assignmentTable th{background:#f3f4f6;color:#111827}.assignmentTable th,.assignmentTable td{border-color:#ddd}.pill{border-color:#ddd;background:#fff;color:#111827}.printHint{display:block}}
+      #print-heading{display:none}
+    @media print{#print-heading{display:block;color:#111827}.openCard{box-shadow:none;border:1px solid #ddd;background:#fff;color:#111827}.openItem{background:#fff;color:#111827}.openCard .sub,.openItem div{color:#374151}body{background:#fff;color:#111827}.page{max-width:none;padding:0}.toolbar,.status,.summary,.btn{display:none}.employeeCard{box-shadow:none;border:1px solid #ddd;break-inside:avoid;background:#fff;color:#111827;margin-bottom:14px}.employeeHeader{background:#f3f4f6;color:#111827}.employeeMeta,.notes{color:#374151}.assignmentSections{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px}.assignmentSection{background:#fff;border-color:#ddd}.phaseTitle{background:#f3f4f6;color:#111827}.phaseRow{border-color:#ddd}.assignmentTable th{background:#f3f4f6;color:#111827}.assignmentTable th,.assignmentTable td{border-color:#ddd}.pill{border-color:#ddd;background:#fff;color:#111827}.printHint{display:block}}
   </style>
   <link rel="icon" href="./assets/trail-v1/schedule.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./memphis-ui.css?v=release-2026.07.19.custodial-v3.12" />
@@ -38,11 +40,12 @@
         <div class="field"><label for="service-date">Service date</label><input id="service-date" type="date" /></div>
         <div class="field"><label for="filter">Show</label><select id="filter"><option value="all">All employees</option><option value="assigned">Assigned only</option><option value="open">Open segments only</option></select></div>
         <button class="btn blue" id="load-btn" type="button">Load</button>
-        <button class="btn primary" id="print-btn" type="button">Print Page</button>
+        <button class="btn primary" id="print-btn" type="button" disabled>Print Page</button>
       </div>
     </section>
 
     <div class="status" id="status">Starting…</div>
+    <h1 id="print-heading" aria-hidden="true"></h1>
 
     <section class="summary">
       <div class="stat"><div class="statLabel">Employees</div><div class="statValue" id="stat-employees">0</div></div>
@@ -64,11 +67,83 @@
 <script>
 const CONFIG={API_BASE:"https://memphis-zoo-mcp.onrender.com/schedule-api",VERSION_URL:"https://memphis-zoo-mcp.onrender.com/version"};
 const els={backBtn:document.getElementById('back-btn'),serviceDate:document.getElementById('service-date'),filter:document.getElementById('filter'),loadBtn:document.getElementById('load-btn'),printBtn:document.getElementById('print-btn'),status:document.getElementById('status'),employeeList:document.getElementById('employee-list'),openCard:document.getElementById('open-card'),openList:document.getElementById('open-list'),statEmployees:document.getElementById('stat-employees'),statAssignments:document.getElementById('stat-assignments'),statOpen:document.getElementById('stat-open'),statStart:document.getElementById('stat-start'),statEnd:document.getElementById('stat-end')};
-let currentData=null;
+const auth=window.MemphisAuth,actions=window.MemphisSchedulerActions;
+const printHeading=document.getElementById('print-heading');
+let currentData=null,generation=0,active=null;
 init().catch((error)=>setStatus(`Startup failed: ${safe(error)}`,true));
-async function init(){await window.MemphisAuth.requireOpsManagerSession({redirect:true});const today=new Date();const params=new URLSearchParams(window.location.search);els.serviceDate.value=params.get('service_date')||params.get('date')||window.MemphisAuth.getCSTDateString(today);els.backBtn.addEventListener('click',()=>{const url=new URL('./schedule-weekly.html',window.location.href);url.searchParams.set('date',els.serviceDate.value);const current=new URL(window.location.href);const device=String(current.searchParams.get('device')||localStorage.getItem('mz_scan_device_id')||'').trim();if(device)url.searchParams.set('device',device);location.href=url.toString();});els.loadBtn.addEventListener('click',()=>loadDay());els.printBtn.addEventListener('click',()=>window.print());els.filter.addEventListener('change',()=>render());return loadDay();}
-async function api(path){const auth=await window.MemphisAuth.opsManagerAuthHeaders();const res=await fetch(`${CONFIG.API_BASE}${path}`,{cache:'no-store',credentials:'include',headers:auth});const payload=await res.json().catch(()=>null);if(!res.ok||!payload||!payload.ok)throw new Error(payload?.error||`HTTP ${res.status}`);return payload.data;}
-async function loadDay(){setStatus(`Loading ${els.serviceDate.value}…`);currentData=await api(`/day?service_date=${encodeURIComponent(els.serviceDate.value)}`);render();setStatus(`Loaded employee schedule for ${els.serviceDate.value}.`)}
+
+async function init(){
+ const session=await auth.requireOpsManagerSession({redirect:true});
+ if(!session)return;
+ const params=new URLSearchParams(window.location.search);
+ els.serviceDate.value=params.get('service_date')||params.get('date')||auth.getCSTDateString(new Date());
+ els.backBtn.addEventListener('click',()=>{
+  const url=new URL('./schedule-weekly.html',window.location.href);
+  url.searchParams.set('date',els.serviceDate.value);
+  const current=new URL(window.location.href);
+  const device=String(current.searchParams.get('device')||localStorage.getItem('mz_scan_device_id')||'').trim();
+  if(device)url.searchParams.set('device',device);
+  location.href=url.toString();
+ });
+ els.loadBtn.addEventListener('click',loadDay);
+ els.printBtn.addEventListener('click',()=>{if(requireCurrentReport())window.print();});
+ els.serviceDate.addEventListener('change',()=>{withdrawReport();setStatus('Load the selected service date.');});
+ els.filter.addEventListener('change',()=>{if(requireCurrentReport())render();});
+ window.addEventListener('beforeprint',requireCurrentReport);
+ window.addEventListener('pagehide',withdrawReport);
+ window.addEventListener('storage',()=>{if(currentData)requireCurrentReport();});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentData)requireCurrentReport();});
+ return loadDay();
+}
+function withdrawReport(){
+ generation++;active?.abort();active=null;currentData=null;
+ els.printBtn.disabled=true;
+ printHeading.textContent='';
+ updateStats([],[]);
+ renderOpen([],els.filter.value);
+ renderEmployees([]);
+}
+function sameReportOwner(owner){
+ return Boolean(owner?.token&&auth.readSession()?.token===owner.token
+  &&actions.same(owner,actions.principal(auth))&&actions.permissions(auth).read);
+}
+function requireCurrentReport(){
+ if(!currentData)return null;
+ if(currentData.date!==els.serviceDate.value||!sameReportOwner(currentData.owner)){
+  withdrawReport();setStatus('Schedule access or service date changed. Load the day again.',true);
+ }
+ return currentData;
+}
+async function loadDay(){
+ withdrawReport();
+ const epoch=generation,date=els.serviceDate.value,principal=actions.principal(auth);
+ const owner=principal?{...principal,token:auth.readSession()?.token}:null;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!sameReportOwner(owner)){
+  setStatus('A valid service date and current Manager access are required.',true);return;
+ }
+ const controller=new AbortController();active=controller;
+ const isCurrent=()=>epoch===generation&&date===els.serviceDate.value&&sameReportOwner(owner)&&!controller.signal.aborted;
+ setStatus(`Loading ${date}…`);
+ try{
+  const headers=await auth.opsManagerAuthHeaders();
+  if(!isCurrent())return;
+  const response=await fetch(`${CONFIG.API_BASE}/day?service_date=${encodeURIComponent(date)}`,
+    {cache:'no-store',credentials:'include',redirect:'error',signal:controller.signal,headers});
+  const payload=await response.json().catch(()=>null);
+  if(!isCurrent())return;
+  if(!response.ok||payload?.ok!==true||payload.data?.service_date!==date)throw new Error('Schedule source unavailable for the selected date.');
+  currentData=Object.freeze({date,owner,data:payload.data});
+  els.printBtn.disabled=false;
+  render();setStatus(`Loaded employee schedule for ${date}.`);
+ }catch{
+  if(isCurrent())setStatus('Schedule source unavailable for the selected date.',true);
+ }finally{
+  if(epoch===generation){
+   active=null;
+   if(!isCurrent()){withdrawReport();setStatus('Schedule access or service date changed. Load the day again.',true);}
+  }
+ }
+}
 function flattenSegments(data){const groups=Array.isArray(data?.groups)?data.groups:[];const rows=[];for(const group of groups){for(const seg of (group.segments||[])){rows.push({...seg,group_name:group.group_name||seg.group_name,group_code:group.group_code||seg.group_code,included_locations:group.included_locations||[]});}}return rows;}
 function isOpen(seg){return String(seg.status||seg.owner_type||'').toUpperCase()==='OPEN'||!seg.assigned_employee_name;}
 function buildRosterMap(data){const map=new Map();for(const row of (Array.isArray(data?.roster)?data.roster:[])){const id=String(row.employee_id||'');if(!id)continue;map.set(id,{shift_start:row.shift_start||'',shift_end:row.shift_end||'',employee_name:row.employee_name||''});}return map;}
@@ -102,14 +177,39 @@ function simpleRowHtml(row){return `<div class="phaseRow"><div class="phaseArea"
 function tableRowHtml(row){return `<tr><td><div class="area">${escapeHtml(locationDisplayName(row))}</div></td></tr>`;}
 function assignmentSections(emp){const rows=(Array.isArray(emp.assignments)?emp.assignments:[]).filter(isManagerScheduleVisibleAssignment);const sections=[];const morning=sortScheduleRows(dedupeScheduleRows(rows.filter(isMorningFullCleanAssignment)));const rebalance=sortScheduleRows(dedupeScheduleRows(rows.filter(isRestroomRebalanceAssignment)));if(morning.length)sections.push({title:'Morning Full Clean Locations',rows:morning,kind:'morning'});if(rebalance.length)sections.push({title:'Restroom Rebalance',rows:rebalance,kind:'rebalance'});return sections;}
 function buildEmployeeRows(data){const rows=flattenSegments(data);const roster=buildRosterMap(data);const map=new Map();const open=[];for(const seg of rows){if(isOpen(seg)){open.push(seg);continue;}const key=String(seg.employee_id||seg.assigned_employee_id||seg.assigned_employee_name||'unknown');if(!map.has(key)){const r=roster.get(key)||{};map.set(key,{employee_id:key,employee_name:seg.assigned_employee_name||seg.employee_name||r.employee_name||'Unknown Employee',shift_start:r.shift_start||'',shift_end:r.shift_end||'',assignments:[]});}map.get(key).assignments.push(seg);}const employees=Array.from(map.values()).sort((a,b)=>(parseTime(a.shift_start)??9999)-(parseTime(b.shift_start)??9999)||a.employee_name.localeCompare(b.employee_name));for(const emp of employees){emp.assignments=emp.assignments.sort(compareAssignments);}open.sort((a,b)=>String(a.coverage_start||'').localeCompare(String(b.coverage_start||''))||String(a.group_name||'').localeCompare(String(b.group_name||'')));return {employees,open};}
-function render(){if(!currentData){return;}const {employees,open}=buildEmployeeRows(currentData);const filter=els.filter.value;const visibleEmployees=filter==='open'?[]:employees;updateStats(visibleEmployees,open);renderOpen(open,filter);renderEmployees(visibleEmployees);}
-function updateStats(employees,open){const assignments=employees.reduce((sum,e)=>sum+assignmentSections(e).reduce((sectionSum,section)=>sectionSum+section.rows.length,0),0);els.statEmployees.textContent=String(employees.length);els.statAssignments.textContent=String(assignments);els.statOpen.textContent=String(open.length);els.statStart.textContent=els.serviceDate.value||'—';els.statEnd.textContent='Locations';}
+function render(){if(!currentData){return;}const {date,data}=currentData;const {employees,open}=buildEmployeeRows(data);const filter=els.filter.value;const visibleEmployees=filter==='open'?[]:employees;printHeading.textContent=`Employee Daily Schedule · ${formatScheduleDate(date)}`;updateStats(visibleEmployees,open,date);renderOpen(open,filter);renderEmployees(visibleEmployees,date);}
+function updateStats(employees,open,date){const assignments=employees.reduce((sum,e)=>sum+assignmentSections(e).reduce((sectionSum,section)=>sectionSum+section.rows.length,0),0);els.statEmployees.textContent=String(employees.length);els.statAssignments.textContent=String(assignments);els.statOpen.textContent=String(open.length);els.statStart.textContent=date||'—';els.statEnd.textContent='Locations';}
 function renderOpen(open,filter){els.openCard.style.display=(open.length&&filter!=='assigned')?'block':'none';els.openList.innerHTML=open.map(seg=>`<div class="openItem"><strong>${escapeHtml(seg.group_name||seg.group_code||'Open area')}</strong><div class="notes">${escapeHtml(formatTimeRange(seg))}</div><div class="notes">${escapeHtml(seg.notes||seg.reason_open||'Needs assignment')}</div></div>`).join('');}
-function renderEmployees(employees){if(!employees.length){els.employeeList.innerHTML='<div class="empty">No assigned employee sections for this filter.</div>';return;}els.employeeList.innerHTML=employees.map(emp=>employeeCardHtml(emp)).join('');els.employeeList.querySelectorAll('[data-export-employee]').forEach(btn=>btn.addEventListener('click',()=>exportEmployeeDocx(btn.getAttribute('data-export-employee'))));}
-function employeeCardHtml(emp){const sections=assignmentSections(emp);const sectionCards=sections.map(section=>`<div class="assignmentSection ${escapeAttr(section.kind||'')}"><div class="phaseTitle">${escapeHtml(section.title)}</div><div class="phaseRows">${section.rows.map(row=>simpleRowHtml(row)).join('')}</div></div>`).join('');return `<article class="employeeCard" data-employee-id="${escapeAttr(emp.employee_id)}"><div class="employeeHeader"><div><div class="employeeName">${escapeHtml(emp.employee_name)}</div><div class="employeeMeta">${escapeHtml(formatScheduleDate(els.serviceDate.value))}</div></div><button class="btn blue small" data-export-employee="${escapeAttr(emp.employee_id)}" type="button">Export DOCX</button></div><div class="assignmentSections">${sectionCards}</div></article>`;}
+function renderEmployees(employees,date){if(!employees.length){els.employeeList.innerHTML='<div class="empty">No assigned employee sections for this filter.</div>';return;}els.employeeList.innerHTML=employees.map(emp=>employeeCardHtml(emp,date)).join('');els.employeeList.querySelectorAll('[data-export-employee]').forEach(btn=>btn.addEventListener('click',()=>exportEmployeeDocx(btn.getAttribute('data-export-employee'))));}
+function employeeCardHtml(emp,date){const sections=assignmentSections(emp);const sectionCards=sections.map(section=>`<div class="assignmentSection ${escapeAttr(section.kind||'')}"><div class="phaseTitle">${escapeHtml(section.title)}</div><div class="phaseRows">${section.rows.map(row=>simpleRowHtml(row)).join('')}</div></div>`).join('');return `<article class="employeeCard" data-employee-id="${escapeAttr(emp.employee_id)}"><div class="employeeHeader"><div><div class="employeeName">${escapeHtml(emp.employee_name)}</div><div class="employeeMeta">${escapeHtml(formatScheduleDate(date))}</div></div><button class="btn blue small" data-export-employee="${escapeAttr(emp.employee_id)}" type="button">Export DOCX</button></div><div class="assignmentSections">${sectionCards}</div></article>`;}
 function minutesBetween(start,end){const s=parseTime(start),e=parseTime(end);if(s==null||e==null)return 0;return e>=s?e-s:(e+1440)-s;}function parseTime(value){const m=String(value||'').match(/^(\d{1,2}):(\d{2})/);if(!m)return null;return Number(m[1])*60+Number(m[2]);}function formatClock(value){return String(value||'—').slice(0,5)||'—';}function formatTimeRange(row){return `${formatClock(row.coverage_start)}-${formatClock(row.coverage_end)}`;}function formatLocationSummary(row={}){const locations=Array.isArray(row.included_locations)?row.included_locations.filter(Boolean):[];return locations.length?locations.slice(0,3).join(', '):'';}function summarizeAssignmentNote(note=''){const text=String(note||'').toLowerCase();if(!text.trim())return '';if(text.includes('overload'))return 'Assigned Area';if(text.includes('respond')||text.includes('issue'))return 'Per Issue';if(text.includes('reassign'))return 'Reassigned';if(text.includes('weekend'))return 'Weekend Coverage';if(text.includes('full'))return 'Full Coverage';if(text.includes('open'))return 'Open Coverage';return String(note||'').replace(/\s+/g,' ').trim().slice(0,48);}
-async function exportEmployeeDocx(employeeId){const {employees}=buildEmployeeRows(currentData);const emp=employees.find(e=>String(e.employee_id)===String(employeeId));if(!emp)return;const sections=assignmentSections(emp);try{if(!window.docx)throw new Error('DOCX library not loaded');const {Document,Packer,Paragraph,HeadingLevel}=window.docx;const children=[new Paragraph({text:emp.employee_name,heading:HeadingLevel.HEADING_1}),new Paragraph(formatScheduleDate(els.serviceDate.value)),new Paragraph('')];if(!sections.length){children.push(new Paragraph('No locations assigned.'));}for(const section of sections){children.push(new Paragraph({text:section.title,heading:HeadingLevel.HEADING_2}));for(const row of section.rows){children.push(new Paragraph({text:locationDisplayName(row),bullet:{level:0}}));}children.push(new Paragraph(''));}const doc=new Document({sections:[{children}]});const blob=await Packer.toBlob(doc);downloadBlob(blob,`${safeFile(emp.employee_name)}_${els.serviceDate.value}_schedule.docx`);setStatus(`Exported DOCX for ${emp.employee_name}.`);}catch(error){setStatus(`DOCX export failed: ${safe(error)}. Falling back to printable Word document.`,true);exportEmployeeDocFallback(emp,sections);}}
-function exportEmployeeDocFallback(emp,sections=assignmentSections(emp)){const html=`<html><head><meta charset="utf-8"><title>${escapeHtml(emp.employee_name)}</title></head><body><h1>${escapeHtml(emp.employee_name)}</h1><p>${escapeHtml(formatScheduleDate(els.serviceDate.value))}</p>${sections.length?sections.map(section=>`<h2>${escapeHtml(section.title)}</h2><ul>${section.rows.map(row=>`<li>${escapeHtml(locationDisplayName(row))}</li>`).join('')}</ul>`).join(''):'<p>No locations assigned.</p>'}</body></html>`;downloadBlob(new Blob([html],{type:'application/msword'}),`${safeFile(emp.employee_name)}_${els.serviceDate.value}_schedule.doc`);}
+async function exportEmployeeDocx(employeeId){
+ const report=requireCurrentReport();
+ if(!report)return;
+ const emp=buildEmployeeRows(report.data).employees.find(e=>String(e.employee_id)===String(employeeId));
+ if(!emp)return;
+ const sections=assignmentSections(emp),date=report.date;
+ try{
+  if(!window.docx)throw new Error('DOCX library not loaded');
+  const {Document,Packer,Paragraph,HeadingLevel}=window.docx;
+  const children=[new Paragraph({text:emp.employee_name,heading:HeadingLevel.HEADING_1}),new Paragraph(formatScheduleDate(date)),new Paragraph('')];
+  if(!sections.length)children.push(new Paragraph('No locations assigned.'));
+  for(const section of sections){
+   children.push(new Paragraph({text:section.title,heading:HeadingLevel.HEADING_2}));
+   for(const row of section.rows)children.push(new Paragraph({text:locationDisplayName(row),bullet:{level:0}}));
+   children.push(new Paragraph(''));
+  }
+  const blob=await Packer.toBlob(new Document({sections:[{children}]}));
+  if(requireCurrentReport()!==report)return;
+  downloadBlob(blob,`${safeFile(emp.employee_name)}_${date}_schedule.docx`);
+  setStatus(`DOCX download started for ${emp.employee_name}.`);
+ }catch{
+  if(requireCurrentReport()!==report)return;
+  exportEmployeeDocFallback(emp,sections,date);
+  setStatus(`Printable Word download started for ${emp.employee_name}.`);
+ }
+}
+function exportEmployeeDocFallback(emp,sections,date){const html=`<html><head><meta charset="utf-8"><title>${escapeHtml(emp.employee_name)}</title></head><body><h1>${escapeHtml(emp.employee_name)}</h1><p>${escapeHtml(formatScheduleDate(date))}</p>${sections.length?sections.map(section=>`<h2>${escapeHtml(section.title)}</h2><ul>${section.rows.map(row=>`<li>${escapeHtml(locationDisplayName(row))}</li>`).join('')}</ul>`).join(''):'<p>No locations assigned.</p>'}</body></html>`;downloadBlob(new Blob([html],{type:'application/msword'}),`${safeFile(emp.employee_name)}_${date}_schedule.doc`);}
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);}function safeFile(value){return String(value||'employee').replace(/[^a-z0-9_-]+/gi,'_').replace(/^_+|_+$/g,'');}
 function setStatus(text,isError=false){els.status.textContent=text;els.status.style.color=isError?'var(--danger)':'var(--muted)';}function safe(error){return error?.message?String(error.message):String(error||'Unknown error');}function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}function escapeAttr(value){return escapeHtml(value).replace(/`/g,'&#96;');}
 </script>

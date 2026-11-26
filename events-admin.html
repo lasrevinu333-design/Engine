@@ -194,6 +194,7 @@
       coverageLocations: [],
       events: [],
       parsedImportRows: [],
+      preparedImport: null,
       selectedImportRowId: null,
       editingEventId: null,
       currentOperationId: null,
@@ -273,7 +274,10 @@
       els.cancelEditBtn.addEventListener('click', () => resetForm(false));
 
       els.pasteIntake.addEventListener('input', invalidateIntake);
-      els.importFile.addEventListener('change', invalidateIntake);
+      els.importFile.addEventListener('change', () => {
+        invalidateIntake();
+        renderImportPreview(state.parsedImportRows);
+      });
       ['input','change'].forEach((eventName) => {
         [els.eventName, els.eventScope, els.eventVenue, els.coverageLocations, els.eventDate, els.endDate, els.startTime, els.endTime, els.attendeeCount, els.notes].forEach((node) => {
           node.addEventListener(eventName, () => { invalidateIntake(); updatePreviewFromForm(); });
@@ -448,7 +452,11 @@
       renderEvents(state.events);
     }
 
-    function invalidateIntake() { state.intakeRevision += 1; }
+    function invalidateIntake() {
+      state.intakeRevision += 1;
+      state.preparedImport = null;
+      els.parseFileBtn.textContent = 'Import Spreadsheet';
+    }
 
     async function parseIntoForm(text, button) {
       if (state.retired || state.saving || state.writeUnconfirmed) return;
@@ -476,10 +484,24 @@
       const revision = ++state.intakeRevision;
       const isCurrent = () => state.intakeRevision === revision && !state.saving;
       await withButton(els.parseFileBtn, 'Importing…', async () => {
-        const rows = await readImportRows(file);
-        if (!isCurrent()) return;
-        if (!rows.length) throw new Error('No usable rows found.');
-        const texts = rows.map((row) => row.text).filter(Boolean);
+        const prepared = state.preparedImport;
+        if (prepared?.file !== file) {
+          const rows = await readImportRows(file);
+          if (!isCurrent()) return;
+          if (!rows.length) throw new Error('No visible event fields found.');
+          const fields = new Map();
+          for (const row of rows) {
+            const selected = fields.get(row.sheet_name) || new Set();
+            for (const field of row.fields) selected.add(field);
+            fields.set(row.sheet_name, selected);
+          }
+          state.preparedImport = { file, rows };
+          els.importPreview.innerHTML = [...fields].map(([sheet, selected]) =>
+            `<article class="importCard"><div class="importName">${escapeHtml(sheet)}</div><div class="importMeta">${escapeHtml([...selected].join(', '))}</div></article>`).join('');
+          setStatus('Review the included sheets and fields, then choose Parse included fields.');
+          return;
+        }
+        const texts = prepared.rows.map((row) => row.text);
         if(texts.length>200)throw new Error('This file has more than 200 event rows. Split it into smaller files; no rows were imported.');
         const parsed = await api('/parse', { method: 'POST', body: { texts } });
         if (!isCurrent()) return;
@@ -497,20 +519,24 @@
           source_text: texts[row.source_index],
           source_format: file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'spreadsheet',
         }));
+        state.preparedImport = null;
         renderImportPreview(state.parsedImportRows);
         renderImportSummary(state.parsedImportRows);
         setStatus(`Imported ${state.parsedImportRows.length} row${state.parsedImportRows.length === 1 ? '' : 's'}.`);
       }, isCurrent);
+      if (isCurrent()) els.parseFileBtn.textContent = state.preparedImport ? 'Parse included fields' : 'Import Spreadsheet';
     }
 
     async function readImportRows(file) {
       if(file.size>10*1024*1024)throw new Error('Choose a spreadsheet smaller than 10 MiB.');
       if (file.name.toLowerCase().endsWith('.csv')) return parseCsvRows(await file.text());
       if (!window.XLSX) throw new Error('Spreadsheet parser is still loading. Try again in a moment.');
-      const workbook = window.XLSX.read(await file.arrayBuffer(), { type: 'array', cellNF:true });
+      const workbook = window.XLSX.read(await file.arrayBuffer(), { type: 'array', cellNF:true, cellStyles:true });
       const date1904 = Boolean(workbook.Workbook?.WBProps?.date1904);
       const rows = [];let scannedCells=0;
+      const sheetMetadata = new Map((workbook.Workbook?.Sheets || []).map(entry => [entry.name, entry]));
       for (const sheetName of workbook.SheetNames) {
+        if (Number(sheetMetadata.get(sheetName)?.Hidden || 0) !== 0) continue;
         const sheet = workbook.Sheets[sheetName];
         if(!sheet['!ref'])continue;
         const range=window.XLSX.utils.decode_range(sheet['!ref']);
@@ -518,13 +544,20 @@
         if(!Number.isSafeInteger(cells)||cells<1||cells>40000-scannedCells)throw new Error('Spreadsheet used range is too large. Remove unused rows and columns or import smaller sections.');
         scannedCells+=cells;
         const cellAt=(r,c)=>sheet[window.XLSX.utils.encode_cell({r,c})];
-        const headers=[];
-        for(let c=range.s.c;c<=range.e.c;c++)headers.push(String(cellAt(range.s.r,c)?.v??'').trim()||`Column ${c+1}`);
-        if(new Set(headers).size!==headers.length)throw new Error(`Duplicate column names in ${sheetName}.`);
+        if (sheet['!rows']?.[range.s.r]?.hidden) continue;
+        const columns=[];
+        for(let c=range.s.c;c<=range.e.c;c++){
+          if(sheet['!cols']?.[c]?.hidden)continue;
+          const header=eventImportField(cellAt(range.s.r,c)?.v);
+          if(header)columns.push({column:c,header});
+        }
+        if(new Set(columns.map(({header})=>header.toLowerCase())).size!==columns.length)throw new Error(`Duplicate event fields in ${sheetName}.`);
+        if(!columns.length)continue;
         for(let r=range.s.r+1;r<=range.e.r;r++){
+          if(sheet['!rows']?.[r]?.hidden)continue;
           const row={};
-          headers.forEach((header,i)=>{
-            const cell=cellAt(r,range.s.c+i);let value=cell?.v??'';
+          for(const {column,header} of columns){
+            const cell=cellAt(r,column);let value=cell?.v??'';
             if(cell?.t==='n'&&window.XLSX.SSF.is_date(cell.z||'')){
               const parts=window.XLSX.SSF.parse_date_code(value,{date1904});
               if(!parts || parts.y<1 || (parts.y===1900&&parts.m===2&&parts.d===29))throw new Error(`Invalid Excel date at ${sheetName} row ${r+1}.`);
@@ -534,9 +567,9 @@
               else value=window.XLSX.utils.format_cell(cell);
             }else if(cell?.t==='e')throw new Error(`Spreadsheet error at ${sheetName} row ${r+1}.`);
             row[header]=value;
-          });
-          const text=spreadsheetRowText(row);
-          if(text){if(rows.length>=200)throw new Error('Import at most 200 event rows at a time.');rows.push({text,source_row:r+1,sheet_name:sheetName});}
+          }
+          const source=spreadsheetRowText(row);
+          if(source.text){if(rows.length>=200)throw new Error('Import at most 200 event rows at a time.');rows.push({...source,source_row:r+1,sheet_name:sheetName});}
         }
       }
       return rows;
@@ -562,19 +595,26 @@
       if(quoted)throw new Error('CSV contains an unclosed quoted field.');
       if(value||closed||cells.length)finishRecord();
       if(!records.length)return[];
-      const headers=records.shift().cells.map((v,i)=>v.trim()||`Column ${i+1}`);
-      if(new Set(headers).size!==headers.length)throw new Error('CSV contains duplicate column names.');
+      const headers=records.shift().cells.map(eventImportField);
+      const named=headers.filter(Boolean);
+      if(new Set(named.map(header=>header.toLowerCase())).size!==named.length)throw new Error('CSV contains duplicate event fields.');
       return records.map(({cells,line})=>{
         if(cells.length!==headers.length)throw new Error(`CSV column count differs at line ${line}.`);
-        return {text:spreadsheetRowText(Object.fromEntries(headers.map((h,i)=>[h,cells[i]]))),source_row:line,sheet_name:'CSV'};
-      });
+        const row=Object.fromEntries(headers.flatMap((header,i)=>header?[[header,cells[i]]]:[]));
+        return {...spreadsheetRowText(row),source_row:line,sheet_name:'CSV'};
+      }).filter(row=>row.text);
     }
+    function eventImportField(value) {
+      const label=String(value??'').trim().replace(/\s+/g,' ');
+      const fields=/^(?:event name|event|title|event title|name|event area|location group|area|location|venue|event date|start date|date|event end date|end date|start time|time|begin time|end time|ends|guest count|projected attendance|expected attendance|estimated attendance|attendance count|attendees|attendance|projected|guests|people|count|notes|details|comments|comment|needs)$/i;
+      return fields.test(label)?label:null;
+    }
+
     function spreadsheetRowText(row = {}) {
-      return Object.entries(row)
-        .map(([key, value]) => [String(key ?? '').trim(), String(value ?? '').trim()])
-        .filter(([, value]) => value)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(' | ');
+      const fields=Object.entries(row)
+        .map(([key,value]) => [eventImportField(key),String(value??'').trim()])
+        .filter(([key,value]) => key&&value);
+      return {fields:fields.map(([key])=>key),text:fields.map(([key,value])=>`${key}: ${value}`).join(' | ')};
     }
 
     function renderImportSummary(rows) {
