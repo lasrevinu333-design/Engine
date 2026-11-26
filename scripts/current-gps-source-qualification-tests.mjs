@@ -51,7 +51,7 @@ try{
  // This validator and its profiles are .mjs and need no replacement package.
  const isolated=await import(pathToFileURL(join(temporary,'scripts/current-gps-qualification-source-boundary.mjs')));
  assert.equal(isolated.assertCurrentGpsInventory().main,195);
- const changeRows=[...profile.deltas,...profile.auditRepairHistory,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];
+ const changeRows=[...profile.deltas,...profile.auditRepairHistory,...profile.releaseRepairHistory,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];
  for(const row of changeRows){const path=join(temporary,row.path),before=readFileSync(path);writeFileSync(path,Buffer.concat([before,Buffer.from('\n')]));assert.throws(()=>isolated.assertCurrentGpsInventory());writeFileSync(path,before);assert.equal(isolated.assertCurrentGpsInventory().main,195);}
  pass('later byte changes in every delta plus unchanged main/test/aux/proof/core are rejected without cached approval');
  const main=join(temporary,profile.main_java[0].path),test=join(temporary,profile.test_java[0].path);

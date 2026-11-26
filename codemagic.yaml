@@ -974,7 +974,7 @@ workflows:
       vars:
         MZ_APP_EDITION: custodial
         MZ_RELEASE_VERSION: 1.0.0
-        MZ_BUILD_NUMBER: '87'
+        MZ_BUILD_NUMBER: '88'
         MZ_SHELL_START: '1'
         MZ_TEST_SOURCE_COMMIT: ${{ inputs.test_source_commit }}
       android_signing:
@@ -991,6 +991,10 @@ workflows:
       - *custodial_android_toolchain
       - name: Verify generated messenger behavior
         script: node scripts/messenger-bundle-browser-tests.mjs
+      - name: Verify the exact clock, audio, and protected source inventory
+        script: |
+          node scripts/provider-best-effort-release-tests.mjs
+          node scripts/current-gps-source-qualification-tests.mjs
       - name: Verify active scan startup and pending setup recovery
         script: node scripts/custodial-scan-startup-race-tests.mjs
       - name: Build and sign full-workflow TEST APK with retained fleet identity

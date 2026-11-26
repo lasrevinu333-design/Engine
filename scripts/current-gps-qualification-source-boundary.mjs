@@ -38,11 +38,12 @@ const RETAINED_FEEDBACK_PROFILE_SHA='bfa5fa1084c8953a9243e8469742383717d2b5ec4b8
 const WEB_LIFECYCLE_PROFILE_SHA='a414732e10fde9ddf4978fd67985984573588198e2c48bbad7181b2b3556dbb3';
 const MANAGER_RECOVERY_PROFILE_SHA='190aad455944e05763a647ce2313257a94107f800f7095837afab4c6677a4670';
 const STAFFING_TRANSITION_PROFILE_SHA='36197b398477eb4f42fa22d3ca1beeae15eba900e6ce3b2be48eb1b3588d509d';
+const AUDITED_V88_PROFILE_SHA='79bb25b6989c8e37531b75a5f159bce5f075b49814be0ee1da0906e965d216af';
 const BASECAMP_R34_PROFILE_SHA='113e0647421cfbb6b3dc8cfc2a21757e15446f27bd65c64bc150ba41af4a2f36';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 export function validateCurrentGpsQualification(value){
- const integrationRepair=[INTEGRATION_REPAIR_PROFILE_SHA,CLOCK_NAVIGATION_PROFILE_SHA,RETAINED_FEEDBACK_PROFILE_SHA,WEB_LIFECYCLE_PROFILE_SHA,MANAGER_RECOVERY_PROFILE_SHA,STAFFING_TRANSITION_PROFILE_SHA].includes(sha(JSON.stringify(value)));
+ const integrationRepair=[INTEGRATION_REPAIR_PROFILE_SHA,CLOCK_NAVIGATION_PROFILE_SHA,RETAINED_FEEDBACK_PROFILE_SHA,WEB_LIFECYCLE_PROFILE_SHA,MANAGER_RECOVERY_PROFILE_SHA,STAFFING_TRANSITION_PROFILE_SHA,AUDITED_V88_PROFILE_SHA].includes(sha(JSON.stringify(value)));
  assert.ok(integrationRepair||[PROFILE_SHA,DIAGNOSTIC_PROFILE_SHA,PRESENTATION_PROFILE_SHA,TERRACOTTA_PROFILE_SHA,TIMING_PROFILE_SHA,WEB_READINESS_PROFILE_SHA,STARTUP_MESSENGER_PROFILE_SHA,STARTUP_MESSENGER_R21_PROFILE_SHA,STARTUP_MESSENGER_R22_PROFILE_SHA,BASECAMP_R29_PROFILE_SHA,BASECAMP_R30_PROFILE_SHA,BASECAMP_R31_PROFILE_SHA,BASECAMP_R32_PROFILE_SHA,BASECAMP_R33_PROFILE_SHA,BASECAMP_R34_PROFILE_SHA,AUDIT_R42_PROFILE_SHA,AUDIT_R44_PROFILE_SHA,AUDIT_R44B_PROFILE_SHA,AUDIT_R61_PROFILE_SHA,AUDIT_R63_PROFILE_SHA,REPAIR_R79_PROFILE_SHA,WEEK_PERIMETER_PROFILE_SHA,NOTIFICATION_DEADLINE_PROFILE_SHA,NOTIFICATION_PRESENTATION_PROFILE_SHA,PROVIDER_STORAGE_PROFILE_SHA,MESSENGER_VOICE_PROFILE_SHA,MESSENGER_EXPEDITED_PROFILE_SHA].includes(sha(JSON.stringify(value))),'Exact registered source profile; independent review and runtime admission remain separate');
  assert.equal(value.schema,'custodial.current-gps-source-qualification.v1');
  for(const key of ['runtime_admission','release_admission','native_authority','hardware_acceptance','historical_pins_rewritten'])assert.equal(value[key],false);
@@ -116,6 +117,7 @@ function applyNotificationOverlay(profile,relativePath,expected){
  if(overlay.clockHistory)result.clockHistory=overlay.clockHistory;
  if(overlay.retainedFeedbackHistory)result.retainedFeedbackHistory=overlay.retainedFeedbackHistory;
  if(overlay.webHistory)result.webHistory=overlay.webHistory;
+ if(overlay.releaseRepairHistory)result.releaseRepairHistory=overlay.releaseRepairHistory;
  if(overlay.staffingTransitionHistory)result.staffingTransitionHistory=overlay.staffingTransitionHistory;
  if(overlay.managerRecoveryHistory)result.managerRecoveryHistory=overlay.managerRecoveryHistory;
  if(overlay.auditRepairHistory){
@@ -148,7 +150,9 @@ const managerRecoveryProfile=applyNotificationOverlay(webLifecycleProfile,
  './fixtures/current-gps-manager-recovery-overlay.json',MANAGER_RECOVERY_PROFILE_SHA);
 const staffingTransitionProfile=applyNotificationOverlay(managerRecoveryProfile,
  './fixtures/current-gps-staffing-transition-overlay.json',STAFFING_TRANSITION_PROFILE_SHA);
-export const currentGpsQualification=freeze(validateCurrentGpsQualification(staffingTransitionProfile));
+const auditedV88Profile=applyNotificationOverlay(staffingTransitionProfile,
+ './fixtures/current-gps-audited-v88-overlay.json',AUDITED_V88_PROFILE_SHA);
+export const currentGpsQualification=freeze(validateCurrentGpsQualification(auditedV88Profile));
 const all=[...currentGpsQualification.main_java,...currentGpsQualification.test_java,...currentGpsQualification.auxiliary,...currentGpsQualification.core_sources,...(currentGpsQualification.presentation_sources||[])];
 const byPath=new Map(all.map(row=>[row.path,row]));
 const aliases=new Map(Object.entries(currentGpsQualification.basename_aliases));
@@ -206,6 +210,11 @@ export function assertBoundCurrentGpsSource(name,source){
 // any of the archived GPS or provider contracts.
 export function normalizeClockNavigationForComparison(name,source){
  const path=canonical(name);
+ const audited=currentGpsQualification.releaseRepairHistory.find(row=>row.path===path);
+ if(audited?.kind==='changed'&&sha(source)===audited.current_sha256){
+  assertCurrentGpsInventory();
+  source=reverseGps(audited,source);
+ }
  const staffing=currentGpsQualification.staffingTransitionHistory.find(row=>row.path===path);
  if(staffing&&sha(source)===staffing.current_sha256){
   assertCurrentGpsInventory();
@@ -254,10 +263,11 @@ export function normalizeNotificationPresentationForComparison(name,source){
 }
 export function normalizeCurrentGpsForHistoricalComparison(name,source){
  const path=canonical(name);if(!path)return source;
+ const actual=source;
  source=normalizeIntegrationRepair(path,source);
  const row=currentGpsQualification.deltas.find(row=>row.path===path);if(!row)return source;
  if(row.kind==='added'){
-  assert.equal(sha(source),row.current_sha256,'New GPS type must remain actual; never invent an absent predecessor');return source;
+  assert.equal(sha(source),row.current_sha256,'New GPS type must remain actual; never invent an absent predecessor');return actual;
  }
  if(sha(source)!==row.current_sha256)return source; // Unknown bytes remain unknown to unchanged historical guards.
  assertCurrentGpsInventory();return reverseGps(row,source);
@@ -275,7 +285,7 @@ function reverseGps(row,source){
 export function assertGpsHistoricalInventoryProjection(oldMain,oldTests,oldAuxiliary){
  assertCurrentGpsInventory();
  function projected(rows){
-  const added=new Set([...currentGpsQualification.deltas,...currentGpsQualification.auditRepairHistory]
+  const added=new Set([...currentGpsQualification.deltas,...currentGpsQualification.auditRepairHistory,...currentGpsQualification.releaseRepairHistory]
    .filter(d=>d.kind==='added').map(d=>d.path));
   return rows.filter(row=>!added.has(row.path)).map(row=>{
   const delta=currentGpsQualification.deltas.find(d=>d.path===row.path);

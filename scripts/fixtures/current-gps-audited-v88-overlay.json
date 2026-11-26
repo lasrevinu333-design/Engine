@@ -1,0 +1,2789 @@
+{
+  "main_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialEnrollmentApplication.java",
+      "bytes": 10927,
+      "sha256": "5599677474262a88ea00718f067772360d8fd566da75973953d700e92280c458"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
+      "bytes": 4897,
+      "sha256": "3c3a8039a102d9cf3e92bab42b1cf8d632674c91288cfdc45e8d07873860404e"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
+      "bytes": 5572,
+      "sha256": "4a06942c096ee2fa84b0aa16374e91ed589417b434fc452ab7e7af58b2bd0326"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeRetainedEnrollmentRealmStore.java",
+      "bytes": 25727,
+      "sha256": "7701063fef9d1f9e69f2a1a30e6afca0ea001ac8959f7cd03cd3d9de2664ca87"
+    }
+  ],
+  "test_java": [
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedEnrollmentRealmStoreTest.java",
+      "bytes": 17751,
+      "sha256": "a12cb05bf034224b2ebe62d82fda8ef16c1191cb237b9561eb4718be0f016cbb"
+    }
+  ],
+  "auxiliary": [
+    {
+      "path": "codemagic.yaml",
+      "bytes": 48247,
+      "sha256": "7eb35be59e26f05f9c00718dd56444e9dd89aae91e3dbe281b8138a4da3874fb"
+    },
+    {
+      "path": "dashboard-map-page.js",
+      "bytes": 15323,
+      "sha256": "bcb74ffc39b01be8ec7a4f1b087969eafb11ff064f26a33c3c8907abbbb5b8cf"
+    },
+    {
+      "path": "events-admin.html",
+      "bytes": 68573,
+      "sha256": "d5a1e47afae16af751d3185834b47ce5ae5ec8041ef4d5108987b2f1ecd22a47"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+      "bytes": 5737,
+      "sha256": "b5b4f34866f9536193072faa52be2081dbfe0b032095daea3a7967d69c7de673"
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
+      "bytes": 6131,
+      "sha256": "16b56484bcdd52aa1ad2d721a245f9ddb151350cce3b67ad5cbc3bf6e3aecc2a"
+    },
+    {
+      "path": "mobile/scripts/configure-native-links.mjs",
+      "bytes": 21401,
+      "sha256": "8c3bcc3e92a2567ba1ad72b0127d9938cadb443df4f962f0326799cf0f0ce592"
+    },
+    {
+      "path": "mobile/src/custodial/active-gps-lifecycle.js",
+      "bytes": 10522,
+      "sha256": "1c96e12ef7d8bf318de680e1bbdeb286b101aa8e9e41f89b88f16e44c8732cca"
+    },
+    {
+      "path": "operations-dashboard-data.js",
+      "bytes": 38389,
+      "sha256": "f835181a02d67d2aad76191aa21e1559f6450934f06ae6085bc5caddc14cf30e"
+    },
+    {
+      "path": "operations-dashboard.css",
+      "bytes": 26350,
+      "sha256": "d76fe4767f5fefa1440b8125edf598c156450e26c52b176ec09ed2a0c448dc72"
+    },
+    {
+      "path": "operations-dashboard.html",
+      "bytes": 9580,
+      "sha256": "4e749149cb92e691204ebb158d5c27d9249435623c4449b766e34cc63e3b765f"
+    },
+    {
+      "path": "operations-dashboard.js",
+      "bytes": 31667,
+      "sha256": "aa540762bfb0b017ba1e32844c0351efc350486632205cd8fbe8230b210d616a"
+    },
+    {
+      "path": "ops-hub.js",
+      "bytes": 21513,
+      "sha256": "d590f4500e45090a633f4327f4ff538fa7d5bd487c3ab71841a27271b3f34bb1"
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "bytes": 8469,
+      "sha256": "46670941a52005ec80183c182f4001a163f105d7fcfec716df5351197da673ae"
+    },
+    {
+      "path": "scripts/events-admin-source-evidence-tests.mjs",
+      "bytes": 10282,
+      "sha256": "8a12b85c39a536f0f36db1b99f1c748fb52f32662510157debe81fb5f2d449d0"
+    },
+    {
+      "path": "scripts/operations-next-rendered-tests.mjs",
+      "bytes": 10853,
+      "sha256": "5862fdca33fe3eb2e86bbb14f3d816c44f2c74fadcb4481161951af69f62a768"
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "bytes": 9690,
+      "sha256": "efbe6aed67d2d628118f0c5c51b4e3ee7923c1b29ab9ef95681aa4eb0ef10372"
+    },
+    {
+      "path": "scripts/provider-best-effort-release-tests.mjs",
+      "bytes": 6694,
+      "sha256": "e2f9978210fd1e3944195d8da99371936dacb299eaa7d31ec0a5313cfb8c30d0"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v88-composition.json",
+      "bytes": 49413,
+      "sha256": "8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v88-host-tests.txt",
+      "bytes": 716,
+      "sha256": "da9bb5d80706ccbb2c92deb5a629a2891ee64765ac9bbef4cb54eed253721ae2"
+    }
+  ],
+  "core_sources": [
+    {
+      "path": "memphis-scan-sync.js",
+      "bytes": 256977,
+      "sha256": "c4ce3860bc1e2188871835b57daa8add4302389417aebf0aa88ddc7f3f95c0fc"
+    },
+    {
+      "path": "scripts/active-gps-lifecycle-tests.mjs",
+      "bytes": 7643,
+      "sha256": "ec060c5ae840d5b67182ed6c2d427367a35df0d8d2ed5f70ec24293669ec1789"
+    },
+    {
+      "path": "scripts/custodial-readiness-tests.mjs",
+      "bytes": 33426,
+      "sha256": "bf3a0cfdd43bc5e13b874d0720c57e9accba661cd3215d6a508762a49679afb1"
+    },
+    {
+      "path": "scripts/operations-dashboard-tests.mjs",
+      "bytes": 137126,
+      "sha256": "8efdf40d2339c16cf6cc69b0c8d2793abcefc73e69cc32ca11d2c324b675dab5"
+    }
+  ],
+  "presentation_sources": [
+    {
+      "path": "ops-viewer.html",
+      "bytes": 9303,
+      "sha256": "c840c532f293ef3012d4ed0d3cc035aacbbdea73789c8ba20f14885b0d2655f2"
+    },
+    {
+      "path": "schedule-employee-day.html",
+      "bytes": 30173,
+      "sha256": "28c57548ef515f0d78de0064ce074387b9c3ee5b5bb2fd896f708e5d7631cf5d"
+    },
+    {
+      "path": "start_page1.html",
+      "bytes": 11737,
+      "sha256": "68368c982c713764f19193c4da2ac8531c83c9c4b2190b06eff949490b4f39a9"
+    }
+  ],
+  "releaseRepairHistory": [
+    {
+      "path": "codemagic.yaml",
+      "kind": "changed",
+      "prior_bytes": 48025,
+      "prior_sha256": "601c0d78bc7d531537b21f2f4670eae6a278f8647134b46f4be95ce0293424d2",
+      "current_sha256": "7eb35be59e26f05f9c00718dd56444e9dd89aae91e3dbe281b8138a4da3874fb",
+      "hunks": [
+        {
+          "old_start": 977,
+          "old_count": 1,
+          "new_start": 977,
+          "new_count": 1,
+          "before": [
+            "        MZ_BUILD_NUMBER: '87'"
+          ],
+          "after": [
+            "        MZ_BUILD_NUMBER: '88'"
+          ]
+        },
+        {
+          "old_start": 993,
+          "old_count": 0,
+          "new_start": 994,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "      - name: Verify the exact clock, audio, and protected source inventory",
+            "        script: |",
+            "          node scripts/provider-best-effort-release-tests.mjs",
+            "          node scripts/current-gps-source-qualification-tests.mjs"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "dashboard-map-page.js",
+      "kind": "changed",
+      "prior_bytes": 15292,
+      "prior_sha256": "6523a7d61f10158f9e01391b1b3119204c892923c3023ecd58d969e781c0f05d",
+      "current_sha256": "bcb74ffc39b01be8ec7a4f1b087969eafb11ff064f26a33c3c8907abbbb5b8cf",
+      "hunks": [
+        {
+          "old_start": 108,
+          "old_count": 1,
+          "new_start": 108,
+          "new_count": 1,
+          "before": [
+            "          isCurrent:currentRead}).catch(()=>{});"
+          ],
+          "after": [
+            "          isCurrent:currentRead,onAuthorityError:authorityLost}).catch(()=>{});"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "events-admin.html",
+      "kind": "changed",
+      "prior_bytes": 66000,
+      "prior_sha256": "a98abe9166013446a6d2afb6e167ae4366fa325fa5195c3ebf192b7aceaf6224",
+      "current_sha256": "d5a1e47afae16af751d3185834b47ce5ae5ec8041ef4d5108987b2f1ecd22a47",
+      "hunks": [
+        {
+          "old_start": 196,
+          "old_count": 0,
+          "new_start": 197,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      preparedImport: null,"
+          ]
+        },
+        {
+          "old_start": 276,
+          "old_count": 1,
+          "new_start": 277,
+          "new_count": 4,
+          "before": [
+            "      els.importFile.addEventListener('change', invalidateIntake);"
+          ],
+          "after": [
+            "      els.importFile.addEventListener('change', () => {",
+            "        invalidateIntake();",
+            "        renderImportPreview(state.parsedImportRows);",
+            "      });"
+          ]
+        },
+        {
+          "old_start": 451,
+          "old_count": 1,
+          "new_start": 455,
+          "new_count": 5,
+          "before": [
+            "    function invalidateIntake() { state.intakeRevision += 1; }"
+          ],
+          "after": [
+            "    function invalidateIntake() {",
+            "      state.intakeRevision += 1;",
+            "      state.preparedImport = null;",
+            "      els.parseFileBtn.textContent = 'Import Spreadsheet';",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 465,
+          "old_count": 1,
+          "new_start": 473,
+          "new_count": 4,
+          "before": [
+            "        setStatus(row.needs_review ? 'Parsed, but scope/venue needs review before saving.' : 'Parsed into form. Review the preview before saving.', Boolean(row.needs_review));"
+          ],
+          "after": [
+            "        const dateInferred = row.warnings?.includes('ambiguous_date');",
+            "        const note = row.needs_review ? 'Parsed, but scope/venue needs review before saving.'",
+            "          : 'Parsed into form. Review the preview before saving.';",
+            "        setStatus(dateInferred ? `${note} Confirm the inferred date.` : note, Boolean(row.needs_review || dateInferred));"
+          ]
+        },
+        {
+          "old_start": 476,
+          "old_count": 4,
+          "new_start": 487,
+          "new_count": 18,
+          "before": [
+            "        const rows = await readImportRows(file);",
+            "        if (!isCurrent()) return;",
+            "        if (!rows.length) throw new Error('No usable rows found.');",
+            "        const texts = rows.map((row) => row.text).filter(Boolean);"
+          ],
+          "after": [
+            "        const prepared = state.preparedImport;",
+            "        if (prepared?.file !== file) {",
+            "          const rows = await readImportRows(file);",
+            "          if (!isCurrent()) return;",
+            "          if (!rows.length) throw new Error('No visible event fields found.');",
+            "          const fields = new Map();",
+            "          for (const row of rows) {",
+            "            const selected = fields.get(row.sheet_name) || new Set();",
+            "            for (const field of row.fields) selected.add(field);",
+            "            fields.set(row.sheet_name, selected);",
+            "          }",
+            "          state.preparedImport = { file, rows };",
+            "          els.importPreview.innerHTML = [...fields].map(([sheet, selected]) =>",
+            "            `<article class=\"importCard\"><div class=\"importName\">${escapeHtml(sheet)}</div><div class=\"importMeta\">${escapeHtml([...selected].join(', '))}</div></article>`).join('');",
+            "          setStatus('Review the included sheets and fields, then choose Parse included fields.');",
+            "          return;",
+            "        }",
+            "        const texts = prepared.rows.map((row) => row.text);"
+          ]
+        },
+        {
+          "old_start": 496,
+          "old_count": 0,
+          "new_start": 522,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        state.preparedImport = null;"
+          ]
+        },
+        {
+          "old_start": 500,
+          "old_count": 0,
+          "new_start": 527,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      if (isCurrent()) els.parseFileBtn.textContent = state.preparedImport ? 'Parse included fields' : 'Import Spreadsheet';"
+          ]
+        },
+        {
+          "old_start": 507,
+          "old_count": 1,
+          "new_start": 534,
+          "new_count": 1,
+          "before": [
+            "      const workbook = window.XLSX.read(await file.arrayBuffer(), { type: 'array', cellNF:true });"
+          ],
+          "after": [
+            "      const workbook = window.XLSX.read(await file.arrayBuffer(), { type: 'array', cellNF:true, cellStyles:true });"
+          ]
+        },
+        {
+          "old_start": 509,
+          "old_count": 0,
+          "new_start": 537,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      const sheetMetadata = new Map((workbook.Workbook?.Sheets || []).map(entry => [entry.name, entry]));"
+          ]
+        },
+        {
+          "old_start": 510,
+          "old_count": 0,
+          "new_start": 539,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        if (Number(sheetMetadata.get(sheetName)?.Hidden || 0) !== 0) continue;"
+          ]
+        },
+        {
+          "old_start": 518,
+          "old_count": 3,
+          "new_start": 547,
+          "new_count": 9,
+          "before": [
+            "        const headers=[];",
+            "        for(let c=range.s.c;c<=range.e.c;c++)headers.push(String(cellAt(range.s.r,c)?.v??'').trim()||`Column ${c+1}`);",
+            "        if(new Set(headers).size!==headers.length)throw new Error(`Duplicate column names in ${sheetName}.`);"
+          ],
+          "after": [
+            "        if (sheet['!rows']?.[range.s.r]?.hidden) continue;",
+            "        const columns=[];",
+            "        for(let c=range.s.c;c<=range.e.c;c++){",
+            "          if(sheet['!cols']?.[c]?.hidden)continue;",
+            "          const header=eventImportField(cellAt(range.s.r,c)?.v);",
+            "          if(header)columns.push({column:c,header});",
+            "        }",
+            "        if(new Set(columns.map(({header})=>header.toLowerCase())).size!==columns.length)throw new Error(`Duplicate event fields in ${sheetName}.`);",
+            "        if(!columns.length)continue;"
+          ]
+        },
+        {
+          "old_start": 521,
+          "old_count": 0,
+          "new_start": 557,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "          if(sheet['!rows']?.[r]?.hidden)continue;"
+          ]
+        },
+        {
+          "old_start": 523,
+          "old_count": 2,
+          "new_start": 559,
+          "new_count": 2,
+          "before": [
+            "          headers.forEach((header,i)=>{",
+            "            const cell=cellAt(r,range.s.c+i);let value=cell?.v??'';"
+          ],
+          "after": [
+            "          for(const {column,header} of columns){",
+            "            const cell=cellAt(r,column);let value=cell?.v??'';"
+          ]
+        },
+        {
+          "old_start": 534,
+          "old_count": 3,
+          "new_start": 570,
+          "new_count": 3,
+          "before": [
+            "          });",
+            "          const text=spreadsheetRowText(row);",
+            "          if(text){if(rows.length>=200)throw new Error('Import at most 200 event rows at a time.');rows.push({text,source_row:r+1,sheet_name:sheetName});}"
+          ],
+          "after": [
+            "          }",
+            "          const source=spreadsheetRowText(row);",
+            "          if(source.text){if(rows.length>=200)throw new Error('Import at most 200 event rows at a time.');rows.push({...source,source_row:r+1,sheet_name:sheetName});}"
+          ]
+        },
+        {
+          "old_start": 562,
+          "old_count": 2,
+          "new_start": 598,
+          "new_count": 3,
+          "before": [
+            "      const headers=records.shift().cells.map((v,i)=>v.trim()||`Column ${i+1}`);",
+            "      if(new Set(headers).size!==headers.length)throw new Error('CSV contains duplicate column names.');"
+          ],
+          "after": [
+            "      const headers=records.shift().cells.map(eventImportField);",
+            "      const named=headers.filter(Boolean);",
+            "      if(new Set(named.map(header=>header.toLowerCase())).size!==named.length)throw new Error('CSV contains duplicate event fields.');"
+          ]
+        },
+        {
+          "old_start": 566,
+          "old_count": 2,
+          "new_start": 603,
+          "new_count": 8,
+          "before": [
+            "        return {text:spreadsheetRowText(Object.fromEntries(headers.map((h,i)=>[h,cells[i]]))),source_row:line,sheet_name:'CSV'};",
+            "      });"
+          ],
+          "after": [
+            "        const row=Object.fromEntries(headers.flatMap((header,i)=>header?[[header,cells[i]]]:[]));",
+            "        return {...spreadsheetRowText(row),source_row:line,sheet_name:'CSV'};",
+            "      }).filter(row=>row.text);",
+            "    }",
+            "    function eventImportField(value) {",
+            "      const label=String(value??'').trim().replace(/\\s+/g,' ');",
+            "      const fields=/^(?:event name|event|title|event title|name|event area|location group|area|location|venue|event date|start date|date|event end date|end date|start time|time|begin time|end time|ends|guest count|projected attendance|expected attendance|estimated attendance|attendance count|attendees|attendance|projected|guests|people|count|notes|details|comments|comment|needs)$/i;",
+            "      return fields.test(label)?label:null;"
+          ]
+        },
+        {
+          "old_start": 568,
+          "old_count": 0,
+          "new_start": 612,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            ""
+          ]
+        },
+        {
+          "old_start": 570,
+          "old_count": 5,
+          "new_start": 614,
+          "new_count": 4,
+          "before": [
+            "      return Object.entries(row)",
+            "        .map(([key, value]) => [String(key ?? '').trim(), String(value ?? '').trim()])",
+            "        .filter(([, value]) => value)",
+            "        .map(([key, value]) => `${key}: ${value}`)",
+            "        .join(' | ');"
+          ],
+          "after": [
+            "      const fields=Object.entries(row)",
+            "        .map(([key,value]) => [eventImportField(key),String(value??'').trim()])",
+            "        .filter(([key,value]) => key&&value);",
+            "      return {fields:fields.map(([key])=>key),text:fields.map(([key,value])=>`${key}: ${value}`).join(' | ')};"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "memphis-scan-sync.js",
+      "kind": "changed",
+      "prior_bytes": 255456,
+      "prior_sha256": "fd01838fec6754ace69bfa1f7b5b814b900152f992d29fc5a2d25dd6dfe8a5c0",
+      "current_sha256": "c4ce3860bc1e2188871835b57daa8add4302389417aebf0aa88ddc7f3f95c0fc",
+      "hunks": [
+        {
+          "old_start": 1075,
+          "old_count": 0,
+          "new_start": 1076,
+          "new_count": 13,
+          "before": [],
+          "after": [
+            "  function sameQueuedGpsFix(before, after) {",
+            "    if (!exactGpsOperationIdentity(before, before.operation_id) || !exactGpsOperationIdentity(after, after.operation_id)) return false;",
+            "    const prior = before.payload, next = after.payload;",
+            "    const observedAt = Date.parse(next.p_observed_at);",
+            "    if (!Number.isFinite(observedAt) || Date.parse(prior.p_observed_at) !== observedAt) return false;",
+            "    for (const key of ['p_session_uuid','p_device_identifier','p_location_code']) {",
+            "      if (prior[key] !== next[key]) return false;",
+            "    }",
+            "    const original = before.replay_binding, incoming = after.replay_binding;",
+            "    if (!original || !incoming) return false;",
+            "    return ['client_session_id','occurrence_id','context_id','snapshot_id','employee_id','assignment_epoch']",
+            "      .every(key => original[key] === incoming[key]);",
+            "  }"
+          ]
+        },
+        {
+          "old_start": 2177,
+          "old_count": 1,
+          "new_start": 2190,
+          "new_count": 1,
+          "before": [
+            "          const exact = existingRows.find((item) => item.logical_key === record.logical_key"
+          ],
+          "after": [
+            "          const exactKey = existingRows.find((item) => item.logical_key === record.logical_key"
+          ]
+        },
+        {
+          "old_start": 2178,
+          "old_count": 0,
+          "new_start": 2192,
+          "new_count": 10,
+          "before": [],
+          "after": [
+            "          const gpsFix = exactGpsOperationIdentity(record, record.operation_id);",
+            "          // A cached fix can predate this producer's deterministic identity.",
+            "          // Find the original under the same queue lock and authority, leaving",
+            "          // its ID, payload, state and correlation intact.",
+            "          const exact = gpsFix ? existingRows.find(item => sameQueuedGpsFix(item, record)) : exactKey;",
+            "          if (gpsFix && exactKey && !sameQueuedGpsFix(exactKey, record)) {",
+            "            conflict = Object.assign(new Error('This GPS fix has a different retained owner or capture.'),",
+            "              {code:'gps_fix_custody_conflict',queue_record_id:exactKey.id});",
+            "            return;",
+            "          }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/CustodialEnrollmentApplication.java",
+      "kind": "changed",
+      "prior_bytes": 9787,
+      "prior_sha256": "5c621ca00b3b7387eef6cd6c1e097550b867820f7046bf4d5275de5445062365",
+      "current_sha256": "5599677474262a88ea00718f067772360d8fd566da75973953d700e92280c458",
+      "hunks": [
+        {
+          "old_start": 27,
+          "old_count": 0,
+          "new_start": 28,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    private VaultFailure startupFailure;"
+          ]
+        },
+        {
+          "old_start": 33,
+          "old_count": 1,
+          "new_start": 34,
+          "new_count": 1,
+          "before": [
+            "            if(Files.exists(originalRoot.toPath().resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY),LinkOption.NOFOLLOW_LINKS)){"
+          ],
+          "after": [
+            "            if(!Files.notExists(originalRoot.toPath().resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY),LinkOption.NOFOLLOW_LINKS)){"
+          ]
+        },
+        {
+          "old_start": 47,
+          "old_count": 1,
+          "new_start": 48,
+          "new_count": 13,
+          "before": [
+            "        }catch(Exception e){throw new IllegalStateException(NativeRetainedEnrollmentRealmStore.FAILURE,e);}"
+          ],
+          "after": [
+            "        }catch(Exception e){",
+            "            if(Build.VERSION.SDK_INT<28)throw new IllegalStateException(NativeRetainedEnrollmentRealmStore.FAILURE,e);",
+            "            startupFailure=e instanceof VaultFailure failure?failure:new VaultFailure(NativeRetainedEnrollmentRealmStore.FAILURE,e);",
+            "            currentRoot=null;",
+            "            // Keep the existing maintenance receiver available for a",
+            "            // bounded diagnosis. This process must not open any WebView or",
+            "            // ordinary employee storage while its realm is unresolved.",
+            "            WebView.disableWebView();",
+            "        }",
+            "    }",
+            "    public static boolean employeeRealmReady(Context context){",
+            "        return context!=null&&context.getApplicationContext() instanceof CustodialEnrollmentApplication application",
+            "            &&application.startupFailure==null&&application.currentRoot!=null;"
+          ]
+        },
+        {
+          "old_start": 52,
+          "old_count": 0,
+          "new_start": 66,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        if(startupFailure!=null&&PROTECTED.contains(name))throw new IllegalStateException(startupFailure.code,startupFailure);"
+          ]
+        },
+        {
+          "old_start": 74,
+          "old_count": 2,
+          "new_start": 88,
+          "new_count": 5,
+          "before": [
+            "        if(context==null||!(context.getApplicationContext() instanceof CustodialEnrollmentApplication application)",
+            "            ||application.originalRoot==null||application.currentRoot==null)throw new VaultFailure(\"custodial_retained_enrollment_application_required\");"
+          ],
+          "after": [
+            "        if(context==null||!(context.getApplicationContext() instanceof CustodialEnrollmentApplication application))",
+            "            throw new VaultFailure(\"custodial_retained_enrollment_application_required\");",
+            "        if(application.startupFailure!=null)throw application.startupFailure;",
+            "        if(application.originalRoot==null||application.currentRoot==null)",
+            "            throw new VaultFailure(\"custodial_retained_enrollment_application_required\");"
+          ]
+        },
+        {
+          "old_start": 107,
+          "old_count": 1,
+          "new_start": 124,
+          "new_count": 2,
+          "before": [
+            "        if(!Files.exists(originalRoot.toPath().resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY),LinkOption.NOFOLLOW_LINKS)){"
+          ],
+          "after": [
+            "        if(startupFailure!=null)throw startupFailure;",
+            "        if(Files.notExists(originalRoot.toPath().resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY),LinkOption.NOFOLLOW_LINKS)){"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedAudioReleases.java",
+      "kind": "changed",
+      "prior_bytes": 4364,
+      "prior_sha256": "3d7b019b7c291cecad4aea6f03b58310027ef124dd3c3fcf5d3adebc0893d4f2",
+      "current_sha256": "3c3a8039a102d9cf3e92bab42b1cf8d632674c91288cfdc45e8d07873860404e",
+      "hunks": [
+        {
+          "old_start": 29,
+          "old_count": 0,
+          "new_start": 30,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "                    new NativeProviderAudioPolicy(\"com.google.android.tts\", \"en-us-x-iol-local\", 900, \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\", \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\")),",
+            "                new NativeProviderAudioAdmission.Entry(88L, \"1.0.0\", \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2\","
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeProviderReviewedReleases.java",
+      "kind": "changed",
+      "prior_bytes": 4953,
+      "prior_sha256": "0ea27e9298b85ca9e846ff7a89ba027d82f04cf33d0fb105588a1c5981e69973",
+      "current_sha256": "4a06942c096ee2fa84b0aa16374e91ed589417b434fc452ab7e7af58b2bd0326",
+      "hunks": [
+        {
+          "old_start": 30,
+          "old_count": 1,
+          "new_start": 30,
+          "new_count": 4,
+          "before": [
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78\")"
+          ],
+          "after": [
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"7aa1cc223c7c373104fb68733c01dec358e3abbd6c4ba467d4658b2f52bbee78\"),",
+            "                new NativeProviderReleaseAdmission.Release(88L, \"1.0.0\",",
+            "                    NativeProviderTime.Profile.androidBestEffort(\"android-elapsed-best-effort.karen-api36.v1\", new NativeProviderTime.Platform(\"android.os.SystemClock.elapsedRealtime/API-36\", \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\", \"motorola/moto g - 2025/kansas/mt6835\"), \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"),",
+            "                    \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\", \"8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2\")"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault/NativeRetainedEnrollmentRealmStore.java",
+      "kind": "changed",
+      "prior_bytes": 20670,
+      "prior_sha256": "70910d2fc84218dc2b9fcf15b880a11aa6fb663452067006616c976cc7628df9",
+      "current_sha256": "7701063fef9d1f9e69f2a1a30e6afca0ea001ac8959f7cd03cd3d9de2664ca87",
+      "hunks": [
+        {
+          "old_start": 11,
+          "old_count": 0,
+          "new_start": 12,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import java.util.concurrent.ConcurrentHashMap;"
+          ]
+        },
+        {
+          "old_start": 23,
+          "old_count": 0,
+          "new_start": 25,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    static final String RESERVATION_HELD=\"custodial_retained_enrollment_reservation_unverified\";"
+          ]
+        },
+        {
+          "old_start": 26,
+          "old_count": 1,
+          "new_start": 28,
+          "new_count": 3,
+          "before": [
+            "    private final Path root,directory,current,pending,reservation,lock,realms;"
+          ],
+          "after": [
+            "    private static final int ENVELOPE_MAGIC=0x4d5a5231;",
+            "    private static final Map<Path,Object> PROCESS_LOCKS=new ConcurrentHashMap<>();",
+            "    private final Path root,directory,current,pending,reservation,reservationStage,lock,realms;"
+          ]
+        },
+        {
+          "old_start": 30,
+          "old_count": 1,
+          "new_start": 34,
+          "new_count": 1,
+          "before": [
+            "    private final Object monitor=new Object();"
+          ],
+          "after": [
+            "    private final Object monitor;"
+          ]
+        },
+        {
+          "old_start": 49,
+          "old_count": 10,
+          "new_start": 53,
+          "new_count": 25,
+          "before": [
+            "            root=nativeNoBackupRoot;var a=directory(root);owner=a.owner();rootKey=a.fileKey();",
+            "            cipher=existingKeyCipher;directory=root.resolve(DIRECTORY);",
+            "            boolean existed=exists(directory);",
+            "            if(!initialize&&!existed)throw unavailable();",
+            "            ensureDirectory(directory);directoryKey=directory(directory).fileKey();",
+            "            realms=directory.resolve(\"realms\");boolean bootstrap=!existed||emptyBootstrap(directory,realms);",
+            "            if(!exists(realms)&&!bootstrap)throw unavailable();ensureDirectory(realms);realmsKey=directory(realms).fileKey();",
+            "            current=directory.resolve(\"current.bin\");pending=directory.resolve(\"prepared.bin\");reservation=directory.resolve(\"reservation.bin\");lock=directory.resolve(\"owner.lock\");",
+            "            if(!exists(lock)){if(!bootstrap)throw unavailable();writeNew(lock,new byte[]{0});forceDirectory(directory);}",
+            "            lockKey=regular(lock).fileKey();requireBase();"
+          ],
+          "after": [
+            "            root=nativeNoBackupRoot;",
+            "            monitor=PROCESS_LOCKS.computeIfAbsent(root,ignored->new Object());",
+            "            synchronized(monitor){",
+            "                var a=directory(root);owner=a.owner();rootKey=a.fileKey();",
+            "                cipher=existingKeyCipher;directory=root.resolve(DIRECTORY);",
+            "                boolean existed=exists(directory);",
+            "                if(!initialize&&!existed)throw unavailable();",
+            "                ensureDirectory(directory);directoryKey=directory(directory).fileKey();",
+            "                realms=directory.resolve(\"realms\");boolean bootstrap=!existed||emptyBootstrap(directory,realms);",
+            "                if(!exists(realms)&&!bootstrap)throw unavailable();",
+            "                ensureDirectory(realms);realmsKey=directory(realms).fileKey();",
+            "                current=directory.resolve(\"current.bin\");",
+            "                pending=directory.resolve(\"prepared.bin\");",
+            "                reservation=directory.resolve(\"reservation.bin\");",
+            "                reservationStage=directory.resolve(\"reservation.bin.stage\");",
+            "                lock=directory.resolve(\"owner.lock\");",
+            "                if(!exists(lock)){",
+            "                    if(!bootstrap)throw unavailable();",
+            "                    // Only the lock inode matters. Never replace an active lock.",
+            "                    try{Files.createFile(lock,PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(\"rw-------\")));}",
+            "                    catch(FileAlreadyExistsException concurrent){regular(lock);}",
+            "                }",
+            "                lockKey=regular(lock).fileKey();requireBase();",
+            "                if(bootstrap){forceDirectory(directory);forceDirectory(root);}",
+            "            }"
+          ]
+        },
+        {
+          "old_start": 66,
+          "old_count": 1,
+          "new_start": 85,
+          "new_count": 1,
+          "before": [
+            "            if(exists(pending)||exists(reservation))throw unavailable();"
+          ],
+          "after": [
+            "            if(exists(reservationStage)||exists(pending)||exists(reservation))throw unavailable();"
+          ]
+        },
+        {
+          "old_start": 74,
+          "old_count": 1,
+          "new_start": 93,
+          "new_count": 4,
+          "before": [
+            "            requireBase();if(exists(reservation))return finishReserved();if(!exists(pending))return current();"
+          ],
+          "after": [
+            "            requireBase();",
+            "            if(exists(reservationStage))publishReservationStage();",
+            "            if(exists(reservation))return finishReserved();",
+            "            if(!exists(pending))return current();"
+          ]
+        },
+        {
+          "old_start": 83,
+          "old_count": 1,
+          "new_start": 105,
+          "new_count": 1,
+          "before": [
+            "            if(!exists(transition(prepared.realm))){writeNew(transition(prepared.realm),bytes);forceDirectory(directory);}"
+          ],
+          "after": [
+            "            publishTransition(prepared,bytes);"
+          ]
+        },
+        {
+          "old_start": 89,
+          "old_count": 1,
+          "new_start": 111,
+          "new_count": 1,
+          "before": [
+            "            requireBase();if(exists(pending)||exists(reservation)||expected==null)throw unavailable();"
+          ],
+          "after": [
+            "            requireBase();if(exists(reservationStage)||exists(pending)||exists(reservation)||expected==null)throw unavailable();"
+          ]
+        },
+        {
+          "old_start": 103,
+          "old_count": 1,
+          "new_start": 125,
+          "new_count": 2,
+          "before": [
+            "            writeNew(reservation,encryptDocument(intent));forceDirectory(directory);"
+          ],
+          "after": [
+            "            createStage(reservationStage,encryptDocument(intent));",
+            "            publishReservationStage();"
+          ]
+        },
+        {
+          "old_start": 107,
+          "old_count": 2,
+          "new_start": 130,
+          "new_count": 4,
+          "before": [
+            "    private State finishReserved()throws Exception {",
+            "        JSONObject intent=decryptDocument(readFile(reservation));"
+          ],
+          "after": [
+            "    private JSONObject readReservation(Path path)throws Exception {",
+            "        JSONObject intent;",
+            "        try{intent=decryptDocument(readFile(path));}",
+            "        catch(Exception unreadable){throw new VaultFailure(RESERVATION_HELD,unreadable);}"
+          ]
+        },
+        {
+          "old_start": 112,
+          "old_count": 1,
+          "new_start": 137,
+          "new_count": 16,
+          "before": [
+            "        validateCommon(intent);String next=intent.getString(\"realm\");"
+          ],
+          "after": [
+            "        validateCommon(intent);return intent;",
+            "    }",
+            "    private void publishReservationStage()throws Exception {",
+            "        if(exists(reservation)||exists(pending))throw unavailable();",
+            "        JSONObject intent=readReservation(reservationStage);",
+            "        String next=intent.getString(\"realm\");",
+            "        State before=current();",
+            "        if(!before.realm.equals(intent.getString(\"previous_realm\"))||!before.sha256.equals(intent.getString(\"previous_sha256\"))",
+            "            ||exists(realms.resolve(next))||exists(transition(next)))throw unavailable();",
+            "        // A complete file from an interrupted sync can still own the exact",
+            "        // reservation. Sync it again before making the final name visible.",
+            "        try(FileChannel c=FileChannel.open(reservationStage,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS)){c.force(true);}",
+            "        promoteNew(reservationStage,reservation);",
+            "    }",
+            "    private State finishReserved()throws Exception {",
+            "        JSONObject intent=readReservation(reservation);String next=intent.getString(\"realm\");"
+          ]
+        },
+        {
+          "old_start": 127,
+          "old_count": 0,
+          "new_start": 168,
+          "new_count": 11,
+          "before": [],
+          "after": [
+            "        // Old versions could leave final-name partial files. An authentic",
+            "        // reservation and its verified predecessor still own this transition.",
+            "        // Preserve a provably truncated prepared artifact before resuming.",
+            "        if(exists(pending)){",
+            "            byte[] staged=readFile(pending,true);",
+            "            if(truncatedEnvelope(staged)){",
+            "                requireEmptyReservedRoot(next);",
+            "                if(exists(transition(next)))throw unavailable();",
+            "                retainTruncated(pending);",
+            "            }",
+            "        }"
+          ]
+        },
+        {
+          "old_start": 134,
+          "old_count": 4,
+          "new_start": 185,
+          "new_count": 2,
+          "before": [
+            "            if(exists(nextRoot)){",
+            "                var attributes=directory(nextRoot);if(!attributes.owner().equals(owner))throw unavailable();",
+            "                try(DirectoryStream<Path> entries=Files.newDirectoryStream(nextRoot)){if(entries.iterator().hasNext())throw unavailable();}",
+            "            }else ensureDirectory(nextRoot);"
+          ],
+          "after": [
+            "            if(exists(nextRoot))requireEmptyReservedRoot(next);",
+            "            else ensureDirectory(nextRoot);"
+          ]
+        },
+        {
+          "old_start": 142,
+          "old_count": 1,
+          "new_start": 191,
+          "new_count": 1,
+          "before": [
+            "            writeNew(pending,bytes);forceDirectory(directory);"
+          ],
+          "after": [
+            "            publishNew(pending,bytes);"
+          ]
+        },
+        {
+          "old_start": 144,
+          "old_count": 1,
+          "new_start": 193,
+          "new_count": 1,
+          "before": [
+            "        if(!exists(transition(next))){writeNew(transition(next),bytes);forceDirectory(directory);}"
+          ],
+          "after": [
+            "        publishTransition(after,bytes);"
+          ]
+        },
+        {
+          "old_start": 152,
+          "old_count": 0,
+          "new_start": 202,
+          "new_count": 19,
+          "before": [],
+          "after": [
+            "    private void requireEmptyReservedRoot(String realm)throws Exception {",
+            "        Path path=realms.resolve(realm);",
+            "        if(!exists(path)||!directory(path).owner().equals(owner))throw unavailable();",
+            "        try(DirectoryStream<Path> entries=Files.newDirectoryStream(path)){if(entries.iterator().hasNext())throw unavailable();}",
+            "    }",
+            "    private void publishTransition(State state,byte[] exactBytes)throws Exception {",
+            "        requireRealmRoot(state);",
+            "        Path path=transition(state.realm);",
+            "        if(exists(path)){",
+            "            byte[] previous=readFile(path,true);",
+            "            if(Arrays.equals(previous,exactBytes))return;",
+            "            if(previous.length>=exactBytes.length||!Arrays.equals(previous,Arrays.copyOf(exactBytes,previous.length)))throw unavailable();",
+            "            retainTruncated(path);",
+            "        }",
+            "        publishNew(path,exactBytes);",
+            "    }",
+            "    private void retainTruncated(Path path)throws Exception {",
+            "        promoteNew(path,directory.resolve(\"retained-incomplete-\"+UUID.randomUUID()+\".evidence\"));",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 191,
+          "old_count": 0,
+          "new_start": 260,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "        requireRealmRoot(state);",
+            "    }",
+            "    private void requireRealmRoot(State state)throws Exception {"
+          ]
+        },
+        {
+          "old_start": 204,
+          "old_count": 1,
+          "new_start": 275,
+          "new_count": 1,
+          "before": [
+            "                if(in.readInt()!=0x4d5a5231)throw unavailable();"
+          ],
+          "after": [
+            "                if(in.readInt()!=ENVELOPE_MAGIC)throw unavailable();"
+          ]
+        },
+        {
+          "old_start": 240,
+          "old_count": 1,
+          "new_start": 311,
+          "new_count": 1,
+          "before": [
+            "            out.writeInt(0x4d5a5231);writeString(out,value.ciphertext);writeString(out,value.iv);"
+          ],
+          "after": [
+            "            out.writeInt(ENVELOPE_MAGIC);writeString(out,value.ciphertext);writeString(out,value.iv);"
+          ]
+        },
+        {
+          "old_start": 245,
+          "old_count": 2,
+          "new_start": 316,
+          "new_count": 18,
+          "before": [
+            "    private byte[] readFile(Path path)throws Exception {",
+            "        var before=regular(path);long size=before.size();if(size<1||size>MAX)throw unavailable();"
+          ],
+          "after": [
+            "    private static boolean truncatedEnvelope(byte[] bytes){",
+            "        ByteBuffer content=ByteBuffer.wrap(bytes);",
+            "        for(int shift=24;shift>=0;shift-=8){",
+            "            if(!content.hasRemaining())return true;",
+            "            if(content.get()!=(byte)(ENVELOPE_MAGIC>>>shift))return false;",
+            "        }",
+            "        for(int fields=0;fields<2;fields++){",
+            "            if(content.remaining()<Integer.BYTES)return true;",
+            "            int length=content.getInt();",
+            "            if(length<1||length>MAX)return false;",
+            "            if(length>content.remaining())return true;",
+            "            content.position(content.position()+length);",
+            "        }",
+            "        return false;",
+            "    }",
+            "    private byte[] readFile(Path path)throws Exception {return readFile(path,false);}",
+            "    private byte[] readFile(Path path,boolean allowEmpty)throws Exception {",
+            "        var before=regular(path);long size=before.size();if((!allowEmpty&&size==0)||size>MAX)throw unavailable();"
+          ]
+        },
+        {
+          "old_start": 252,
+          "old_count": 2,
+          "new_start": 339,
+          "new_count": 4,
+          "before": [
+            "    private void writeNew(Path path,byte[] bytes)throws Exception {",
+            "        try(FileChannel c=FileChannel.open(path,StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS)){"
+          ],
+          "after": [
+            "    private void createStage(Path path,byte[] bytes)throws Exception {",
+            "        try(FileChannel c=FileChannel.open(path,Set.of(StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS),",
+            "            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(\"rw-------\")))){",
+            "            if(path.equals(reservationStage))forceDirectory(directory);"
+          ]
+        },
+        {
+          "old_start": 256,
+          "old_count": 0,
+          "new_start": 346,
+          "new_count": 11,
+          "before": [],
+          "after": [
+            "    private void publishNew(Path path,byte[] bytes)throws Exception {",
+            "        Path stage=directory.resolve(\"write-\"+UUID.randomUUID()+\".staged\");",
+            "        createStage(stage,bytes);",
+            "        promoteNew(stage,path);",
+            "    }",
+            "    private void promoteNew(Path source,Path destination)throws Exception {",
+            "        requireBase();regular(source);",
+            "        if(exists(destination))throw unavailable();",
+            "        Files.move(source,destination,StandardCopyOption.ATOMIC_MOVE);",
+            "        forceDirectory(directory);regular(destination);",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 267,
+          "old_count": 1,
+          "new_start": 367,
+          "new_count": 4,
+          "before": [
+            "        if(!exists(path))Files.createDirectory(path,PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(\"rwx------\")));"
+          ],
+          "after": [
+            "        if(!exists(path)){",
+            "            try{Files.createDirectory(path,PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(\"rwx------\")));}",
+            "            catch(FileAlreadyExistsException concurrent){directory(path);}",
+            "        }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-audio-releases.json",
+      "kind": "changed",
+      "prior_bytes": 5037,
+      "prior_sha256": "2f8b1dac527bc762177d7a5ec4c8e85a93da29b65372faae03b31751668d88b2",
+      "current_sha256": "b5b4f34866f9536193072faa52be2081dbfe0b032095daea3a7967d69c7de673",
+      "hunks": [
+        {
+          "old_start": 101,
+          "old_count": 0,
+          "new_start": 102,
+          "new_count": 14,
+          "before": [],
+          "after": [
+            "    },",
+            "    {",
+            "      \"version_code\": 88,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2\",",
+            "      \"clock_fingerprint\": \"a553099d48713282b58a9bb9e07dd51f0bce32471d60de208c2c13aa1b69d785\",",
+            "      \"policy\": {",
+            "        \"engine\": \"com.google.android.tts\",",
+            "        \"voice\": \"en-us-x-iol-local\",",
+            "        \"rate_milli\": 900,",
+            "        \"tone_sha256\": \"baf1e5dc9bda891e8482a8369ce339783012324e48120206801eb096e8ffef98\",",
+            "        \"evidence_sha256\": \"89284af13afbbf2db7c2404d328aaf45ba8b98e093580db15f1c9fad80fa5f82\"",
+            "      }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/provider-reviewed-releases.json",
+      "kind": "changed",
+      "prior_bytes": 5381,
+      "prior_sha256": "07c2ab87df3e531eb89fcdcf278518e429826ab1c09ade06aa9fa71dff7db3dd",
+      "current_sha256": "16b56484bcdd52aa1ad2d721a245f9ddb151350cce3b67ad5cbc3bf6e3aecc2a",
+      "hunks": [
+        {
+          "old_start": 101,
+          "old_count": 0,
+          "new_start": 102,
+          "new_count": 14,
+          "before": [],
+          "after": [
+            "    },",
+            "    {",
+            "      \"version_code\": 88,",
+            "      \"version_name\": \"1.0.0\",",
+            "      \"backend_protocol_evidence_sha256\": \"54d3a2f47a70aba0cad96477704feb38b63d7794593a91ee7cd1c223fd1ba952\",",
+            "      \"composition_evidence_sha256\": \"8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2\",",
+            "      \"profile\": {",
+            "        \"id\": \"android-elapsed-best-effort.karen-api36.v1\",",
+            "        \"api\": \"android.os.SystemClock.elapsedRealtime/API-36\",",
+            "        \"build\": \"motorola/kansas_g_sys/kansas:16/W1VKS36H.9-12-9-8-4/f30e05-4b081e:user/release-keys\",",
+            "        \"device\": \"motorola/moto g - 2025/kansas/mt6835\",",
+            "        \"timing_model\": \"android-elapsed-best-effort.v1\",",
+            "        \"evidence_sha256\": \"ceda8cf79449c02fe434880ac76b3e8674414e2f1306006e7ea7ec90464ff798\"",
+            "      }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/plugins/custodial-native-vault/android/src/test/java/org/memphiszoo/custodial/vault/NativeRetainedEnrollmentRealmStoreTest.java",
+      "kind": "changed",
+      "prior_bytes": 11246,
+      "prior_sha256": "7d9fa682397cef9c3529ff43ad818dda0e74cfff0df02cfc3da54380b10a98c4",
+      "current_sha256": "a12cb05bf034224b2ebe62d82fda8ef16c1191cb237b9561eb4718be0f016cbb",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 0,
+          "new_start": 6,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import java.util.concurrent.*;"
+          ]
+        },
+        {
+          "old_start": 37,
+          "old_count": 0,
+          "new_start": 39,
+          "new_count": 94,
+          "before": [],
+          "after": [
+            "    static void requireRetainedBytes(Path directory,byte[] expected)throws Exception{",
+            "        try(DirectoryStream<Path> files=Files.newDirectoryStream(directory,\"retained-incomplete-*.evidence\")){",
+            "            var entries=files.iterator();",
+            "            check(entries.hasNext());",
+            "            check(Arrays.equals(Files.readAllBytes(entries.next()),expected));",
+            "            check(!entries.hasNext());",
+            "        }",
+            "    }",
+            "    static void testStageRecovery(Path parent)throws Exception{",
+            "        for(String scenario:List.of(\"staged\",\"torn-stage\",\"torn-reservation\",\"torn-prepared\",\"foreign-prepared\")){",
+            "            Path root=fixture(parent,scenario),dir=root.resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY);",
+            "            var cipher=new SyntheticExistingCipher();cipher.failEncryptAt=2;",
+            "            var store=new NativeRetainedEnrollmentRealmStore(root,cipher);",
+            "            String next=id(),operation=id(),binding=\"exact original binding\";",
+            "            refuses(()->store.advance(store.read(),next,operation,binding));",
+            "            cipher.failEncryptAt=0;",
+            "            Path reservation=dir.resolve(\"reservation.bin\");",
+            "            byte[] valid=Files.readAllBytes(reservation),partial=Arrays.copyOf(valid,8);",
+            "            if(scenario.equals(\"staged\")||scenario.equals(\"torn-stage\")){",
+            "                Files.move(reservation,dir.resolve(\"reservation.bin.stage\"));",
+            "                Files.delete(dir.resolve(\"realms\").resolve(next)); // Only the empty synthetic root.",
+            "            }",
+            "            if(scenario.equals(\"torn-reservation\")||scenario.equals(\"torn-stage\")){",
+            "                Path interrupted=scenario.equals(\"torn-stage\")?dir.resolve(\"reservation.bin.stage\"):reservation;",
+            "                Files.write(interrupted,partial,StandardOpenOption.TRUNCATE_EXISTING);",
+            "                var reopened=new NativeRetainedEnrollmentRealmStore(root,cipher,false);",
+            "                refuses(reopened::read);",
+            "                try{reopened.finishPrepared();throw new AssertionError(\"unauthenticated reservation accepted\");}",
+            "                catch(VaultFailure failure){check(failure.code.equals(NativeRetainedEnrollmentRealmStore.RESERVATION_HELD));}",
+            "                check(Arrays.equals(Files.readAllBytes(interrupted),partial));",
+            "                check(!Files.exists(dir.resolve(\"current.bin\")));",
+            "                continue;",
+            "            }",
+            "            if(!scenario.equals(\"staged\")){",
+            "                Files.write(dir.resolve(\"prepared.bin\"),scenario.equals(\"torn-prepared\")?partial:new byte[]{7,8,9});",
+            "            }",
+            "            var reopened=new NativeRetainedEnrollmentRealmStore(root,cipher,false);",
+            "            refuses(reopened::read);",
+            "            if(scenario.equals(\"foreign-prepared\")){",
+            "                refuses(reopened::finishPrepared);",
+            "                check(Arrays.equals(Files.readAllBytes(dir.resolve(\"prepared.bin\")),new byte[]{7,8,9}));",
+            "                check(Arrays.equals(Files.readAllBytes(reservation),valid));",
+            "                continue;",
+            "            }",
+            "            var result=reopened.finishPrepared();",
+            "            check(result.realm.equals(next)&&result.operationId.equals(operation)&&result.binding.equals(binding));",
+            "            check(!Files.exists(reservation)&&!Files.exists(dir.resolve(\"reservation.bin.stage\")));",
+            "            check(reopened.finishPrepared().sha256.equals(result.sha256));",
+            "            if(scenario.equals(\"torn-prepared\"))requireRetainedBytes(dir,partial);",
+            "        }",
+            "        Path root=fixture(parent,\"torn-transition\"),dir=root.resolve(NativeRetainedEnrollmentRealmStore.DIRECTORY);",
+            "        var cipher=new SyntheticExistingCipher();",
+            "        var store=new NativeRetainedEnrollmentRealmStore(root,cipher);",
+            "        var expected=store.advance(store.read(),id(),id(),\"original transition\");",
+            "        Path original=dir.resolve(\"transition-\"+expected.realm+\".bin\");",
+            "        byte[] encrypted=Files.readAllBytes(original),partial=Arrays.copyOf(encrypted,8);",
+            "        Files.move(dir.resolve(\"current.bin\"),dir.resolve(\"prepared.bin\"));",
+            "        Files.write(original,partial,StandardOpenOption.TRUNCATE_EXISTING);",
+            "        var reopened=new NativeRetainedEnrollmentRealmStore(root,cipher,false);",
+            "        var actual=reopened.finishPrepared();",
+            "        check(expected.sha256.equals(actual.sha256)&&expected.operationId.equals(actual.operationId));",
+            "        check(Arrays.equals(Files.readAllBytes(original),encrypted));",
+            "        requireRetainedBytes(dir,partial);",
+            "        check(reopened.finishPrepared().sha256.equals(actual.sha256));",
+            "    }",
+            "    static void testConcurrentReaders(Path root,SyntheticExistingCipher cipher,String expected)throws Exception{",
+            "        var firstRead=new CountDownLatch(1);",
+            "        var allowRead=new CountDownLatch(1);",
+            "        CredentialCipher blockingCipher=new CredentialCipher(){",
+            "            public EncryptedSecret encrypt(char[] clear)throws VaultFailure{return cipher.encrypt(clear);}",
+            "            public char[] decrypt(EncryptedSecret encrypted)throws VaultFailure{",
+            "                firstRead.countDown();",
+            "                try{if(!allowRead.await(5,TimeUnit.SECONDS))throw new AssertionError(\"fixture lock did not release\");}",
+            "                catch(InterruptedException error){Thread.currentThread().interrupt();throw new AssertionError(error);}",
+            "                return cipher.decrypt(encrypted);",
+            "            }",
+            "            public void destroyKey(){throw new AssertionError(\"key removal forbidden\");}",
+            "        };",
+            "        var first=new NativeRetainedEnrollmentRealmStore(root,blockingCipher,false);",
+            "        var second=new NativeRetainedEnrollmentRealmStore(root,cipher,false);",
+            "        ExecutorService threads=Executors.newFixedThreadPool(2);",
+            "        try{",
+            "            Future<NativeRetainedEnrollmentRealmStore.State> one=threads.submit(first::read);",
+            "            check(firstRead.await(5,TimeUnit.SECONDS));",
+            "            var secondEntered=new CountDownLatch(1);",
+            "            Future<NativeRetainedEnrollmentRealmStore.State> two=threads.submit(()->{secondEntered.countDown();return second.read();});",
+            "            check(secondEntered.await(5,TimeUnit.SECONDS));",
+            "            try{two.get(100,TimeUnit.MILLISECONDS);throw new AssertionError(\"second reader ran while the first held the lock\");}",
+            "            catch(TimeoutException serialized){check(true);}",
+            "            finally{allowRead.countDown();}",
+            "            check(one.get(5,TimeUnit.SECONDS).sha256.equals(expected));",
+            "            check(two.get(5,TimeUnit.SECONDS).sha256.equals(expected));",
+            "        }finally{allowRead.countDown();threads.shutdownNow();}",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 102,
+          "old_count": 0,
+          "new_start": 198,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "        testStageRecovery(parent);",
+            "        testConcurrentReaders(root,key,b.sha256);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/release-evidence/provider-v88-composition.json",
+      "kind": "added",
+      "current_sha256": "8c6e30158ce8ce94da8476ab195318c1683ed9d77d61e97e8055931048721db2"
+    },
+    {
+      "path": "mobile/release-evidence/provider-v88-host-tests.txt",
+      "kind": "added",
+      "current_sha256": "da9bb5d80706ccbb2c92deb5a629a2891ee64765ac9bbef4cb54eed253721ae2"
+    },
+    {
+      "path": "mobile/scripts/configure-native-links.mjs",
+      "kind": "changed",
+      "prior_bytes": 20469,
+      "prior_sha256": "2fb923ef3eba0d8fb1876ff4b466d324f4e0e3caad78557b7ad6e86d0aa8fabb",
+      "current_sha256": "8c3bcc3e92a2567ba1ad72b0127d9938cadb443df4f962f0326799cf0f0ce592",
+      "hunks": [
+        {
+          "old_start": 35,
+          "old_count": 0,
+          "new_start": 36,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import org.memphiszoo.custodial.vault.CustodialEnrollmentApplication;"
+          ]
+        },
+        {
+          "old_start": 214,
+          "old_count": 0,
+          "new_start": 216,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        if (!CustodialEnrollmentApplication.employeeRealmReady(this)) return;"
+          ]
+        },
+        {
+          "old_start": 229,
+          "old_count": 0,
+          "new_start": 232,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        if (!CustodialEnrollmentApplication.employeeRealmReady(this)) return;"
+          ]
+        },
+        {
+          "old_start": 240,
+          "old_count": 0,
+          "new_start": 244,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "        if (!CustodialEnrollmentApplication.employeeRealmReady(this)) return;"
+          ]
+        },
+        {
+          "old_start": 257,
+          "old_count": 1,
+          "new_start": 261,
+          "new_count": 3,
+          "before": [
+            "        setIntent(normalizeExternalIntent(getIntent()));"
+          ],
+          "after": [
+            "        boolean enrollmentReady = CustodialEnrollmentApplication.employeeRealmReady(this);",
+            "        if (enrollmentReady) setIntent(normalizeExternalIntent(getIntent()));",
+            "        else setIntent(new Intent(Intent.ACTION_MAIN));"
+          ]
+        },
+        {
+          "old_start": 258,
+          "old_count": 0,
+          "new_start": 265,
+          "new_count": 7,
+          "before": [],
+          "after": [
+            "        if (!enrollmentReady) {",
+            "            android.widget.TextView status = new android.widget.TextView(this);",
+            "            status.setText(\"Custodial enrollment needs recovery. Saved work has been left in place.\");",
+            "            status.setGravity(android.view.Gravity.CENTER);",
+            "            status.setTextSize(18);",
+            "            setContentView(status);",
+            "        }"
+          ]
+        },
+        {
+          "old_start": 264,
+          "old_count": 1,
+          "new_start": 277,
+          "new_count": 2,
+          "before": [
+            "        Intent normalized = normalizeExternalIntent(intent);"
+          ],
+          "after": [
+            "        Intent normalized = CustodialEnrollmentApplication.employeeRealmReady(this)",
+            "            ? normalizeExternalIntent(intent) : new Intent(Intent.ACTION_MAIN);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "mobile/src/custodial/active-gps-lifecycle.js",
+      "kind": "changed",
+      "prior_bytes": 9207,
+      "prior_sha256": "26ae6605e3b0759e49a5e4e5ee881cbf4dcfda9c866b8853d108baf7c93e2b67",
+      "current_sha256": "1c96e12ef7d8bf318de680e1bbdeb286b101aa8e9e41f89b88f16e44c8732cca",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 0,
+          "new_start": 5,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "// UUIDv5 namespace for this producer only. This is an idempotency key, not",
+            "// authentication. The existing queue and server still verify the work owner.",
+            "const FIX_NAMESPACE = new Uint8Array([0x1d,0xfe,0xfc,0x72,0x42,0xc7,0x46,0xb9,0xa1,0xfd,0x34,0xa3,0x8c,0x25,0x13,0x91]);"
+          ]
+        },
+        {
+          "old_start": 22,
+          "old_count": 0,
+          "new_start": 26,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    assignmentEpoch: Number.isSafeInteger(row.offline_authority_assignment_epoch) ? row.offline_authority_assignment_epoch : null,"
+          ]
+        },
+        {
+          "old_start": 26,
+          "old_count": 0,
+          "new_start": 31,
+          "new_count": 15,
+          "before": [],
+          "after": [
+            "async function fixIdentity(session, observedAt) {",
+            "  const name = new TextEncoder().encode(JSON.stringify([",
+            "    session.clientSessionId, session.deviceId, session.locationCode,",
+            "    session.employeeId, session.assignmentEpoch, observedAt,",
+            "  ]));",
+            "  const source = new Uint8Array(FIX_NAMESPACE.length + name.length);",
+            "  source.set(FIX_NAMESPACE);",
+            "  source.set(name, FIX_NAMESPACE.length);",
+            "  const digest = new Uint8Array(await crypto.subtle.digest('SHA-1', source));",
+            "  digest[6] = (digest[6] & 0x0f) | 0x50;",
+            "  digest[8] = (digest[8] & 0x3f) | 0x80;",
+            "  const hex = Array.from(digest.subarray(0, 16), byte => byte.toString(16).padStart(2, '0')).join('');",
+            "  return [hex.slice(0,8), hex.slice(8,12), hex.slice(12,16), hex.slice(16,20), hex.slice(20)].join('-');",
+            "}",
+            ""
+          ]
+        },
+        {
+          "old_start": 68,
+          "old_count": 1,
+          "new_start": 86,
+          "new_count": 0,
+          "before": [
+            "  randomUuid = () => crypto.randomUUID(),"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 96,
+          "old_count": 1,
+          "new_start": 114,
+          "new_count": 1,
+          "before": [
+            "  async function capture(reason = 'timer') {"
+          ],
+          "after": [
+            "  async function capture() {"
+          ]
+        },
+        {
+          "old_start": 146,
+          "old_count": 1,
+          "new_start": 164,
+          "new_count": 7,
+          "before": [
+            "      const eventId = `gps:${requested.clientSessionId}:${randomUuid()}`;"
+          ],
+          "after": [
+            "      const observedAt = new Date(sample.timestamp).toISOString();",
+            "      const fixId = await fixIdentity(requested, observedAt);",
+            "      if (disposed) return Object.freeze({ state: 'disposed' });",
+            "      if (JSON.stringify(current().session) !== JSON.stringify(requested)) {",
+            "        return Object.freeze({ state: 'session_changed' });",
+            "      }",
+            "      const eventId = `gps:${requested.clientSessionId}:${fixId}`;"
+          ]
+        },
+        {
+          "old_start": 155,
+          "old_count": 2,
+          "new_start": 179,
+          "new_count": 2,
+          "before": [
+            "        p_correlation_id: `gps:${requested.clientSessionId}:${reason}:${sample.timestamp}`,",
+            "        p_observed_at: new Date(sample.timestamp).toISOString(),"
+          ],
+          "after": [
+            "        p_correlation_id: eventId,",
+            "        p_observed_at: observedAt,"
+          ]
+        },
+        {
+          "old_start": 176,
+          "old_count": 1,
+          "new_start": 200,
+          "new_count": 1,
+          "before": [
+            "    timer = setTimer(() => { void capture('timer'); }, intervalMs);"
+          ],
+          "after": [
+            "    timer = setTimer(() => { void capture(); }, intervalMs);"
+          ]
+        },
+        {
+          "old_start": 179,
+          "old_count": 1,
+          "new_start": 203,
+          "new_count": 1,
+          "before": [
+            "  async function reconcile(reason = 'reconcile') {"
+          ],
+          "after": [
+            "  async function reconcile() {"
+          ]
+        },
+        {
+          "old_start": 188,
+          "old_count": 1,
+          "new_start": 212,
+          "new_count": 1,
+          "before": [
+            "    return capture(reason);"
+          ],
+          "after": [
+            "    return capture();"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "operations-dashboard-data.js",
+      "kind": "changed",
+      "prior_bytes": 38333,
+      "prior_sha256": "0212496c03db9c46142b8c110eaf3882298f6d6147edda703adac19b30bc2604",
+      "current_sha256": "f835181a02d67d2aad76191aa21e1559f6450934f06ae6085bc5caddc14cf30e",
+      "hunks": [
+        {
+          "old_start": 226,
+          "old_count": 1,
+          "new_start": 226,
+          "new_count": 2,
+          "before": [
+            "    const time=d.source_timestamp||d.fetched_at||d.updated_at,unknown=instant(time)===null||typeof d.stale!=='boolean';"
+          ],
+          "after": [
+            "    const time=d.source_timestamp||d.fetched_at||d.updated_at,at=instant(time);",
+            "    const unknown=at===null||typeof d.stale!=='boolean';"
+          ]
+        },
+        {
+          "old_start": 228,
+          "old_count": 1,
+          "new_start": 229,
+          "new_count": 1,
+          "before": [
+            "      stale:unknown||d.stale};"
+          ],
+          "after": [
+            "      stale:unknown||d.stale,sourceDay:at===null?null:localDate(at)};"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "operations-dashboard.css",
+      "kind": "changed",
+      "prior_bytes": 26682,
+      "prior_sha256": "ea2020f88980c6a0905b4063102d9b6d2e39901e724065c418ce8b1eb862ff89",
+      "current_sha256": "d76fe4767f5fefa1440b8125edf598c156450e26c52b176ec09ed2a0c448dc72",
+      "hunks": [
+        {
+          "old_start": 156,
+          "old_count": 6,
+          "new_start": 156,
+          "new_count": 1,
+          "before": [
+            "/* Daily planned counts share the existing telemetry card, not the map. */",
+            ".dailyExpected{display:grid;gap:4px;margin-top:8px}",
+            ".dailyExpected strong{font-size:18px;line-height:1.2;overflow-wrap:anywhere}",
+            ".dailyExpected .eyebrow{white-space:normal}",
+            "",
+            "/* Independent cards keep planned attendance out of the clock and gate cards. */"
+          ],
+          "after": [
+            "/* The clock, gate, weather, and duty cards stay separate. */"
+          ]
+        },
+        {
+          "old_start": 165,
+          "old_count": 1,
+          "new_start": 159,
+          "new_count": 0,
+          "before": [
+            ".telemetry.separateTelemetry .expectedCard{align-content:start}"
+          ],
+          "after": []
+        }
+      ]
+    },
+    {
+      "path": "operations-dashboard.html",
+      "kind": "changed",
+      "prior_bytes": 9591,
+      "prior_sha256": "b79dee1d8a686d3a0e9e76868a88ed045fc7e80430ae7eacd96515cbc6563729",
+      "current_sha256": "4e749149cb92e691204ebb158d5c27d9249435623c4449b766e34cc63e3b765f",
+      "hunks": [
+        {
+          "old_start": 12,
+          "old_count": 1,
+          "new_start": 12,
+          "new_count": 1,
+          "before": [
+            "  <link rel=\"stylesheet\" href=\"./operations-dashboard.css?v=2026.11.14.ticker-rows-r1\">"
+          ],
+          "after": [
+            "  <link rel=\"stylesheet\" href=\"./operations-dashboard.css?v=2026.11.26.next-records\">"
+          ]
+        },
+        {
+          "old_start": 52,
+          "old_count": 2,
+          "new_start": 52,
+          "new_count": 2,
+          "before": [
+            "  <script src=\"./operations-dashboard-data.js?v=2026.11.13.spiceworks-wording-r1\"></script><script src=\"./operations-dashboard.js?v=2026.11.14.board-controls-r53\"></script>",
+            "  <script src=\"./dashboard-map-page.js?v=2026.11.10.clean-status\"></script>"
+          ],
+          "after": [
+            "  <script src=\"./operations-dashboard-data.js?v=2026.11.26.next-records\"></script><script src=\"./operations-dashboard.js?v=2026.11.26.board-authority\"></script>",
+            "  <script src=\"./dashboard-map-page.js?v=2026.11.26.board-authority\"></script>"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "operations-dashboard.js",
+      "kind": "changed",
+      "prior_bytes": 30098,
+      "prior_sha256": "3900974b9419f6c9eb5c6c234dc9fadc7ad147fca4c74d31562235e9533316a8",
+      "current_sha256": "aa540762bfb0b017ba1e32844c0351efc350486632205cd8fbe8230b210d616a",
+      "hunks": [
+        {
+          "old_start": 109,
+          "old_count": 1,
+          "new_start": 109,
+          "new_count": 6,
+          "before": [
+            "      boardFingerprint=fingerprint;const top=content.scrollTop,focused=document.activeElement?.dataset?.locationSelect;"
+          ],
+          "after": [
+            "      boardFingerprint=fingerprint;",
+            "      const top=content.scrollTop,focused=document.activeElement;",
+            "      const oldHistory=content.querySelector('details');",
+            "      const oldSummary=oldHistory?.querySelector('summary');",
+            "      const restoreFocus=focused&&focused!==content&&content.contains?.(focused);",
+            "      const focusedLocation=focused?.dataset?.locationSelect;"
+          ]
+        },
+        {
+          "old_start": 119,
+          "old_count": 1,
+          "new_start": 124,
+          "new_count": 6,
+          "before": [
+            "      if(v.history?.length){const history=make('details');history.append(make('summary',`${board==='schools'?'Daily visit history':'Event history'} · ${v.history.length} records (not active)`),...v.history.map(cardNode));nodes.push(history);}"
+          ],
+          "after": [
+            "      let historySummary;",
+            "      if(v.history?.length){",
+            "        const history=make('details');history.open=oldHistory?.open===true;",
+            "        historySummary=make('summary',`${board==='schools'?'Daily visit history':'Event history'} · ${v.history.length} records (not active)`);",
+            "        history.append(historySummary,...v.history.map(cardNode));nodes.push(history);",
+            "      }"
+          ]
+        },
+        {
+          "old_start": 122,
+          "old_count": 1,
+          "new_start": 132,
+          "new_count": 5,
+          "before": [
+            "      if(focused)Array.from(content.querySelectorAll('[data-location-select]')).find(n=>n.dataset.locationSelect===focused)?.focus({preventScroll:true});"
+          ],
+          "after": [
+            "      if(restoreFocus){",
+            "        const location=focusedLocation&&Array.from(content.querySelectorAll('[data-location-select]')).find(n=>n.dataset.locationSelect===focusedLocation);",
+            "        const replacement=focused===oldSummary?historySummary:location;",
+            "        (replacement||content).focus({preventScroll:true});",
+            "      }"
+          ]
+        },
+        {
+          "old_start": 124,
+          "old_count": 0,
+          "new_start": 139,
+          "new_count": 9,
+          "before": [],
+          "after": [
+            "    function currentAttendance(){",
+            "      if(lastAttendance&&lastAttendance.sourceDay!==DATA.localDate(now()))lastAttendance=null;",
+            "      return lastAttendance;",
+            "    }",
+            "    function showAttendance(value,note,stale){",
+            "      txt('ops-attendance',value);",
+            "      txt('ops-attendance-note',note);",
+            "      el('ops-attendance-note').dataset.stale=String(stale);",
+            "    }"
+          ]
+        },
+        {
+          "old_start": 127,
+          "old_count": 0,
+          "new_start": 151,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      if(lastAttendance&&!currentAttendance())showAttendance('Unavailable','Current gate count unavailable.',true);"
+          ]
+        },
+        {
+          "old_start": 200,
+          "old_count": 1,
+          "new_start": 224,
+          "new_count": 1,
+          "before": [
+            "    async function refresh({headers,fetchImpl,isCurrent,summary:next,preserveSummary=false}){"
+          ],
+          "after": [
+            "    async function refresh({headers,fetchImpl,isCurrent,summary:next,preserveSummary=false,onAuthorityError}){"
+          ]
+        },
+        {
+          "old_start": 209,
+          "old_count": 1,
+          "new_start": 233,
+          "new_count": 4,
+          "before": [
+            "      txt('ops-attendance',lastAttendance?lastAttendance.value:'Loading…');txt('ops-attendance-note',lastAttendance?`${lastAttendance.note} · Updating… Last received count.`:'Loading gate count…');"
+          ],
+          "after": [
+            "      const retainedAttendance=currentAttendance();",
+            "      showAttendance(retainedAttendance?.value??'Loading…',",
+            "        retainedAttendance?`${retainedAttendance.note} · Updating… Last received count.`:'Loading gate count…',",
+            "        retainedAttendance?.stale??true);"
+          ]
+        },
+        {
+          "old_start": 213,
+          "old_count": 2,
+          "new_start": 239,
+          "new_count": 0,
+          "before": [
+            "      const load=async(url,privateFeed=true)=>{const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(publicRead?{credentials:'omit'}:privateFeed?{headers}:{})});",
+            "        if(!response.ok)throw new Error('feed_unavailable');return response.json();};"
+          ],
+          "after": []
+        },
+        {
+          "old_start": 218,
+          "old_count": 0,
+          "new_start": 244,
+          "new_count": 7,
+          "before": [],
+          "after": [
+            "      const load=async(url,privateFeed=true,requireManager=false)=>{",
+            "        const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(publicRead?{credentials:'omit'}:privateFeed?{headers}:{})});",
+            "        if(requireManager&&!publicRead&&(response.status===401||response.status===403)&&publish()){",
+            "          if(typeof onAuthorityError==='function')onAuthorityError();else suspend();",
+            "        }",
+            "        if(!response.ok)throw new Error('feed_unavailable');return response.json();",
+            "      };"
+          ]
+        },
+        {
+          "old_start": 224,
+          "old_count": 3,
+          "new_start": 256,
+          "new_count": 9,
+          "before": [
+            "          if(attendance.value!=='Unavailable')lastAttendance=attendance;",
+            "          txt('ops-attendance',attendance.value==='Unavailable'&&lastAttendance?lastAttendance.value:attendance.value);",
+            "          txt('ops-attendance-note',attendance.value==='Unavailable'&&lastAttendance?`${lastAttendance.note} · Update delayed`:attendance.note);el('ops-attendance-note').dataset.stale=String(attendance.stale);"
+          ],
+          "after": [
+            "          const retained=currentAttendance();",
+            "          if(attendance.sourceDay===DATA.localDate(now())){",
+            "            lastAttendance=attendance;",
+            "            showAttendance(attendance.value,attendance.note,attendance.stale);",
+            "          }else if(retained){",
+            "            showAttendance(retained.value,`${retained.note} · Update delayed`,true);",
+            "          }else{",
+            "            showAttendance('Unavailable','Current gate count unavailable.',true);",
+            "          }"
+          ]
+        },
+        {
+          "old_start": 239,
+          "old_count": 1,
+          "new_start": 277,
+          "new_count": 1,
+          "before": [
+            "      tasks.push(load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`).catch(()=>null).then(value=>{"
+          ],
+          "after": [
+            "      tasks.push(load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`,true,true).catch(()=>null).then(value=>{"
+          ]
+        },
+        {
+          "old_start": 305,
+          "old_count": 1,
+          "new_start": 343,
+          "new_count": 1,
+          "before": [
+            "      txt('ops-attendance','Unavailable');txt('ops-attendance-note','Current gate count unavailable.');txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderHighLow();renderFeeds();}"
+          ],
+          "after": [
+            "      showAttendance('Unavailable','Current gate count unavailable.',true);txt('ops-weather','Unavailable');txt('ops-weather-note','Current weather unavailable.');txt('ops-hour','Next-hour forecast unavailable.');renderHighLow();renderFeeds();}"
+          ]
+        },
+        {
+          "old_start": 317,
+          "old_count": 1,
+          "new_start": 355,
+          "new_count": 5,
+          "before": [
+            "      if(event.key!=='Tab')return;const focusable=Array.from(dialog.querySelectorAll('button,select,[tabindex=\"0\"]')).filter(n=>!n.hidden&&!n.disabled);"
+          ],
+          "after": [
+            "      if(event.key!=='Tab')return;",
+            "      const focusable=Array.from(dialog.querySelectorAll('button,select,summary,[tabindex=\"0\"]')).filter(node=>{",
+            "        const closedHistory=node.closest?.('details:not([open])');",
+            "        return !node.hidden&&!node.disabled&&(!closedHistory||node===closedHistory.querySelector('summary'));",
+            "      });"
+          ]
+        },
+        {
+          "old_start": 346,
+          "old_count": 1,
+          "new_start": 388,
+          "new_count": 1,
+          "before": [
+            "    return Object.freeze({activate,beginRefresh,refresh,updateSummary,summaryUnavailable,tick,unavailable,suspend,stop,openBoard,closeBoard});"
+          ],
+          "after": [
+            "    return Object.freeze({activate,attachMap:renderer=>{map=renderer;},beginRefresh,refresh,updateSummary,summaryUnavailable,tick,unavailable,suspend,stop,openBoard,closeBoard});"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "ops-hub.js",
+      "kind": "changed",
+      "prior_bytes": 20281,
+      "prior_sha256": "1d4620743f25ae482d34262034cae1cd4336811d2e1c4443e3a79fb75dcccb11",
+      "current_sha256": "d590f4500e45090a633f4327f4ff538fa7d5bd487c3ab71841a27271b3f34bb1",
+      "hunks": [
+        {
+          "old_start": 12,
+          "old_count": 1,
+          "new_start": 12,
+          "new_count": 1,
+          "before": [
+            "  const authMethodNames=['getDeviceId','readSession','isOpsManager','requireOpsManagerSession','hasRole','canMutateOpsManagerSurface','isCustodialManagementAdmin'];"
+          ],
+          "after": [
+            "  const authMethodNames=['getDeviceId','readSession','isOpsManager','requireOpsManagerSession','hasRole','canMutateOpsManagerSurface','isCustodialManagementAdmin','hasPermission'];"
+          ]
+        },
+        {
+          "old_start": 19,
+          "old_count": 0,
+          "new_start": 20,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    staffingLink:document.getElementById('staffing-link'),unfinishedWorkLink:document.getElementById('unfinished-work-link'),"
+          ]
+        },
+        {
+          "old_start": 35,
+          "old_count": 1,
+          "new_start": 36,
+          "new_count": 1,
+          "before": [
+            "    els.deviceSecurityLink,els.releaseCanaryLink,els.geminiConsoleLink,coverageLink].filter(Boolean);"
+          ],
+          "after": [
+            "    els.deviceSecurityLink,els.releaseCanaryLink,els.geminiConsoleLink,els.staffingLink,els.unfinishedWorkLink,coverageLink].filter(Boolean);"
+          ]
+        },
+        {
+          "old_start": 134,
+          "old_count": 1,
+          "new_start": 135,
+          "new_count": 3,
+          "before": [
+            "    const urls=[messagesUrl,scheduleUrl,eventsUrl,dashboardUrl,dashboardMapUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl];"
+          ],
+          "after": [
+            "    const staffingUrl=new URL('./staffing-management.html',window.location.href);",
+            "    const unfinishedWorkUrl=new URL('./unfinished-work.html',window.location.href);",
+            "    const urls=[messagesUrl,scheduleUrl,eventsUrl,dashboardUrl,dashboardMapUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl,staffingUrl,unfinishedWorkUrl];"
+          ]
+        },
+        {
+          "old_start": 149,
+          "old_count": 0,
+          "new_start": 153,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            "    if(els.staffingLink)els.staffingLink.href=staffingUrl.toString();",
+            "    if(els.unfinishedWorkLink)els.unfinishedWorkLink.href=unfinishedWorkUrl.toString();"
+          ]
+        },
+        {
+          "old_start": 163,
+          "old_count": 0,
+          "new_start": 169,
+          "new_count": 8,
+          "before": [],
+          "after": [
+            "    const staffingRead=window.MemphisAuth.hasPermission?.('read',session)===true&&!!session.credential_id",
+            "      &&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.manager_id||'')",
+            "      &&Date.parse(session.expires_at)>Date.now()",
+            "      &&window.MemphisCustodialSecurity?.native!==true&&window.MemphisMobile?.edition!=='custodial'",
+            "      &&window.MemphisMobileBuildIdentity?.edition!=='custodial'&&window.Capacitor?.isNativePlatform?.()!==true;",
+            "    for(const [link,permitted] of [[els.staffingLink,staffingRead],[els.unfinishedWorkLink,owner]]){",
+            "      if(link&&!permitted){link.hidden=true;link.removeAttribute('href');link.setAttribute('aria-disabled','true');}",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "ops-viewer.html",
+      "kind": "changed",
+      "prior_bytes": 9319,
+      "prior_sha256": "6493dc5798a642744cf0abbe4142d2b943d56d5b5d0af20d17825c94a3556546",
+      "current_sha256": "c840c532f293ef3012d4ed0d3cc035aacbbdea73789c8ba20f14885b0d2655f2",
+      "hunks": [
+        {
+          "old_start": 12,
+          "old_count": 1,
+          "new_start": 12,
+          "new_count": 1,
+          "before": [
+            "  <link rel=\"stylesheet\" href=\"./operations-dashboard.css?v=2026.11.14.ticker-rows-r1\">"
+          ],
+          "after": [
+            "  <link rel=\"stylesheet\" href=\"./operations-dashboard.css?v=2026.11.26.next-records\">"
+          ]
+        },
+        {
+          "old_start": 57,
+          "old_count": 2,
+          "new_start": 57,
+          "new_count": 2,
+          "before": [
+            "  <script src=\"./operations-dashboard-data.js?v=2026.11.13.spiceworks-wording-r1\"></script><script src=\"./operations-dashboard.js?v=2026.11.14.board-controls-r53\"></script>",
+            "  <script src=\"./ops-viewer.js?v=2026.11.11.operations-layout\"></script>"
+          ],
+          "after": [
+            "  <script src=\"./operations-dashboard-data.js?v=2026.11.26.next-records\"></script><script src=\"./operations-dashboard.js?v=2026.11.26.board-authority\"></script>",
+            "  <script src=\"./ops-viewer.js?v=2026.11.26.independent-map\"></script>"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "schedule-employee-day.html",
+      "kind": "changed",
+      "prior_bytes": 27340,
+      "prior_sha256": "e74644d7049b951d7912fe0f21d430e018f3ac8457e6d366ad028771649a57cc",
+      "current_sha256": "28c57548ef515f0d78de0064ce074387b9c3ee5b5bb2fd896f708e5d7631cf5d",
+      "hunks": [
+        {
+          "old_start": 9,
+          "old_count": 0,
+          "new_start": 10,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "<script src=\"./memphis-scheduler-actions.js?v=release-2026.07.19.custodial-v3.12\"></script>"
+          ]
+        },
+        {
+          "old_start": 20,
+          "old_count": 1,
+          "new_start": 21,
+          "new_count": 2,
+          "before": [
+            "    @media print{body{background:#fff;color:#111827}.page{max-width:none;padding:0}.toolbar,.status,.summary,.btn,.openCard{display:none}.employeeCard{box-shadow:none;border:1px solid #ddd;break-inside:avoid;background:#fff;color:#111827;margin-bottom:14px}.employeeHeader{background:#f3f4f6;color:#111827}.employeeMeta,.notes{color:#374151}.assignmentSections{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px}.assignmentSection{background:#fff;border-color:#ddd}.phaseTitle{background:#f3f4f6;color:#111827}.phaseRow{border-color:#ddd}.assignmentTable th{background:#f3f4f6;color:#111827}.assignmentTable th,.assignmentTable td{border-color:#ddd}.pill{border-color:#ddd;background:#fff;color:#111827}.printHint{display:block}}"
+          ],
+          "after": [
+            "      #print-heading{display:none}",
+            "    @media print{#print-heading{display:block;color:#111827}.openCard{box-shadow:none;border:1px solid #ddd;background:#fff;color:#111827}.openItem{background:#fff;color:#111827}.openCard .sub,.openItem div{color:#374151}body{background:#fff;color:#111827}.page{max-width:none;padding:0}.toolbar,.status,.summary,.btn{display:none}.employeeCard{box-shadow:none;border:1px solid #ddd;break-inside:avoid;background:#fff;color:#111827;margin-bottom:14px}.employeeHeader{background:#f3f4f6;color:#111827}.employeeMeta,.notes{color:#374151}.assignmentSections{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px}.assignmentSection{background:#fff;border-color:#ddd}.phaseTitle{background:#f3f4f6;color:#111827}.phaseRow{border-color:#ddd}.assignmentTable th{background:#f3f4f6;color:#111827}.assignmentTable th,.assignmentTable td{border-color:#ddd}.pill{border-color:#ddd;background:#fff;color:#111827}.printHint{display:block}}"
+          ]
+        },
+        {
+          "old_start": 41,
+          "old_count": 1,
+          "new_start": 43,
+          "new_count": 1,
+          "before": [
+            "        <button class=\"btn primary\" id=\"print-btn\" type=\"button\">Print Page</button>"
+          ],
+          "after": [
+            "        <button class=\"btn primary\" id=\"print-btn\" type=\"button\" disabled>Print Page</button>"
+          ]
+        },
+        {
+          "old_start": 45,
+          "old_count": 0,
+          "new_start": 48,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    <h1 id=\"print-heading\" aria-hidden=\"true\"></h1>"
+          ]
+        },
+        {
+          "old_start": 67,
+          "old_count": 1,
+          "new_start": 70,
+          "new_count": 3,
+          "before": [
+            "let currentData=null;"
+          ],
+          "after": [
+            "const auth=window.MemphisAuth,actions=window.MemphisSchedulerActions;",
+            "const printHeading=document.getElementById('print-heading');",
+            "let currentData=null,generation=0,active=null;"
+          ]
+        },
+        {
+          "old_start": 69,
+          "old_count": 3,
+          "new_start": 74,
+          "new_count": 73,
+          "before": [
+            "async function init(){await window.MemphisAuth.requireOpsManagerSession({redirect:true});const today=new Date();const params=new URLSearchParams(window.location.search);els.serviceDate.value=params.get('service_date')||params.get('date')||window.MemphisAuth.getCSTDateString(today);els.backBtn.addEventListener('click',()=>{const url=new URL('./schedule-weekly.html',window.location.href);url.searchParams.set('date',els.serviceDate.value);const current=new URL(window.location.href);const device=String(current.searchParams.get('device')||localStorage.getItem('mz_scan_device_id')||'').trim();if(device)url.searchParams.set('device',device);location.href=url.toString();});els.loadBtn.addEventListener('click',()=>loadDay());els.printBtn.addEventListener('click',()=>window.print());els.filter.addEventListener('change',()=>render());return loadDay();}",
+            "async function api(path){const auth=await window.MemphisAuth.opsManagerAuthHeaders();const res=await fetch(`${CONFIG.API_BASE}${path}`,{cache:'no-store',credentials:'include',headers:auth});const payload=await res.json().catch(()=>null);if(!res.ok||!payload||!payload.ok)throw new Error(payload?.error||`HTTP ${res.status}`);return payload.data;}",
+            "async function loadDay(){setStatus(`Loading ${els.serviceDate.value}…`);currentData=await api(`/day?service_date=${encodeURIComponent(els.serviceDate.value)}`);render();setStatus(`Loaded employee schedule for ${els.serviceDate.value}.`)}"
+          ],
+          "after": [
+            "",
+            "async function init(){",
+            " const session=await auth.requireOpsManagerSession({redirect:true});",
+            " if(!session)return;",
+            " const params=new URLSearchParams(window.location.search);",
+            " els.serviceDate.value=params.get('service_date')||params.get('date')||auth.getCSTDateString(new Date());",
+            " els.backBtn.addEventListener('click',()=>{",
+            "  const url=new URL('./schedule-weekly.html',window.location.href);",
+            "  url.searchParams.set('date',els.serviceDate.value);",
+            "  const current=new URL(window.location.href);",
+            "  const device=String(current.searchParams.get('device')||localStorage.getItem('mz_scan_device_id')||'').trim();",
+            "  if(device)url.searchParams.set('device',device);",
+            "  location.href=url.toString();",
+            " });",
+            " els.loadBtn.addEventListener('click',loadDay);",
+            " els.printBtn.addEventListener('click',()=>{if(requireCurrentReport())window.print();});",
+            " els.serviceDate.addEventListener('change',()=>{withdrawReport();setStatus('Load the selected service date.');});",
+            " els.filter.addEventListener('change',()=>{if(requireCurrentReport())render();});",
+            " window.addEventListener('beforeprint',requireCurrentReport);",
+            " window.addEventListener('pagehide',withdrawReport);",
+            " window.addEventListener('storage',()=>{if(currentData)requireCurrentReport();});",
+            " document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentData)requireCurrentReport();});",
+            " return loadDay();",
+            "}",
+            "function withdrawReport(){",
+            " generation++;active?.abort();active=null;currentData=null;",
+            " els.printBtn.disabled=true;",
+            " printHeading.textContent='';",
+            " updateStats([],[]);",
+            " renderOpen([],els.filter.value);",
+            " renderEmployees([]);",
+            "}",
+            "function sameReportOwner(owner){",
+            " return Boolean(owner?.token&&auth.readSession()?.token===owner.token",
+            "  &&actions.same(owner,actions.principal(auth))&&actions.permissions(auth).read);",
+            "}",
+            "function requireCurrentReport(){",
+            " if(!currentData)return null;",
+            " if(currentData.date!==els.serviceDate.value||!sameReportOwner(currentData.owner)){",
+            "  withdrawReport();setStatus('Schedule access or service date changed. Load the day again.',true);",
+            " }",
+            " return currentData;",
+            "}",
+            "async function loadDay(){",
+            " withdrawReport();",
+            " const epoch=generation,date=els.serviceDate.value,principal=actions.principal(auth);",
+            " const owner=principal?{...principal,token:auth.readSession()?.token}:null;",
+            " if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!sameReportOwner(owner)){",
+            "  setStatus('A valid service date and current Manager access are required.',true);return;",
+            " }",
+            " const controller=new AbortController();active=controller;",
+            " const isCurrent=()=>epoch===generation&&date===els.serviceDate.value&&sameReportOwner(owner)&&!controller.signal.aborted;",
+            " setStatus(`Loading ${date}…`);",
+            " try{",
+            "  const headers=await auth.opsManagerAuthHeaders();",
+            "  if(!isCurrent())return;",
+            "  const response=await fetch(`${CONFIG.API_BASE}/day?service_date=${encodeURIComponent(date)}`,",
+            "    {cache:'no-store',credentials:'include',redirect:'error',signal:controller.signal,headers});",
+            "  const payload=await response.json().catch(()=>null);",
+            "  if(!isCurrent())return;",
+            "  if(!response.ok||payload?.ok!==true||payload.data?.service_date!==date)throw new Error('Schedule source unavailable for the selected date.');",
+            "  currentData=Object.freeze({date,owner,data:payload.data});",
+            "  els.printBtn.disabled=false;",
+            "  render();setStatus(`Loaded employee schedule for ${date}.`);",
+            " }catch{",
+            "  if(isCurrent())setStatus('Schedule source unavailable for the selected date.',true);",
+            " }finally{",
+            "  if(epoch===generation){",
+            "   active=null;",
+            "   if(!isCurrent()){withdrawReport();setStatus('Schedule access or service date changed. Load the day again.',true);}",
+            "  }",
+            " }",
+            "}"
+          ]
+        },
+        {
+          "old_start": 105,
+          "old_count": 2,
+          "new_start": 180,
+          "new_count": 2,
+          "before": [
+            "function render(){if(!currentData){return;}const {employees,open}=buildEmployeeRows(currentData);const filter=els.filter.value;const visibleEmployees=filter==='open'?[]:employees;updateStats(visibleEmployees,open);renderOpen(open,filter);renderEmployees(visibleEmployees);}",
+            "function updateStats(employees,open){const assignments=employees.reduce((sum,e)=>sum+assignmentSections(e).reduce((sectionSum,section)=>sectionSum+section.rows.length,0),0);els.statEmployees.textContent=String(employees.length);els.statAssignments.textContent=String(assignments);els.statOpen.textContent=String(open.length);els.statStart.textContent=els.serviceDate.value||'—';els.statEnd.textContent='Locations';}"
+          ],
+          "after": [
+            "function render(){if(!currentData){return;}const {date,data}=currentData;const {employees,open}=buildEmployeeRows(data);const filter=els.filter.value;const visibleEmployees=filter==='open'?[]:employees;printHeading.textContent=`Employee Daily Schedule · ${formatScheduleDate(date)}`;updateStats(visibleEmployees,open,date);renderOpen(open,filter);renderEmployees(visibleEmployees,date);}",
+            "function updateStats(employees,open,date){const assignments=employees.reduce((sum,e)=>sum+assignmentSections(e).reduce((sectionSum,section)=>sectionSum+section.rows.length,0),0);els.statEmployees.textContent=String(employees.length);els.statAssignments.textContent=String(assignments);els.statOpen.textContent=String(open.length);els.statStart.textContent=date||'—';els.statEnd.textContent='Locations';}"
+          ]
+        },
+        {
+          "old_start": 108,
+          "old_count": 2,
+          "new_start": 183,
+          "new_count": 2,
+          "before": [
+            "function renderEmployees(employees){if(!employees.length){els.employeeList.innerHTML='<div class=\"empty\">No assigned employee sections for this filter.</div>';return;}els.employeeList.innerHTML=employees.map(emp=>employeeCardHtml(emp)).join('');els.employeeList.querySelectorAll('[data-export-employee]').forEach(btn=>btn.addEventListener('click',()=>exportEmployeeDocx(btn.getAttribute('data-export-employee'))));}",
+            "function employeeCardHtml(emp){const sections=assignmentSections(emp);const sectionCards=sections.map(section=>`<div class=\"assignmentSection ${escapeAttr(section.kind||'')}\"><div class=\"phaseTitle\">${escapeHtml(section.title)}</div><div class=\"phaseRows\">${section.rows.map(row=>simpleRowHtml(row)).join('')}</div></div>`).join('');return `<article class=\"employeeCard\" data-employee-id=\"${escapeAttr(emp.employee_id)}\"><div class=\"employeeHeader\"><div><div class=\"employeeName\">${escapeHtml(emp.employee_name)}</div><div class=\"employeeMeta\">${escapeHtml(formatScheduleDate(els.serviceDate.value))}</div></div><button class=\"btn blue small\" data-export-employee=\"${escapeAttr(emp.employee_id)}\" type=\"button\">Export DOCX</button></div><div class=\"assignmentSections\">${sectionCards}</div></article>`;}"
+          ],
+          "after": [
+            "function renderEmployees(employees,date){if(!employees.length){els.employeeList.innerHTML='<div class=\"empty\">No assigned employee sections for this filter.</div>';return;}els.employeeList.innerHTML=employees.map(emp=>employeeCardHtml(emp,date)).join('');els.employeeList.querySelectorAll('[data-export-employee]').forEach(btn=>btn.addEventListener('click',()=>exportEmployeeDocx(btn.getAttribute('data-export-employee'))));}",
+            "function employeeCardHtml(emp,date){const sections=assignmentSections(emp);const sectionCards=sections.map(section=>`<div class=\"assignmentSection ${escapeAttr(section.kind||'')}\"><div class=\"phaseTitle\">${escapeHtml(section.title)}</div><div class=\"phaseRows\">${section.rows.map(row=>simpleRowHtml(row)).join('')}</div></div>`).join('');return `<article class=\"employeeCard\" data-employee-id=\"${escapeAttr(emp.employee_id)}\"><div class=\"employeeHeader\"><div><div class=\"employeeName\">${escapeHtml(emp.employee_name)}</div><div class=\"employeeMeta\">${escapeHtml(formatScheduleDate(date))}</div></div><button class=\"btn blue small\" data-export-employee=\"${escapeAttr(emp.employee_id)}\" type=\"button\">Export DOCX</button></div><div class=\"assignmentSections\">${sectionCards}</div></article>`;}"
+          ]
+        },
+        {
+          "old_start": 111,
+          "old_count": 2,
+          "new_start": 186,
+          "new_count": 27,
+          "before": [
+            "async function exportEmployeeDocx(employeeId){const {employees}=buildEmployeeRows(currentData);const emp=employees.find(e=>String(e.employee_id)===String(employeeId));if(!emp)return;const sections=assignmentSections(emp);try{if(!window.docx)throw new Error('DOCX library not loaded');const {Document,Packer,Paragraph,HeadingLevel}=window.docx;const children=[new Paragraph({text:emp.employee_name,heading:HeadingLevel.HEADING_1}),new Paragraph(formatScheduleDate(els.serviceDate.value)),new Paragraph('')];if(!sections.length){children.push(new Paragraph('No locations assigned.'));}for(const section of sections){children.push(new Paragraph({text:section.title,heading:HeadingLevel.HEADING_2}));for(const row of section.rows){children.push(new Paragraph({text:locationDisplayName(row),bullet:{level:0}}));}children.push(new Paragraph(''));}const doc=new Document({sections:[{children}]});const blob=await Packer.toBlob(doc);downloadBlob(blob,`${safeFile(emp.employee_name)}_${els.serviceDate.value}_schedule.docx`);setStatus(`Exported DOCX for ${emp.employee_name}.`);}catch(error){setStatus(`DOCX export failed: ${safe(error)}. Falling back to printable Word document.`,true);exportEmployeeDocFallback(emp,sections);}}",
+            "function exportEmployeeDocFallback(emp,sections=assignmentSections(emp)){const html=`<html><head><meta charset=\"utf-8\"><title>${escapeHtml(emp.employee_name)}</title></head><body><h1>${escapeHtml(emp.employee_name)}</h1><p>${escapeHtml(formatScheduleDate(els.serviceDate.value))}</p>${sections.length?sections.map(section=>`<h2>${escapeHtml(section.title)}</h2><ul>${section.rows.map(row=>`<li>${escapeHtml(locationDisplayName(row))}</li>`).join('')}</ul>`).join(''):'<p>No locations assigned.</p>'}</body></html>`;downloadBlob(new Blob([html],{type:'application/msword'}),`${safeFile(emp.employee_name)}_${els.serviceDate.value}_schedule.doc`);}"
+          ],
+          "after": [
+            "async function exportEmployeeDocx(employeeId){",
+            " const report=requireCurrentReport();",
+            " if(!report)return;",
+            " const emp=buildEmployeeRows(report.data).employees.find(e=>String(e.employee_id)===String(employeeId));",
+            " if(!emp)return;",
+            " const sections=assignmentSections(emp),date=report.date;",
+            " try{",
+            "  if(!window.docx)throw new Error('DOCX library not loaded');",
+            "  const {Document,Packer,Paragraph,HeadingLevel}=window.docx;",
+            "  const children=[new Paragraph({text:emp.employee_name,heading:HeadingLevel.HEADING_1}),new Paragraph(formatScheduleDate(date)),new Paragraph('')];",
+            "  if(!sections.length)children.push(new Paragraph('No locations assigned.'));",
+            "  for(const section of sections){",
+            "   children.push(new Paragraph({text:section.title,heading:HeadingLevel.HEADING_2}));",
+            "   for(const row of section.rows)children.push(new Paragraph({text:locationDisplayName(row),bullet:{level:0}}));",
+            "   children.push(new Paragraph(''));",
+            "  }",
+            "  const blob=await Packer.toBlob(new Document({sections:[{children}]}));",
+            "  if(requireCurrentReport()!==report)return;",
+            "  downloadBlob(blob,`${safeFile(emp.employee_name)}_${date}_schedule.docx`);",
+            "  setStatus(`DOCX download started for ${emp.employee_name}.`);",
+            " }catch{",
+            "  if(requireCurrentReport()!==report)return;",
+            "  exportEmployeeDocFallback(emp,sections,date);",
+            "  setStatus(`Printable Word download started for ${emp.employee_name}.`);",
+            " }",
+            "}",
+            "function exportEmployeeDocFallback(emp,sections,date){const html=`<html><head><meta charset=\"utf-8\"><title>${escapeHtml(emp.employee_name)}</title></head><body><h1>${escapeHtml(emp.employee_name)}</h1><p>${escapeHtml(formatScheduleDate(date))}</p>${sections.length?sections.map(section=>`<h2>${escapeHtml(section.title)}</h2><ul>${section.rows.map(row=>`<li>${escapeHtml(locationDisplayName(row))}</li>`).join('')}</ul>`).join(''):'<p>No locations assigned.</p>'}</body></html>`;downloadBlob(new Blob([html],{type:'application/msword'}),`${safeFile(emp.employee_name)}_${date}_schedule.doc`);}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/active-gps-lifecycle-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 6786,
+      "prior_sha256": "afab57d6493e9351ae64411c5d9fb7b6dc5df276b799eed1822f90e55dc1c979",
+      "current_sha256": "ec060c5ae840d5b67182ed6c2d427367a35df0d8d2ed5f70ec24293669ec1789",
+      "hunks": [
+        {
+          "old_start": 37,
+          "old_count": 1,
+          "new_start": 37,
+          "new_count": 1,
+          "before": [
+            "    enqueue:async action=>queued.push(action),randomUuid:()=> '30000000-0000-4000-8000-000000000003',"
+          ],
+          "after": [
+            "    enqueue:async action=>queued.push(action),"
+          ]
+        },
+        {
+          "old_start": 87,
+          "old_count": 1,
+          "new_start": 87,
+          "new_count": 1,
+          "before": [
+            "    enqueue:async action=>queued.push(action),randomUuid:()=>crypto.randomUUID(),setTimer:()=>1,clearTimer:()=>{}});"
+          ],
+          "after": [
+            "    enqueue:async action=>queued.push(action),setTimer:()=>1,clearTimer:()=>{}});"
+          ]
+        },
+        {
+          "old_start": 91,
+          "old_count": 0,
+          "new_start": 92,
+          "new_count": 14,
+          "before": [],
+          "after": [
+            "await test('a cached fix retains one operation and original body across new documents',async()=>{",
+            "  const s=storage({...row(),offline_authority_assignment_epoch:3}),attempts=[];",
+            "  const make=()=>createActiveGpsLifecycle({storage:s,deviceId:()=>DEVICE,geolocation:geo(),",
+            "    enqueue:async action=>attempts.push(action),setTimer:()=>1,clearTimer:()=>{}});",
+            "  const first=make(),second=make();",
+            "  await first.reconcile('page_load');first.dispose();",
+            "  await second.reconcile('page_show');second.dispose();",
+            "  assert.equal(attempts.length,2);",
+            "  assert.match(attempts[0].client_id,/^gps:[0-9a-f-]+:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);",
+            "  assert.deepEqual(attempts[0],attempts[1]);",
+            "  s.setItem('session:'+SESSION_A,JSON.stringify({...row(),offline_authority_assignment_epoch:4}));",
+            "  const successor=make();await successor.reconcile();successor.dispose();",
+            "  assert.notEqual(attempts[2].client_id,attempts[0].client_id);",
+            "});"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-gps-source-qualification-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 8437,
+      "prior_sha256": "ae17e717047f1205095232ad808b29350807752d72555c3f93de1f49780cf456",
+      "current_sha256": "46670941a52005ec80183c182f4001a163f105d7fcfec716df5351197da673ae",
+      "hunks": [
+        {
+          "old_start": 54,
+          "old_count": 1,
+          "new_start": 54,
+          "new_count": 1,
+          "before": [
+            " const changeRows=[...profile.deltas,...profile.auditRepairHistory,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];"
+          ],
+          "after": [
+            " const changeRows=[...profile.deltas,...profile.auditRepairHistory,...profile.releaseRepairHistory,profile.main_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.test_java.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.auxiliary.find(x=>!profile.deltas.some(d=>d.path===x.path)),profile.legacy_proofs[0],profile.core_sources[0],profile.presentation_sources[0]];"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-readiness-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 33139,
+      "prior_sha256": "898030c7f40e3f27b3404ee152f1f29ce92613cadbf3b8de73053c1c241f0be0",
+      "current_sha256": "bf3a0cfdd43bc5e13b874d0720c57e9accba661cd3215d6a508762a49679afb1",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 0,
+          "new_start": 5,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import { bindPhoneUnlock, createPhonePresentation, setPhoneClockPresentation } from '../mobile/src/custodial/phone-presentation.js';"
+          ]
+        },
+        {
+          "old_start": 134,
+          "old_count": 0,
+          "new_start": 136,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "      phonePresentation: async () => ({ wake: 'fixture-wake', unlocked: true }),"
+          ]
+        },
+        {
+          "old_start": 146,
+          "old_count": 0,
+          "new_start": 149,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    bindPhoneUnlock, createPhonePresentation, setPhoneClockPresentation,"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/events-admin-source-evidence-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 7400,
+      "prior_sha256": "c9359db12830430590aa970afa01e8ea7c3876df9cdf52c681f23b81758953ba",
+      "current_sha256": "8a12b85c39a536f0f36db1b99f1c748fb52f32662510157debe81fb5f2d449d0",
+      "hunks": [
+        {
+          "old_start": 35,
+          "old_count": 1,
+          "new_start": 35,
+          "new_count": 4,
+          "before": [
+            "run(`readImportRows=async()=>[{text:'Original source A'},{text:'Original source B'}];"
+          ],
+          "after": [
+            "const originalReader=run('readImportRows');",
+            "const mockRow=text=>({text,fields:['Event Name'],sheet_name:'CSV'});",
+            "sandbox.mockRows=[mockRow('Original source A'),mockRow('Original source B')];",
+            "run(`readImportRows=async()=>mockRows;"
+          ]
+        },
+        {
+          "old_start": 39,
+          "old_count": 0,
+          "new_start": 43,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "eq(run('state.parsedImportRows.length'),0,'scope preview does not send workbook values');",
+            "eq(node('parse-file-btn').textContent,'Parse included fields','scope preview exposes its confirmation action');",
+            "await run('parseUploadedFile()');"
+          ]
+        },
+        {
+          "old_start": 42,
+          "old_count": 0,
+          "new_start": 49,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "const submitImport=async()=>{if(!run('state.preparedImport'))await run('parseUploadedFile()');return run('parseUploadedFile()');};"
+          ]
+        },
+        {
+          "old_start": 45,
+          "old_count": 1,
+          "new_start": 52,
+          "new_count": 1,
+          "before": [
+            " await assert.rejects(()=>run('parseUploadedFile()'),/source identity/);checks++;"
+          ],
+          "after": [
+            " await assert.rejects(submitImport,/source identity/);checks++;"
+          ]
+        },
+        {
+          "old_start": 49,
+          "old_count": 1,
+          "new_start": 56,
+          "new_count": 1,
+          "before": [
+            "run('providerRows=[{source_index:0},{source_index:0}]');await assert.rejects(()=>run('parseUploadedFile()'),/source identity/);checks++;"
+          ],
+          "after": [
+            "run('providerRows=[{source_index:0},{source_index:0}]');await assert.rejects(submitImport,/source identity/);checks++;"
+          ]
+        },
+        {
+          "old_start": 82,
+          "old_count": 1,
+          "new_start": 89,
+          "new_count": 2,
+          "before": [
+            " const gate=deferred();sandbox.pendingParse=gate.promise;run(\"readImportRows=async()=>[{text:'Old import'}];apiBase=async()=>pendingParse\");"
+          ],
+          "after": [
+            " const gate=deferred();sandbox.pendingParse=gate.promise;sandbox.mockRows=[mockRow('Old import')];run('readImportRows=async()=>mockRows;apiBase=async()=>pendingParse');",
+            " await run('parseUploadedFile()');"
+          ]
+        },
+        {
+          "old_start": 92,
+          "old_count": 0,
+          "new_start": 101,
+          "new_count": 36,
+          "before": [],
+          "after": [
+            "{",
+            " const vendor={};",
+            " vm.runInNewContext(readFileSync(new URL('../vendor/xlsx-0.20.3.full.min.js',import.meta.url),'utf8'),vendor);",
+            " const xlsx=vendor.XLSX,workbook=xlsx.utils.book_new();",
+            " const visible=xlsx.utils.aoa_to_sheet([['Event Name','Notes','Payroll','Date','Start Time'],",
+            "  ['Visible, \"Named\"','COLUMN_NOT_VISIBLE','UNRELATED_VISIBLE',46352,0.5],",
+            "  ['ROW_NOT_VISIBLE','other','more',46352,0.5]]);",
+            " visible['!cols']=[{}, {hidden:true}];visible['!rows']=[{},{},{hidden:true}];",
+            " visible.D2.z='yyyy-mm-dd';visible.E2.z='hh:mm';",
+            " xlsx.utils.book_append_sheet(workbook,visible,'Admitted');",
+            " for(const name of ['Hidden','VeryHidden']){",
+            "  xlsx.utils.book_append_sheet(workbook,xlsx.utils.aoa_to_sheet([['Event Name'],['SHEET_NOT_VISIBLE']]),name);",
+            "  xlsx.utils.book_set_sheet_visibility(workbook,name,name==='Hidden'?1:2);",
+            " }",
+            " const file={name:'fixture.xlsx',size:16000,arrayBuffer:async()=>xlsx.write(workbook,{type:'array',bookType:'xlsx',cellStyles:true})};",
+            " sandbox.window.XLSX=xlsx;sandbox.originalReader=originalReader;",
+            " node('import-file').files=[file];node('import-file').events.change();",
+            " run(\"readImportRows=originalReader;globalThis.sent=[];apiBase=async(_base,_path,options)=>{sent.push(...options.body.texts);return [{source_index:0,event_name:'Visible'}];};\");",
+            " await run('parseUploadedFile()');",
+            " eq(json('sent'),[],'hidden workbook data is never uploaded before scope review');",
+            " assert.match(node('import-preview').innerHTML,/Admitted/);checks++;",
+            " assert.doesNotMatch(node('import-preview').innerHTML,/VeryHidden|Payroll|COLUMN_NOT_VISIBLE/);checks++;",
+            " await run('parseUploadedFile()');",
+            " const [row]=json('sent');",
+            " assert.match(row,/Visible, \"Named\"/);checks++;",
+            " assert.match(row,/Date: 2026-11-26/);checks++;",
+            " assert.match(row,/Start Time: 12:00:00/);checks++;",
+            " assert.doesNotMatch(row,/COLUMN_NOT_VISIBLE|UNRELATED_VISIBLE|ROW_NOT_VISIBLE|SHEET_NOT_VISIBLE/);checks++;",
+            " run('loadPayloadIntoForm(state.parsedImportRows[0])');",
+            " eq(json('buildPayloadFromForm().source_text'),row,'only admitted exact row text can be retained on save');",
+            " sandbox.csv='Event Name,Payroll,Notes\\n\"Event, A\",UNRELATED_CSV,\"Quote \"\"example\"\"\"\\n';",
+            " const [csv]=json('parseCsvRows(csv)');",
+            " assert.match(csv.text,/Event, A/);checks++;",
+            " assert.match(csv.text,/Quote \"example\"/);checks++;",
+            " assert.doesNotMatch(csv.text,/Payroll|UNRELATED_CSV/);checks++;",
+            "}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/operations-dashboard-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 134013,
+      "prior_sha256": "8674db63d2e4ca6c3253b6c08eaf8037c7ad47181772089fe936924125bcec6a",
+      "current_sha256": "8efdf40d2339c16cf6cc69b0c8d2793abcefc73e69cc32ca11d2c324b675dab5",
+      "hunks": [
+        {
+          "old_start": 34,
+          "old_count": 1,
+          "new_start": 34,
+          "new_count": 1,
+          "before": [
+            "  querySelectorAll(){return [];},addEventListener(type,callback,options){const list=events.get(type)||[];list.push({callback,once:options?.once});events.set(type,list);},"
+          ],
+          "after": [
+            "  childNodes:[],replaceChildren(...children){this.childNodes=children;},querySelectorAll(){return [];},addEventListener(type,callback,options){const list=events.get(type)||[];list.push({callback,once:options?.once});events.set(type,list);},"
+          ]
+        },
+        {
+          "old_start": 499,
+          "old_count": 0,
+          "new_start": 500,
+          "new_count": 21,
+          "before": [],
+          "after": [
+            "for(const audience of ['manager','public_readonly'])test(`gate count expires at Chicago midnight for ${audience}`,async()=>{",
+            " const f=fixture({audience});",
+            " const card=f.elements['ops-attendance'],note=f.elements['ops-attendance-note'];",
+            " const refresh=data=>f.controller.refresh({headers:{},isCurrent:()=>true,summary:{open_tickets:[]},fetchImpl:async url=>({",
+            "   ok:!url.includes('attendance')||Boolean(data),",
+            "   json:async()=>url.includes('attendance')?{ok:true,data}:null,",
+            " })});",
+            " const oldDay={attendance:1234,stale:false,source_timestamp:'2026-11-27T05:59:50Z'};",
+            " try{",
+            "  f.setNow(Date.parse('2026-11-27T05:59:55Z'));",
+            "  await refresh(oldDay);assert.equal(card.textContent,'1,234');assert.equal(note.dataset.stale,'false');",
+            "  await refresh(null);assert.equal(card.textContent,'1,234');assert.equal(note.dataset.stale,'true');",
+            "  await refresh(oldDay);assert.equal(note.dataset.stale,'false');",
+            "  f.setNow(Date.parse('2026-11-27T06:00:10Z'));",
+            "  f.controller.tick();assert.equal(card.textContent,'Unavailable');assert.equal(note.dataset.stale,'true');",
+            "  await refresh(oldDay);assert.equal(card.textContent,'Unavailable');",
+            "  await refresh(null);assert.equal(card.textContent,'Unavailable');",
+            "  await refresh({attendance:0,stale:false,source_timestamp:'2026-11-27T06:00:05Z'});",
+            "  assert.equal(card.textContent,'0');assert.equal(note.dataset.stale,'false');",
+            " }finally{f.clean();}",
+            "});"
+          ]
+        },
+        {
+          "old_start": 1468,
+          "old_count": 0,
+          "new_start": 1490,
+          "new_count": 25,
+          "before": [],
+          "after": [
+            "",
+            "test('protected Operations accepts only the current request denial and ignores an obsolete opposite response',async()=>{",
+            " const f=fixture(),expectedAt='2026-11-09T18:00:00Z';",
+            " const successful={ok:true,status:200,json:async()=>({ok:true,data:{",
+            "  schema:'custodial.operations-board.v1',generated_at:expectedAt,timezone:'America/Chicago',events:[{",
+            "   id:'synthetic-current',name:'Synthetic current authority',date:'2026-11-09',start_at:'2026-11-09T20:00:00Z',status:'SCHEDULED'",
+            "  }]",
+            " }})};",
+            " let authorityLost=0;",
+            " const onAuthorityError=()=>{authorityLost++;f.controller.suspend();};",
+            " const refusal={ok:false,status:403,json:async()=>{assert.fail('HTTP denial needs no response body');}};",
+            " const responseFor=operations=>async url=>url.endsWith('/operations')?operations:{ok:false,status:503};",
+            " const refresh=fetchImpl=>f.controller.refresh({fetchImpl,isCurrent:()=>true,onAuthorityError,preserveSummary:true});",
+            " try{",
+            "  const older=homeDeferred(),oldRefresh=refresh(responseFor(older.promise));",
+            "  await refresh(responseFor(successful));",
+            "  assert.match(f.text(f.elements['ops-events-ticker']),/Synthetic current authority/);",
+            "  older.release(refusal);await oldRefresh;",
+            "  assert.equal(authorityLost,0);assert.match(f.text(f.elements['ops-events-ticker']),/Synthetic current authority/);",
+            "  const olderSuccess=homeDeferred(),granted=refresh(responseFor(olderSuccess.promise));",
+            "  await refresh(responseFor(refusal));olderSuccess.release(successful);await granted;",
+            "  assert.equal(authorityLost,1);assert.equal(f.elements['operations-panels'].hidden,true);",
+            "  assert.doesNotMatch(f.text(f.elements['ops-events-ticker']),/Synthetic current authority/);",
+            " }finally{f.clean();}",
+            "});"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/operations-next-rendered-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 10853,
+      "prior_sha256": "64c1994e3b7b0de8ba4c0fb21e70999235ab577ddb8fa026e3c39cd30df178bf",
+      "current_sha256": "5862fdca33fe3eb2e86bbb14f3d816c44f2c74fadcb4481161951af69f62a768",
+      "hunks": [
+        {
+          "old_start": 9,
+          "old_count": 1,
+          "new_start": 9,
+          "new_count": 1,
+          "before": [
+            "const prior='6fdb19e3252bb829acd025bf0a0142abc46b0eeb',changed=['ops-viewer.html','operations-dashboard.html','operations-dashboard.js','operations-dashboard-data.js','operations-dashboard.css'];"
+          ],
+          "after": [
+            "const prior='a2192df588d2ffa59f5e45841ec80c6f193db056',changed=['ops-viewer.html','operations-dashboard.html','operations-dashboard.js','operations-dashboard-data.js','operations-dashboard.css'];"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-audio-release-policy-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 9623,
+      "prior_sha256": "f77755e6473b3c57c8ff9c1f21c1f60e2cc0338cc3caab6a801b6ea296ae30fa",
+      "current_sha256": "efbe6aed67d2d628118f0c5c51b4e3ee7923c1b29ab9ef95681aa4eb0ef10372",
+      "hunks": [
+        {
+          "old_start": 37,
+          "old_count": 1,
+          "new_start": 37,
+          "new_count": 1,
+          "before": [
+            "equal(releaseAudio.map(r=>[r.version_code,r.version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0'],[85,'1.0.0'],[86,'1.0.0'],[87,'1.0.0']]);"
+          ],
+          "after": [
+            "equal(releaseAudio.map(r=>[r.version_code,r.version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0'],[85,'1.0.0'],[86,'1.0.0'],[87,'1.0.0'],[88,'1.0.0']]);"
+          ]
+        },
+        {
+          "old_start": 44,
+          "old_count": 0,
+          "new_start": 45,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "equal(releaseAudio[7].policy,releaseAudio[6].policy);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/provider-best-effort-release-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 5544,
+      "prior_sha256": "f2f64fba26676ac3cc3588ac8ec5a072233dfd8abbdad4dbf6a30d283c096786",
+      "current_sha256": "e2f9978210fd1e3944195d8da99371936dacb299eaa7d31ec0a5313cfb8c30d0",
+      "hunks": [
+        {
+          "old_start": 3,
+          "old_count": 1,
+          "new_start": 3,
+          "new_count": 1,
+          "before": [
+            "import {readFileSync} from 'node:fs';"
+          ],
+          "after": [
+            "import {readFileSync,readdirSync} from 'node:fs';"
+          ]
+        },
+        {
+          "old_start": 11,
+          "old_count": 1,
+          "new_start": 11,
+          "new_count": 1,
+          "before": [
+            "assert.deepEqual(policy.releases.map(({version_code,version_name})=>[version_code,version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0'],[85,'1.0.0'],[86,'1.0.0'],[87,'1.0.0']]);"
+          ],
+          "after": [
+            "assert.deepEqual(policy.releases.map(({version_code,version_name})=>[version_code,version_name]),[[81,'1.0.0'],[82,'1.0.0'],[83,'1.0.0'],[84,'1.0.0'],[85,'1.0.0'],[86,'1.0.0'],[87,'1.0.0'],[88,'1.0.0']]);"
+          ]
+        },
+        {
+          "old_start": 21,
+          "old_count": 3,
+          "new_start": 21,
+          "new_count": 6,
+          "before": [
+            "const installedComposition=JSON.parse(readFileSync(new URL('../mobile/release-evidence/provider-v86-composition.json',import.meta.url)));",
+            "const composition=JSON.parse(readFileSync(new URL('../mobile/release-evidence/provider-v87-composition.json',import.meta.url)));",
+            "assert.equal(composition.candidate_version_for_validation,87);"
+          ],
+          "after": [
+            "const latest=r.version_code;",
+            "const installedComposition=JSON.parse(readFileSync(new URL('../mobile/release-evidence/provider-v87-composition.json',import.meta.url)));",
+            "const composition=JSON.parse(readFileSync(new URL('../mobile/release-evidence/provider-v88-composition.json',import.meta.url)));",
+            "assert.equal(latest,88);",
+            "assert.equal(composition.candidate_version_for_validation,latest);",
+            "if(process.env.MZ_BUILD_NUMBER)assert.equal(process.env.MZ_BUILD_NUMBER,String(latest),'This candidate selects the exact audited provider version');"
+          ]
+        },
+        {
+          "old_start": 25,
+          "old_count": 2,
+          "new_start": 28,
+          "new_count": 2,
+          "before": [
+            "assert.equal(composition.release_independent_sources.length,192);",
+            "assert.equal(new Set(composition.release_independent_sources.map(entry=>entry.path)).size,192);"
+          ],
+          "after": [
+            "assert.equal(composition.release_independent_sources.length,193);",
+            "assert.equal(new Set(composition.release_independent_sources.map(entry=>entry.path)).size,193);"
+          ]
+        },
+        {
+          "old_start": 31,
+          "old_count": 7,
+          "new_start": 34,
+          "new_count": 9,
+          "before": [
+            "assert.deepEqual(",
+            "  composition.release_independent_sources.map(({path})=>path),",
+            "  installedComposition.release_independent_sources.map(({path})=>path),",
+            ");",
+            "const changed=composition.release_independent_sources.flatMap((entry,index)=>{",
+            " const prior=installedComposition.release_independent_sources[index];",
+            " return entry.sha256===prior.sha256?[]:[{path:entry.path,prior_sha256:prior.sha256,current_sha256:entry.sha256}];"
+          ],
+          "after": [
+            "const folder='mobile/plugins/custodial-native-vault/android/src/main/java/org/memphiszoo/custodial/vault';",
+            "const generated=new Set(['NativeProviderReviewedReleases.java','NativeProviderReviewedAudioReleases.java']);",
+            "const names=readdirSync(new URL('../'+folder+'/',import.meta.url)).filter(name=>name.endsWith('.java')&&!generated.has(name)).sort();",
+            "assert.deepEqual(composition.release_independent_sources.map(({path})=>path),names.map(name=>folder+'/'+name));",
+            "const old=new Map(installedComposition.release_independent_sources.map(row=>[row.path,row.sha256]));",
+            "assert.ok([...old.keys()].every(path=>composition.release_independent_sources.some(row=>row.path===path)));",
+            "const changed=composition.release_independent_sources.flatMap(entry=>{",
+            " const prior=old.get(entry.path)??null;",
+            " return entry.sha256===prior?[]:[{path:entry.path,prior_sha256:prior,current_sha256:entry.sha256}];"
+          ]
+        },
+        {
+          "old_start": 40,
+          "old_count": 1,
+          "new_start": 45,
+          "new_count": 6,
+          "before": [
+            "assert.deepEqual(changed.map(row=>row.path.split('/').at(-1)),['AndroidProviderJobs.java','CustodialProviderSyncJobService.java','NativeProviderAudioSequence.java','NativeProviderFirebaseDispatch.java','NativeProviderIngressRuntime.java','NativeProviderJobSchedule.java','NativeProviderJournal.java','NativeProviderRuntimeOwner.java']);"
+          ],
+          "after": [
+            "assert.deepEqual(changed.map(row=>row.path.split('/').at(-1)),['CustodialEnrollmentApplication.java','CustodialNativeVaultPlugin.java','NativeRetainedEnrollmentRealmStore.java','PhonePresentation.java','VaultEngine.java']);",
+            "const host=composition.host_test_evidence,hostBytes=readFileSync(new URL('../'+host.path,import.meta.url));",
+            "assert.equal(hostBytes.length,host.bytes);assert.equal(sha(hostBytes),host.sha256);",
+            "assert.match(hostBytes.toString(),new RegExp('OK \\\\('+host.focused_host_junit_cases+' tests\\\\)'));",
+            "assert.match(hostBytes.toString(),new RegExp('PASS '+host.realm_storage_assertions+' storage assertions'));",
+            "assert.equal(composition.retained_composition_sha256,sha(readFileSync(new URL('../mobile/release-evidence/provider-v87-composition.json',import.meta.url))));"
+          ]
+        },
+        {
+          "old_start": 46,
+          "old_count": 1,
+          "new_start": 56,
+          "new_count": 1,
+          "before": [
+            "for(const [code,name]of[[80,'1.0.0'],[88,'1.0.0'],[87,'wrong']])assert.throws(()=>readReviewedProviderRelease(root.pathname,{versionCode:code,versionName:name,required:true}),/qualified provider release inputs absent/);"
+          ],
+          "after": [
+            "for(const [code,name]of[[80,'1.0.0'],[89,'1.0.0'],[88,'wrong']])assert.throws(()=>readReviewedProviderRelease(root.pathname,{versionCode:code,versionName:name,required:true}),/qualified provider release inputs absent/);"
+          ]
+        },
+        {
+          "old_start": 51,
+          "old_count": 1,
+          "new_start": 61,
+          "new_count": 1,
+          "before": [
+            "const input={policyBytes:bytes,compiledSource:compiledReviewedProviderReleases(bytes),audioPolicyBytes:audio,audioCompiledSource:compiledReviewedProviderAudioReleases(audio),versionCode:87,versionName:'1.0.0',required:true};"
+          ],
+          "after": [
+            "const input={policyBytes:bytes,compiledSource:compiledReviewedProviderReleases(bytes),audioPolicyBytes:audio,audioCompiledSource:compiledReviewedProviderAudioReleases(audio),versionCode:latest,versionName:'1.0.0',required:true};"
+          ]
+        },
+        {
+          "old_start": 56,
+          "old_count": 1,
+          "new_start": 66,
+          "new_count": 1,
+          "before": [
+            "console.log(JSON.stringify({status:'PASS_BEST_EFFORT_RELEASE_INPUTS',negative_controls:negatives,version_code:87,retained_versions:[81,82,83,84,85,86],profile_count:1,build:false,installed:false,physical_audio:false}));"
+          ],
+          "after": [
+            "console.log(JSON.stringify({status:'PASS_BEST_EFFORT_RELEASE_INPUTS',negative_controls:negatives,version_code:latest,retained_versions:[81,82,83,84,85,86,87],profile_count:1,build:false,installed:false,physical_audio:false}));"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "start_page1.html",
+      "kind": "changed",
+      "prior_bytes": 11759,
+      "prior_sha256": "911c17a1d41136094fda8070c6c3f77ebcd99d5b6ea11c7440bd09edf62e846e",
+      "current_sha256": "68368c982c713764f19193c4da2ac8531c83c9c4b2190b06eff949490b4f39a9",
+      "hunks": [
+        {
+          "old_start": 53,
+          "old_count": 1,
+          "new_start": 53,
+          "new_count": 1,
+          "before": [
+            "        <a id=\"staffing-link\" class=\"hubTile\" href=\"./staffing-management.html?hub=manager\" data-trail-app=\"staffing\"><span class=\"tileIcon hubIllustratedIcon\" aria-hidden=\"true\"><img class=\"trailIcon\" src=\"./assets/trail-v1/staffing-320.webp\" width=\"64\" height=\"64\" alt=\"\" decoding=\"async\"><svg viewBox=\"0 0 24 24\" focusable=\"false\"><circle cx=\"9\" cy=\"8\" r=\"3\"/><path d=\"M2 21v-3a7 7 0 0 1 14 0v3m1-16a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v2\"/></svg></span><span><strong>Staffing positions</strong><small>Current roster and open positions</small></span></a>"
+          ],
+          "after": [
+            "        <a id=\"staffing-link\" class=\"hubTile\" hidden aria-disabled=\"true\" data-trail-app=\"staffing\"><span class=\"tileIcon hubIllustratedIcon\" aria-hidden=\"true\"><img class=\"trailIcon\" src=\"./assets/trail-v1/staffing-320.webp\" width=\"64\" height=\"64\" alt=\"\" decoding=\"async\"><svg viewBox=\"0 0 24 24\" focusable=\"false\"><circle cx=\"9\" cy=\"8\" r=\"3\"/><path d=\"M2 21v-3a7 7 0 0 1 14 0v3m1-16a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v2\"/></svg></span><span><strong>Staffing positions</strong><small>Current roster and open positions</small></span></a>"
+          ]
+        },
+        {
+          "old_start": 65,
+          "old_count": 1,
+          "new_start": 65,
+          "new_count": 1,
+          "before": [
+            "        <a id=\"unfinished-work-link\" class=\"hubTile\" href=\"./unfinished-work.html\" data-trail-app=\"unfinished\"><span class=\"tileIcon hubIllustratedIcon\" aria-hidden=\"true\"><img class=\"trailIcon\" src=\"./assets/trail-v1/unfinished-320.webp\" width=\"64\" height=\"64\" alt=\"\" decoding=\"async\"><svg viewBox=\"0 0 24 24\" focusable=\"false\"><rect x=\"3\" y=\"4\" width=\"13\" height=\"17\" rx=\"2\"/><path d=\"M7 2h5v4H7Zm0 8h5m-5 4h3\"/><circle cx=\"17\" cy=\"16\" r=\"5\"/><path d=\"M17 13v3l2 1\"/></svg></span><span><strong>Unfinished work</strong><small>Eric: review timed-out work and explicitly clear it</small></span></a>"
+          ],
+          "after": [
+            "        <a id=\"unfinished-work-link\" class=\"hubTile\" hidden aria-disabled=\"true\" data-trail-app=\"unfinished\"><span class=\"tileIcon hubIllustratedIcon\" aria-hidden=\"true\"><img class=\"trailIcon\" src=\"./assets/trail-v1/unfinished-320.webp\" width=\"64\" height=\"64\" alt=\"\" decoding=\"async\"><svg viewBox=\"0 0 24 24\" focusable=\"false\"><rect x=\"3\" y=\"4\" width=\"13\" height=\"17\" rx=\"2\"/><path d=\"M7 2h5v4H7Zm0 8h5m-5 4h3\"/><circle cx=\"17\" cy=\"16\" r=\"5\"/><path d=\"M17 13v3l2 1\"/></svg></span><span><strong>Unfinished work</strong><small>Eric: review timed-out work and explicitly clear it</small></span></a>"
+          ]
+        },
+        {
+          "old_start": 86,
+          "old_count": 1,
+          "new_start": 86,
+          "new_count": 1,
+          "before": [
+            "  <script type=\"module\" src=\"./ops-hub.js?v=2026.11.11.hub-weather-details\"></script>"
+          ],
+          "after": [
+            "  <script type=\"module\" src=\"./ops-hub.js?v=2026.11.26.manager-admission\"></script>"
+          ]
+        }
+      ]
+    }
+  ]
+}

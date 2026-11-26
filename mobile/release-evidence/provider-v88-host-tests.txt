@@ -1,0 +1,12 @@
+Candidate source c24bc73e0acecf78b906c0f0cef2c0de65aa710c
+All native production Java compiled against Android API 36 with the existing pinned generated scope and dependencies.
+NativeProviderClockOwnerTest, NativeProviderTimeTest, NativeProviderJobLifecycleTest, NativeProviderRuntimeOwnerTest, NativeProviderBestEffortTest, NativeProviderAudioSequenceTest
+JUnit version 4.13.2
+......................................................................................
+Time: 3.227
+
+OK (86 tests)
+
+NativeRetainedEnrollmentRealmStoreTest
+PASS 98 storage assertions; SYNTHETIC_JCE_ONLY; Android/browser/owning-finalizer/reassignment NOT_QUALIFIED
+No package signing, hardware, installed app or live notification validation.
