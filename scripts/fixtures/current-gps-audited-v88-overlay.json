@@ -210,6 +210,11 @@
       "path": "scripts/operations-dashboard-tests.mjs",
       "bytes": 137126,
       "sha256": "8efdf40d2339c16cf6cc69b0c8d2793abcefc73e69cc32ca11d2c324b675dab5"
+    },
+    {
+      "path": "scripts/custodial-readiness-browser-tests.mjs",
+      "bytes": 72723,
+      "sha256": "f4d2732b2888703ca2453873bf350930139c73b47d526712f0c7143e93664a84"
     }
   ],
   "presentation_sources": [
@@ -3385,6 +3390,76 @@
           ],
           "after": [
             "  <script type=\"module\" src=\"./ops-hub.js?v=2026.11.26.manager-admission\"></script>"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-readiness-browser-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 72201,
+      "prior_sha256": "a405972e19956227ea4d29a2f409b4562d45ff45dcb4a81cc56703823cff933c",
+      "current_sha256": "f4d2732b2888703ca2453873bf350930139c73b47d526712f0c7143e93664a84",
+      "hunks": [
+        {
+          "old_start": 237,
+          "old_count": 0,
+          "new_start": 238,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "  + '\\n' + read('mobile/src/custodial/phone-presentation.js').replace(/^export /gm, '')"
+          ]
+        },
+        {
+          "old_start": 790,
+          "old_count": 2,
+          "new_start": 791,
+          "new_count": 3,
+          "before": [
+            "      const status = { initialized: true, ready: true, available: true, quarantined: false, state: 'enrolled', deviceId: 'KIOSK_08', generation: 1 };",
+            "      const listeners = new Map(); let subscriber; let queue = [];"
+          ],
+          "after": [
+            "      const principal = { device_id: 'KIOSK_08' };",
+            "      const status = { initialized: true, ready: true, available: true, quarantined: false, state: 'enrolled', deviceId: 'KIOSK_08', generation: 1, principal };",
+            "      const listeners = new Map(); let subscriber; let queue = []; let unlocked = false;"
+          ]
+        },
+        {
+          "old_start": 794,
+          "old_count": 1,
+          "new_start": 796,
+          "new_count": 2,
+          "before": [
+            "        ensureSecurityState: async () => ({ ...status }), subscribe: fn => { subscriber = fn; }, getPendingEnrollmentOperation: () => null };"
+          ],
+          "after": [
+            "        ensureSecurityState: async () => ({ ...status }), subscribe: fn => { subscriber = fn; }, getPendingEnrollmentOperation: () => null,",
+            "        mutateProtectedWork: async () => { throw new Error('This read-only fixture refuses protected writes.'); } };"
+          ]
+        },
+        {
+          "old_start": 801,
+          "old_count": 0,
+          "new_start": 805,
+          "new_count": 4,
+          "before": [],
+          "after": [
+            "        phonePresentation: async wake => {",
+            "          if (wake === 'synthetic-wake') unlocked = true;",
+            "          return { wake: 'synthetic-wake', unlocked };",
+            "        },"
+          ]
+        },
+        {
+          "old_start": 822,
+          "old_count": 0,
+          "new_start": 830,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "    await page.locator('#phone-lock').waitFor({ state: 'hidden' });"
           ]
         }
       ]

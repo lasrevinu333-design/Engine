@@ -235,6 +235,7 @@ if(process.argv.includes('--coverall-owner-lifetime-only')||process.argv.include
 const html = read('mobile/src/custodial/index.html').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
 const implementation = read('mobile/src/custodial/readiness.js').replace(/^export /gm, '')
   + '\n' + read('mobile/src/custodial/hourly-forecast-keyboard.js').replace(/^export /gm, '')
+  + '\n' + read('mobile/src/custodial/phone-presentation.js').replace(/^export /gm, '')
   + '\n' + read('mobile/src/custodial/app.js').replace(/^import .*;\s*$/gm, '');
 // Focused actual Source counterexample; no Chromium/native/manager authority.
 if(process.argv.includes('--home-refresh-source-only')){
@@ -787,11 +788,13 @@ try {
     await page.route('**/*', route => route.abort());
     await page.setContent(html);
     await page.evaluate(() => {
-      const status = { initialized: true, ready: true, available: true, quarantined: false, state: 'enrolled', deviceId: 'KIOSK_08', generation: 1 };
-      const listeners = new Map(); let subscriber; let queue = [];
+      const principal = { device_id: 'KIOSK_08' };
+      const status = { initialized: true, ready: true, available: true, quarantined: false, state: 'enrolled', deviceId: 'KIOSK_08', generation: 1, principal };
+      const listeners = new Map(); let subscriber; let queue = []; let unlocked = false;
       const profile = { authenticated: true, employee_name: 'Fixture Custodian', fixture_principal: 'p' };
       window.MemphisCustodialSecurity = { native: true, ready: Promise.resolve(), getStatus: () => ({ ...status }),
-        ensureSecurityState: async () => ({ ...status }), subscribe: fn => { subscriber = fn; }, getPendingEnrollmentOperation: () => null };
+        ensureSecurityState: async () => ({ ...status }), subscribe: fn => { subscriber = fn; }, getPendingEnrollmentOperation: () => null,
+        mutateProtectedWork: async () => { throw new Error('This read-only fixture refuses protected writes.'); } };
       window.MemphisUI = { resolveOpenScanSession: () => ({ state: 'open', session: { location_name: 'Original Place' } }), isUnstartedScanSession: () => false };
       window.MemphisScanSync = { ready: Promise.resolve(true), listActions: async () => queue,
         recoverLocalCompletionIntents: async () => {}, reconcileStartupRecovery: async () => ({ state: 'none' }) };
@@ -799,6 +802,10 @@ try {
         whenReady: async () => {}, resumePendingSecurityWorkflow: async () => {}, readCustodialHomeCache: () => ({ profile }),
         saveCustodialHomeCache: async () => true, requestJson: async path => path.startsWith('/device-auth/status') ? profile : { fixture: true },
         saveOfflineScanAuthoritySnapshot: async () => true,
+        phonePresentation: async wake => {
+          if (wake === 'synthetic-wake') unlocked = true;
+          return { wake: 'synthetic-wake', unlocked };
+        },
         getReadinessObservation: async () => ({ observation: 'CONFIRMED', read_only: true,
           native_clock_continuity: 'CONFIRMED', protected_work_admission: 'CLEAR',
           pending_occurrences: false, unfinished_occurrence: false, rollback_fence_active: false }) };
@@ -820,6 +827,7 @@ try {
     const unlockBox = await page.locator('#phone-unlock').boundingBox();
     assert.ok(unlockBox && unlockBox.x >= 0 && unlockBox.x + unlockBox.width <= viewport.width && unlockBox.y + unlockBox.height <= viewport.height, `Unlock remains reachable at ${viewport.width}`);
     await page.locator('#phone-unlock').click();
+    await page.locator('#phone-lock').waitFor({ state: 'hidden' });
     async function verify(label, target = '#home-readiness') {
       await page.waitForFunction(({ selector, label }) => document.querySelector(selector).textContent.startsWith(`${label} —`), { selector: target, label });
       assert.equal(await page.locator(target).isVisible(), true);
