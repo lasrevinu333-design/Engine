@@ -7,7 +7,11 @@ import {tmpdir} from 'node:os';
 
 const codemagic=readFileSync(new URL('../codemagic.yaml',import.meta.url),'utf8');
 const owner=codemagic.split(/^  custodial-first-test:\s*$/m)[1];
-assert.match(owner,/groups:\s*\n\s*- firebase_client_config/);
+assert.doesNotMatch(owner,/firebase_client_config/);
+assert.match(owner,/curl --fail --silent --show-error --proto '=https' --max-time 30 --max-filesize 1048576/);
+assert.match(owner,/https:\/\/memphis-zoo-mcp\.onrender\.com\/manager-notifications-api\/client-config\/android\?app_identifier=org\.memphiszoo\.custodial/);
+assert.ok(owner.indexOf('configure-firebase.mjs android --verify-only') < owner.indexOf('>> "$CM_ENV"'));
+assert.ok(owner.indexOf('>> "$CM_ENV"') < owner.indexOf('node mobile/scripts/build-custodial-first-test.mjs'));
 assert.match(owner,/MZ_REQUIRE_PINNED_FIREBASE_CONFIG: '1'/);
 const wrapper=readFileSync(new URL('../mobile/scripts/build-custodial-first-test.mjs',import.meta.url),'utf8');
 assert.ok(wrapper.indexOf("'android','--verify-only'")<wrapper.indexOf("node('build.mjs')"));
