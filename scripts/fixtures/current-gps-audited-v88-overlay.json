@@ -201,8 +201,13 @@
     },
     {
       "path": "scripts/current-gps-historical-preservation-tests.mjs",
-      "bytes": 2475,
-      "sha256": "346986f685dcfd80f7f2cf9d999616f5fc9665bbb5b77adf644360881593120d"
+      "bytes": 2871,
+      "sha256": "7377078d30f4c6b26a45071e6428aae4473337cf65189e9d4730faba8726e216"
+    },
+    {
+      "path": "employee-schedule.html",
+      "bytes": 58436,
+      "sha256": "19596bfbcd67ad9fa3b0cdc6f91534f507d507e278040d95d47da58685846a89"
     }
   ],
   "core_sources": [
@@ -3573,23 +3578,34 @@
       "kind": "changed",
       "prior_bytes": 2348,
       "prior_sha256": "27fe0ef64824a709b914bb022a5d7e10d2599546ccc0e73b829a29dcee76b8bc",
-      "current_sha256": "346986f685dcfd80f7f2cf9d999616f5fc9665bbb5b77adf644360881593120d",
+      "current_sha256": "7377078d30f4c6b26a45071e6428aae4473337cf65189e9d4730faba8726e216",
       "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 0,
+          "new_start": 5,
+          "new_count": 1,
+          "before": [],
+          "after": [
+            "import {createHash} from 'node:crypto';"
+          ]
+        },
         {
           "old_start": 14,
           "old_count": 0,
-          "new_start": 15,
-          "new_count": 2,
+          "new_start": 16,
+          "new_count": 3,
           "before": [],
           "after": [
             " const added=new Set([...profile.deltas,...profile.auditRepairHistory,...profile.releaseRepairHistory]",
-            "  .filter(row=>row.kind==='added').map(row=>row.path));"
+            "  .filter(row=>row.kind==='added').map(row=>row.path));",
+            " const currentPaths=new Set([...profile.main_java,...profile.test_java,...profile.auxiliary,...profile.core_sources,...profile.presentation_sources].map(row=>row.path));"
           ]
         },
         {
           "old_start": 16,
           "old_count": 2,
-          "new_start": 18,
+          "new_start": 20,
           "new_count": 5,
           "before": [
             "  if(profile.deltas.some(d=>d.path===row.path&&d.kind==='added'))continue;",
@@ -3599,11 +3615,66 @@
             "  if(added.has(row.path))continue;",
             "  const target=join(temporary,row.path);mkdirSync(dirname(target),{recursive:true});",
             "  const bytes=readFileSync(join(root,row.path)),text=bytes.toString('utf8');",
-            "  const prior=normalize(row.path,text);",
+            "  const prior=currentPaths.has(row.path)?normalize(row.path,text):text;",
             "  writeFileSync(target,prior===text?bytes:prior);"
+          ]
+        },
+        {
+          "old_start": 19,
+          "old_count": 1,
+          "new_start": 26,
+          "new_count": 7,
+          "before": [
+            " for(const row of profile.legacy_execution_sources){const target=join(temporary,row.path);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,readFileSync(join(root,row.archive_path)));}"
+          ],
+          "after": [
+            " for(const row of profile.legacy_execution_sources){",
+            "  const bytes=readFileSync(join(root,row.archive_path));",
+            "  assert.equal(createHash('sha256').update(bytes).digest('hex'),row.sha256,'Exact archived execution source: '+row.path);",
+            "  const target=join(temporary,row.path);",
+            "  mkdirSync(dirname(target),{recursive:true});",
+            "  writeFileSync(target,bytes);",
+            " }"
           ]
         }
       ]
+    },
+    {
+      "path": "employee-schedule.html",
+      "kind": "changed",
+      "prior_bytes": 58306,
+      "prior_sha256": "f3e2f628eccc006054e7ddb802a1052c9575a05a0067a36902b84e73651696d8",
+      "current_sha256": "19596bfbcd67ad9fa3b0cdc6f91534f507d507e278040d95d47da58685846a89",
+      "hunks": [
+        {
+          "old_start": 549,
+          "old_count": 1,
+          "new_start": 549,
+          "new_count": 3,
+          "before": [
+            "        if(!ownsRecovery())return;"
+          ],
+          "after": [
+            "        if(error?.code==='schedule_atomic_storage_unavailable'){",
+            "          clearPresentation();state('Saved schedule could not be verified.',true);return;",
+            "        }"
+          ]
+        }
+      ]
+    }
+  ],
+  "legacy_proofs": [
+    {
+      "path": "scripts/fixtures/current-gps-predecessors/native-audio-sequence-source-boundary.mjs",
+      "bytes": 1968,
+      "sha256": "f2d8a239a2fdfc593638843f44a6c26c57ca0f2ee2d205f42ecd0165e071df1d"
+    }
+  ],
+  "legacy_execution_sources": [
+    {
+      "path": "scripts/native-audio-sequence-source-boundary.mjs",
+      "archive_path": "scripts/fixtures/current-gps-predecessors/native-audio-sequence-source-boundary.mjs",
+      "sha256": "f2d8a239a2fdfc593638843f44a6c26c57ca0f2ee2d205f42ecd0165e071df1d"
     }
   ]
 }

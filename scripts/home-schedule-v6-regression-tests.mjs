@@ -99,10 +99,23 @@ await test('H05 unavailable write failure then restart and failed fetch cannot r
  await fresh.load();assert.equal(fresh.node('content').hidden,true);assert.equal(fresh.cache().recurring_target.target.authorityRevision,19);
 });
 await test('H05 durable read fence survives process death before response',async()=>{
- const f=fixture();await f.load();f.context.fetch=()=>new Promise(()=>{});void f.load();await pause();
- const fresh=fixture();for(const [k,v]of f.stored)fresh.stored.set(k,v);fresh.context.fetch=async()=>{throw Error('offline');};
+ const f=fixture();await f.load();
+ let entered;
+ const requested=new Promise(resolve=>{entered=resolve;});
+ f.context.fetch=(_url,{signal})=>new Promise((_,reject)=>{
+  signal.addEventListener('abort',()=>reject(Error('original page closed')),{once:true});
+  entered();
+ });
+ const original=f.load();
+ await requested;
+ // Capture the durable state before the page disappears. Retiring the
+ // original releases its read lock before the new offline page starts.
+ const retained=[...f.stored];
+ assert.equal(retained.some(([k,value])=>k.startsWith('mz_employee_schedule_snapshot:availability:')&&JSON.parse(value).state==='READING'),true);
+ f.events.get('pagehide')();
+ await original;
+ const fresh=fixture();for(const [k,v]of retained)fresh.stored.set(k,v);fresh.context.fetch=async()=>{throw Error('offline');};
  await fresh.load();assert.equal(fresh.node('content').hidden,true);
- f.events.get('pagehide')();await pause();
 });
 await test('H05 failed read-ahead with prior snapshot does not issue an unfenced request',async()=>{
  const f=fixture();await f.load();f.calls.length=0;f.writeFails=true;await f.load();assert.equal(f.calls.includes('GET'),false);assert.equal(f.node('content').hidden,true);

@@ -38,7 +38,7 @@ const RETAINED_FEEDBACK_PROFILE_SHA='bfa5fa1084c8953a9243e8469742383717d2b5ec4b8
 const WEB_LIFECYCLE_PROFILE_SHA='a414732e10fde9ddf4978fd67985984573588198e2c48bbad7181b2b3556dbb3';
 const MANAGER_RECOVERY_PROFILE_SHA='190aad455944e05763a647ce2313257a94107f800f7095837afab4c6677a4670';
 const STAFFING_TRANSITION_PROFILE_SHA='36197b398477eb4f42fa22d3ca1beeae15eba900e6ce3b2be48eb1b3588d509d';
-const AUDITED_V88_PROFILE_SHA='22ae683ba180b34b0c360cd2bcfd4088343db30297bea8ab18762e41396335c7';
+const AUDITED_V88_PROFILE_SHA='fb1813549e71ae2e1a64aa757b316645ecb3f5f71b036c6bfc92cf90e18f15df';
 const BASECAMP_R34_PROFILE_SHA='113e0647421cfbb6b3dc8cfc2a21757e15446f27bd65c64bc150ba41af4a2f36';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
@@ -112,6 +112,7 @@ function applyNotificationOverlay(profile,relativePath,expected){
   result[key]=[...rows.values()];
  }
  result.basename_aliases={...profile.basename_aliases,...overlay.basename_aliases};
+ if(overlay.legacy_execution_sources)result.legacy_execution_sources=[...profile.legacy_execution_sources,...overlay.legacy_execution_sources];
  if(overlay.presentationHistory)result.presentationHistory=overlay.presentationHistory;
  if(overlay.voiceHistory)result.voiceHistory=overlay.voiceHistory;
  if(overlay.clockHistory)result.clockHistory=overlay.clockHistory;

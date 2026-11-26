@@ -546,7 +546,9 @@
       }catch(error){
         const ownsRecovery=ownsLifecycle;
         if(!ownsRecovery())return;
-        if(!ownsRecovery())return;
+        if(error?.code==='schedule_atomic_storage_unavailable'){
+          clearPresentation();state('Saved schedule could not be verified.',true);return;
+        }
         let cached=null;try{cached=snapshot(ownsRecovery);}catch{ /* Unknown disk state is not empty authority. */ }
         if(!ownsRecovery())return;
         const usable=available(ownsRecovery)&&ownsRecovery()&&!authorityUnavailable(ownsRecovery);if(!ownsRecovery())return;

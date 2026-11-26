@@ -58,10 +58,12 @@ await test('F3 post-save disk rollback forbids application receipt',async()=>{
  assert.equal(f.context.testPage.snapshot().cache_unconfirmed,true);assert.ok(!f.calls.some(x=>x.endsWith('application-receipt')));
 });
 await test('F3 Home lower disk is stale, exact restoration reconfirms',async()=>{
- const f=home();await f.owner.accept(legacy(30),f.who);const exact=f.memory.get(f.key);
- f.memory.set(f.key,JSON.stringify(row(legacy(29),f.who.protectedBinding)));assert.equal(f.owner.resolve(f.who,null).stale,true);
- f.memory.delete(f.key);assert.equal(f.owner.resolve(f.who,null).stale,true);
- f.memory.set(f.key,exact);assert.equal(f.owner.resolve(f.who,null).stale,false);
+ const f=home(),confirmed=await f.owner.accept(legacy(30),f.who);const exact=f.memory.get(f.key);
+ assert.equal(confirmed.stale,false);
+ f.memory.set(f.key,JSON.stringify(row(legacy(29),f.who.protectedBinding)));assert.equal(f.owner.resolve(f.who,confirmed).stale,true);
+ f.memory.delete(f.key);assert.equal(f.owner.resolve(f.who,confirmed).stale,true);
+ f.memory.set(f.key,exact);assert.equal(f.owner.resolve(f.who,confirmed).stale,false);
+ assert.equal(f.owner.resolve(f.who,null).stale,true,'restored cache alone does not establish a fresh transport result');
 });
 await test('F4 equal authority PENDING cannot regress receipt or duplicate ACK',async()=>{
  const f=fixture(),d=legacy();d.schedule_application.application_status='DEVICE_REPORTED_APPLIED';d.schedule_application.received_at='2026-09-28T17:00:00Z';
