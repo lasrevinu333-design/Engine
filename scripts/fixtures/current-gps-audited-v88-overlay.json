@@ -188,6 +188,21 @@
       "path": "mobile/release-evidence/provider-v88-host-tests.txt",
       "bytes": 968,
       "sha256": "3f3d6387b93f704947e3cab647b5a13e247fc11b73d1c66f5c759929c3ad7153"
+    },
+    {
+      "path": "scripts/custodial-core-release-gate.mjs",
+      "bytes": 7214,
+      "sha256": "24cee270cf857551ec33538748607045867b728be6552acbcff385c2a0272178"
+    },
+    {
+      "path": "scripts/custodial-core-release-gate-tests.mjs",
+      "bytes": 15936,
+      "sha256": "009e9fe846290bd23a7fb48dc6fc87a8d0ca3096fcc0ab7ccf65f3502bcf610e"
+    },
+    {
+      "path": "scripts/current-gps-historical-preservation-tests.mjs",
+      "bytes": 2475,
+      "sha256": "346986f685dcfd80f7f2cf9d999616f5fc9665bbb5b77adf644360881593120d"
     }
   ],
   "core_sources": [
@@ -215,6 +230,11 @@
       "path": "scripts/custodial-readiness-browser-tests.mjs",
       "bytes": 72937,
       "sha256": "83e6fd381fc35696b8967b63ee520866db9d8187ace9f4a3e6ef7214a4082112"
+    },
+    {
+      "path": "scripts/custodial-core-release-gate.mjs",
+      "bytes": 7214,
+      "sha256": "24cee270cf857551ec33538748607045867b728be6552acbcff385c2a0272178"
     }
   ],
   "presentation_sources": [
@@ -3472,6 +3492,115 @@
           "before": [],
           "after": [
             "    await page.locator('#phone-lock').waitFor({ state: 'hidden' });"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-core-release-gate.mjs",
+      "kind": "changed",
+      "prior_bytes": 7091,
+      "prior_sha256": "685111405228dc5b7820765a0f6874036d9d15ab6246a02c78affe61d63a1a8a",
+      "current_sha256": "24cee270cf857551ec33538748607045867b728be6552acbcff385c2a0272178",
+      "hunks": [
+        {
+          "old_start": 95,
+          "old_count": 4,
+          "new_start": 95,
+          "new_count": 8,
+          "before": [
+            "// Maintenance executes the mirror and composition proofs as nested processes.",
+            "// That complete check measured 44 seconds locally and exceeded 45 under load.",
+            "const PROVIDER_MAINTENANCE_SUITE = 'scripts/provider-maintenance-contract-tests.mjs';",
+            "const PROVIDER_MAINTENANCE_TIMEOUT_MS = 60_000;"
+          ],
+          "after": [
+            "// The exact portable proofs run their dependencies as nested Node processes.",
+            "// The observed full run took 49s for composition, 84s for mirror, and 75s for",
+            "// maintenance. The total release-gate deadline remains ten minutes.",
+            "const EXTENDED_SUITE_TIMEOUT_MS = new Map([",
+            "  ['scripts/provider-composition-contract-tests.mjs', 60_000],",
+            "  ['scripts/provider-mirror-contract-tests.mjs', 120_000],",
+            "  ['scripts/provider-maintenance-contract-tests.mjs', 120_000],",
+            "]);"
+          ]
+        },
+        {
+          "old_start": 123,
+          "old_count": 3,
+          "new_start": 127,
+          "new_count": 1,
+          "before": [
+            "    const suiteTimeout = suite === PROVIDER_MAINTENANCE_SUITE",
+            "      ? PROVIDER_MAINTENANCE_TIMEOUT_MS",
+            "      : CORE_SUITE_TIMEOUT_MS;"
+          ],
+          "after": [
+            "    const suiteTimeout = EXTENDED_SUITE_TIMEOUT_MS.get(suite) ?? CORE_SUITE_TIMEOUT_MS;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/custodial-core-release-gate-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 15809,
+      "prior_sha256": "f3778050d523fe77445cf5a7c56fc364d722213722207371a7fb38ee7284bf09",
+      "current_sha256": "009e9fe846290bd23a7fb48dc6fc87a8d0ca3096fcc0ab7ccf65f3502bcf610e",
+      "hunks": [
+        {
+          "old_start": 141,
+          "old_count": 3,
+          "new_start": 141,
+          "new_count": 5,
+          "before": [
+            "    const expectedTimeout = CORE_SUITES[index] === 'scripts/provider-maintenance-contract-tests.mjs'",
+            "      ? 60_000",
+            "      : CORE_SUITE_TIMEOUT_MS;"
+          ],
+          "after": [
+            "    const expectedTimeout = {",
+            "      'scripts/provider-composition-contract-tests.mjs': 60_000,",
+            "      'scripts/provider-mirror-contract-tests.mjs': 120_000,",
+            "      'scripts/provider-maintenance-contract-tests.mjs': 120_000,",
+            "    }[CORE_SUITES[index]] ?? CORE_SUITE_TIMEOUT_MS;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/current-gps-historical-preservation-tests.mjs",
+      "kind": "changed",
+      "prior_bytes": 2348,
+      "prior_sha256": "27fe0ef64824a709b914bb022a5d7e10d2599546ccc0e73b829a29dcee76b8bc",
+      "current_sha256": "346986f685dcfd80f7f2cf9d999616f5fc9665bbb5b77adf644360881593120d",
+      "hunks": [
+        {
+          "old_start": 14,
+          "old_count": 0,
+          "new_start": 15,
+          "new_count": 2,
+          "before": [],
+          "after": [
+            " const added=new Set([...profile.deltas,...profile.auditRepairHistory,...profile.releaseRepairHistory]",
+            "  .filter(row=>row.kind==='added').map(row=>row.path));"
+          ]
+        },
+        {
+          "old_start": 16,
+          "old_count": 2,
+          "new_start": 18,
+          "new_count": 5,
+          "before": [
+            "  if(profile.deltas.some(d=>d.path===row.path&&d.kind==='added'))continue;",
+            "  const target=join(temporary,row.path);mkdirSync(dirname(target),{recursive:true});const bytes=readFileSync(join(root,row.path));writeFileSync(target,profile.deltas.some(d=>d.path===row.path)?normalize(row.path,bytes.toString('utf8')):bytes);"
+          ],
+          "after": [
+            "  if(added.has(row.path))continue;",
+            "  const target=join(temporary,row.path);mkdirSync(dirname(target),{recursive:true});",
+            "  const bytes=readFileSync(join(root,row.path)),text=bytes.toString('utf8');",
+            "  const prior=normalize(row.path,text);",
+            "  writeFileSync(target,prior===text?bytes:prior);"
           ]
         }
       ]

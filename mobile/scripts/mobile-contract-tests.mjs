@@ -322,7 +322,9 @@ assert.match(managerJs, /window\.MemphisAuth\?\.requireOpsManagerSession\?\.\(\{
 assert.match(managerHtml, /ops-manager-hub\.html\?return=index\.html/,'Interactive enrollment stays at the shared-PIN named entry');
 assert.match(managerJs, /credentials: 'include'/);
 assert.doesNotMatch(managerJs, /SecureStorage|device_credential|sessionStorage|X-Memphis-Device-Credential|mobile-auth-api/);
-assert.match(managerJs, /Existing phone access was kept/);
+const managerRefresh = managerJs.slice(managerJs.indexOf('async function refresh() {'), managerJs.indexOf('function setEnrollStatus'));
+assert.match(managerRefresh, /showBoot\('Manager access could not be checked\. Try again when connected\.', true\)/);
+assert.doesNotMatch(managerRefresh, /clearSession|logout\(/, 'transient refresh never removes the existing enrollment');
 assert.match(managerJs, /Could not remove this phone\. Phone access was kept/);
 assert.match(managerHtml, />Update Page</);
 assert.doesNotMatch(managerHtml, /Refresh Session/);

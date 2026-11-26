@@ -92,10 +92,14 @@ export const CORE_SUITES = Object.freeze([
 ].map(name => `scripts/${name}.mjs`));
 export const CORE_SUITE_TIMEOUT_MS = 45_000;
 export const CORE_TOTAL_TIMEOUT_MS = 600_000;
-// Maintenance executes the mirror and composition proofs as nested processes.
-// That complete check measured 44 seconds locally and exceeded 45 under load.
-const PROVIDER_MAINTENANCE_SUITE = 'scripts/provider-maintenance-contract-tests.mjs';
-const PROVIDER_MAINTENANCE_TIMEOUT_MS = 60_000;
+// The exact portable proofs run their dependencies as nested Node processes.
+// The observed full run took 49s for composition, 84s for mirror, and 75s for
+// maintenance. The total release-gate deadline remains ten minutes.
+const EXTENDED_SUITE_TIMEOUT_MS = new Map([
+  ['scripts/provider-composition-contract-tests.mjs', 60_000],
+  ['scripts/provider-mirror-contract-tests.mjs', 120_000],
+  ['scripts/provider-maintenance-contract-tests.mjs', 120_000],
+]);
 export function coreChildEnvironment(environment = process.env) {
   // Do not inherit baseline, optional database, npm, or Node preload overrides.
   return {
@@ -120,9 +124,7 @@ export function runCoreReleaseGate({ execute = spawnSync, log = console.log,
       throw new Error(`Core regression time budget exhausted before ${suite}`);
     }
     log(`CORE_SUITE ${index + 1}/${CORE_SUITES.length} ${suite}`);
-    const suiteTimeout = suite === PROVIDER_MAINTENANCE_SUITE
-      ? PROVIDER_MAINTENANCE_TIMEOUT_MS
-      : CORE_SUITE_TIMEOUT_MS;
+    const suiteTimeout = EXTENDED_SUITE_TIMEOUT_MS.get(suite) ?? CORE_SUITE_TIMEOUT_MS;
     let result;
     try {
       result = execute(process.execPath, [resolve(CORE_ROOT, suite)], {

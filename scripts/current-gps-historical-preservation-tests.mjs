@@ -12,9 +12,14 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');assertCurrentGp
 const temporary=mkdtempSync(join(tmpdir(),'custodial-pre-gps-historical-'));
 try{
  cpSync(join(root,'scripts'),join(temporary,'scripts'),{recursive:true});writeFileSync(join(temporary,'package.json'),'{"type":"module"}\n');
+ const added=new Set([...profile.deltas,...profile.auditRepairHistory,...profile.releaseRepairHistory]
+  .filter(row=>row.kind==='added').map(row=>row.path));
  for(const row of [...profile.legacy_proofs,...profile.main_java,...profile.test_java,...profile.auxiliary]){
-  if(profile.deltas.some(d=>d.path===row.path&&d.kind==='added'))continue;
-  const target=join(temporary,row.path);mkdirSync(dirname(target),{recursive:true});const bytes=readFileSync(join(root,row.path));writeFileSync(target,profile.deltas.some(d=>d.path===row.path)?normalize(row.path,bytes.toString('utf8')):bytes);
+  if(added.has(row.path))continue;
+  const target=join(temporary,row.path);mkdirSync(dirname(target),{recursive:true});
+  const bytes=readFileSync(join(root,row.path)),text=bytes.toString('utf8');
+  const prior=normalize(row.path,text);
+  writeFileSync(target,prior===text?bytes:prior);
  }
  for(const row of profile.legacy_execution_sources){const target=join(temporary,row.path);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,readFileSync(join(root,row.archive_path)));}
  for(const script of ['current-approved-preservation-source-tests.mjs','current-provider-comparison-source-tests.mjs']){
