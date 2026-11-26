@@ -86,8 +86,8 @@
   "auxiliary": [
     {
       "path": "codemagic.yaml",
-      "bytes": 48341,
-      "sha256": "f8d4bf62c31f4d6df0514f990185f499d78e46cf4a92d326cd717701d8a635e0"
+      "bytes": 49285,
+      "sha256": "d19dd51a8628b5c9d9277e4286c1ad6a8262edc909539f2aaeebb0b5aebdc9c9"
     },
     {
       "path": "dashboard-map-page.js",
@@ -245,23 +245,12 @@
       "kind": "changed",
       "prior_bytes": 48025,
       "prior_sha256": "601c0d78bc7d531537b21f2f4670eae6a278f8647134b46f4be95ce0293424d2",
-      "current_sha256": "f8d4bf62c31f4d6df0514f990185f499d78e46cf4a92d326cd717701d8a635e0",
+      "current_sha256": "d19dd51a8628b5c9d9277e4286c1ad6a8262edc909539f2aaeebb0b5aebdc9c9",
       "hunks": [
-        {
-          "old_start": 973,
-          "old_count": 0,
-          "new_start": 974,
-          "new_count": 2,
-          "before": [],
-          "after": [
-            "      groups:",
-            "        - firebase_client_config"
-          ]
-        },
         {
           "old_start": 977,
           "old_count": 1,
-          "new_start": 979,
+          "new_start": 977,
           "new_count": 2,
           "before": [
             "        MZ_BUILD_NUMBER: '87'"
@@ -274,7 +263,7 @@
         {
           "old_start": 993,
           "old_count": 0,
-          "new_start": 997,
+          "new_start": 995,
           "new_count": 4,
           "before": [],
           "after": [
@@ -282,6 +271,31 @@
             "        script: |",
             "          node scripts/provider-best-effort-release-tests.mjs",
             "          node scripts/current-gps-source-qualification-tests.mjs"
+          ]
+        },
+        {
+          "old_start": 995,
+          "old_count": 0,
+          "new_start": 1001,
+          "new_count": 16,
+          "before": [],
+          "after": [
+            "      - name: Provision the digest-pinned Android Firebase client config",
+            "        script: |",
+            "          #!/usr/bin/env bash",
+            "          set -euo pipefail",
+            "          umask 077",
+            "          firebase_config=\"$(mktemp)\"",
+            "          trap 'rm -f -- \"$firebase_config\"' EXIT",
+            "          # This is the published application client configuration. The tracked",
+            "          # digest lock and package check must pass before it reaches the build.",
+            "          curl --fail --silent --show-error --proto '=https' --max-time 30 --max-filesize 1048576 \\",
+            "            'https://memphis-zoo-mcp.onrender.com/manager-notifications-api/client-config/android?app_identifier=org.memphiszoo.custodial' \\",
+            "            --output \"$firebase_config\"",
+            "          unset GOOGLE_SERVICES_JSON",
+            "          export GOOGLE_SERVICES_JSON_B64=\"$(base64 < \"$firebase_config\" | tr -d '\\r\\n')\"",
+            "          node mobile/scripts/configure-firebase.mjs android --verify-only",
+            "          printf 'GOOGLE_SERVICES_JSON_B64=%s\\n' \"$GOOGLE_SERVICES_JSON_B64\" >> \"$CM_ENV\""
           ]
         }
       ]
