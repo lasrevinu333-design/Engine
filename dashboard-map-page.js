@@ -105,7 +105,7 @@
         const headers=await bounded(()=>auth.opsManagerAuthHeaders({expectedManagerId:owner.manager_id}),signal);
         if(!currentRead())return false;
         void operations?.refresh({headers,fetchImpl,preserveSummary:true,
-          isCurrent:currentRead}).catch(()=>{});
+          isCurrent:currentRead,onAuthorityError:authorityLost}).catch(()=>{});
         // Phone location is independent of cleaning summary and optional work history.
         let gpsOpen=true,gpsVersion=-1;
         const receiveGps=context=>{const version=context?.historyVersion||0;

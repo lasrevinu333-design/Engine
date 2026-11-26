@@ -9,7 +9,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
   const sourceInstant = value => typeof value === 'string' && /(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value)) ? Date.parse(value) : null;
   const localDay = time => new Intl.DateTimeFormat('en-CA', {timeZone:ZONE,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(time));
   const state={currentDeviceId:'',session:null,sessionBinding:'',admittedOwnerBinding:'',auth:null,authMethods:null,generation:0,retired:false,suspended:false,resumeBinding:'',verifying:true,renewing:null};
-  const authMethodNames=['getDeviceId','readSession','isOpsManager','requireOpsManagerSession','hasRole','canMutateOpsManagerSurface','isCustodialManagementAdmin'];
+  const authMethodNames=['getDeviceId','readSession','isOpsManager','requireOpsManagerSession','hasRole','canMutateOpsManagerSurface','isCustodialManagementAdmin','hasPermission'];
   const intervals=new Set();
   const els={
     accessMode:document.getElementById('access-mode'),managerName:document.getElementById('manager-name'),managerTitle:document.getElementById('manager-title'),
@@ -17,6 +17,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     attendanceValue:document.getElementById('attendance-value'),attendanceMeta:document.getElementById('attendance-meta'),hubStatus:document.getElementById('hub-status'),buildStamp:document.getElementById('build-stamp'),
     messagesLink:document.getElementById('messages-link'),scheduleLink:document.getElementById('schedule-link'),eventsLink:document.getElementById('events-link'),
     dashboardLink:document.getElementById('dashboard-link'),dashboardMapLink:document.getElementById('dashboard-map-link'),insightsLink:document.getElementById('insights-link'),guestIssuesLink:document.getElementById('guest-issues-link'),feedbackLink:document.getElementById('feedback-link'),
+    staffingLink:document.getElementById('staffing-link'),unfinishedWorkLink:document.getElementById('unfinished-work-link'),
     notificationsLink:document.getElementById('notifications-link'),phoneAssignmentsLink:document.getElementById('phone-assignments-link'),
     deviceSecurityLink:document.getElementById('device-security-link'),releaseCanaryLink:document.getElementById('release-canary-link'),geminiConsoleLink:document.getElementById('gemini-console-link'),
   };
@@ -32,7 +33,7 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
   const coverageHref=coverageLink?.href;
   const managerLinks=[els.messagesLink,els.scheduleLink,els.eventsLink,els.dashboardLink,els.dashboardMapLink,els.insightsLink,
     els.guestIssuesLink,els.feedbackLink,els.notificationsLink,els.phoneAssignmentsLink,
-    els.deviceSecurityLink,els.releaseCanaryLink,els.geminiConsoleLink,coverageLink].filter(Boolean);
+    els.deviceSecurityLink,els.releaseCanaryLink,els.geminiConsoleLink,els.staffingLink,els.unfinishedWorkLink,coverageLink].filter(Boolean);
   // A rejection fence only. MemphisAuth remains the session/role authority;
   // an unchanged local snapshot does not prove current backend permission.
   function sessionBinding(session){
@@ -131,7 +132,9 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     const deviceSecurityUrl=new URL('./device-security.html',window.location.href);
     const releaseCanaryUrl=new URL('./admin.html#release-canary-controls',window.location.href);
     const geminiConsoleUrl=new URL('./gemini-admin.html',window.location.href);
-    const urls=[messagesUrl,scheduleUrl,eventsUrl,dashboardUrl,dashboardMapUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl];
+    const staffingUrl=new URL('./staffing-management.html',window.location.href);
+    const unfinishedWorkUrl=new URL('./unfinished-work.html',window.location.href);
+    const urls=[messagesUrl,scheduleUrl,eventsUrl,dashboardUrl,dashboardMapUrl,insightsUrl,guestIssuesUrl,feedbackUrl,notificationsUrl,phoneAssignmentsUrl,deviceSecurityUrl,releaseCanaryUrl,geminiConsoleUrl,staffingUrl,unfinishedWorkUrl];
     for(const url of urls)url.searchParams.set('hub','manager');
     if(state.currentDeviceId){for(const url of urls)url.searchParams.set('device',state.currentDeviceId);}
     els.messagesLink.href=messagesUrl.toString();
@@ -147,6 +150,8 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     els.deviceSecurityLink.href=deviceSecurityUrl.toString();
     els.releaseCanaryLink.href=releaseCanaryUrl.toString();
     els.geminiConsoleLink.href=geminiConsoleUrl.toString();
+    if(els.staffingLink)els.staffingLink.href=staffingUrl.toString();
+    if(els.unfinishedWorkLink)els.unfinishedWorkLink.href=unfinishedWorkUrl.toString();
     for(const link of managerLinks){link.hidden=false;link.removeAttribute('aria-disabled');}
     if(coverageLink&&coverageHref)coverageLink.href=coverageHref;
     // A current positive feature response, not old display state, exposes it.
@@ -161,6 +166,14 @@ import { installManagerWeather } from './mobile/src/manager/home-weather.js?v=20
     const director=window.MemphisAuth.hasRole('DIRECTOR',session);
     const security=window.MemphisAuth.hasRole('SECURITY_ADMIN',session);
     for(const element of [els.insightsLink,els.phoneAssignmentsLink,els.geminiConsoleLink])if(element)element.hidden=!custodial;
+    const staffingRead=window.MemphisAuth.hasPermission?.('read',session)===true&&!!session.credential_id
+      &&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.manager_id||'')
+      &&Date.parse(session.expires_at)>Date.now()
+      &&window.MemphisCustodialSecurity?.native!==true&&window.MemphisMobile?.edition!=='custodial'
+      &&window.MemphisMobileBuildIdentity?.edition!=='custodial'&&window.Capacitor?.isNativePlatform?.()!==true;
+    for(const [link,permitted] of [[els.staffingLink,staffingRead],[els.unfinishedWorkLink,owner]]){
+      if(link&&!permitted){link.hidden=true;link.removeAttribute('href');link.setAttribute('aria-disabled','true');}
+    }
     if(els.deviceSecurityLink)els.deviceSecurityLink.hidden=!(custodial||security);
     if(els.releaseCanaryLink)els.releaseCanaryLink.hidden=!(director||security);
   }

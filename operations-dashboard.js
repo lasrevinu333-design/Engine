@@ -106,7 +106,12 @@
       if(pending(board)&&received(board))v.note+=' Updating… Showing the last received records.';
       if(delayedFeeds.has(board))v.note+=' Update delayed. Showing the last received records.';
       const fingerprint=JSON.stringify(v);if(!force&&fingerprint===boardFingerprint)return;
-      boardFingerprint=fingerprint;const top=content.scrollTop,focused=document.activeElement?.dataset?.locationSelect;
+      boardFingerprint=fingerprint;
+      const top=content.scrollTop,focused=document.activeElement;
+      const oldHistory=content.querySelector('details');
+      const oldSummary=oldHistory?.querySelector('summary');
+      const restoreFocus=focused&&focused!==content&&content.contains?.(focused);
+      const focusedLocation=focused?.dataset?.locationSelect;
       txt('operations-board-title',v.title);txt('operations-board-note',v.note);
       const cardNode=card=>{
         const article=make('article',null,'boardCard');article.dataset.state=card.state;
@@ -116,10 +121,19 @@
         return article;
       };
       const nodes=v.cards.length?v.cards.map(cardNode):[make('p',v.pending?v.note:'No active rows to display. Check the source status above.','boardCard')];
-      if(v.history?.length){const history=make('details');history.append(make('summary',`${board==='schools'?'Daily visit history':'Event history'} · ${v.history.length} records (not active)`),...v.history.map(cardNode));nodes.push(history);}
+      let historySummary;
+      if(v.history?.length){
+        const history=make('details');history.open=oldHistory?.open===true;
+        historySummary=make('summary',`${board==='schools'?'Daily visit history':'Event history'} · ${v.history.length} records (not active)`);
+        history.append(historySummary,...v.history.map(cardNode));nodes.push(history);
+      }
       content.replaceChildren(...nodes);
       content.scrollTop=top;
-      if(focused)Array.from(content.querySelectorAll('[data-location-select]')).find(n=>n.dataset.locationSelect===focused)?.focus({preventScroll:true});
+      if(restoreFocus){
+        const location=focusedLocation&&Array.from(content.querySelectorAll('[data-location-select]')).find(n=>n.dataset.locationSelect===focusedLocation);
+        const replacement=focused===oldSummary?historySummary:location;
+        (replacement||content).focus({preventScroll:true});
+      }
     }
     function renderHighLow(){txt('ops-weather-high-low',lastWeather?.day===DATA.localDate(now())?lastWeather.highLow:pendingFeeds.has('weather')?'Loading high/low…':'High/low unavailable.');}
     function currentAttendance(){
@@ -207,7 +221,7 @@
       if(typeof isCurrent!=='function'||!isCurrent()||!bound())return false;
       pendingFeeds.delete('summary');summary=next;cleaning=cleaningView(next,approved(),now());renderFeeds();return true;
     }
-    async function refresh({headers,fetchImpl,isCurrent,summary:next,preserveSummary=false}){
+    async function refresh({headers,fetchImpl,isCurrent,summary:next,preserveSummary=false,onAuthorityError}){
       if(!active||closed)return;cancel();const generation=epoch;abort=new AbortController();const signal=abort.signal;
       currentRead={epoch:generation,isCurrent};
       if(typeof isCurrent!=='function'||!bound()){unavailable();return;}
@@ -223,11 +237,16 @@
       txt('ops-weather',lastWeather?lastWeather.value:'Loading…');txt('ops-weather-note',lastWeather?`${lastWeather.note} · Updating… Last received forecast.`:'Loading weather…');
       txt('ops-hour',lastWeather?`${lastWeather.hour} · Updating…`:'Loading next-hour forecast…');
       renderFeeds();
-      const load=async(url,privateFeed=true)=>{const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(publicRead?{credentials:'omit'}:privateFeed?{headers}:{})});
-        if(!response.ok)throw new Error('feed_unavailable');return response.json();};
       const publish=()=>{
         if(closed||!active||generation!==epoch)return false;
         if(!bound()){unavailable();return false;}return true;
+      };
+      const load=async(url,privateFeed=true,requireManager=false)=>{
+        const response=await fetchImpl(url,{method:'GET',cache:'no-store',redirect:'error',signal,...(publicRead?{credentials:'omit'}:privateFeed?{headers}:{})});
+        if(requireManager&&!publicRead&&(response.status===401||response.status===403)&&publish()){
+          if(typeof onAuthorityError==='function')onAuthorityError();else suspend();
+        }
+        if(!response.ok)throw new Error('feed_unavailable');return response.json();
       };
       // Each independent source publishes when it settles. A database failure
       // must not suppress an available forecast or turn unknown facts into zero.
@@ -255,7 +274,7 @@
       ];
       // Public tickers use only the existing sanitized viewer projection.
       // No manager headers, source mail, or schedule reads are used there.
-      tasks.push(load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`).catch(()=>null).then(value=>{
+      tasks.push(load(`${API}/${publicRead?'viewer-api':'dashboard-api'}/operations`,true,true).catch(()=>null).then(value=>{
         if(!publish())return;pendingFeeds.delete('operations');let replacement=null;try{replacement=DATA.operations(value);}catch{}
         delayedFeeds.clear();
         if(replacement){
@@ -333,7 +352,11 @@
     listen(dialog,'cancel',event=>{event.preventDefault();closeBoard();});
     listen(dialog,'keydown',event=>{
       if(event.key==='Escape'){event.preventDefault();closeBoard();return;}
-      if(event.key!=='Tab')return;const focusable=Array.from(dialog.querySelectorAll('button,select,[tabindex="0"]')).filter(n=>!n.hidden&&!n.disabled);
+      if(event.key!=='Tab')return;
+      const focusable=Array.from(dialog.querySelectorAll('button,select,summary,[tabindex="0"]')).filter(node=>{
+        const closedHistory=node.closest?.('details:not([open])');
+        return !node.hidden&&!node.disabled&&(!closedHistory||node===closedHistory.querySelector('summary'));
+      });
       const first=focusable[0],last=focusable[focusable.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
       else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
     });
@@ -362,7 +385,7 @@
     listen(viewport,'click',event=>{const pin=event.target.closest?.('.mzMapPin');if(!pin||!active)return;
       const candidates=nearby(pins().map(p=>{const r=p.getBoundingClientRect();return{id:p.dataset.locationId,x:r.left+r.width/2,y:r.top+r.height/2,radius:Math.max(r.width,r.height)/2};}),pin.dataset.locationId);
       if(candidates.length>1){event.preventDefault();event.stopPropagation();openBoard('locations',pin,candidates);}},true);
-    return Object.freeze({activate,beginRefresh,refresh,updateSummary,summaryUnavailable,tick,unavailable,suspend,stop,openBoard,closeBoard});
+    return Object.freeze({activate,attachMap:renderer=>{map=renderer;},beginRefresh,refresh,updateSummary,summaryUnavailable,tick,unavailable,suspend,stop,openBoard,closeBoard});
   }
   root.MemphisOperationsDashboard=Object.freeze({create,nearby,WEATHER});
   if(typeof module!=='undefined'&&module.exports)module.exports=root.MemphisOperationsDashboard;

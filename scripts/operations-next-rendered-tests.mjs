@@ -6,7 +6,7 @@ import {resolve,extname} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {chromium} from 'playwright';
 const root=resolve(new URL('..',import.meta.url).pathname),out=process.env.CUSTODIAL_MAP_EVIDENCE||'/mnt/ai_models/custodial-web-readiness-20261113-r1/evidence/map-messenger-priorities-20261119';
-const prior='6fdb19e3252bb829acd025bf0a0142abc46b0eeb',changed=['ops-viewer.html','operations-dashboard.html','operations-dashboard.js','operations-dashboard-data.js','operations-dashboard.css'];
+const prior='a2192df588d2ffa59f5e45841ec80c6f193db056',changed=['ops-viewer.html','operations-dashboard.html','operations-dashboard.js','operations-dashboard-data.js','operations-dashboard.css'];
 const baselineRoot=process.env.CUSTODIAL_MAP_BASELINE_ROOT||root;
 const originals=new Map(changed.map(p=>[p,execFileSync('git',['show',prior+':'+p],{cwd:baselineRoot})]));
 const server=createServer((req,res)=>{

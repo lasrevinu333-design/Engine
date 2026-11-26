@@ -1487,3 +1487,28 @@ for(const mode of ['expiry','clone','bfcache'])for(const [name,mutate]of [
  await f.turn();await f.turn();assertHomeWithdrawn(f);assert.equal(f.node('hub-status').textContent,'Manager access changed or page retired. Reload to verify access.');
  assert.equal(f.intervals.size,0);if(mode!=='bfcache')assert.equal(forceCalls,0);f.emit('pagehide');
 });
+
+test('protected Operations accepts only the current request denial and ignores an obsolete opposite response',async()=>{
+ const f=fixture(),expectedAt='2026-11-09T18:00:00Z';
+ const successful={ok:true,status:200,json:async()=>({ok:true,data:{
+  schema:'custodial.operations-board.v1',generated_at:expectedAt,timezone:'America/Chicago',events:[{
+   id:'synthetic-current',name:'Synthetic current authority',date:'2026-11-09',start_at:'2026-11-09T20:00:00Z',status:'SCHEDULED'
+  }]
+ }})};
+ let authorityLost=0;
+ const onAuthorityError=()=>{authorityLost++;f.controller.suspend();};
+ const refusal={ok:false,status:403,json:async()=>{assert.fail('HTTP denial needs no response body');}};
+ const responseFor=operations=>async url=>url.endsWith('/operations')?operations:{ok:false,status:503};
+ const refresh=fetchImpl=>f.controller.refresh({fetchImpl,isCurrent:()=>true,onAuthorityError,preserveSummary:true});
+ try{
+  const older=homeDeferred(),oldRefresh=refresh(responseFor(older.promise));
+  await refresh(responseFor(successful));
+  assert.match(f.text(f.elements['ops-events-ticker']),/Synthetic current authority/);
+  older.release(refusal);await oldRefresh;
+  assert.equal(authorityLost,0);assert.match(f.text(f.elements['ops-events-ticker']),/Synthetic current authority/);
+  const olderSuccess=homeDeferred(),granted=refresh(responseFor(olderSuccess.promise));
+  await refresh(responseFor(refusal));olderSuccess.release(successful);await granted;
+  assert.equal(authorityLost,1);assert.equal(f.elements['operations-panels'].hidden,true);
+  assert.doesNotMatch(f.text(f.elements['ops-events-ticker']),/Synthetic current authority/);
+ }finally{f.clean();}
+});
