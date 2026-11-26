@@ -213,8 +213,8 @@
     },
     {
       "path": "scripts/custodial-readiness-browser-tests.mjs",
-      "bytes": 72723,
-      "sha256": "f4d2732b2888703ca2453873bf350930139c73b47d526712f0c7143e93664a84"
+      "bytes": 72937,
+      "sha256": "83e6fd381fc35696b8967b63ee520866db9d8187ace9f4a3e6ef7214a4082112"
     }
   ],
   "presentation_sources": [
@@ -3399,7 +3399,7 @@
       "kind": "changed",
       "prior_bytes": 72201,
       "prior_sha256": "a405972e19956227ea4d29a2f409b4562d45ff45dcb4a81cc56703823cff933c",
-      "current_sha256": "f4d2732b2888703ca2453873bf350930139c73b47d526712f0c7143e93664a84",
+      "current_sha256": "83e6fd381fc35696b8967b63ee520866db9d8187ace9f4a3e6ef7214a4082112",
       "hunks": [
         {
           "old_start": 237,
@@ -3412,9 +3412,21 @@
           ]
         },
         {
+          "old_start": 240,
+          "old_count": 0,
+          "new_start": 242,
+          "new_count": 3,
+          "before": [],
+          "after": [
+            "  // Seed the real schedule helper in Node before the temporary window exists.",
+            "  // The cached module must still be readable after that window is retired.",
+            "  await import('../memphis-recurring-schedule-target.js');"
+          ]
+        },
+        {
           "old_start": 790,
           "old_count": 2,
-          "new_start": 791,
+          "new_start": 794,
           "new_count": 3,
           "before": [
             "      const status = { initialized: true, ready: true, available: true, quarantined: false, state: 'enrolled', deviceId: 'KIOSK_08', generation: 1 };",
@@ -3429,7 +3441,7 @@
         {
           "old_start": 794,
           "old_count": 1,
-          "new_start": 796,
+          "new_start": 799,
           "new_count": 2,
           "before": [
             "        ensureSecurityState: async () => ({ ...status }), subscribe: fn => { subscriber = fn; }, getPendingEnrollmentOperation: () => null };"
@@ -3442,7 +3454,7 @@
         {
           "old_start": 801,
           "old_count": 0,
-          "new_start": 805,
+          "new_start": 808,
           "new_count": 4,
           "before": [],
           "after": [
@@ -3455,7 +3467,7 @@
         {
           "old_start": 822,
           "old_count": 0,
-          "new_start": 830,
+          "new_start": 833,
           "new_count": 1,
           "before": [],
           "after": [

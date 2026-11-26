@@ -239,6 +239,9 @@ const implementation = read('mobile/src/custodial/readiness.js').replace(/^expor
   + '\n' + read('mobile/src/custodial/app.js').replace(/^import .*;\s*$/gm, '');
 // Focused actual Source counterexample; no Chromium/native/manager authority.
 if(process.argv.includes('--home-refresh-source-only')){
+  // Seed the real schedule helper in Node before the temporary window exists.
+  // The cached module must still be readable after that window is retired.
+  await import('../memphis-recurring-schedule-target.js');
   const {createSyntheticScheduleLocks}=await import('./synthetic-schedule-locks.mjs');
   const {webcrypto}=await import('node:crypto');
   const locks=createSyntheticScheduleLocks(),rows=new Map([['SYNTHETIC_ORIGINAL_WORK','{"original":"retained"}']]),nodes=new Map();

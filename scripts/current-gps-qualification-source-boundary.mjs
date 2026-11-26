@@ -38,7 +38,7 @@ const RETAINED_FEEDBACK_PROFILE_SHA='bfa5fa1084c8953a9243e8469742383717d2b5ec4b8
 const WEB_LIFECYCLE_PROFILE_SHA='a414732e10fde9ddf4978fd67985984573588198e2c48bbad7181b2b3556dbb3';
 const MANAGER_RECOVERY_PROFILE_SHA='190aad455944e05763a647ce2313257a94107f800f7095837afab4c6677a4670';
 const STAFFING_TRANSITION_PROFILE_SHA='36197b398477eb4f42fa22d3ca1beeae15eba900e6ce3b2be48eb1b3588d509d';
-const AUDITED_V88_PROFILE_SHA='7eb7e02d336011b983b4f8b18119c2ba030fcad0a9d2cc9e2f03c138cae317e8';
+const AUDITED_V88_PROFILE_SHA='51139e618a2e67d47869eb7948140dbeb3bd9a9cf33735725a7e0d8ad116ab14';
 const BASECAMP_R34_PROFILE_SHA='113e0647421cfbb6b3dc8cfc2a21757e15446f27bd65c64bc150ba41af4a2f36';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
@@ -206,71 +206,52 @@ export function assertBoundCurrentGpsSource(name,source){
  const path=canonical(name);assert.ok(path,'Known current GPS source required');assertCurrentGpsInventory();
  const row=byPath.get(path);assert.equal(Buffer.byteLength(source),row.bytes);assert.equal(sha(source),row.sha256,'Actual current bytes required; predecessor is comparison only');return source;
 }
-// Bind the complete current tree before supplying a historical comparison to
-// any of the archived GPS or provider contracts.
-export function normalizeClockNavigationForComparison(name,source){
- const path=canonical(name);
- const audited=currentGpsQualification.releaseRepairHistory.find(row=>row.path===path);
- if(audited?.kind==='changed'&&sha(source)===audited.current_sha256){
-  assertCurrentGpsInventory();
-  source=reverseGps(audited,source);
+// Transform only complete, pinned bytes. Each public comparison below freshly
+// verifies the entire tree before returning a transformed view.
+function normalizeClockNavigation(path,source){
+ const histories=[
+  currentGpsQualification.releaseRepairHistory,currentGpsQualification.staffingTransitionHistory,
+  currentGpsQualification.managerRecoveryHistory,currentGpsQualification.webHistory,
+  currentGpsQualification.retainedFeedbackHistory,currentGpsQualification.clockHistory,
+ ];
+ for(const history of histories){
+  const row=history.find(candidate=>candidate.path===path);
+  if(row&&row.kind!=='added'&&sha(source)===row.current_sha256)source=reverseGps(row,source);
  }
- const staffing=currentGpsQualification.staffingTransitionHistory.find(row=>row.path===path);
- if(staffing&&sha(source)===staffing.current_sha256){
-  assertCurrentGpsInventory();
-  source=reverseGps(staffing,source);
- }
- const recovery=currentGpsQualification.managerRecoveryHistory.find(row=>row.path===path);
- if(recovery&&sha(source)===recovery.current_sha256){
-  assertCurrentGpsInventory();
-  source=reverseGps(recovery,source);
- }
- const web=currentGpsQualification.webHistory.find(row=>row.path===path);
- if(web&&sha(source)===web.current_sha256){
-  assertCurrentGpsInventory();
-  source=reverseGps(web,source);
- }
- const retained=currentGpsQualification.retainedFeedbackHistory.find(row=>row.path===path);
- if(retained&&sha(source)===retained.current_sha256){
-  assertCurrentGpsInventory();
-  source=reverseGps(retained,source);
- }
- const clock=currentGpsQualification.clockHistory.find(row=>row.path===path);
- if(!clock||sha(source)!==clock.current_sha256)return source;
- assertCurrentGpsInventory();
- return reverseGps(clock,source);
+ return source;
 }
-function normalizeIntegrationRepair(name,source){
- const path=canonical(name);
- source=normalizeClockNavigationForComparison(name,source);
- const change=currentGpsQualification.auditRepairHistory.find(row=>row.path===path);
- if(!change||change.kind!=='changed'||sha(source)!==change.current_sha256)return source;
- assertCurrentGpsInventory();
- return reverseGps(change,source);
+export function normalizeClockNavigationForComparison(name,source){
+ const prior=normalizeClockNavigation(canonical(name),source);
+ if(prior!==source)assertCurrentGpsInventory();
+ return prior;
+}
+function normalizeIntegrationRepair(path,source){
+ source=normalizeClockNavigation(path,source);
+ const row=currentGpsQualification.auditRepairHistory.find(candidate=>candidate.path===path);
+ return row?.kind==='changed'&&sha(source)===row.current_sha256?reverseGps(row,source):source;
 }
 // Reverse only exact successor bytes for the previous presentation contracts.
 export function normalizeNotificationPresentationForComparison(name,source){
- source=normalizeIntegrationRepair(name,source);
- const voice=currentGpsQualification.voiceHistory.find(candidate=>candidate.path===name||basename(candidate.path)===name);
- if(voice&&sha(source)===voice.current_sha256){
-  assertCurrentGpsInventory();
-  source=reverseGps(voice,source);
+ let prior=normalizeIntegrationRepair(canonical(name),source);
+ for(const history of [currentGpsQualification.voiceHistory,currentGpsQualification.presentationHistory]){
+  const row=history.find(candidate=>candidate.path===name||basename(candidate.path)===name);
+  if(row&&sha(prior)===row.current_sha256)prior=reverseGps(row,prior);
  }
- const row=currentGpsQualification.presentationHistory.find(candidate=>candidate.path===name||basename(candidate.path)===name);
- if(!row||sha(source)!==row.current_sha256)return source;
- assertCurrentGpsInventory();
- return reverseGps(row,source);
+ if(prior!==source)assertCurrentGpsInventory();
+ return prior;
 }
 export function normalizeCurrentGpsForHistoricalComparison(name,source){
  const path=canonical(name);if(!path)return source;
- const actual=source;
- source=normalizeIntegrationRepair(path,source);
- const row=currentGpsQualification.deltas.find(row=>row.path===path);if(!row)return source;
- if(row.kind==='added'){
-  assert.equal(sha(source),row.current_sha256,'New GPS type must remain actual; never invent an absent predecessor');return actual;
+ let prior=normalizeIntegrationRepair(path,source);
+ const row=currentGpsQualification.deltas.find(candidate=>candidate.path===path);
+ if(row?.kind==='added'){
+  assert.equal(sha(prior),row.current_sha256,'New GPS type must remain actual; never invent an absent predecessor');
+  if(prior!==source)assertCurrentGpsInventory();
+  return source;
  }
- if(sha(source)!==row.current_sha256)return source; // Unknown bytes remain unknown to unchanged historical guards.
- assertCurrentGpsInventory();return reverseGps(row,source);
+ if(row&&sha(prior)===row.current_sha256)prior=reverseGps(row,prior);
+ if(prior!==source)assertCurrentGpsInventory();
+ return prior;
 }
 function reverseGps(row,source){
  assert.equal(sha(source),row.current_sha256);
@@ -289,7 +270,12 @@ export function assertGpsHistoricalInventoryProjection(oldMain,oldTests,oldAuxil
    .filter(d=>d.kind==='added').map(d=>d.path));
   return rows.filter(row=>!added.has(row.path)).map(row=>{
   const delta=currentGpsQualification.deltas.find(d=>d.path===row.path);
-  const source=normalizeIntegrationRepair(row.path,bytesAt(root,row.path).toString('utf8'));
+  // The complete inventory was verified above. Rebind the exact bytes
+  // consumed here too, since this read takes place after that traversal.
+  const bytes=bytesAt(root,row.path);
+  assert.equal(bytes.length,row.bytes,'Bound historical projection input length: '+row.path);
+  assert.equal(sha(bytes),row.sha256,'Bound historical projection input hash: '+row.path);
+  const source=normalizeIntegrationRepair(row.path,bytes.toString('utf8'));
   const prior=delta?reverseGps(delta,source):source;
   return {path:row.path,bytes:Buffer.byteLength(prior),sha256:sha(prior)};
  });}
